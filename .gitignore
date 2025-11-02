@@ -39,3 +39,7 @@
 
 # debug information files
 *.dwo
+
+# cursor indexing ignore
+.cursorindexingignore
+.specstory/
