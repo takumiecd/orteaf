@@ -38,7 +38,8 @@
 *.app
 
 # Generated documentation
-docs/api/
+docs/api-developer/
+docs/api-user/
 docs/api-tests/
 
 # debug information files

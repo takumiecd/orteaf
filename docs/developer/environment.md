@@ -28,9 +28,10 @@
 ## Doxygen
 - Docker イメージに Doxygen を含めているため、コンテナ内で以下を実行すればドキュメント生成が可能:
   ```bash
-  doxygen docs/Doxyfile         # ライブラリ / 開発者ドキュメント
-  doxygen docs/Doxyfile.tests   # テストスイート専用ドキュメント
+  doxygen docs/Doxyfile.user         # 公開 API ドキュメント
+  doxygen docs/Doxyfile.developer    # 開発者向けドキュメント
+  doxygen docs/Doxyfile.tests        # テストスイート専用ドキュメント
   ```
-- 出力先はそれぞれ `docs/api/` と `docs/api-tests/`。
+- 出力先はそれぞれ `docs/api-user/`、`docs/api-developer/`、`docs/api-tests/`。
 
 > このガイドは暫定版です。環境構築手順が固まり次第アップデートしてください。

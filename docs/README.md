@@ -17,6 +17,10 @@ ORTEAF に関するドキュメントの索引です。目的に応じて以下�
 
 ## テスト
 - TDD チェックリスト: [docs/developer/testing-strategy.md](developer/testing-strategy.md)
-- テスト専用 Doxygen 設定: `docs/Doxyfile.tests`
+
+## ドキュメント生成
+- ユーザー向け Doxygen: `docs/Doxyfile.user`
+- 開発者向け Doxygen: `docs/Doxyfile.developer`
+- テスト専用 Doxygen: `docs/Doxyfile.tests`
 
 > ドキュメントが増えた場合は、この索引を更新して導線を維持してください。
