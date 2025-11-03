@@ -37,6 +37,9 @@
 *.out
 *.app
 
+# Generated documentation
+docs/api/
+
 # debug information files
 *.dwo
 
