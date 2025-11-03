@@ -57,5 +57,11 @@ If both are disabled, the build will default to the CPU runtime.
 - Extension entry points (`Kernel`, `Ops`, `TensorImpl`): [docs/developer/extension-guide.md](docs/developer/extension-guide.md)
 - Roadmap / challenge log templates: see [docs/README.md](docs/README.md)
 
+## ⚙️ Configuration Options
+
+- Override runtime statistics levels: `-DORTEAF_RUNTIME_STATS_LEVEL=1` (`0`=off, `1`=basic, `2`=extended)
+- Per-component overrides inherit from the global level unless specified:  
+  `-DORTEAF_CPU_STATS_LEVEL=AUTO`, `-DORTEAF_MPS_STATS_LEVEL=2`, `-DORTEAF_ALLOCATOR_STATS_LEVEL=1`
+
 ## 📜 License
 ORTEAF is licensed under the Apache License 2.0. See [LICENSE](LICENSE) for details.

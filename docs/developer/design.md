@@ -44,6 +44,18 @@ orteaf/
 - `Allocator` / `MemSafe`：メモリ確保と安全管理。
 - `Dispatcher` / `KernelRegister`：OPS と Kernel の橋渡し。
 - `Runtimes`：CPU / CUDA / MPS を抽象化したバックエンド。
+- `Error`：共通の例外ラッパーとエラー分類。内部で統一的に throw / catch を扱い、必要に応じてログや統計を追加する。
+
+## ビルド時オプション
+
+統計機能を制御する CMake 変数を用意している。いずれもデフォルトは 0（無効）。
+
+| 変数 | 説明 |
+| --- | --- |
+| `ORTEAF_RUNTIME_STATS_LEVEL` | ランタイムとアロケータの統計レベル既定値。1=基本、2=拡張。|
+| `ORTEAF_CPU_STATS_LEVEL` / `ORTEAF_CUDA_STATS_LEVEL` / `ORTEAF_MPS_STATS_LEVEL` / `ORTEAF_ALLOCATOR_STATS_LEVEL` | 個別上書き（`AUTO` でグローバル設定を継承）。|
+
+コード側では `ORTEAF_*_STATS_LEVEL` マクロを参照し `0/1/2` に応じたメンバを有効にする。
 
 ## データフローと依存関係
 
