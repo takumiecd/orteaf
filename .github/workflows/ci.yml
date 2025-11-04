@@ -23,6 +23,7 @@ jobs:
         run: |
           docker build -f docker/dev/Dockerfile -t orteaf-dev .
           docker run --rm \
+            --user "$(id -u):$(id -g)" \
             -v "${{ github.workspace }}":/workspace \
             -w /workspace \
             orteaf-dev \
