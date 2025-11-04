@@ -18,8 +18,8 @@ orteaf/                # Library sources
     extension/         # Extension points (Kernel, Ops, TensorImpl, ModuleImpl)
     internal/          # Core runtime/allocator/diagnostics implementations
       diagnostics/
-        error/         # Common exception helpers
-        log/           # (planned) logging interfaces
+        error/         # Common error data + throw/fatal helpers
+        log/           # Compile-time logging macros and sinks
   src/…                # Mirrors the include tree (user/extension/internal)
 tests/                 # Mirrors the include layout for TDD-focused suites
 docs/

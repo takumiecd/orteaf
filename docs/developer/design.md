@@ -57,6 +57,15 @@ orteaf/
 
 コード側では `ORTEAF_*_STATS_LEVEL` マクロを参照し `0/1/2` に応じたメンバを有効にする。
 
+ログ制御の CMake 変数も用意している。
+
+| 変数 | 説明 |
+| --- | --- |
+| `ORTEAF_LOG_LEVEL` | ログの既定レベル（`TRACE`/`DEBUG`/`INFO`/`WARN`/`ERROR`/`CRITICAL`/`OFF`）。|
+| `ORTEAF_LOG_LEVEL_CORE` / `TENSOR` / `CUDA` / `MPS` / `IO` | カテゴリごとの上書き。`AUTO` で既定値を継承。|
+
+`ORTEAF_LOG_LEVEL_*` マクロを参照して `ORTEAF_LOG_TRACE` などのマクロがコンパイル時に無効化される。`OFF` に設定すればゼロコストでログが除去される。
+
 ## データフローと依存関係
 
 ### メモリとテンソル

@@ -36,6 +36,53 @@ orteaf_resolve_stats_level(ORTEAF_CUDA_STATS_LEVEL_EFFECTIVE "${ORTEAF_CUDA_STAT
 orteaf_resolve_stats_level(ORTEAF_MPS_STATS_LEVEL_EFFECTIVE "${ORTEAF_MPS_STATS_LEVEL}")
 orteaf_resolve_stats_level(ORTEAF_ALLOCATOR_STATS_LEVEL_EFFECTIVE "${ORTEAF_ALLOCATOR_STATS_LEVEL}")
 
+set(ORTEAF_LOG_LEVEL "INFO" CACHE STRING
+    "Default log level (TRACE, DEBUG, INFO, WARN, ERROR, CRITICAL, OFF)")
+set_property(CACHE ORTEAF_LOG_LEVEL PROPERTY STRINGS TRACE DEBUG INFO WARN ERROR CRITICAL OFF)
+
+foreach(_category CORE TENSOR CUDA MPS IO)
+    set(ORTEAF_LOG_LEVEL_${_category} "AUTO" CACHE STRING
+        "Log level override for ${_category} (AUTO inherits ORTEAF_LOG_LEVEL)")
+    set_property(CACHE ORTEAF_LOG_LEVEL_${_category} PROPERTY STRINGS AUTO TRACE DEBUG INFO WARN ERROR CRITICAL OFF)
+endforeach()
+
+function(orteaf_log_level_value out_var level_string)
+    string(TOUPPER "${level_string}" _level_upper)
+    if(_level_upper STREQUAL "TRACE")
+        set(_value 0)
+    elseif(_level_upper STREQUAL "DEBUG")
+        set(_value 1)
+    elseif(_level_upper STREQUAL "INFO")
+        set(_value 2)
+    elseif(_level_upper STREQUAL "WARN")
+        set(_value 3)
+    elseif(_level_upper STREQUAL "ERROR")
+        set(_value 4)
+    elseif(_level_upper STREQUAL "CRITICAL")
+        set(_value 5)
+    elseif(_level_upper STREQUAL "OFF")
+        set(_value 6)
+    else()
+        message(FATAL_ERROR "Unknown log level: ${level_string}")
+    endif()
+    set(${out_var} ${_value} PARENT_SCOPE)
+endfunction()
+
+orteaf_log_level_value(ORTEAF_LOG_LEVEL_GLOBAL_VALUE_NUMERIC "${ORTEAF_LOG_LEVEL}")
+
+function(orteaf_resolve_log_level out_var override_value)
+    if("${override_value}" STREQUAL "AUTO")
+        set(${out_var} ${ORTEAF_LOG_LEVEL_GLOBAL_VALUE_NUMERIC} PARENT_SCOPE)
+    else()
+        orteaf_log_level_value(_resolved "${override_value}")
+        set(${out_var} ${_resolved} PARENT_SCOPE)
+    endif()
+endfunction()
+
+foreach(_category CORE TENSOR CUDA MPS IO)
+    orteaf_resolve_log_level(ORTEAF_LOG_LEVEL_${_category}_VALUE_NUMERIC "${ORTEAF_LOG_LEVEL_${_category}}")
+endforeach()
+
 function(orteaf_bool_to_int out_var value)
     if(${value})
         set(${out_var} 1 PARENT_SCOPE)
