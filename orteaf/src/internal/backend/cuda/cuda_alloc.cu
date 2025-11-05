@@ -3,7 +3,7 @@
 #include "orteaf/internal/backend/cuda/cuda_stats.h"
 #include "orteaf/internal/backend/cuda/cuda_objc_bridge.h"
 
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
 #include <cuda.h>
 #endif
 
@@ -17,10 +17,10 @@ namespace orteaf::internal::backend::cuda {
  *
  * @param size Size of memory to allocate in bytes.
  * @return Opaque CUDA device pointer. Returns 0 if CUDA is not available.
- * @throws std::runtime_error If CUDA allocation fails (when CUDA_AVAILABLE is defined).
+ * @throws std::runtime_error If CUDA allocation fails (when ORTEAF_ENABLE_CUDA is defined).
  */
 CUdeviceptr_t alloc(size_t size) {
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
     CUdeviceptr ptr;
     CU_CHECK(cuMemAlloc(&ptr, size));
     stats_on_alloc(size);
@@ -41,7 +41,7 @@ CUdeviceptr_t alloc(size_t size) {
  * @param size Size of memory to free in bytes. Used for statistics update.
  */
 void free(CUdeviceptr_t ptr, size_t size) {
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
     CUdeviceptr objc_ptr = cu_deviceptr_from_opaque(ptr);
     CU_CHECK(cuMemFree(objc_ptr));
     stats_on_dealloc(size);
@@ -62,7 +62,7 @@ void free(CUdeviceptr_t ptr, size_t size) {
  * @throws std::runtime_error If stream is nullptr or CUDA allocation fails.
  */
 CUdeviceptr_t alloc_stream(size_t size, CUstream_t stream) {
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
     CUdeviceptr ptr;
     if (stream == nullptr) {
         // errorで落ちる
@@ -91,7 +91,7 @@ CUdeviceptr_t alloc_stream(size_t size, CUstream_t stream) {
  * @throws std::runtime_error If stream is nullptr or CUDA deallocation fails.
  */
 void free_stream(CUdeviceptr_t ptr, size_t size, CUstream_t stream) {
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
     CUdeviceptr objc_ptr = cu_deviceptr_from_opaque(ptr);
     if (stream == nullptr) {
         throw std::runtime_error("stream is nullptr");
@@ -113,10 +113,10 @@ void free_stream(CUdeviceptr_t ptr, size_t size, CUstream_t stream) {
  *
  * @param size Size of memory to allocate in bytes.
  * @return Pointer to allocated pinned host memory. Returns nullptr if CUDA is not available.
- * @throws std::runtime_error If CUDA allocation fails (when CUDA_AVAILABLE is defined).
+ * @throws std::runtime_error If CUDA allocation fails (when ORTEAF_ENABLE_CUDA is defined).
  */
 void* alloc_host(std::size_t size) {
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
     void* ptr;
     CU_CHECK(cuMemAllocHost(&ptr, size));
     stats_on_alloc(size);
@@ -137,10 +137,10 @@ void* alloc_host(std::size_t size) {
  * @param ptr Opaque CUDA device pointer to copy from.
  * @param host_ptr Host memory pointer to copy to.
  * @param size Number of bytes to copy.
- * @throws std::runtime_error If CUDA copy operation fails (when CUDA_AVAILABLE is defined).
+ * @throws std::runtime_error If CUDA copy operation fails (when ORTEAF_ENABLE_CUDA is defined).
  */
 void copy_to_host(CUdeviceptr_t ptr, void* host_ptr, size_t size) {
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
     CUdeviceptr objc_ptr = cu_deviceptr_from_opaque(ptr);
     CU_CHECK(cuMemcpyDtoH(host_ptr, objc_ptr, size));
 #else
@@ -160,10 +160,10 @@ void copy_to_host(CUdeviceptr_t ptr, void* host_ptr, size_t size) {
  * @param host_ptr Host memory pointer to copy from.
  * @param ptr Opaque CUDA device pointer to copy to.
  * @param size Number of bytes to copy.
- * @throws std::runtime_error If CUDA copy operation fails (when CUDA_AVAILABLE is defined).
+ * @throws std::runtime_error If CUDA copy operation fails (when ORTEAF_ENABLE_CUDA is defined).
  */
 void copy_to_device(void* host_ptr, CUdeviceptr_t ptr, size_t size) {
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
     CUdeviceptr objc_ptr = cu_deviceptr_from_opaque(ptr);
     CU_CHECK(cuMemcpyHtoD(objc_ptr, host_ptr, size));
 #else
@@ -181,10 +181,10 @@ void copy_to_device(void* host_ptr, CUdeviceptr_t ptr, size_t size) {
  *
  * @param ptr Pointer to pinned host memory to free.
  * @param size Size of memory to free in bytes. Used for statistics update.
- * @throws std::runtime_error If CUDA deallocation fails (when CUDA_AVAILABLE is defined).
+ * @throws std::runtime_error If CUDA deallocation fails (when ORTEAF_ENABLE_CUDA is defined).
  */
 void free_host(void* ptr, size_t size) {
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
     CU_CHECK(cuMemFreeHost(ptr));
     stats_on_dealloc(size);
 #else

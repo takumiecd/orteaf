@@ -5,7 +5,7 @@
 #include <sstream>
 #include <iostream>
 
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
 #include <cuda.h>
 #endif
 

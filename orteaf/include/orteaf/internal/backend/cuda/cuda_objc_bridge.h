@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
 #include <cuda.h>
 #include <cstddef>
 #include <cstdint>

@@ -2,61 +2,54 @@
 
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 
-#ifdef CUDA_AVAILABLE
+#include "orteaf/internal/diagnostics/error/error.h"
+
+#ifdef ORTEAF_ENABLE_CUDA
   #include <cuda_runtime_api.h>  // 最小限でOK（<cuda_runtime.h>でも可）
   #include <cuda.h>
 #endif
 
 namespace orteaf::internal::backend::cuda {
 
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
 
-// ランタイムAPI用の例外型
-class CudaError : public std::runtime_error {
-public:
-    explicit CudaError(cudaError_t code,
+// 内部: CUDA ランタイムエラーのマッピング
+inline orteaf::internal::diagnostics::error::OrteafErrc map_runtime_errc(cudaError_t err) {
+    using orteaf::internal::diagnostics::error::OrteafErrc;
+    switch (err) {
+        case cudaErrorMemoryAllocation:
+            return OrteafErrc::OutOfMemory;
+        case cudaErrorInvalidValue:
+            return OrteafErrc::InvalidArgument;
+        case cudaErrorInitializationError:
+        case cudaErrorNotInitialized:
+            return OrteafErrc::BackendUnavailable;
+        default:
+            return OrteafErrc::OperationFailed;
+    }
+}
+
+// 戻り値チェック（失敗なら OrteafError を送出）
+inline void cuda_check(cudaError_t err,
                        const char* expr,
                        const char* file,
-                       int line)
-    : std::runtime_error(make_message(code, expr, file, line)),
-      code_(code), file_(file), line_(line) {}
-
-    cudaError_t code() const noexcept { return code_; }
-    const char* file() const noexcept { return file_; }
-    int line() const noexcept { return line_; }
-
-private:
-    static std::string make_message(cudaError_t code,
-                                    const char* expr,
-                                    const char* file,
-                                    int line) {
+                       int line) {
+    if (err != cudaSuccess) {
+        using namespace orteaf::internal::diagnostics::error;
         std::string msg = "CUDA error: ";
-        msg += cudaGetErrorString(code);
+        msg += cudaGetErrorString(err);
         msg += " (code ";
-        msg += std::to_string(static_cast<int>(code));
+        msg += std::to_string(static_cast<int>(err));
         msg += ") while calling ";
         msg += expr;
         msg += " at ";
         msg += file;
         msg += ":";
         msg += std::to_string(line);
-        return msg;
-    }
-
-    cudaError_t code_;
-    const char* file_;
-    int line_;
-};
-
-// 戻り値チェック（失敗なら例外）
-inline void cuda_check(cudaError_t err,
-                       const char* expr,
-                       const char* file,
-                       int line) {
-    if (err != cudaSuccess) {
-        throw CudaError(err, expr, file, line);
+        throw_error(map_runtime_errc(err), std::move(msg));
     }
 }
 
@@ -64,7 +57,16 @@ inline void cuda_check(cudaError_t err,
 inline void cuda_check_last(const char* file, int line) {
     cudaError_t err = cudaGetLastError();
     if (err != cudaSuccess) {
-        throw CudaError(err, "cudaGetLastError()", file, line);
+        using namespace orteaf::internal::diagnostics::error;
+        std::string msg = "CUDA error: ";
+        msg += cudaGetErrorString(err);
+        msg += " (code ";
+        msg += std::to_string(static_cast<int>(err));
+        msg += ") while calling cudaGetLastError() at ";
+        msg += file;
+        msg += ":";
+        msg += std::to_string(line);
+        throw_error(map_runtime_errc(err), std::move(msg));
     }
 }
 
@@ -80,29 +82,32 @@ inline void cuda_check_sync(cudaStream_t stream,
 #endif
 }
 
-// ドライバAPI用の例外型
-class CuDriverError : public std::runtime_error {
-public:
-    explicit CuDriverError(CUresult code,
-                           const char* name,
-                           const char* msg,
-                           const char* expr,
-                           const char* file,
-                           int line)
-    : std::runtime_error(make_message(code, name, msg, expr, file, line)),
-      code_(code), file_(file), line_(line) {}
+// 内部: CUDA ドライバエラーのマッピング
+inline orteaf::internal::diagnostics::error::OrteafErrc map_driver_errc(CUresult err) {
+    using orteaf::internal::diagnostics::error::OrteafErrc;
+    switch (err) {
+        case CUDA_ERROR_DEINITIALIZED:
+        case CUDA_ERROR_NOT_INITIALIZED:
+            return OrteafErrc::BackendUnavailable;
+        case CUDA_ERROR_OUT_OF_MEMORY:
+            return OrteafErrc::OutOfMemory;
+        case CUDA_ERROR_INVALID_VALUE:
+            return OrteafErrc::InvalidArgument;
+        default:
+            return OrteafErrc::OperationFailed;
+    }
+}
 
-    CUresult code() const noexcept { return code_; }
-    const char* file() const noexcept { return file_; }
-    int line() const noexcept { return line_; }
-
-private:
-    static std::string make_message(CUresult code,
-                                    const char* name,
-                                    const char* msg,
-                                    const char* expr,
-                                    const char* file,
-                                    int line) {
+inline void cu_driver_check(CUresult err,
+                            const char* expr,
+                            const char* file,
+                            int line) {
+    if (err != CUDA_SUCCESS) {
+        using namespace orteaf::internal::diagnostics::error;
+        const char* name = nullptr;
+        const char* msg = nullptr;
+        cuGetErrorName(err, &name);
+        cuGetErrorString(err, &msg);
         std::string result = "CUDA driver error: ";
         if (name) {
             result += name;
@@ -110,7 +115,7 @@ private:
         } else {
             result += "unknown (";
         }
-        result += std::to_string(static_cast<int>(code));
+        result += std::to_string(static_cast<int>(err));
         result += ")";
         if (msg) {
             result += ": ";
@@ -122,24 +127,7 @@ private:
         result += file;
         result += ":";
         result += std::to_string(line);
-        return result;
-    }
-
-    CUresult code_;
-    const char* file_;
-    int line_;
-};
-
-inline void cu_driver_check(CUresult err,
-                            const char* expr,
-                            const char* file,
-                            int line) {
-    if (err != CUDA_SUCCESS) {
-        const char* name = nullptr;
-        const char* msg = nullptr;
-        cuGetErrorName(err, &name);
-        cuGetErrorString(err, &msg);
-        throw CuDriverError(err, name, msg, expr, file, line);
+        throw_error(map_driver_errc(err), std::move(result));
     }
 }
 
@@ -148,15 +136,17 @@ bool try_driver_call(Fn&& fn) {
     try {
         std::forward<Fn>(fn)();
         return true;
-    } catch (const CuDriverError& err) {
-        if (err.code() == CUDA_ERROR_DEINITIALIZED) {
+    } catch (const std::system_error& ex) {
+        // CUDA_ERROR_DEINITIALIZED の場合のみ false を返す（再初期化を許可）
+        std::string_view what = ex.what();
+        if (what.find("CUDA_ERROR_DEINITIALIZED") != std::string_view::npos) {
             return false;
         }
         throw;
     }
 }
 
-#else  // !CUDA_AVAILABLE
+#else  // !ORTEAF_ENABLE_CUDA
 
 // 非 CUDA ビルド：何もしないダミー定義（型にも触れない）
 inline void cuda_check(int, const char*, const char*, int) noexcept {}
@@ -170,12 +160,12 @@ bool try_driver_call(Fn&& fn) {
     return true;
 }
 
-#endif // CUDA_AVAILABLE
+#endif // ORTEAF_ENABLE_CUDA
 
 } // namespace orteaf::internal::backend::cuda
 
 // 使いやすいマクロ
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
   #define CUDA_CHECK(expr)       ::orteaf::internal::backend::cuda::cuda_check((expr), #expr, __FILE__, __LINE__)
   #define CUDA_CHECK_LAST()      ::orteaf::internal::backend::cuda::cuda_check_last(__FILE__, __LINE__)
   #define CUDA_CHECK_SYNC(s)     ::orteaf::internal::backend::cuda::cuda_check_sync((s), __FILE__, __LINE__)

@@ -10,7 +10,7 @@ CudaUInt3_t make_uint3(std::uint32_t x, std::uint32_t y, std::uint32_t z) noexce
     return CudaUInt3_t{x, y, z};
 }
 
-#if defined(CUDA_AVAILABLE)
+#ifndef ORTEAF_ENABLE_CUDA
 dim3 to_cuda_dim3(CudaDim3_t value) noexcept {
     dim3 result{};
     result.x = value.x;

@@ -2,7 +2,7 @@
 #include "orteaf/internal/backend/cuda/cuda_device.h"
 #include "orteaf/internal/backend/cuda/cuda_objc_bridge.h"
 
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
 #include <cuda.h>
 #include "orteaf/internal/backend/cuda/cuda_check.h"
 #endif
@@ -10,7 +10,7 @@
 namespace orteaf::internal::backend::cuda {
 
 CUcontext_t get_primary_context(CUdevice_t device) {
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
     CUdevice objc_device = cu_device_from_opaque(device);
     CUcontext context = nullptr;
     CU_CHECK(cuDevicePrimaryCtxRetain(&context, objc_device));
@@ -22,7 +22,7 @@ CUcontext_t get_primary_context(CUdevice_t device) {
 }
 
 CUcontext_t create_context(CUdevice_t device) {
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
     CUdevice objc_device = cu_device_from_opaque(device);
     CUcontext context = nullptr;
     CU_CHECK(cuCtxCreate(&context, 0, objc_device));
@@ -34,7 +34,7 @@ CUcontext_t create_context(CUdevice_t device) {
 }
 
 void set_context(CUcontext_t context) {
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
     CUcontext objc_context = objc_from_opaque_noown<CUcontext>(context);
     CU_CHECK(cuCtxSetCurrent(objc_context));
 #else
@@ -43,7 +43,7 @@ void set_context(CUcontext_t context) {
 }
 
 void release_primary_context(CUdevice_t device) {
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
     CUdevice objc_device = cu_device_from_opaque(device);
     CU_CHECK(cuDevicePrimaryCtxRelease(objc_device));
 #else
@@ -52,7 +52,7 @@ void release_primary_context(CUdevice_t device) {
 }
 
 void release_context(CUcontext_t context) {
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
     CUcontext objc_context = objc_from_opaque_noown<CUcontext>(context);
     CU_CHECK(cuCtxDestroy(objc_context));
 #else

@@ -3,14 +3,14 @@
 #include "orteaf/internal/backend/cuda/cuda_stats.h"
 #include "orteaf/internal/backend/cuda/cuda_objc_bridge.h"
 
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
 #include <cuda.h>
 #endif
 
 namespace orteaf::internal::backend::cuda {
 
 int get_device_count() {
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
     int device_count;
     CU_CHECK(cuDeviceGetCount(&device_count));
     return device_count;
@@ -20,7 +20,7 @@ int get_device_count() {
 }
 
 CUdevice_t get_device(uint32_t device_id) {
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
     CUdevice device;
     CU_CHECK(cuDeviceGet(&device, static_cast<int>(device_id)));
     return opaque_from_cu_device(device);
@@ -31,7 +31,7 @@ CUdevice_t get_device(uint32_t device_id) {
 }
 
 ComputeCapability get_compute_capability(CUdevice_t device) {
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
     CUdevice objc_device = cu_device_from_opaque(device);
     ComputeCapability capability;
     CU_CHECK(cuDeviceGetAttribute(&capability.major, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, objc_device));

@@ -1,11 +1,6 @@
 #pragma once
 
-// Handle cases where CUDA_AVAILABLE is defined but set to OFF/0
-#if defined(CUDA_AVAILABLE) && !(CUDA_AVAILABLE)
-#undef CUDA_AVAILABLE
-#endif
-
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 #include <stdexcept>
@@ -15,7 +10,7 @@
 // ----------------------------------------------------------
 // CUDA error check macro
 // ----------------------------------------------------------
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
 #define CUDA_CHECK(call)                                                                     \
     do {                                                                                     \
         cudaError_t err = call;                                                              \
@@ -33,7 +28,7 @@
 // ----------------------------------------------------------
 // cuBLAS error check macro
 // ----------------------------------------------------------
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
 #define CUBLAS_CHECK(call)                                                                       \
     do {                                                                                         \
         cublasStatus_t status = call;                                                            \

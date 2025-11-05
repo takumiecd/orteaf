@@ -3,14 +3,14 @@
 #include "orteaf/internal/backend/cuda/cuda_check.h"
 #include "orteaf/internal/backend/cuda/cuda_objc_bridge.h"
 
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
 #include <cuda.h>
 #endif
 
 namespace orteaf::internal::backend::cuda {
 
 CUevent_t create_event() {
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
     CUevent event;
     CU_CHECK(cuEventCreate(&event, CU_EVENT_DISABLE_TIMING));
     stats_on_create_event();
@@ -21,7 +21,7 @@ CUevent_t create_event() {
 }
 
 void destroy_event(CUevent_t event) {
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
     if (event == nullptr) return;
     CUevent objc_event = objc_from_opaque_noown<CUevent>(event);
     CU_CHECK(cuEventDestroy(objc_event));
@@ -32,7 +32,7 @@ void destroy_event(CUevent_t event) {
 }
 
 void record_event(CUevent_t event, CUstream_t stream) {
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
     if (event == nullptr || stream == nullptr) return;
     CUevent objc_event = objc_from_opaque_noown<CUevent>(event);
     CUstream objc_stream = objc_from_opaque_noown<CUstream>(stream);
@@ -44,7 +44,7 @@ void record_event(CUevent_t event, CUstream_t stream) {
 }
 
 bool query_event(CUevent_t event) {
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
     if (event == nullptr) return true;
     CUevent objc_event = objc_from_opaque_noown<CUevent>(event);
     CUresult status = cuEventQuery(objc_event);
@@ -59,7 +59,7 @@ bool query_event(CUevent_t event) {
 }
 
 void wait_event(CUstream_t stream, CUevent_t event) {
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
     if (stream == nullptr || event == nullptr) return;
     CUstream objc_stream = objc_from_opaque_noown<CUstream>(stream);
     CUevent objc_event = objc_from_opaque_noown<CUevent>(event);

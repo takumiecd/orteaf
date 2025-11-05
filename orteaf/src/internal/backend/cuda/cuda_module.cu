@@ -1,7 +1,7 @@
 #include "orteaf/internal/backend/cuda/cuda_module.h"
 #include "orteaf/internal/backend/cuda/cuda_objc_bridge.h"
 
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
 #include <cuda.h>
 #include "orteaf/internal/backend/cuda/cuda_check.h"
 #endif
@@ -9,7 +9,7 @@
 namespace orteaf::internal::backend::cuda {
 
 CUmodule_t load_module_from_file(const char* filepath) {
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
     CUmodule module;
     CU_CHECK(cuModuleLoad(&module, filepath));
     return opaque_from_objc_noown<CUmodule_t, CUmodule>(module);
@@ -20,7 +20,7 @@ CUmodule_t load_module_from_file(const char* filepath) {
 }
 
 CUmodule_t load_module_from_image(const void* image) {
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
     CUmodule module;
     CU_CHECK(cuModuleLoadData(&module, image));
     return opaque_from_objc_noown<CUmodule_t, CUmodule>(module);
@@ -31,7 +31,7 @@ CUmodule_t load_module_from_image(const void* image) {
 }
 
 CUfunction_t get_function(CUmodule_t module, const char* kernel_name) {
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
     CUmodule objc_module = objc_from_opaque_noown<CUmodule>(module);
     CUfunction function;
     CU_CHECK(cuModuleGetFunction(&function, objc_module, kernel_name));
@@ -44,7 +44,7 @@ CUfunction_t get_function(CUmodule_t module, const char* kernel_name) {
 }
 
 void unload_module(CUmodule_t module) {
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
     CUmodule objc_module = objc_from_opaque_noown<CUmodule>(module);
     CU_CHECK(cuModuleUnload(objc_module));
 #else

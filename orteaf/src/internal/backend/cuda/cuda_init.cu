@@ -1,6 +1,6 @@
 #include "orteaf/internal/backend/cuda/cuda_init.h"
 
-#ifdef CUDA_AVAILABLE
+#ifdef ORTEAF_ENABLE_CUDA
 
 #include <mutex>
 #include <cuda.h>
