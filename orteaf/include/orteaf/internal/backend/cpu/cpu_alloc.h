@@ -120,18 +120,4 @@ inline void dealloc(void* ptr, std::size_t size) noexcept {
 #endif
 }
 
-/**
- * @brief Test function: Get memory usage.
- *
- * This function is added for testing purposes.
- * Returns the current memory usage in bytes.
- *
- * @return Current memory usage in bytes.
- * @note This function is for testing purposes and does not contain actual implementation.
- */
-inline std::size_t get_memory_usage() {
-    // TODO: Implementation needed
-    return 0;
-}
-
 } // namespace orteaf::internal::backend::cpu
