@@ -1,3 +1,7 @@
+/**
+ * @file cuda_graph.cu
+ * @brief Implementation of CUDA Graph helpers (create/destroy/capture/instantiate/launch).
+ */
 #include "orteaf/internal/backend/cuda/cuda_graph.h"
 #include "orteaf/internal/backend/cuda/cuda_check.h"
 #include "orteaf/internal/backend/cuda/cuda_objc_bridge.h"
@@ -8,6 +12,9 @@
 
 namespace orteaf::internal::backend::cuda {
 
+/**
+ * @copydoc orteaf::internal::backend::cuda::create_graph
+ */
 CUgraph_t create_graph() {
 #ifdef ORTEAF_ENABLE_CUDA
     CUgraph graph;
@@ -18,6 +25,9 @@ CUgraph_t create_graph() {
 #endif
 }
 
+/**
+ * @copydoc orteaf::internal::backend::cuda::create_graph_exec
+ */
 CUgraphExec_t create_graph_exec(CUgraph_t graph) {
 #ifdef ORTEAF_ENABLE_CUDA
     CUgraph objc_graph = objc_from_opaque_noown<CUgraph>(graph);
@@ -30,6 +40,9 @@ CUgraphExec_t create_graph_exec(CUgraph_t graph) {
 #endif
 }
 
+/**
+ * @copydoc orteaf::internal::backend::cuda::destroy_graph
+ */
 void destroy_graph(CUgraph_t graph) {
 #ifdef ORTEAF_ENABLE_CUDA
     CUgraph objc_graph = objc_from_opaque_noown<CUgraph>(graph);
@@ -39,6 +52,9 @@ void destroy_graph(CUgraph_t graph) {
 #endif
 }
 
+/**
+ * @copydoc orteaf::internal::backend::cuda::destroy_graph_exec
+ */
 void destroy_graph_exec(CUgraphExec_t graph_exec) {
 #ifdef ORTEAF_ENABLE_CUDA
     CUgraphExec objc_graph_exec = objc_from_opaque_noown<CUgraphExec>(graph_exec);
@@ -48,6 +64,9 @@ void destroy_graph_exec(CUgraphExec_t graph_exec) {
 #endif
 }
 
+/**
+ * @copydoc orteaf::internal::backend::cuda::begin_graph_capture
+ */
 void begin_graph_capture(CUstream_t stream) {
 #ifdef ORTEAF_ENABLE_CUDA
     CUstream objc_stream = objc_from_opaque_noown<CUstream>(stream);
@@ -57,6 +76,9 @@ void begin_graph_capture(CUstream_t stream) {
 #endif
 }
 
+/**
+ * @copydoc orteaf::internal::backend::cuda::end_graph_capture
+ */
 void end_graph_capture(CUstream_t stream, CUgraph_t* graph) {
 #ifdef ORTEAF_ENABLE_CUDA
     CUstream objc_stream = objc_from_opaque_noown<CUstream>(stream);
@@ -69,6 +91,9 @@ void end_graph_capture(CUstream_t stream, CUgraph_t* graph) {
 #endif
 }
 
+/**
+ * @copydoc orteaf::internal::backend::cuda::instantiate_graph
+ */
 void instantiate_graph(CUgraph_t graph, CUgraphExec_t* graph_exec) {
 #ifdef ORTEAF_ENABLE_CUDA
     CUgraph objc_graph = objc_from_opaque_noown<CUgraph>(graph);
@@ -81,6 +106,9 @@ void instantiate_graph(CUgraph_t graph, CUgraphExec_t* graph_exec) {
 #endif
 }
 
+/**
+ * @copydoc orteaf::internal::backend::cuda::graph_launch
+ */
 void graph_launch(CUgraphExec_t graph_exec, CUstream_t stream) {
 #ifdef ORTEAF_ENABLE_CUDA
     CUgraphExec objc_graph_exec = objc_from_opaque_noown<CUgraphExec>(graph_exec);
