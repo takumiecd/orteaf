@@ -1,0 +1,50 @@
+#pragma once
+
+#ifdef MPS_AVAILABLE
+
+#if defined(__OBJC__)
+#import <Foundation/Foundation.h>
+#else
+using NSAutoreleasePool = void;
+#endif
+
+namespace orteaf::internal::backend::mps {
+
+class AutoreleasePool {
+public:
+    AutoreleasePool();
+    ~AutoreleasePool();
+
+    AutoreleasePool(const AutoreleasePool&) = delete;
+    AutoreleasePool& operator=(const AutoreleasePool&) = delete;
+    AutoreleasePool(AutoreleasePool&&) = delete;
+    AutoreleasePool& operator=(AutoreleasePool&&) = delete;
+
+private:
+    NSAutoreleasePool* pool_;
+};
+
+} // namespace orteaf::internal::backend::mps
+
+#define _BITS_CONCAT2(a,b) a##b
+#define _BITS_CONCAT(a,b)  _BITS_CONCAT2(a,b)
+#define MPS_AUTORELEASE_POOL() \
+  orteaf::internal::backend::mps::AutoreleasePool _BITS_CONCAT(_orteaf_mps_autorelease_, __LINE__)
+
+#else  // MPS_AVAILABLE
+
+namespace orteaf::internal::backend::mps {
+
+class AutoreleasePool {
+public:
+    AutoreleasePool() = default;
+    ~AutoreleasePool() = default;
+};
+
+} // namespace orteaf::internal::backend::mps
+
+#define MPS_AUTORELEASE_POOL()
+
+#endif // MPS_AVAILABLE
+
+
