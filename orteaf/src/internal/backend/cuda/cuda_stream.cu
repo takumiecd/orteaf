@@ -1,3 +1,7 @@
+/**
+ * @file cuda_stream.cu
+ * @brief Implementation of CUDA stream helpers (create/destroy/sync/mem signals).
+ */
 #include "orteaf/internal/backend/cuda/cuda_stream.h"
 #include "orteaf/internal/backend/cuda/cuda_check.h"
 #include "orteaf/internal/backend/cuda/cuda_stats.h"
@@ -9,6 +13,9 @@
 
 namespace orteaf::internal::backend::cuda {
 
+/**
+ * @copydoc orteaf::internal::backend::cuda::get_stream
+ */
 CUstream_t get_stream() {
 #ifdef ORTEAF_ENABLE_CUDA
     CUstream stream;
@@ -20,6 +27,9 @@ CUstream_t get_stream() {
 #endif
 }
 
+/**
+ * @copydoc orteaf::internal::backend::cuda::set_stream
+ */
 void set_stream(CUstream_t stream) {
 #ifdef ORTEAF_ENABLE_CUDA
     (void)stream; // No driver API to set a global current stream.
@@ -28,6 +38,9 @@ void set_stream(CUstream_t stream) {
 #endif
 }
 
+/**
+ * @copydoc orteaf::internal::backend::cuda::release_stream
+ */
 void release_stream(CUstream_t stream) {
 #ifdef ORTEAF_ENABLE_CUDA
     if (!stream) return;
@@ -39,6 +52,9 @@ void release_stream(CUstream_t stream) {
 #endif
 }
 
+/**
+ * @copydoc orteaf::internal::backend::cuda::synchronize_stream
+ */
 void synchronize_stream(CUstream_t stream) {
 #ifdef ORTEAF_ENABLE_CUDA
     CUstream objc_stream = objc_from_opaque_noown<CUstream>(stream);
@@ -48,6 +64,9 @@ void synchronize_stream(CUstream_t stream) {
 #endif
 }
 
+/**
+ * @copydoc orteaf::internal::backend::cuda::wait_stream
+ */
 void wait_stream(CUstream_t stream, CUdeviceptr_t addr, uint32_t value) {
 #ifdef ORTEAF_ENABLE_CUDA
     CUstream objc_stream = objc_from_opaque_noown<CUstream>(stream);
@@ -60,6 +79,9 @@ void wait_stream(CUstream_t stream, CUdeviceptr_t addr, uint32_t value) {
 #endif
 }
 
+/**
+ * @copydoc orteaf::internal::backend::cuda::write_stream
+ */
 void write_stream(CUstream_t stream, CUdeviceptr_t addr, uint32_t value) {
 #ifdef ORTEAF_ENABLE_CUDA
     CUstream objc_stream = objc_from_opaque_noown<CUstream>(stream);
