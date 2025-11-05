@@ -1,3 +1,12 @@
+/**
+ * @file cuda_dim.h
+ * @brief Lightweight POD types and helpers for CUDA 3D dimensions.
+ *
+ * Defines `CudaDim3_t` and `CudaUInt3_t` as plain 3x32-bit structs that mirror
+ * CUDA's `dim3` and `uint3` layout/ABI. Conversion helpers are provided when
+ * CUDA is enabled in headers that include `<vector_types.h>`; otherwise size
+ * checks verify ABI assumptions.
+ */
 #pragma once
 
 #include <cstdint>
@@ -6,6 +15,9 @@
 #include <vector_types.h>
 #endif
 
+/**
+ * @brief 3D grid/block shape (unsigned 32-bit components).
+ */
 struct CudaDim3_st {
     std::uint32_t x;
     std::uint32_t y;
@@ -14,6 +26,9 @@ struct CudaDim3_st {
 
 using CudaDim3_t = CudaDim3_st;
 
+/**
+ * @brief Generic 3D unsigned vector (uint3 equivalent).
+ */
 struct CudaUInt3_st {
     std::uint32_t x;
     std::uint32_t y;
@@ -32,14 +47,24 @@ static_assert(sizeof(CudaUInt3_t) == sizeof(uint3), "uint3 has unexpected size."
 
 namespace orteaf::internal::backend::cuda {
 
+/**
+ * @brief Construct a `CudaDim3_t` from components.
+ */
 CudaDim3_t make_dim3(std::uint32_t x, std::uint32_t y, std::uint32_t z) noexcept;
+/**
+ * @brief Construct a `CudaUInt3_t` from components.
+ */
 CudaUInt3_t make_uint3(std::uint32_t x, std::uint32_t y, std::uint32_t z) noexcept;
 
 #ifndef ORTEAF_ENABLE_CUDA
+/** Convert `CudaDim3_t` to CUDA `dim3`. */
 dim3 to_cuda_dim3(CudaDim3_t value) noexcept;
+/** Convert CUDA `dim3` to `CudaDim3_t`. */
 CudaDim3_t from_cuda_dim3(dim3 value) noexcept;
 
+/** Convert `CudaUInt3_t` to CUDA `uint3`. */
 uint3 to_cuda_uint3(CudaUInt3_t value) noexcept;
+/** Convert CUDA `uint3` to `CudaUInt3_t`. */
 CudaUInt3_t from_cuda_uint3(uint3 value) noexcept;
 #endif
 
