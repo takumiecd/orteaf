@@ -1,10 +1,14 @@
-# Doxygen configuration for ORTEAF user documentation (English - default).
+# Doxygen configuration for ORTEAF user documentation (Japanese).
+
+# Encoding settings for Japanese
+DOXYFILE_ENCODING      = UTF-8
+INPUT_ENCODING         = UTF-8
 
 PROJECT_NAME           = "ORTEAF User"
-PROJECT_BRIEF          = "Public API documentation"
+PROJECT_BRIEF          = "公開APIドキュメント"
 
-OUTPUT_LANGUAGE        = English
-OUTPUT_DIRECTORY       = docs/api-user
+OUTPUT_LANGUAGE        = Japanese
+OUTPUT_DIRECTORY       = docs/api-user/ja
 GENERATE_HTML          = YES
 GENERATE_LATEX         = NO
 
@@ -23,7 +27,7 @@ EXTRACT_ALL            = NO
 ENABLE_PREPROCESSING   = YES
 MACRO_EXPANSION        = YES
 EXPAND_ONLY_PREDEF     = NO
-PREDEFINED             =
+PREDEFINED             = JA
 
 GENERATE_TREEVIEW      = YES
 FULL_PATH_NAMES        = NO

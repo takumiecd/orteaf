@@ -1,28 +1,23 @@
-# Doxygen configuration for ORTEAF developer documentation (English - default).
+# Doxygen configuration for ORTEAF test documentation (Japanese).
 
-PROJECT_NAME           = "ORTEAF Developer"
-PROJECT_BRIEF          = "Internal architecture and extension reference"
+# Encoding settings for Japanese
+DOXYFILE_ENCODING      = UTF-8
+INPUT_ENCODING         = UTF-8
 
-OUTPUT_LANGUAGE        = English
-OUTPUT_DIRECTORY       = docs/api-developer
+PROJECT_NAME           = "ORTEAF Tests"
+PROJECT_BRIEF          = "ORTEAFのテストスイートと仕様"
+
+OUTPUT_LANGUAGE        = Japanese
+OUTPUT_DIRECTORY       = docs/api-tests/ja
 GENERATE_HTML          = YES
 GENERATE_LATEX         = NO
 
-INPUT                  = orteaf/include \
-                         orteaf/src \
-                         docs/developer
-FILE_PATTERNS          = *.h \
-                         *.hpp \
-                         *.hh \
-                         *.cpp \
+INPUT                  = tests
+FILE_PATTERNS          = *.cpp \
                          *.cc \
                          *.cxx \
                          *.md
 RECURSIVE              = YES
-
-EXCLUDE                = tests
-
-EXCLUDE_PATTERNS       =
 
 EXTRACT_PRIVATE        = NO
 EXTRACT_STATIC         = NO
@@ -32,7 +27,8 @@ EXTRACT_ALL            = NO
 ENABLE_PREPROCESSING   = YES
 MACRO_EXPANSION        = YES
 EXPAND_ONLY_PREDEF     = NO
-PREDEFINED             = ORTEAF_STATS_LEVEL_GLOBAL_VALUE=8 \
+PREDEFINED             = JA \
+                         ORTEAF_STATS_LEVEL_GLOBAL_VALUE=8 \
                          ORTEAF_STATS_LEVEL_CPU_VALUE=8 \
                          ORTEAF_STATS_LEVEL_CUDA_VALUE=8 \
                          ORTEAF_STATS_LEVEL_MPS_VALUE=8 \
@@ -47,4 +43,5 @@ INLINE_SOURCES         = NO
 WARN_IF_UNDOCUMENTED   = NO
 QUIET                  = NO
 WARNINGS               = YES
+
 SEARCHENGINE           = NO

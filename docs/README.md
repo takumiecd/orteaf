@@ -19,9 +19,16 @@ ORTEAF に関するドキュメントの索引です。目的に応じて以下�
 - TDD チェックリスト: [docs/developer/testing-strategy.md](developer/testing-strategy.md)
 
 ## ドキュメント生成
-- ユーザー向け Doxygen: `docs/Doxyfile.user`
-- 開発者向け Doxygen: `docs/Doxyfile.developer`
-- テスト専用 Doxygen: `docs/Doxyfile.tests`
+- ユーザー向け Doxygen:
+  - 英語版（デフォルト）: `docs/Doxyfile.user` → `docs/api-user/`
+  - 日本語版: `docs/Doxyfile.user.ja` → `docs/api-user/ja/`
+- 開発者向け Doxygen:
+  - 英語版（デフォルト）: `docs/Doxyfile.developer` → `docs/api-developer/`
+  - 日本語版: `docs/Doxyfile.developer.ja` → `docs/api-developer/ja/`
+- テスト専用 Doxygen:
+  - 英語版（デフォルト）: `docs/Doxyfile.tests` → `docs/api-tests/`
+  - 日本語版: `docs/Doxyfile.tests.ja` → `docs/api-tests/ja/`
+- ソースコード内のコメントは `\if JA` / `\else` / `\endif` を使って英語と日本語を切り替えます。
 
 ## CI
 - GitHub Actions ワークフロー: `.github/workflows/ci.yml`

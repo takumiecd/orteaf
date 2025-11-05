@@ -1,13 +1,14 @@
-# Doxygen configuration for ORTEAF test documentation.
+# Doxygen configuration for ORTEAF test documentation (English - default).
 
 PROJECT_NAME           = "ORTEAF Tests"
 PROJECT_BRIEF          = "Test suites and specifications for ORTEAF"
 
+OUTPUT_LANGUAGE        = English
 OUTPUT_DIRECTORY       = docs/api-tests
 GENERATE_HTML          = YES
 GENERATE_LATEX         = NO
 
-INPUT                  = ../tests
+INPUT                  = tests
 FILE_PATTERNS          = *.cpp \
                          *.cc \
                          *.cxx \

@@ -27,7 +27,7 @@ docs/
   developer/design.md  # Architecture + access boundaries
   developer/testing-strategy.md # Checklist-oriented TDD guidance
   developer/environment.md      # Docker/shared environment instructions
-  Doxyfile             # Doxygen config (output to docs/api/)
+  Doxyfile.* / Doxyfile.*.ja    # Doxygen configs (default=English, .ja=Japanese)
 docker/dev/Dockerfile  # Linux dev container with cmake/clang/doxygen
 scripts/setup-mps.sh   # Placeholder for macOS Metal setup
 ```
@@ -37,14 +37,16 @@ scripts/setup-mps.sh   # Placeholder for macOS Metal setup
    `cmake -S . -B build -DENABLE_CUDA=ON -DORTEAF_STATS_LEVEL=STATS_BASIC`
 2. Build: `cmake --build build`
 3. To generate docs (requires Doxygen):  
-   `doxygen docs/Doxyfile` → output under `docs/api/html/`.
+   `doxygen docs/Doxyfile.user` → output under `docs/api-user/html/` (English, default)  
+   `doxygen docs/Doxyfile.user.ja` → output under `docs/api-user/ja/html/` (Japanese)  
+   (Similar for `.developer` and `.tests` configs)
 4. Tests currently require Googletest via FetchContent (network access or vendored dependency). Tests are expected to mirror the `user/extension/internal` structure.
 
 ## Documentation Links
 - Architecture overview: `docs/developer/design.md`
 - Extension guidelines: `docs/developer/extension-guide.md`
 - Environment setup (Docker, MPS placeholder, WSL): `docs/developer/environment.md`
-- Doxygen configs: `docs/Doxyfile` (core) / `docs/Doxyfile.tests` (tests)
+- Doxygen configs: `docs/Doxyfile.user` (default=English), `docs/Doxyfile.user.ja` (Japanese), etc.
 - Testing checklist for TDD: `docs/developer/testing-strategy.md`
 - Roadmap / challenge log templates: `docs/roadmap.md`, `docs/challenge-log.md`
 

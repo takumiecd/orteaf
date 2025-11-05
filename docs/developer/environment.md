@@ -28,10 +28,19 @@
 ## Doxygen
 - Docker イメージに Doxygen を含めているため、コンテナ内で以下を実行すればドキュメント生成が可能:
   ```bash
-  doxygen docs/Doxyfile.user         # 公開 API ドキュメント
-  doxygen docs/Doxyfile.developer    # 開発者向けドキュメント
-  doxygen docs/Doxyfile.tests        # テストスイート専用ドキュメント
+  # 英語版ドキュメント（デフォルト）
+  doxygen docs/Doxyfile.user         # 公開 API ドキュメント（英語）
+  doxygen docs/Doxyfile.developer    # 開発者向けドキュメント（英語）
+  doxygen docs/Doxyfile.tests        # テストスイート専用ドキュメント（英語）
+  
+  # 日本語版ドキュメント
+  doxygen docs/Doxyfile.user.ja         # 公開 API ドキュメント（日本語）
+  doxygen docs/Doxyfile.developer.ja    # 開発者向けドキュメント（日本語）
+  doxygen docs/Doxyfile.tests.ja        # テストスイート専用ドキュメント（日本語）
   ```
-- 出力先はそれぞれ `docs/api-user/`、`docs/api-developer/`、`docs/api-tests/`。
+- 出力先はそれぞれ:
+  - 英語版: `docs/api-user/`、`docs/api-developer/`、`docs/api-tests/`
+  - 日本語版: `docs/api-user/ja/`、`docs/api-developer/ja/`、`docs/api-tests/ja/`
+- ソースコード内のコメントは `\if JA` / `\else` / `\endif` を使って英語と日本語を切り替えます。
 
 > このガイドは暫定版です。環境構築手順が固まり次第アップデートしてください。
