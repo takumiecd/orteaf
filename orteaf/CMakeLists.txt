@@ -36,9 +36,33 @@ target_compile_definitions(orteaf_extension INTERFACE
     ORTEAF_STATS_LEVEL_CORE_VALUE=${ORTEAF_STATS_LEVEL_CORE_VALUE_NUMERIC}
 )
 
-file(GLOB_RECURSE ORTEAF_SOURCES CONFIGURE_DEPENDS
+# Collect source files by backend
+# Common files (always compiled) - all .cpp files
+file(GLOB_RECURSE ORTEAF_SOURCES_COMMON CONFIGURE_DEPENDS
     ${ORTEAF_SOURCE_ROOT}/src/*.cpp
-    ${ORTEAF_SOURCE_ROOT}/src/*.mm
+)
+
+# CUDA backend sources - all .cu files in src/
+set(ORTEAF_SOURCES_CUDA "")
+if(ORTEAF_ENABLE_CUDA_INT)
+    file(GLOB_RECURSE ORTEAF_SOURCES_CUDA CONFIGURE_DEPENDS
+        ${ORTEAF_SOURCE_ROOT}/src/*.cu
+    )
+endif()
+
+# MPS backend sources - all .mm files in src/
+set(ORTEAF_SOURCES_MPS "")
+if(ORTEAF_ENABLE_MPS_INT)
+    file(GLOB_RECURSE ORTEAF_SOURCES_MPS CONFIGURE_DEPENDS
+        ${ORTEAF_SOURCE_ROOT}/src/*.mm
+    )
+endif()
+
+# Combine all sources
+set(ORTEAF_SOURCES
+    ${ORTEAF_SOURCES_COMMON}
+    ${ORTEAF_SOURCES_CUDA}
+    ${ORTEAF_SOURCES_MPS}
 )
 
 if(ORTEAF_SOURCES)

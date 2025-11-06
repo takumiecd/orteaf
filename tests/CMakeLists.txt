@@ -24,22 +24,34 @@ endif()
 
 enable_testing()
 
-# Collect C++ test sources
-file(GLOB_RECURSE ORTEAF_TEST_SOURCES_CPP CONFIGURE_DEPENDS
+# Collect test sources by backend
+# Common tests (always compiled) - all .cpp files
+file(GLOB_RECURSE ORTEAF_TEST_SOURCES_COMMON CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
 )
 
-# Filter out CUDA tests if CUDA is disabled
-if(NOT ORTEAF_ENABLE_CUDA_INT)
-    list(FILTER ORTEAF_TEST_SOURCES_CPP EXCLUDE REGEX ".*/cuda/.*\\.cpp$")
+# CUDA backend tests - all .cu files in tests/
+set(ORTEAF_TEST_SOURCES_CUDA "")
+if(ORTEAF_ENABLE_CUDA_INT)
+    file(GLOB_RECURSE ORTEAF_TEST_SOURCES_CUDA CONFIGURE_DEPENDS
+        ${CMAKE_CURRENT_SOURCE_DIR}/*.cu
+    )
 endif()
 
-# Collect Objective-C++ test sources (for MPS tests)
-file(GLOB_RECURSE ORTEAF_TEST_SOURCES_MM CONFIGURE_DEPENDS
-    ${CMAKE_CURRENT_SOURCE_DIR}/*.mm
-)
+# MPS backend tests - all .mm files in tests/
+set(ORTEAF_TEST_SOURCES_MPS "")
+if(ORTEAF_ENABLE_MPS_INT)
+    file(GLOB_RECURSE ORTEAF_TEST_SOURCES_MPS CONFIGURE_DEPENDS
+        ${CMAKE_CURRENT_SOURCE_DIR}/*.mm
+    )
+endif()
 
-set(ORTEAF_TEST_SOURCES ${ORTEAF_TEST_SOURCES_CPP} ${ORTEAF_TEST_SOURCES_MM})
+# Combine all test sources
+set(ORTEAF_TEST_SOURCES
+    ${ORTEAF_TEST_SOURCES_COMMON}
+    ${ORTEAF_TEST_SOURCES_CUDA}
+    ${ORTEAF_TEST_SOURCES_MPS}
+)
 
 if(ORTEAF_TEST_SOURCES)
     add_executable(orteaf_tests ${ORTEAF_TEST_SOURCES})
@@ -64,7 +76,7 @@ if(ORTEAF_TEST_SOURCES)
     )
     
     # Link Metal/MPS frameworks on macOS when MPS tests are present
-    if(APPLE AND ORTEAF_TEST_SOURCES_MM)
+    if(APPLE AND ORTEAF_ENABLE_MPS_INT)
         target_link_libraries(orteaf_tests
             PRIVATE
                 "-framework Metal"

@@ -18,6 +18,15 @@ option(ENABLE_CPU "Enable CPU runtime" ON)
 option(ENABLE_CUDA "Enable CUDA runtime" OFF)
 option(ENABLE_MPS "Enable Metal (MPS) runtime" OFF)
 
+# Warn if CPU backend is disabled (unusual)
+if(NOT ENABLE_CPU)
+    message(WARNING 
+        "CPU backend is disabled. "
+        "This is unusual and may cause compatibility issues. "
+        "Most code expects CPU backend to be available."
+    )
+endif()
+
 # Enable CTest at the top level so `ctest` from the build dir works.
 enable_testing()
 
