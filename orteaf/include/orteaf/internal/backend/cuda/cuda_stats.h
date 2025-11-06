@@ -21,90 +21,123 @@ namespace orteaf::internal::backend::cuda {
  */
 class CudaStats {
 public:
-    // STATS_BASIC(2) or STATS_EXTENDED(4) enabled
-#ifdef ORTEAF_STATS_LEVEL_CUDA_VALUE
-    #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 2
-        // Getter methods for basic stats
-        /**
-         * @brief Get the total number of allocations performed.
-         *
-         * @return Total number of memory allocations since initialization.
-         */
-        uint64_t total_allocations() const noexcept {
-            return total_allocations_.load(std::memory_order_relaxed);
-        }
-        
-        /**
-         * @brief Get the total number of deallocations performed.
-         *
-         * @return Total number of memory deallocations since initialization.
-         */
-        uint64_t total_deallocations() const noexcept {
-            return total_deallocations_.load(std::memory_order_relaxed);
-        }
-        
-        /**
-         * @brief Get the number of currently active allocations.
-         *
-         * This is the difference between total allocations and total deallocations.
-         *
-         * @return Number of allocations that have not been deallocated.
-         */
-        uint64_t active_allocations() const noexcept {
-            return active_allocations_.load(std::memory_order_relaxed);
-        }
-        
-        /**
-         * @brief Get the number of device switches.
-         *
-         * @return Total number of CUDA device context switches since initialization.
-         */
-        uint64_t device_switches() const noexcept {
-            return device_switches_.load(std::memory_order_relaxed);
-        }
-    #endif
+    // Getter methods - always defined, return values based on stats level
+    /**
+     * @brief Get the total number of allocations performed.
+     *
+     * @return Total number of memory allocations since initialization (0 if stats disabled).
+     */
+    uint64_t total_allocations() const noexcept {
+        #ifdef ORTEAF_STATS_LEVEL_CUDA_VALUE
+            #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 2
+                return total_allocations_.load(std::memory_order_relaxed);
+            #endif
+        #endif
+        return 0;
+    }
     
-    #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 4
-        // Getter methods for extended stats
-        /**
-         * @brief Get the current number of allocated bytes.
-         *
-         * @return Total number of bytes currently allocated (not yet deallocated).
-         */
-        uint64_t current_allocated_bytes() const noexcept {
-            return current_allocated_bytes_.load(std::memory_order_relaxed);
-        }
-        
-        /**
-         * @brief Get the peak number of allocated bytes.
-         *
-         * This represents the maximum number of bytes that were simultaneously allocated
-         * at any point since initialization.
-         *
-         * @return Peak number of allocated bytes.
-         */
-        uint64_t peak_allocated_bytes() const noexcept {
-            return peak_allocated_bytes_.load(std::memory_order_relaxed);
-        }
-        
-        /**
-         * @brief Get the number of currently active events.
-         *
-         * @return Number of CUDA events that have been created but not yet destroyed.
-         */
-        uint64_t active_events() const noexcept {
-            return active_events_.load(std::memory_order_relaxed);
-        }
-        
-        /**
-         * @brief Get the number of currently active streams.
-         *
-         * @return Number of CUDA streams that have been created but not yet destroyed.
-         */
-        uint64_t active_streams() const noexcept {
-            return active_streams_.load(std::memory_order_relaxed);
-        }
-    #endif
+    /**
+     * @brief Get the total number of deallocations performed.
+     *
+     * @return Total number of memory deallocations since initialization (0 if stats disabled).
+     */
+    uint64_t total_deallocations() const noexcept {
+        #ifdef ORTEAF_STATS_LEVEL_CUDA_VALUE
+            #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 2
+                return total_deallocations_.load(std::memory_order_relaxed);
+            #endif
+        #endif
+        return 0;
+    }
+    
+    /**
+     * @brief Get the number of currently active allocations.
+     *
+     * This is the difference between total allocations and total deallocations.
+     *
+     * @return Number of allocations that have not been deallocated (0 if stats disabled).
+     */
+    uint64_t active_allocations() const noexcept {
+        #ifdef ORTEAF_STATS_LEVEL_CUDA_VALUE
+            #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 2
+                return active_allocations_.load(std::memory_order_relaxed);
+            #endif
+        #endif
+        return 0;
+    }
+    
+    /**
+     * @brief Get the number of device switches.
+     *
+     * @return Total number of CUDA device context switches since initialization (0 if stats disabled).
+     */
+    uint64_t device_switches() const noexcept {
+        #ifdef ORTEAF_STATS_LEVEL_CUDA_VALUE
+            #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 2
+                return device_switches_.load(std::memory_order_relaxed);
+            #endif
+        #endif
+        return 0;
+    }
+    
+    /**
+     * @brief Get the current number of allocated bytes.
+     *
+     * @return Total number of bytes currently allocated (0 if stats disabled or not tracking bytes).
+     */
+    uint64_t current_allocated_bytes() const noexcept {
+        #ifdef ORTEAF_STATS_LEVEL_CUDA_VALUE
+            #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 4
+                return current_allocated_bytes_.load(std::memory_order_relaxed);
+            #endif
+        #endif
+        return 0;
+    }
+    
+    /**
+     * @brief Get the peak number of allocated bytes.
+     *
+     * This represents the maximum number of bytes that were simultaneously allocated
+     * at any point since initialization.
+     *
+     * @return Peak number of allocated bytes (0 if stats disabled or not tracking bytes).
+     */
+    uint64_t peak_allocated_bytes() const noexcept {
+        #ifdef ORTEAF_STATS_LEVEL_CUDA_VALUE
+            #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 4
+                return peak_allocated_bytes_.load(std::memory_order_relaxed);
+            #endif
+        #endif
+        return 0;
+    }
+    
+    /**
+     * @brief Get the number of currently active events.
+     *
+     * @return Number of CUDA events that have been created but not yet destroyed (0 if stats disabled or not tracking events).
+     */
+    uint64_t active_events() const noexcept {
+        #ifdef ORTEAF_STATS_LEVEL_CUDA_VALUE
+            #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 4
+                return active_events_.load(std::memory_order_relaxed);
+            #endif
+        #endif
+        return 0;
+    }
+    
+    /**
+     * @brief Get the number of currently active streams.
+     *
+     * @return Number of CUDA streams that have been created but not yet destroyed (0 if stats disabled or not tracking streams).
+     */
+    uint64_t active_streams() const noexcept {
+        #ifdef ORTEAF_STATS_LEVEL_CUDA_VALUE
+            #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 4
+                return active_streams_.load(std::memory_order_relaxed);
+            #endif
+        #endif
+        return 0;
+    }
     
     // Update methods (handles both BASIC and EXTENDED levels)
     /**
@@ -116,16 +149,18 @@ public:
      * @param size Size of the allocated memory in bytes.
      */
     void update_alloc(size_t size) noexcept {
-        #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 2
-            total_allocations_.fetch_add(1, std::memory_order_relaxed);
-            active_allocations_.fetch_add(1, std::memory_order_relaxed);
-        #endif
-        #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 4
-            uint64_t current = current_allocated_bytes_.fetch_add(size, std::memory_order_relaxed) + size;
-            uint64_t peak = peak_allocated_bytes_.load(std::memory_order_relaxed);
-            while (current > peak && !peak_allocated_bytes_.compare_exchange_weak(peak, current, std::memory_order_relaxed)) {
-                peak = peak_allocated_bytes_.load(std::memory_order_relaxed);
-            }
+        #ifdef ORTEAF_STATS_LEVEL_CUDA_VALUE
+            #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 2
+                total_allocations_.fetch_add(1, std::memory_order_relaxed);
+                active_allocations_.fetch_add(1, std::memory_order_relaxed);
+            #endif
+            #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 4
+                uint64_t current = current_allocated_bytes_.fetch_add(size, std::memory_order_relaxed) + size;
+                uint64_t peak = peak_allocated_bytes_.load(std::memory_order_relaxed);
+                while (current > peak && !peak_allocated_bytes_.compare_exchange_weak(peak, current, std::memory_order_relaxed)) {
+                    peak = peak_allocated_bytes_.load(std::memory_order_relaxed);
+                }
+            #endif
         #endif
     }
     
@@ -138,121 +173,95 @@ public:
      * @param size Size of the deallocated memory in bytes.
      */
     void update_dealloc(size_t size) noexcept {
-        #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 2
-            total_deallocations_.fetch_add(1, std::memory_order_relaxed);
-            active_allocations_.fetch_sub(1, std::memory_order_relaxed);
-        #endif
-        #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 4
-            current_allocated_bytes_.fetch_sub(size, std::memory_order_relaxed);
+        #ifdef ORTEAF_STATS_LEVEL_CUDA_VALUE
+            #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 2
+                total_deallocations_.fetch_add(1, std::memory_order_relaxed);
+                active_allocations_.fetch_sub(1, std::memory_order_relaxed);
+            #endif
+            #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 4
+                current_allocated_bytes_.fetch_sub(size, std::memory_order_relaxed);
+            #endif
         #endif
     }
     
-    // CUDA-specific update methods
-    #ifdef ORTEAF_STATS_LEVEL_CUDA_VALUE
-        #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 2
-            /**
-             * @brief Update statistics when a device switch occurs.
-             *
-             * Increments the device switch counter.
-             */
-            void update_device_switch() noexcept {
+    // CUDA-specific update methods - always defined, implementation depends on stats level
+    /**
+     * @brief Update statistics when a device switch occurs.
+     *
+     * Increments the device switch counter (only if STATS_BASIC or better is enabled).
+     */
+    void update_device_switch() noexcept {
+        #ifdef ORTEAF_STATS_LEVEL_CUDA_VALUE
+            #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 2
                 device_switches_.fetch_add(1, std::memory_order_relaxed);
-            }
+            #endif
         #endif
-        
-        #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 4
-            /**
-             * @brief Update statistics when a CUDA event is created.
-             *
-             * Increments the active events counter.
-             */
-            void update_create_event() noexcept {
+    }
+    
+    /**
+     * @brief Update statistics when a CUDA event is created.
+     *
+     * Increments the active events counter (only if STATS_EXTENDED is enabled).
+     */
+    void update_create_event() noexcept {
+        #ifdef ORTEAF_STATS_LEVEL_CUDA_VALUE
+            #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 4
                 active_events_.fetch_add(1, std::memory_order_relaxed);
-            }
-            
-            /**
-             * @brief Update statistics when a CUDA event is destroyed.
-             *
-             * Decrements the active events counter.
-             */
-            void update_destroy_event() noexcept {
+            #endif
+        #endif
+    }
+    
+    /**
+     * @brief Update statistics when a CUDA event is destroyed.
+     *
+     * Decrements the active events counter (only if STATS_EXTENDED is enabled).
+     */
+    void update_destroy_event() noexcept {
+        #ifdef ORTEAF_STATS_LEVEL_CUDA_VALUE
+            #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 4
                 active_events_.fetch_sub(1, std::memory_order_relaxed);
-            }
-            
-            /**
-             * @brief Update statistics when a CUDA stream is created.
-             *
-             * Increments the active streams counter.
-             */
-            void update_create_stream() noexcept {
-                active_streams_.fetch_add(1, std::memory_order_relaxed);
-            }
-            
-            /**
-             * @brief Update statistics when a CUDA stream is destroyed.
-             *
-             * Decrements the active streams counter.
-             */
-            void update_destroy_stream() noexcept {
-                active_streams_.fetch_sub(1, std::memory_order_relaxed);
-            }
-            
-            /**
-             * @brief Update statistics when an event becomes active.
-             *
-             * Increments the active events counter.
-             */
-            void update_active_event() noexcept {
-                active_events_.fetch_add(1, std::memory_order_relaxed);
-            }
+            #endif
         #endif
-    #endif
-#else
-    // When stats are disabled, provide no-op methods
+    }
+    
     /**
-     * @brief No-op method when statistics are disabled.
+     * @brief Update statistics when a CUDA stream is created.
      *
-     * @param size Ignored.
+     * Increments the active streams counter (only if STATS_EXTENDED is enabled).
      */
-    void update_alloc(size_t) noexcept {}
+    void update_create_stream() noexcept {
+        #ifdef ORTEAF_STATS_LEVEL_CUDA_VALUE
+            #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 4
+                active_streams_.fetch_add(1, std::memory_order_relaxed);
+            #endif
+        #endif
+    }
     
     /**
-     * @brief No-op method when statistics are disabled.
+     * @brief Update statistics when a CUDA stream is destroyed.
      *
-     * @param size Ignored.
+     * Decrements the active streams counter (only if STATS_EXTENDED is enabled).
      */
-    void update_dealloc(size_t) noexcept {}
+    void update_destroy_stream() noexcept {
+        #ifdef ORTEAF_STATS_LEVEL_CUDA_VALUE
+            #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 4
+                active_streams_.fetch_sub(1, std::memory_order_relaxed);
+            #endif
+        #endif
+    }
     
     /**
-     * @brief No-op method when statistics are disabled.
+     * @brief Update statistics when an event becomes active.
+     *
+     * Increments the active events counter (only if STATS_EXTENDED is enabled).
      */
-    void update_device_switch() noexcept {}
-    
-    /**
-     * @brief No-op method when statistics are disabled.
-     */
-    void update_create_event() noexcept {}
-    
-    /**
-     * @brief No-op method when statistics are disabled.
-     */
-    void update_destroy_event() noexcept {}
-    
-    /**
-     * @brief No-op method when statistics are disabled.
-     */
-    void update_create_stream() noexcept {}
-    
-    /**
-     * @brief No-op method when statistics are disabled.
-     */
-    void update_destroy_stream() noexcept {}
-    
-    /**
-     * @brief No-op method when statistics are disabled.
-     */
-    void update_active_event() noexcept {}
-#endif
+    void update_active_event() noexcept {
+        #ifdef ORTEAF_STATS_LEVEL_CUDA_VALUE
+            #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 4
+                active_events_.fetch_add(1, std::memory_order_relaxed);
+            #endif
+        #endif
+    }
 
     /**
      * @brief Convert statistics to a human-readable string representation.
