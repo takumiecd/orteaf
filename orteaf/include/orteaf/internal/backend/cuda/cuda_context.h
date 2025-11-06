@@ -10,12 +10,12 @@
 
 #include "orteaf/internal/backend/cuda/cuda_device.h"
 
+namespace orteaf::internal::backend::cuda {
+
 struct CUcontext_st;
 using CUcontext_t = CUcontext_st*;
 
 static_assert(sizeof(CUcontext_t) == sizeof(void*), "CUcontext_t must be pointer-sized.");
-
-namespace orteaf::internal::backend::cuda {
 
 /**
  * @brief Retain and return the primary context for a device.

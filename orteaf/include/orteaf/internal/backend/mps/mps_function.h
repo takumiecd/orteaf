@@ -6,13 +6,13 @@
 
 #include <string_view>
 
-struct MPSFunction_st; using MPSFunction_t = MPSFunction_st*;
-
 #include "orteaf/internal/backend/mps/mps_library.h"
 
-static_assert(sizeof(MPSFunction_t) == sizeof(void*), "MPSFunction must be pointer-sized.");
-
 namespace orteaf::internal::backend::mps {
+
+struct MPSFunction_st; using MPSFunction_t = MPSFunction_st*;
+
+static_assert(sizeof(MPSFunction_t) == sizeof(void*), "MPSFunction must be pointer-sized.");
 
 /**
  * @brief Create a Metal function by name from a library.

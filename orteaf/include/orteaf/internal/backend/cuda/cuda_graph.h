@@ -10,13 +10,13 @@
 
 #include "orteaf/internal/backend/cuda/cuda_stream.h"
 
+namespace orteaf::internal::backend::cuda {
+
 struct CUgraph_st;
 using CUgraph_t = CUgraph_st*;
 
 struct CUgraphExec_st;
 using CUgraphExec_t = CUgraphExec_st*;
-
-namespace orteaf::internal::backend::cuda {
 
 /**
  * @brief Create an empty CUDA graph.

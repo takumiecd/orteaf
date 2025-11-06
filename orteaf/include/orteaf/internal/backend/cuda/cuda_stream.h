@@ -9,6 +9,8 @@
 #include <cstdint>
 #include "orteaf/internal/backend/cuda/cuda_device.h"
 
+namespace orteaf::internal::backend::cuda {
+
 struct CUstream_st;
 using CUstream_t = CUstream_st*;
 using CUdeviceptr_t = std::uint64_t;
@@ -17,8 +19,6 @@ static_assert(sizeof(CUdeviceptr_t) == sizeof(std::uint64_t), "CUdeviceptr_t mus
 
 // ABI guard: must be pointer-sized on every platform
 static_assert(sizeof(CUstream_t) == sizeof(void*), "CUstream_t must be pointer-sized.");
-
-namespace orteaf::internal::backend::cuda {
 
 /**
  * @brief Create a new non-blocking CUDA stream.

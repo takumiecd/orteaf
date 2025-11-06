@@ -10,11 +10,11 @@
 
 #include "orteaf/internal/backend/mps/mps_device.h"
 
+namespace orteaf::internal::backend::mps {
+
 struct MPSCommandQueue_st; using MPSCommandQueue_t = MPSCommandQueue_st*;
 
 static_assert(sizeof(MPSCommandQueue_t) == sizeof(void*), "MPSCommandQueue must be pointer-sized.");
-
-namespace orteaf::internal::backend::mps {
 
 /**
  * @brief Create a command queue for a device.

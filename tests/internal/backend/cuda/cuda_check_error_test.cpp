@@ -11,7 +11,7 @@
 namespace cuda = orteaf::internal::backend::cuda;
 namespace diag = orteaf::internal::diagnostics::error;
 
-#ifdef ORTEAF_ENABLE_CUDA
+#if ORTEAF_ENABLE_CUDA
 
 /**
  * @brief Test that map_runtime_errc maps CUDA errors correctly.

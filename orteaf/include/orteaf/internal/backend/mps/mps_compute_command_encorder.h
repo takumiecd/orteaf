@@ -11,11 +11,11 @@
 
 #include <cstddef>
 
+namespace orteaf::internal::backend::mps {
+
 struct MPSComputeCommandEncoder_st; using MPSComputeCommandEncoder_t = MPSComputeCommandEncoder_st*;
 
 static_assert(sizeof(MPSComputeCommandEncoder_t) == sizeof(void*), "MPSComputeCommandEncoder must be pointer-sized.");
-
-namespace orteaf::internal::backend::mps {
 
 /** Create a compute command encoder from a command buffer. */
 MPSComputeCommandEncoder_t create_compute_command_encoder(MPSCommandBuffer_t command_buffer);

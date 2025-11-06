@@ -8,14 +8,15 @@
  */
 #pragma once
 
+#include "orteaf/internal/backend/cuda/cuda_stream.h"
+
+namespace orteaf::internal::backend::cuda {
+
 struct CUevent_st;
 using CUevent_t = CUevent_st*;
 
-#include "orteaf/internal/backend/cuda/cuda_stream.h"
-
 static_assert(sizeof(CUevent_t) == sizeof(void*), "CUevent_t must be pointer-sized.");
 
-namespace orteaf::internal::backend::cuda {
 /**
  * @brief Create a CUDA event with timing disabled.
  * @return Opaque event handle, or nullptr when CUDA is disabled.

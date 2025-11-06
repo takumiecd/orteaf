@@ -6,11 +6,11 @@
 
 #include <string_view>
 
+namespace orteaf::internal::backend::mps {
+
 struct MPSString_st; using MPSString_t = MPSString_st*;
 
 static_assert(sizeof(MPSString_t) == sizeof(void*), "MPSString must be pointer-sized.");
-
-namespace orteaf::internal::backend::mps {
 
 /**
  * @brief Convert std::string_view to NSString*.

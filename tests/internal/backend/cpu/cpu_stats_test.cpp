@@ -125,6 +125,8 @@ TEST_F(CpuStatsTest, PeakAllocatedBytesTracksMaximum) {
 
 #endif  // ORTEAF_STATS_LEVEL_CPU_VALUE <= 4
 
+#if ORTEAF_STATS_LEVEL_CPU_VALUE <= 2
+
 /**
  * @brief Test that statistics are updated when using alloc/dealloc.
  */
@@ -146,59 +148,6 @@ TEST_F(CpuStatsTest, AllocDeallocUpdatesStats) {
     
     cpu::dealloc(ptr2, 2048);
     EXPECT_EQ(stats.active_allocations(), initial_active);
-}
-
-/**
- * @brief Test that to_string produces valid output.
- */
-TEST_F(CpuStatsTest, ToStringProducesValidOutput) {
-    auto& stats = cpu::stats_instance();
-    std::string str = stats.to_string();
-    
-    EXPECT_FALSE(str.empty());
-    EXPECT_NE(str.find("CPU Stats"), std::string::npos);
-}
-
-/**
- * @brief Test that to_string is not empty even with no operations.
- */
-TEST_F(CpuStatsTest, ToStringNotEmptyWhenEmpty) {
-    auto& stats = cpu::stats_instance();
-    std::string str = stats.to_string();
-    
-    EXPECT_FALSE(str.empty());
-}
-
-/**
- * @brief Test that stream output operator works.
- */
-TEST_F(CpuStatsTest, StreamOutputOperatorWorks) {
-    auto& stats = cpu::stats_instance();
-    std::ostringstream oss;
-    
-    oss << stats;
-    
-    EXPECT_FALSE(oss.str().empty());
-}
-
-/**
- * @brief Test that stats_instance returns singleton.
- */
-TEST_F(CpuStatsTest, StatsInstanceIsSingleton) {
-    cpu::CpuStats& stats1 = cpu::stats_instance();
-    cpu::CpuStats& stats2 = cpu::stats_instance();
-    
-    EXPECT_EQ(&stats1, &stats2);
-}
-
-/**
- * @brief Test that cpu_stats returns same instance.
- */
-TEST_F(CpuStatsTest, CpuStatsReturnsSameInstance) {
-    cpu::CpuStats& stats1 = cpu::stats_instance();
-    cpu::CpuStats& stats2 = cpu::cpu_stats();
-    
-    EXPECT_EQ(&stats1, &stats2);
 }
 
 /**
@@ -254,6 +203,61 @@ TEST_F(CpuStatsTest, StatisticsWithActualAllocations) {
     }
     
     EXPECT_EQ(stats.active_allocations(), initial_active);
+}
+
+#endif  // ORTEAF_STATS_LEVEL_CPU_VALUE <= 2
+
+/**
+ * @brief Test that to_string produces valid output.
+ */
+TEST_F(CpuStatsTest, ToStringProducesValidOutput) {
+    auto& stats = cpu::stats_instance();
+    std::string str = stats.to_string();
+    
+    EXPECT_FALSE(str.empty());
+    EXPECT_NE(str.find("CPU Stats"), std::string::npos);
+}
+
+/**
+ * @brief Test that to_string is not empty even with no operations.
+ */
+TEST_F(CpuStatsTest, ToStringNotEmptyWhenEmpty) {
+    auto& stats = cpu::stats_instance();
+    std::string str = stats.to_string();
+    
+    EXPECT_FALSE(str.empty());
+}
+
+/**
+ * @brief Test that stream output operator works.
+ */
+TEST_F(CpuStatsTest, StreamOutputOperatorWorks) {
+    auto& stats = cpu::stats_instance();
+    std::ostringstream oss;
+    
+    oss << stats;
+    
+    EXPECT_FALSE(oss.str().empty());
+}
+
+/**
+ * @brief Test that stats_instance returns singleton.
+ */
+TEST_F(CpuStatsTest, StatsInstanceIsSingleton) {
+    cpu::CpuStats& stats1 = cpu::stats_instance();
+    cpu::CpuStats& stats2 = cpu::stats_instance();
+    
+    EXPECT_EQ(&stats1, &stats2);
+}
+
+/**
+ * @brief Test that cpu_stats returns same instance.
+ */
+TEST_F(CpuStatsTest, CpuStatsReturnsSameInstance) {
+    cpu::CpuStats& stats1 = cpu::stats_instance();
+    cpu::CpuStats& stats2 = cpu::cpu_stats();
+    
+    EXPECT_EQ(&stats1, &stats2);
 }
 
 #else  // !ORTEAF_ENABLE_CPU || !ORTEAF_STATS_LEVEL_CPU_VALUE

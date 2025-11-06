@@ -8,6 +8,8 @@
  */
 #pragma once
 
+namespace orteaf::internal::backend::cuda {
+
 struct CUmodule_st;
 using CUmodule_t = CUmodule_st*;
 
@@ -16,8 +18,6 @@ using CUfunction_t = CUfunction_st*;
 
 static_assert(sizeof(CUmodule_t) == sizeof(void*), "CUmodule_t must be pointer-sized.");
 static_assert(sizeof(CUfunction_t) == sizeof(void*), "CUfunction_t must be pointer-sized.");
-
-namespace orteaf::internal::backend::cuda {
 
 /**
  * @brief Load a CUDA module from a file path (PTX/CUBIN/FATBIN supported).

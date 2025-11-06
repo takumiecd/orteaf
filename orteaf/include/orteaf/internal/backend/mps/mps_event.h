@@ -7,6 +7,8 @@
 #include "orteaf/internal/backend/mps/mps_device.h"
 #include "orteaf/internal/backend/mps/mps_command_queue.h"
 
+namespace orteaf::internal::backend::mps {
+
 struct MPSEvent_st;
 struct MPSCommandBuffer_st;
 using MPSEvent_t = MPSEvent_st*;
@@ -14,8 +16,6 @@ using MPSCommandBuffer_t = MPSCommandBuffer_st*;
 
 static_assert(sizeof(MPSCommandBuffer_t) == sizeof(void*), "MPSCommandBuffer must be pointer-sized.");
 static_assert(sizeof(MPSEvent_t) == sizeof(void*), "MPSEvent_t must be pointer-sized.");
-
-namespace orteaf::internal::backend::mps {
 
 /** Create a shared event for a device (initial value = 0). */
 MPSEvent_t create_event(MPSDevice_t device);

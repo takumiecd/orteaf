@@ -7,11 +7,11 @@
 #include <string>
 #include <string_view>
 
+namespace orteaf::internal::backend::mps {
+
 struct MPSError_st; using MPSError_t = MPSError_st*;
 
 static_assert(sizeof(MPSError_t) == sizeof(void*), "MPSError must be pointer-sized.");
-
-namespace orteaf::internal::backend::mps {
 
 /** Create an error in NSCocoaErrorDomain with a description. */
 MPSError_t create_error(const std::string& message);

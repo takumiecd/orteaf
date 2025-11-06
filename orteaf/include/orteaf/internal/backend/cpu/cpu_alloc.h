@@ -54,6 +54,11 @@ inline std::size_t next_pow2(std::size_t x){
 }
 
 /**
+ * @brief Forward declaration of alloc_aligned.
+ */
+inline void* alloc_aligned(std::size_t size, std::size_t alignment);
+
+/**
  * @brief Allocate memory with default CPU alignment.
  *
  * Wrapper for `alloc_aligned(size, kCpuDefaultAlign)`.

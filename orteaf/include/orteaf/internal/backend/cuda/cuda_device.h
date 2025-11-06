@@ -10,12 +10,12 @@
 #pragma once
 #include <cstdint>
 
+namespace orteaf::internal::backend::cuda {
+
 using CUdevice_t = int;            // Keep ABI stable across TUs
 
 // ABI guards (header-level, so every TU checks these)
 static_assert(sizeof(CUdevice_t) == sizeof(int), "CUdevice_t must be int-sized (Driver API handle).");
-
-namespace orteaf::internal::backend::cuda {
 
 /**
  * @brief Bitmask flags indicating optional CUDA capabilities.

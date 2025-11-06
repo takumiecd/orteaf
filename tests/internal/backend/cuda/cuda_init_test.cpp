@@ -11,7 +11,7 @@
 
 namespace cuda = orteaf::internal::backend::cuda;
 
-#ifdef ORTEAF_ENABLE_CUDA
+#if ORTEAF_ENABLE_CUDA
 
 /**
  * @brief Test that CUDA initialization succeeds.

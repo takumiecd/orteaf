@@ -11,12 +11,12 @@
 
 #include "orteaf/internal/backend/mps/mps_size.h"
 
+namespace orteaf::internal::backend::mps {
+
 struct MPSDevice_st; using MPSDevice_t = MPSDevice_st*;
 struct MPSDeviceArray_st; using MPSDeviceArray_t = MPSDeviceArray_st*;
 
 static_assert(sizeof(MPSDevice_t) == sizeof(void*), "MPSDevice must be pointer-sized.");
-
-namespace orteaf::internal::backend::mps {
 
 /**
  * @brief Get the system default Metal device.

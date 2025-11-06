@@ -4,11 +4,11 @@
  */
 #pragma once
 
+namespace orteaf::internal::backend::mps {
+
 struct MPSCompileOptions_st; using MPSCompileOptions_t = MPSCompileOptions_st*;
 
 static_assert(sizeof(MPSCompileOptions_t) == sizeof(void*), "MPSCompileOptions must be pointer-sized.");
-
-namespace orteaf::internal::backend::mps {
 
 /** Create a new `MTLCompileOptions` object (opaque). */
 [[nodiscard]] MPSCompileOptions_t create_compile_options();

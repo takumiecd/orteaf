@@ -11,11 +11,11 @@
 #include "orteaf/internal/backend/mps/mps_compile_options.h"
 #include "orteaf/internal/backend/mps/mps_error.h"
 
+namespace orteaf::internal::backend::mps {
+
 struct MPSLibrary_st; using MPSLibrary_t = MPSLibrary_st*;
 
 static_assert(sizeof(MPSLibrary_t) == sizeof(void*), "MPSLibrary must be pointer-sized.");
-
-namespace orteaf::internal::backend::mps {
 
 /**
  * @brief Create a library by name.

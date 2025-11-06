@@ -8,11 +8,11 @@
 #include "orteaf/internal/backend/mps/mps_device.h"
 #include "orteaf/internal/backend/mps/mps_error.h"
 
+namespace orteaf::internal::backend::mps {
+
 struct MPSPipelineState_st; using MPSPipelineState_t = MPSPipelineState_st*;
 
 static_assert(sizeof(MPSPipelineState_t) == sizeof(void*), "MPSPipelineState must be pointer-sized.");
-
-namespace orteaf::internal::backend::mps {
 
 /**
  * @brief Create a compute pipeline state from a function.

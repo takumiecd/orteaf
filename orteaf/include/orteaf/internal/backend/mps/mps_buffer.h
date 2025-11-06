@@ -8,13 +8,13 @@
 
 #include <cstddef>
 
+namespace orteaf::internal::backend::mps {
+
 struct MPSBuffer_st; using MPSBuffer_t = MPSBuffer_st*;
 using MPSBufferUsage_t = unsigned long;
 inline constexpr MPSBufferUsage_t kMPSDefaultBufferUsage = 0;
 
 static_assert(sizeof(MPSBuffer_t) == sizeof(void*), "MPSBuffer must be pointer-sized.");
-
-namespace orteaf::internal::backend::mps {
 
 /**
  * @brief Create a new Metal buffer.

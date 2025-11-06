@@ -50,6 +50,14 @@ if(ORTEAF_TEST_SOURCES)
     )
     target_compile_features(orteaf_tests PRIVATE cxx_std_20)
     
+    # Propagate compile definitions from main CMakeLists.txt
+    target_compile_definitions(orteaf_tests
+        PRIVATE
+            ORTEAF_ENABLE_CPU=${ORTEAF_ENABLE_CPU_INT}
+            ORTEAF_ENABLE_CUDA=${ORTEAF_ENABLE_CUDA_INT}
+            ORTEAF_ENABLE_MPS=${ORTEAF_ENABLE_MPS_INT}
+    )
+    
     # Link Metal/MPS frameworks on macOS when MPS tests are present
     if(APPLE AND ORTEAF_TEST_SOURCES_MM)
         target_link_libraries(orteaf_tests

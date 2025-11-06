@@ -20,14 +20,14 @@
 
 #include "orteaf/internal/diagnostics/error/error.h"
 
-#ifdef ORTEAF_ENABLE_CUDA
+#if ORTEAF_ENABLE_CUDA
   #include <cuda_runtime_api.h>
   #include <cuda.h>
 #endif
 
 namespace orteaf::internal::backend::cuda {
 
-#ifdef ORTEAF_ENABLE_CUDA
+#if ORTEAF_ENABLE_CUDA
 
 /**
  * @brief Map a CUDA Runtime error to `OrteafErrc`.
@@ -242,7 +242,7 @@ bool try_driver_call(Fn&& fn) {
 
 } // namespace orteaf::internal::backend::cuda
 
-#ifdef ORTEAF_ENABLE_CUDA
+#if ORTEAF_ENABLE_CUDA
   /**
    * @def CUDA_CHECK(expr)
    * @brief Validate a CUDA Runtime API result and throw on failure.
