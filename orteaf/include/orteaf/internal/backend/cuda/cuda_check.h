@@ -21,7 +21,7 @@
 #include "orteaf/internal/diagnostics/error/error.h"
 
 #if ORTEAF_ENABLE_CUDA
-  #include <cuda_runtime_api.h>
+  #include <cuda_runtime.h>
   #include <cuda.h>
 #endif
 
@@ -42,7 +42,6 @@ inline orteaf::internal::diagnostics::error::OrteafErrc map_runtime_errc(cudaErr
         case cudaErrorInvalidValue:
             return OrteafErrc::InvalidArgument;
         case cudaErrorInitializationError:
-        case cudaErrorNotInitialized:
             return OrteafErrc::BackendUnavailable;
         default:
             return OrteafErrc::OperationFailed;

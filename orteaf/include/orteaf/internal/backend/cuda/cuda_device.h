@@ -55,14 +55,6 @@ int get_device_count();
 CUdevice_t get_device(uint32_t device_id);
 
 /**
- * @brief Set the current device for the calling thread.
- * @param device Opaque device handle
- *
- * No-op when CUDA is disabled.
- */
-void set_device(CUdevice_t device);
-
-/**
  * @brief Query the compute capability of a device.
  * @param device Opaque device handle
  * @return SM compute capability; {0,0} when CUDA is disabled.

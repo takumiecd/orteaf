@@ -21,7 +21,7 @@ TEST(CudaCheckError, MapRuntimeErrcMapsCorrectly) {
     EXPECT_EQ(cuda::map_runtime_errc(cudaErrorMemoryAllocation), diag::OrteafErrc::OutOfMemory);
     EXPECT_EQ(cuda::map_runtime_errc(cudaErrorInvalidValue), diag::OrteafErrc::InvalidArgument);
     EXPECT_EQ(cuda::map_runtime_errc(cudaErrorInitializationError), diag::OrteafErrc::BackendUnavailable);
-    EXPECT_EQ(cuda::map_runtime_errc(cudaErrorNotInitialized), diag::OrteafErrc::BackendUnavailable);
+    EXPECT_EQ(cuda::map_runtime_errc(cudaErrorInitializationError), diag::OrteafErrc::BackendUnavailable);
     EXPECT_EQ(cuda::map_runtime_errc(cudaErrorUnknown), diag::OrteafErrc::OperationFailed);
 }
 
@@ -59,7 +59,7 @@ TEST(CudaCheckError, CudaCheckErrorThrows) {
  */
 TEST(CudaCheckError, CudaCheckThrowsCorrectErrorCode) {
     try {
-        cuda::cuda_check(cudaErrorOutOfMemory, "alloc_test", "file.cpp", 100);
+        cuda::cuda_check(cudaErrorMemoryAllocation, "alloc_test", "file.cpp", 100);
         FAIL() << "Expected std::system_error to be thrown";
     } catch (const std::system_error& ex) {
         EXPECT_EQ(static_cast<diag::OrteafErrc>(ex.code().value()), diag::OrteafErrc::OperationFailed);
@@ -139,7 +139,7 @@ TEST(CudaCheckError, TryDriverCallReturnsFalseForDeinitialized) {
     bool result = cuda::try_driver_call([]() {
         throw std::system_error(
             static_cast<int>(CUDA_ERROR_DEINITIALIZED),
-            std::error_category(),
+            std::generic_category(),
             "CUDA_ERROR_DEINITIALIZED: driver is deinitialized"
         );
     });
@@ -154,7 +154,7 @@ TEST(CudaCheckError, TryDriverCallRethrowsOtherErrors) {
         cuda::try_driver_call([]() {
             throw std::system_error(
                 static_cast<int>(CUDA_ERROR_OUT_OF_MEMORY),
-                std::error_category(),
+                std::generic_category(),
                 "CUDA_ERROR_OUT_OF_MEMORY"
             );
         }),

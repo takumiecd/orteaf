@@ -76,6 +76,12 @@ target_link_libraries(orteaf
         orteaf_extension
 )
 
+# Link CUDA Runtime when CUDA is enabled
+if(ORTEAF_ENABLE_CUDA_INT)
+    find_package(CUDAToolkit REQUIRED)
+    target_link_libraries(orteaf PUBLIC CUDA::cudart CUDA::cuda_driver)
+endif()
+
 # Link Metal/MPS frameworks on macOS when MPS is enabled
 if(APPLE AND ORTEAF_ENABLE_MPS_INT)
     target_link_libraries(orteaf

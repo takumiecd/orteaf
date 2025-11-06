@@ -68,18 +68,6 @@ TEST_F(CudaDeviceTest, GetDeviceInvalidIndexThrows) {
     }
 }
 
-/**
- * @brief Test that set_device works for valid device handle.
- */
-TEST_F(CudaDeviceTest, SetDeviceSucceeds) {
-    int count = cuda::get_device_count();
-    if (count > 0) {
-        cuda::CUdevice_t device = cuda::get_device(0);
-        EXPECT_NO_THROW(cuda::set_device(device));
-    } else {
-        GTEST_SKIP() << "No CUDA devices available";
-    }
-}
 
 /**
  * @brief Test that compute capability query works.
@@ -167,22 +155,6 @@ TEST_F(CudaDeviceTest, EnumerateMultipleDevices) {
     }
 }
 
-/**
- * @brief Test that set_device can be called multiple times with different devices.
- */
-TEST_F(CudaDeviceTest, SetDeviceMultipleTimes) {
-    int count = cuda::get_device_count();
-    if (count > 1) {
-        cuda::CUdevice_t device0 = cuda::get_device(0);
-        cuda::CUdevice_t device1 = cuda::get_device(1);
-        
-        EXPECT_NO_THROW(cuda::set_device(device0));
-        EXPECT_NO_THROW(cuda::set_device(device1));
-        EXPECT_NO_THROW(cuda::set_device(device0));
-    } else {
-        GTEST_SKIP() << "Less than 2 CUDA devices available";
-    }
-}
 
 #else  // !ORTEAF_ENABLE_CUDA
 
@@ -202,8 +174,7 @@ TEST(CudaDevice, DisabledReturnsNeutralValues) {
     
     EXPECT_EQ(cuda::get_sm_count(cap), 0);
     
-    // set_device should be a no-op
-    EXPECT_NO_THROW(cuda::set_device(device));
+    // no set_device in driver-based design
 }
 
 /**

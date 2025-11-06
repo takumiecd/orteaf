@@ -32,7 +32,7 @@ CUgraphExec_t create_graph_exec(CUgraph_t graph) {
 #ifdef ORTEAF_ENABLE_CUDA
     CUgraph objc_graph = objc_from_opaque_noown<CUgraph>(graph);
     CUgraphExec graph_exec;
-    CU_CHECK(cuGraphInstantiate(&graph_exec, objc_graph, nullptr, nullptr, 0));
+    CU_CHECK(cuGraphInstantiateWithFlags(&graph_exec, objc_graph, 0));
     return opaque_from_objc_noown<CUgraphExec_t, CUgraphExec>(graph_exec);
 #else
     (void)graph;
@@ -98,7 +98,7 @@ void instantiate_graph(CUgraph_t graph, CUgraphExec_t* graph_exec) {
 #ifdef ORTEAF_ENABLE_CUDA
     CUgraph objc_graph = objc_from_opaque_noown<CUgraph>(graph);
     CUgraphExec objc_graph_exec;
-    CU_CHECK(cuGraphInstantiate(&objc_graph_exec, objc_graph, nullptr, nullptr, 0));
+    CU_CHECK(cuGraphInstantiateWithFlags(&objc_graph_exec, objc_graph, 0));
     *graph_exec = opaque_from_objc_noown<CUgraphExec_t, CUgraphExec>(objc_graph_exec);
 #else
     (void)graph;
