@@ -273,20 +273,20 @@ public:
      */
     std::string to_string() const {
         std::ostringstream oss;
-#ifdef ORTEAF_STATS_LEVEL_CUDA_VALUE
-        #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 2
-            oss << "CUDA Stats:\n";
-            oss << "  Total Allocations: " << total_allocations() << "\n";
-            oss << "  Total Deallocations: " << total_deallocations() << "\n";
-            oss << "  Active Allocations: " << active_allocations() << "\n";
-            oss << "  Device Switches: " << device_switches() << "\n";
-        #endif
-        #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 4
-            oss << "  Current Allocated Bytes: " << current_allocated_bytes() << "\n";
-            oss << "  Peak Allocated Bytes: " << peak_allocated_bytes() << "\n";
-            oss << "  Active Events: " << active_events() << "\n";
-            oss << "  Active Streams: " << active_streams() << "\n";
-        #endif
+#if defined(ORTEAF_STATS_LEVEL_CUDA_VALUE) && (ORTEAF_STATS_LEVEL_CUDA_VALUE <= 4)
+        oss << "CUDA Stats:\n";
+    #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 2
+        oss << "  Total Allocations: " << total_allocations() << "\n";
+        oss << "  Total Deallocations: " << total_deallocations() << "\n";
+        oss << "  Active Allocations: " << active_allocations() << "\n";
+        oss << "  Device Switches: " << device_switches() << "\n";
+    #endif
+    #if ORTEAF_STATS_LEVEL_CUDA_VALUE <= 4
+        oss << "  Current Allocated Bytes: " << current_allocated_bytes() << "\n";
+        oss << "  Peak Allocated Bytes: " << peak_allocated_bytes() << "\n";
+        oss << "  Active Events: " << active_events() << "\n";
+        oss << "  Active Streams: " << active_streams() << "\n";
+    #endif
 #else
         oss << "CUDA Stats: Disabled\n";
 #endif

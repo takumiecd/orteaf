@@ -153,17 +153,17 @@ public:
      */
     std::string to_string() const {
         std::ostringstream oss;
-#ifdef ORTEAF_STATS_LEVEL_CPU_VALUE
-        #if ORTEAF_STATS_LEVEL_CPU_VALUE <= 2
-            oss << "CPU Stats:\n";
-            oss << "  Total Allocations: " << total_allocations() << "\n";
-            oss << "  Total Deallocations: " << total_deallocations() << "\n";
-            oss << "  Active Allocations: " << active_allocations() << "\n";
-        #endif
-        #if ORTEAF_STATS_LEVEL_CPU_VALUE <= 4
-            oss << "  Current Allocated Bytes: " << current_allocated_bytes() << "\n";
-            oss << "  Peak Allocated Bytes: " << peak_allocated_bytes() << "\n";
-        #endif
+#if defined(ORTEAF_STATS_LEVEL_CPU_VALUE) && (ORTEAF_STATS_LEVEL_CPU_VALUE <= 4)
+        oss << "CPU Stats:\n";
+    #if ORTEAF_STATS_LEVEL_CPU_VALUE <= 2
+        oss << "  Total Allocations: " << total_allocations() << "\n";
+        oss << "  Total Deallocations: " << total_deallocations() << "\n";
+        oss << "  Active Allocations: " << active_allocations() << "\n";
+    #endif
+    #if ORTEAF_STATS_LEVEL_CPU_VALUE <= 4
+        oss << "  Current Allocated Bytes: " << current_allocated_bytes() << "\n";
+        oss << "  Peak Allocated Bytes: " << peak_allocated_bytes() << "\n";
+    #endif
 #else
         oss << "CPU Stats: Disabled\n";
 #endif
