@@ -58,6 +58,7 @@ if(APPLE AND ORTEAF_ENABLE_MPS_INT)
         PUBLIC
             "-framework Metal"
             "-framework MetalPerformanceShaders"
+            "-framework Foundation"
     )
 endif()
 

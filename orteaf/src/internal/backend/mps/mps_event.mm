@@ -99,6 +99,22 @@ uint64_t event_value(MPSEvent_t event) {
 }
 
 /**
+ * @copydoc orteaf::internal::backend::mps::write_event
+ */
+void write_event(MPSCommandQueue_t command_queue, MPSEvent_t event, uint64_t value) {
+#if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
+    MPSCommandBuffer_t command_buffer = create_command_buffer(command_queue);
+    record_event(event, command_buffer, value);
+    commit(command_buffer);
+    destroy_command_buffer(command_buffer);
+#else
+    (void)command_queue;
+    (void)event;
+    (void)value;
+#endif
+}
+
+/**
  * @copydoc orteaf::internal::backend::mps::write_event_queue
  */
 void write_event_queue(MPSCommandQueue_t command_queue, MPSEvent_t event, uint64_t value) {

@@ -64,6 +64,7 @@ if(ORTEAF_TEST_SOURCES)
             PRIVATE
                 "-framework Metal"
                 "-framework MetalPerformanceShaders"
+                "-framework Foundation"
         )
     endif()
 
