@@ -1,6 +1,17 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(orteaf VERSION 0.1.0 LANGUAGES CXX)
+# Runtime enable flags (must be set before project() for conditional language enable)
+option(ENABLE_CPU "Enable CPU runtime" ON)
+option(ENABLE_CUDA "Enable CUDA runtime" OFF)
+option(ENABLE_MPS "Enable Metal (MPS) runtime" OFF)
+
+# Set languages based on enabled backends
+set(LANGUAGES CXX)
+if(ENABLE_CUDA)
+    list(APPEND LANGUAGES CUDA)
+endif()
+
+project(orteaf VERSION 0.1.0 LANGUAGES ${LANGUAGES})
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -12,11 +23,6 @@ configure_file(
 
 # Propagate generated include directory so both library and tests can pick it up.
 set(ORTEAF_GENERATED_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated CACHE INTERNAL "")
-
-# Runtime enable flags
-option(ENABLE_CPU "Enable CPU runtime" ON)
-option(ENABLE_CUDA "Enable CUDA runtime" OFF)
-option(ENABLE_MPS "Enable Metal (MPS) runtime" OFF)
 
 # Warn if CPU backend is disabled (unusual)
 if(NOT ENABLE_CPU)
