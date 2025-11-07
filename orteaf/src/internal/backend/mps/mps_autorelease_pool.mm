@@ -1,0 +1,41 @@
+/**
+ * @file mps_autorelease_pool.mm
+ * @brief Implementation of NSAutoreleasePool RAII wrapper.
+ */
+#include "orteaf/internal/backend/mps/mps_autorelease_pool.h"
+
+#ifdef ORTEAF_ENABLE_MPS
+
+#import <Foundation/Foundation.h>
+#include <chrono>
+#include <iostream>
+
+namespace orteaf::internal::backend::mps {
+
+/** Construct a new autorelease pool. */
+AutoreleasePool::AutoreleasePool() {
+#if __has_feature(objc_arc)
+    // ARCでもNSAutoreleasePoolは使える（推奨は@autoreleasepoolだが、ラッパー内なら可）
+    pool_ = (NSAutoreleasePool*)[[NSAutoreleasePool alloc] init];
+#else
+    pool_ = [[NSAutoreleasePool alloc] init];
+#endif
+}
+
+/** Drain and destroy the pool on scope exit. */
+AutoreleasePool::~AutoreleasePool() {
+    if (pool_) {
+#if __has_feature(objc_arc)
+        [(id)pool_ drain];
+#else
+        [pool_ drain];
+#endif
+        pool_ = nullptr;
+    }
+}
+
+} // namespace orteaf::internal::backend::mps
+
+#endif // ORTEAF_ENABLE_MPS
+
+

@@ -26,6 +26,28 @@ inline std::string OrteafErrorCategory::message(int condition) const {
             return "out of memory";
         case OrteafErrc::OperationFailed:
             return "operation failed";
+        case OrteafErrc::InvalidParameter:
+            return "invalid parameter";
+        case OrteafErrc::NullPointer:
+            return "null pointer";
+        case OrteafErrc::OutOfRange:
+            return "out of range";
+        case OrteafErrc::Misaligned:
+            return "misaligned";
+        case OrteafErrc::NotReady:
+            return "not ready";
+        case OrteafErrc::Timeout:
+            return "timeout";
+        case OrteafErrc::DeviceLost:
+            return "device lost";
+        case OrteafErrc::ResourceBusy:
+            return "resource busy";
+        case OrteafErrc::PermissionDenied:
+            return "permission denied";
+        case OrteafErrc::Unsupported:
+            return "unsupported";
+        case OrteafErrc::CompilationFailed:
+            return "compilation failed";
         default:
             return "unrecognized orteaf error";
     }

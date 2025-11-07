@@ -43,19 +43,19 @@ orteaf/
 - `SystemManager` と `CurrentStateImpl`：ランタイム初期化と状態保持。
 - `Allocator` / `MemSafe`：メモリ確保と安全管理。
 - `Dispatcher` / `KernelRegister`：OPS と Kernel の橋渡し。
-- `Runtimes`：CPU / CUDA / MPS を抽象化したバックエンド。
+- `Backends`：CPU / CUDA / MPS を抽象化したバックエンド。
 - `Diagnostics`（`error/`, `log/`）：共通のエラー情報 (`OrteafError`)、致命的エラー (`fatal_error`) と例外ラッパーを提供し、統一的に throw / ログ / 統計連携を扱う。
 
 ## ビルド時オプション
 
-統計機能を制御する CMake 変数を用意している。いずれもデフォルトは 0（無効）。
+統計機能を制御する CMake 変数を用意している。デフォルトは `OFF`（無効）。
 
 | 変数 | 説明 |
 | --- | --- |
-| `ORTEAF_RUNTIME_STATS_LEVEL` | ランタイムとアロケータの統計レベル既定値。1=基本、2=拡張。|
-| `ORTEAF_CPU_STATS_LEVEL` / `ORTEAF_CUDA_STATS_LEVEL` / `ORTEAF_MPS_STATS_LEVEL` / `ORTEAF_ALLOCATOR_STATS_LEVEL` | 個別上書き（`AUTO` でグローバル設定を継承）。|
+| `ORTEAF_STATS_LEVEL` | 統計レベルの既定値（`STATS_BASIC`, `STATS_EXTENDED`, `OFF`）。 |
+| `ORTEAF_STATS_LEVEL_CPU` / `ORTEAF_STATS_LEVEL_CUDA` / `ORTEAF_STATS_LEVEL_MPS` / `ORTEAF_STATS_LEVEL_CORE` | カテゴリごとの上書き（`AUTO` でグローバル設定を継承）。`CORE` にはアロケータ統計が含まれる。 |
 
-コード側では `ORTEAF_*_STATS_LEVEL` マクロを参照し `0/1/2` に応じたメンバを有効にする。
+コード側では `ORTEAF_STATS_LEVEL_*_VALUE` マクロを参照し、`STATS_BASIC(2)` または `STATS_EXTENDED(4)` に応じたメンバを有効にする。
 
 ログ制御の CMake 変数も用意している。
 
@@ -72,7 +72,7 @@ orteaf/
 ```mermaid
 graph BT
 
-    Runtimes --> SystemManager
+    Backends --> SystemManager
     SystemManager --> CurrentState
     CurrentState --> Allocator
     Allocator --> MemSafe
@@ -84,7 +84,7 @@ SystemManager がバックエンドを立ち上げ、CurrentState が環境情�
 ```mermaid
 graph BT
 
-    Runtimes --> Kernel
+    Backends --> Kernel
     Kernel --> KernelRegister
     KernelRegister --> Dispatcher
     Dispatcher --> OPS
@@ -101,13 +101,13 @@ graph BT
 ```mermaid
 graph BT
 
-    Runtimes --> SystemManager
+    Backends --> SystemManager
     SystemManager --> CurrentState
     CurrentState --> Allocator
     Allocator --> MemSafe
     MemSafe --> Tensor
 
-    Runtimes --> Kernel
+    Backends --> Kernel
     Kernel --> KernelRegister
     KernelRegister --> Dispatcher
     Dispatcher --> OPS

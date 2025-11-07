@@ -20,11 +20,6 @@ target_include_directories(orteaf_extension INTERFACE
 )
 target_link_libraries(orteaf_extension INTERFACE orteaf_user)
 target_compile_definitions(orteaf_extension INTERFACE
-    ORTEAF_RUNTIME_STATS_LEVEL=${ORTEAF_RUNTIME_STATS_LEVEL}
-    ORTEAF_CPU_STATS_LEVEL=${ORTEAF_CPU_STATS_LEVEL_EFFECTIVE}
-    ORTEAF_CUDA_STATS_LEVEL=${ORTEAF_CUDA_STATS_LEVEL_EFFECTIVE}
-    ORTEAF_MPS_STATS_LEVEL=${ORTEAF_MPS_STATS_LEVEL_EFFECTIVE}
-    ORTEAF_ALLOCATOR_STATS_LEVEL=${ORTEAF_ALLOCATOR_STATS_LEVEL_EFFECTIVE}
     ORTEAF_ENABLE_CPU=${ORTEAF_ENABLE_CPU_INT}
     ORTEAF_ENABLE_CUDA=${ORTEAF_ENABLE_CUDA_INT}
     ORTEAF_ENABLE_MPS=${ORTEAF_ENABLE_MPS_INT}
@@ -34,10 +29,40 @@ target_compile_definitions(orteaf_extension INTERFACE
     ORTEAF_LOG_LEVEL_CUDA_VALUE=${ORTEAF_LOG_LEVEL_CUDA_VALUE_NUMERIC}
     ORTEAF_LOG_LEVEL_MPS_VALUE=${ORTEAF_LOG_LEVEL_MPS_VALUE_NUMERIC}
     ORTEAF_LOG_LEVEL_IO_VALUE=${ORTEAF_LOG_LEVEL_IO_VALUE_NUMERIC}
+    ORTEAF_STATS_LEVEL_GLOBAL_VALUE=${ORTEAF_STATS_LEVEL_GLOBAL_VALUE_NUMERIC}
+    ORTEAF_STATS_LEVEL_CPU_VALUE=${ORTEAF_STATS_LEVEL_CPU_VALUE_NUMERIC}
+    ORTEAF_STATS_LEVEL_CUDA_VALUE=${ORTEAF_STATS_LEVEL_CUDA_VALUE_NUMERIC}
+    ORTEAF_STATS_LEVEL_MPS_VALUE=${ORTEAF_STATS_LEVEL_MPS_VALUE_NUMERIC}
+    ORTEAF_STATS_LEVEL_CORE_VALUE=${ORTEAF_STATS_LEVEL_CORE_VALUE_NUMERIC}
 )
 
-file(GLOB_RECURSE ORTEAF_SOURCES CONFIGURE_DEPENDS
+# Collect source files by backend
+# Common files (always compiled) - all .cpp files
+file(GLOB_RECURSE ORTEAF_SOURCES_COMMON CONFIGURE_DEPENDS
     ${ORTEAF_SOURCE_ROOT}/src/*.cpp
+)
+
+# CUDA backend sources - all .cu files in src/
+set(ORTEAF_SOURCES_CUDA "")
+if(ORTEAF_ENABLE_CUDA_INT)
+    file(GLOB_RECURSE ORTEAF_SOURCES_CUDA CONFIGURE_DEPENDS
+        ${ORTEAF_SOURCE_ROOT}/src/*.cu
+    )
+endif()
+
+# MPS backend sources - all .mm files in src/
+set(ORTEAF_SOURCES_MPS "")
+if(ORTEAF_ENABLE_MPS_INT)
+    file(GLOB_RECURSE ORTEAF_SOURCES_MPS CONFIGURE_DEPENDS
+        ${ORTEAF_SOURCE_ROOT}/src/*.mm
+    )
+endif()
+
+# Combine all sources
+set(ORTEAF_SOURCES
+    ${ORTEAF_SOURCES_COMMON}
+    ${ORTEAF_SOURCES_CUDA}
+    ${ORTEAF_SOURCES_MPS}
 )
 
 if(ORTEAF_SOURCES)
@@ -51,6 +76,34 @@ target_link_libraries(orteaf
         orteaf_extension
 )
 
+# Link CUDA Runtime when CUDA is enabled
+if(ORTEAF_ENABLE_CUDA_INT)
+    find_package(CUDAToolkit REQUIRED)
+    
+    # Ensure the target inherits whatever CUDA architectures the parent configured.
+    if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES OR CMAKE_CUDA_ARCHITECTURES STREQUAL "")
+        if(CMAKE_VERSION VERSION_LESS "3.24")
+            set(_orteaf_default_cuda_archs "75;80;86;89;90")
+        else()
+            set(_orteaf_default_cuda_archs "all-major")
+        endif()
+        set(CMAKE_CUDA_ARCHITECTURES "${_orteaf_default_cuda_archs}" CACHE STRING "CUDA architectures to build for" FORCE)
+    endif()
+    set_property(TARGET orteaf PROPERTY CUDA_ARCHITECTURES "${CMAKE_CUDA_ARCHITECTURES}")
+    
+    target_link_libraries(orteaf PUBLIC CUDA::cudart CUDA::cuda_driver)
+endif()
+
+# Link Metal/MPS frameworks on macOS when MPS is enabled
+if(APPLE AND ORTEAF_ENABLE_MPS_INT)
+    target_link_libraries(orteaf
+        PUBLIC
+            "-framework Metal"
+            "-framework MetalPerformanceShaders"
+            "-framework Foundation"
+    )
+endif()
+
 target_include_directories(orteaf
     PRIVATE
         ${ORTEAF_INCLUDE_ROOT}
@@ -59,11 +112,6 @@ target_include_directories(orteaf
 )
 target_compile_definitions(orteaf
     PUBLIC
-        ORTEAF_RUNTIME_STATS_LEVEL=${ORTEAF_RUNTIME_STATS_LEVEL}
-        ORTEAF_CPU_STATS_LEVEL=${ORTEAF_CPU_STATS_LEVEL_EFFECTIVE}
-        ORTEAF_CUDA_STATS_LEVEL=${ORTEAF_CUDA_STATS_LEVEL_EFFECTIVE}
-        ORTEAF_MPS_STATS_LEVEL=${ORTEAF_MPS_STATS_LEVEL_EFFECTIVE}
-        ORTEAF_ALLOCATOR_STATS_LEVEL=${ORTEAF_ALLOCATOR_STATS_LEVEL_EFFECTIVE}
         ORTEAF_ENABLE_CPU=${ORTEAF_ENABLE_CPU_INT}
         ORTEAF_ENABLE_CUDA=${ORTEAF_ENABLE_CUDA_INT}
         ORTEAF_ENABLE_MPS=${ORTEAF_ENABLE_MPS_INT}
@@ -73,6 +121,11 @@ target_compile_definitions(orteaf
         ORTEAF_LOG_LEVEL_CUDA_VALUE=${ORTEAF_LOG_LEVEL_CUDA_VALUE_NUMERIC}
         ORTEAF_LOG_LEVEL_MPS_VALUE=${ORTEAF_LOG_LEVEL_MPS_VALUE_NUMERIC}
         ORTEAF_LOG_LEVEL_IO_VALUE=${ORTEAF_LOG_LEVEL_IO_VALUE_NUMERIC}
+        ORTEAF_STATS_LEVEL_GLOBAL_VALUE=${ORTEAF_STATS_LEVEL_GLOBAL_VALUE_NUMERIC}
+        ORTEAF_STATS_LEVEL_CPU_VALUE=${ORTEAF_STATS_LEVEL_CPU_VALUE_NUMERIC}
+        ORTEAF_STATS_LEVEL_CUDA_VALUE=${ORTEAF_STATS_LEVEL_CUDA_VALUE_NUMERIC}
+        ORTEAF_STATS_LEVEL_MPS_VALUE=${ORTEAF_STATS_LEVEL_MPS_VALUE_NUMERIC}
+        ORTEAF_STATS_LEVEL_CORE_VALUE=${ORTEAF_STATS_LEVEL_CORE_VALUE_NUMERIC}
 )
 
 target_compile_features(orteaf PUBLIC cxx_std_20)

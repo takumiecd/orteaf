@@ -1,15 +1,16 @@
-# Doxygen configuration for ORTEAF developer documentation.
+# Doxygen configuration for ORTEAF developer documentation (English - default).
 
 PROJECT_NAME           = "ORTEAF Developer"
 PROJECT_BRIEF          = "Internal architecture and extension reference"
 
+OUTPUT_LANGUAGE        = English
 OUTPUT_DIRECTORY       = docs/api-developer
 GENERATE_HTML          = YES
 GENERATE_LATEX         = NO
 
-INPUT                  = ../orteaf/include \
-                         ../orteaf/src \
-                         ./developer
+INPUT                  = orteaf/include \
+                         orteaf/src \
+                         docs/developer
 FILE_PATTERNS          = *.h \
                          *.hpp \
                          *.hh \
@@ -19,23 +20,25 @@ FILE_PATTERNS          = *.h \
                          *.md
 RECURSIVE              = YES
 
-EXCLUDE                = ../tests
+EXCLUDE                = tests
 
 EXCLUDE_PATTERNS       =
 
 EXTRACT_PRIVATE        = NO
-EXTRACT_STATIC         = NO
+EXTRACT_STATIC         = YES
 EXTRACT_LOCAL_METHODS  = NO
-EXTRACT_ALL            = NO
+EXTRACT_ALL            = YES
+
+HIDE_SCOPE_NAMES       = NO
 
 ENABLE_PREPROCESSING   = YES
 MACRO_EXPANSION        = YES
 EXPAND_ONLY_PREDEF     = NO
-PREDEFINED             = ORTEAF_RUNTIME_STATS_LEVEL=0 \
-                         ORTEAF_CPU_STATS_LEVEL=0 \
-                         ORTEAF_CUDA_STATS_LEVEL=0 \
-                         ORTEAF_MPS_STATS_LEVEL=0 \
-                         ORTEAF_ALLOCATOR_STATS_LEVEL=0
+PREDEFINED             = ORTEAF_STATS_LEVEL_GLOBAL_VALUE=8 \
+                         ORTEAF_STATS_LEVEL_CPU_VALUE=8 \
+                         ORTEAF_STATS_LEVEL_CUDA_VALUE=8 \
+                         ORTEAF_STATS_LEVEL_MPS_VALUE=8 \
+                         ORTEAF_STATS_LEVEL_CORE_VALUE=8
 
 GENERATE_TREEVIEW      = YES
 FULL_PATH_NAMES        = NO

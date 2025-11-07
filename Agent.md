@@ -7,8 +7,9 @@ This document gives AI/automation agents a quick reference for working in this r
 - **Targets:** `orteaf` static library plus helper interface targets `orteaf_user` and `orteaf_extension`.
 - **Key Options (root CMakeLists):**
   - `ENABLE_CPU` (default `ON`), `ENABLE_CUDA`, `ENABLE_MPS` toggle runtimes.
-  - `ORTEAF_RUNTIME_STATS_LEVEL` (`0/1/2`) with per-component overrides (`ORTEAF_CPU_STATS_LEVEL`, etc., `AUTO` inherits).
-  - These values propagate to both the library and tests via `ORTEAF_ENABLE_*` and `ORTEAF_*_STATS_LEVEL` macros.
+  - `ORTEAF_STATS_LEVEL` (`STATS_BASIC`, `STATS_EXTENDED`, `OFF`) with per-component overrides (`ORTEAF_STATS_LEVEL_CPU`, etc., `AUTO` inherits).
+  - `ORTEAF_LOG_LEVEL` (`TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `CRITICAL`, `OFF`) with per-category overrides (`ORTEAF_LOG_LEVEL_CORE`, etc., `AUTO` inherits).
+  - These values propagate to both the library and tests via `ORTEAF_ENABLE_*`, `ORTEAF_STATS_LEVEL_*_VALUE`, and `ORTEAF_LOG_LEVEL_*_VALUE` macros.
 
 ## Repository Layout
 ```
@@ -16,7 +17,7 @@ orteaf/                # Library sources
   include/orteaf/
     user/              # Public wrappers (PImpl front end)
     extension/         # Extension points (Kernel, Ops, TensorImpl, ModuleImpl)
-    internal/          # Core runtime/allocator/diagnostics implementations
+    internal/          # Core backend/allocator/diagnostics implementations
       diagnostics/
         error/         # Common error data + throw/fatal helpers
         log/           # Compile-time logging macros and sinks
@@ -26,24 +27,26 @@ docs/
   developer/design.md  # Architecture + access boundaries
   developer/testing-strategy.md # Checklist-oriented TDD guidance
   developer/environment.md      # Docker/shared environment instructions
-  Doxyfile             # Doxygen config (output to docs/api/)
+  Doxyfile.*                      # Doxygen configs (English only)
 docker/dev/Dockerfile  # Linux dev container with cmake/clang/doxygen
 scripts/setup-mps.sh   # Placeholder for macOS Metal setup
 ```
 
 ## Build & Test Workflow
 1. Configure from the project root:  
-   `cmake -S . -B build -DENABLE_CUDA=ON -DORTEAF_RUNTIME_STATS_LEVEL=1`
+   `cmake -S . -B build -DENABLE_CUDA=ON -DORTEAF_STATS_LEVEL=STATS_BASIC`
 2. Build: `cmake --build build`
 3. To generate docs (requires Doxygen):  
-   `doxygen docs/Doxyfile` → output under `docs/api/html/`.
+   `doxygen docs/Doxyfile.user` → output under `docs/api-user/html/` (English, default)  
+   `doxygen docs/Doxyfile.user.ja` → output under `docs/api-user/ja/html/` (Japanese)  
+   (Similar for `.developer` and `.tests` configs)
 4. Tests currently require Googletest via FetchContent (network access or vendored dependency). Tests are expected to mirror the `user/extension/internal` structure.
 
 ## Documentation Links
 - Architecture overview: `docs/developer/design.md`
 - Extension guidelines: `docs/developer/extension-guide.md`
 - Environment setup (Docker, MPS placeholder, WSL): `docs/developer/environment.md`
-- Doxygen configs: `docs/Doxyfile` (core) / `docs/Doxyfile.tests` (tests)
+- Doxygen configs: `docs/Doxyfile.user`, `docs/Doxyfile.developer`, `docs/Doxyfile.tests`
 - Testing checklist for TDD: `docs/developer/testing-strategy.md`
 - Roadmap / challenge log templates: `docs/roadmap.md`, `docs/challenge-log.md`
 

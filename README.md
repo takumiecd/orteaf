@@ -47,8 +47,8 @@ cmake -G Ninja .. -DENABLE_CUDA=ON -DENABLE_MPS=OFF
 | Option | Description | Default |
 |---------|-------------|----------|
 | `ENABLE_CPU` | Enable CPU runtime | ON |
-| `ENABLE_CUDA` | Enable CUDA backend | OFF |
-| `ENABLE_MPS` | Enable Metal (MPS) backend | OFF |
+| `ENABLE_CUDA` | Enable CUDA runtime | OFF |
+| `ENABLE_MPS` | Enable Metal (MPS) runtime | OFF |
 
 If both are disabled, the build will default to the CPU runtime.
 
@@ -60,9 +60,9 @@ If both are disabled, the build will default to the CPU runtime.
 
 ## ⚙️ Configuration Options
 
-- Override runtime statistics levels: `-DORTEAF_RUNTIME_STATS_LEVEL=1` (`0`=off, `1`=basic, `2`=extended)
+- Configure statistics levels: `-DORTEAF_STATS_LEVEL=STATS_BASIC` (`STATS_BASIC`, `STATS_EXTENDED`, `OFF`)
 - Per-component overrides inherit from the global level unless specified:  
-  `-DORTEAF_CPU_STATS_LEVEL=AUTO`, `-DORTEAF_MPS_STATS_LEVEL=2`, `-DORTEAF_ALLOCATOR_STATS_LEVEL=1`
+  `-DORTEAF_STATS_LEVEL_CPU=AUTO`, `-DORTEAF_STATS_LEVEL_MPS=STATS_EXTENDED`, `-DORTEAF_STATS_LEVEL_CORE=STATS_BASIC`
 - Configure logging at build time: `-DORTEAF_LOG_LEVEL=INFO`, per-category overrides via  
   `-DORTEAF_LOG_LEVEL_CORE=AUTO`, `-DORTEAF_LOG_LEVEL_CUDA=TRACE`, etc.
 - Unified build environment (Docker): see [docs/developer/environment.md](docs/developer/environment.md)

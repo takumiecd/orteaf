@@ -14,16 +14,29 @@ namespace orteaf::internal::diagnostics::error {
  * @brief orteaf 固有のエラーコード。
  *
  * 成功(0)、未知エラー、引数不正、状態不正、バックエンド不可、メモリ不足、
- * 一般的な操作失敗といった分類を保持する。
+ * 一般的な操作失敗、および低レイヤの実装パラメータ不備といった分類を保持する。
  */
 enum class OrteafErrc {
     Success = 0,              ///< 成功
     Unknown = 1,              ///< 原因不明のエラー
-    InvalidArgument = 2,      ///< 引数が不正
+    InvalidArgument = 2,      ///< 上位APIの引数不正（ユーザー入力：Tensor演算など）
     InvalidState = 3,         ///< オブジェクト状態が不正
     BackendUnavailable = 4,   ///< バックエンドが利用不可
     OutOfMemory = 5,          ///< メモリ確保に失敗
     OperationFailed = 6,      ///< その他の操作失敗
+    
+    // 低レイヤの実装パラメータ不備
+    InvalidParameter = 7,     ///< 低レイヤのパラメータ不正（nullptr/サイズ/範囲/アライン等）
+    NullPointer = 8,          ///< ポインタがnullptr
+    OutOfRange = 9,           ///< 範囲外アクセス（device ID、index、dimension等）
+    Misaligned = 10,          ///< アラインメント不一致
+    NotReady = 11,            ///< 非同期処理が未完了
+    Timeout = 12,             ///< APIがタイムアウト
+    DeviceLost = 13,          ///< GPUデバイス喪失
+    ResourceBusy = 14,        ///< リソース占有中
+    PermissionDenied = 15,     ///< 権限不足
+    Unsupported = 16,         ///< 機能未対応
+    CompilationFailed = 17,    ///< コンパイル/ロード失敗
 };
 
 /**

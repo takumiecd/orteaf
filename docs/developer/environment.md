@@ -32,6 +32,6 @@
   doxygen docs/Doxyfile.developer    # 開発者向けドキュメント
   doxygen docs/Doxyfile.tests        # テストスイート専用ドキュメント
   ```
-- 出力先はそれぞれ `docs/api-user/`、`docs/api-developer/`、`docs/api-tests/`。
+- 出力先はそれぞれ: `docs/api-user/`、`docs/api-developer/`、`docs/api-tests/`
 
 > このガイドは暫定版です。環境構築手順が固まり次第アップデートしてください。

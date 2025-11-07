@@ -1,13 +1,14 @@
-# Doxygen configuration for ORTEAF user documentation.
+# Doxygen configuration for ORTEAF user documentation (English - default).
 
 PROJECT_NAME           = "ORTEAF User"
 PROJECT_BRIEF          = "Public API documentation"
 
+OUTPUT_LANGUAGE        = English
 OUTPUT_DIRECTORY       = docs/api-user
 GENERATE_HTML          = YES
 GENERATE_LATEX         = NO
 
-INPUT                  = ../orteaf/include/orteaf/user
+INPUT                  = orteaf/include/orteaf/user
 FILE_PATTERNS          = *.h \
                          *.hpp \
                          *.hh \

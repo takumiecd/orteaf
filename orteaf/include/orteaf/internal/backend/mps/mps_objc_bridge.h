@@ -1,0 +1,54 @@
+/**
+ * @file mps_objc_bridge.h
+ * @brief Objective-C pointer <-> opaque handle bridging helpers.
+ *
+ * This header must be included only from Objective-C++ (.mm) files.
+ * Functions use ARC-aware bridging to retain/release when requested.
+ */
+#pragma once
+#ifndef __OBJC__
+#  error "This header must be included only from Objective-C++ (.mm)"
+#endif
+#import <Metal/Metal.h>
+#import <Foundation/Foundation.h>
+#import <CoreFoundation/CoreFoundation.h>
+
+/** Raw cast without changing ownership. */
+template <typename ObjcPtr>
+static inline void* opaque_from_objc_noown(ObjcPtr p) noexcept {
+    return (__bridge void*)p;
+}
+template <typename ObjcPtr>
+static inline ObjcPtr objc_from_opaque_noown(void* p) noexcept {
+    return (__bridge ObjcPtr)p;
+}
+
+/** Return an opaque handle with +1 retain (ARC-aware). */
+template <typename ObjcPtr>
+static inline void* opaque_from_objc_retained(ObjcPtr p) noexcept {
+#if __has_feature(objc_arc)
+    return (__bridge_retained void*)p;
+#else
+    [p retain];
+    return (__bridge void*)p;
+#endif
+}
+
+/** Release a previously retained opaque handle. */
+static inline void opaque_release_retained(void* p) noexcept {
+#if __has_feature(objc_arc)
+    CFBridgingRelease(p);
+#else
+    [(id)p release];
+#endif
+}
+
+/** Retain an opaque handle and return it. */
+static inline void* opaque_retain(void* p) noexcept {
+#if __has_feature(objc_arc)
+    CFRetain(p);
+#else
+    [(id)p retain];
+#endif
+    return p;
+}
