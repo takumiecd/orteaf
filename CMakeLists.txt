@@ -34,6 +34,27 @@ configure_file(
 
 # Propagate generated include directory so both library and tests can pick it up.
 set(ORTEAF_GENERATED_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated CACHE INTERNAL "")
+set(DTYPE_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/orteaf/dtype CACHE INTERNAL "")
+
+add_subdirectory(tools/codegen)
+
+add_custom_command(
+    OUTPUT
+        ${DTYPE_GEN_DIR}/dtype.def
+        ${DTYPE_GEN_DIR}/dtype_tables.h
+    COMMAND $<TARGET_FILE:gen_dtypes> ${CMAKE_CURRENT_SOURCE_DIR}/configs/dtype/dtypes.yml ${DTYPE_GEN_DIR}
+    DEPENDS
+        ${CMAKE_CURRENT_SOURCE_DIR}/configs/dtype/dtypes.yml
+        gen_dtypes
+    COMMENT "Generating dtype metadata"
+    VERBATIM
+)
+
+add_custom_target(generate_dtypes
+    DEPENDS
+        ${DTYPE_GEN_DIR}/dtype.def
+        ${DTYPE_GEN_DIR}/dtype_tables.h
+)
 
 # Warn if CPU backend is disabled (unusual)
 if(NOT ENABLE_CPU)
@@ -147,4 +168,8 @@ orteaf_bool_to_int(ORTEAF_ENABLE_CUDA_INT ENABLE_CUDA)
 orteaf_bool_to_int(ORTEAF_ENABLE_MPS_INT ENABLE_MPS)
 
 add_subdirectory(orteaf)
+add_dependencies(orteaf generate_dtypes)
 add_subdirectory(tests)
+if(TARGET orteaf_tests)
+    add_dependencies(orteaf_tests generate_dtypes)
+endif()
