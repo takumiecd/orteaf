@@ -10,6 +10,11 @@
 
 namespace orteaf::internal::architecture {
 
+/// @brief Enumerates per-backend optimization architectures (Generic, sm90, etc.).
+///
+/// The generator serializes architectures as `(backend, local_index)` pairs. Local
+/// index `0` is automatically reserved for the Generic entry and can be used as a
+/// universal fallback.
 enum class Architecture : std::uint16_t {
 #define ARCHITECTURE(ENUM_NAME, BACKEND_ENUM, LOCAL_INDEX, ID, DISPLAY_NAME, DESCRIPTION) ENUM_NAME,
 #include <orteaf/architecture/architecture.def>
@@ -17,6 +22,7 @@ enum class Architecture : std::uint16_t {
     Count,
 };
 
+/// @brief Convert an architecture to its generated-table index.
 constexpr std::size_t ToIndex(Architecture arch) {
     return static_cast<std::size_t>(arch);
 }
@@ -54,27 +60,33 @@ inline constexpr std::array<std::string_view, kArchitectureCount> kArchitectureD
 #undef ARCHITECTURE
 };
 
+/// @brief Check whether an index is within range.
 constexpr bool IsValidIndex(std::size_t index) {
     return index < kArchitectureCount;
 }
 
+/// @brief Convert an index back into the enum value.
 constexpr Architecture FromIndex(std::size_t index) {
     return static_cast<Architecture>(index);
 }
 
+/// @brief Return the backend the architecture belongs to.
 constexpr backend::Backend BackendOf(Architecture arch) {
     const auto backend_index = tables::kArchitectureBackendIndices[ToIndex(arch)];
     return backend::FromIndex(backend_index);
 }
 
+/// @brief Return the backend-local index (0 == Generic).
 constexpr std::uint16_t LocalIndexOf(Architecture arch) {
     return tables::kArchitectureLocalIndices[ToIndex(arch)];
 }
 
+/// @brief Return true if the architecture is the Generic entry.
 constexpr bool IsGeneric(Architecture arch) {
     return LocalIndexOf(arch) == 0;
 }
 
+/// @brief Return the YAML identifier / display name / description.
 constexpr std::string_view IdOf(Architecture arch) {
     return tables::kArchitectureIds[ToIndex(arch)];
 }
@@ -99,10 +111,12 @@ constexpr bool HasLocalIndex(backend::Backend backend_id, std::uint16_t local_in
     return local_index < CountForBackend(backend_id);
 }
 
+/// @brief Construct an architecture from a backend and local index.
 constexpr Architecture FromBackendAndLocalIndex(backend::Backend backend_id, std::uint16_t local_index) {
     return static_cast<Architecture>(OffsetForBackend(backend_id) + local_index);
 }
 
+/// @brief Return a span of every architecture belonging to the backend.
 inline constexpr std::span<const Architecture> ArchitecturesOf(backend::Backend backend_id) {
     const auto offset = OffsetForBackend(backend_id);
     const auto count = CountForBackend(backend_id);

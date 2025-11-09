@@ -13,6 +13,11 @@
 
 namespace orteaf::internal::device {
 
+/// @brief Enumerates logical devices declared in `configs/device/devices.yml`.
+///
+/// Each entry captures backend, architecture, dtype/ops support, memory limits, and
+/// arbitrary capability metadata. Runtime code can use this table to drive kernel
+/// selection or capability checks.
 enum class Device : std::uint16_t {
 #define DEVICE(ID, DISPLAY_NAME) ID,
 #include <orteaf/device/device.def>
@@ -20,6 +25,7 @@ enum class Device : std::uint16_t {
     Count,
 };
 
+/// @brief Convert a device to its generated-table index.
 constexpr std::size_t ToIndex(Device device) {
     return static_cast<std::size_t>(device);
 }
@@ -71,20 +77,24 @@ struct Capability {
     std::string_view value;
 };
 
+/// @brief Return the backend this device belongs to.
 constexpr backend::Backend BackendOf(Device device) {
     return backend::FromIndex(tables::kDeviceBackendIndices[ToIndex(device)]);
 }
 
+/// @brief Return the architecture associated with the device.
 constexpr architecture::Architecture ArchitectureOf(Device device) {
     const auto backend_id = BackendOf(device);
     const auto local_index = tables::kDeviceArchitectureLocalIndices[ToIndex(device)];
     return architecture::FromBackendAndLocalIndex(backend_id, local_index);
 }
 
+/// @brief Return true if the device uses the Generic architecture (local index 0).
 constexpr bool IsGeneric(Device device) {
     return tables::kDeviceArchitectureLocalIndices[ToIndex(device)] == 0;
 }
 
+/// @brief Return the configured memory limits (max/shared).
 constexpr MemoryInfo MemoryOf(Device device) {
     const auto index = ToIndex(device);
     return MemoryInfo{
@@ -93,6 +103,7 @@ constexpr MemoryInfo MemoryOf(Device device) {
     };
 }
 
+/// @brief Return the optional notes string.
 constexpr std::string_view NotesOf(Device device) {
     return tables::kDeviceNotes[ToIndex(device)];
 }
@@ -132,6 +143,7 @@ inline constexpr std::span<const ::orteaf::internal::DType> SupportedDTypes(Devi
                                                       end - begin);
 }
 
+/// @brief Return the ops supported by this device.
 inline constexpr std::span<const ::orteaf::internal::ops::Op> SupportedOps(Device device) {
     const auto index = ToIndex(device);
     const auto begin = tables::kDeviceOpOffsets[index];
@@ -140,6 +152,7 @@ inline constexpr std::span<const ::orteaf::internal::ops::Op> SupportedOps(Devic
                                                         end - begin);
 }
 
+/// @brief Return the key/value capability list.
 inline constexpr std::span<const Capability> CapabilitiesOf(Device device) {
     const auto index = ToIndex(device);
     const auto begin = tables::kDeviceCapabilityOffsets[index];
@@ -147,10 +160,12 @@ inline constexpr std::span<const Capability> CapabilitiesOf(Device device) {
     return std::span<const Capability>(kDeviceCapabilityEntries.data() + begin, end - begin);
 }
 
+/// @brief Enumerate every device.
 inline constexpr std::span<const Device> AllDevices() {
     return std::span<const Device>(kAllDevices.data(), kAllDevices.size());
 }
 
+/// @brief Enumerate every device identifier.
 inline constexpr std::span<const std::string_view> AllDeviceIds() {
     return std::span<const std::string_view>(kDeviceIds.data(), kDeviceIds.size());
 }
