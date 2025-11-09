@@ -1,0 +1,217 @@
+schema_version: "1.0"
+
+catalogs:
+  categories:
+    arithmetic:
+      description: "Elementwise arithmetic operations (e.g. adds, multiplies)"
+    linear_algebra:
+      description: "Tensor and matrix algebra kernels"
+    reduction:
+      description: "Aggregation operators that reduce axes"
+    activation:
+      description: "Pointwise neural activation functions"
+    spiking:
+      description: "Spiking neural network primitives"
+  dtype_categories:
+    boolean: "Boolean and mask tensors"
+    signed_integer: "Signed integral tensors"
+    unsigned_integer: "Unsigned integral tensors"
+    floating_point: "IEEE754 floating point tensors"
+  shape_kinds:
+    elementwise: "Follows elementwise broadcasting semantics"
+    broadcast: "Broadcasts operands to a shared shape"
+    matmul: "Matrix multiplication or batched GEMM semantics"
+    reduce: "Reduces selected axes to a lower-rank tensor"
+    identity: "Propagates input shape directly"
+    custom: "Requires custom inference callback"
+
+ops:
+  - id: "Add"
+    display_name: "Add"
+    category: "arithmetic"
+    arity: 2
+    inputs:
+      - name: "lhs"
+        description: "Left-hand operand"
+        dtype_constraints:
+          mode: "allow"
+          categories: ["floating_point", "signed_integer", "unsigned_integer"]
+          dtypes: ["Bool"]
+      - name: "rhs"
+        description: "Right-hand operand"
+        dtype_constraints:
+          mode: "match"
+          reference: "lhs"
+          allow_promotion: true
+          require_same_shape: false
+    outputs:
+      - name: "output"
+        description: "Elementwise sum respecting broadcasting"
+        dtype_rule:
+          kind: "promote"
+          inputs: ["lhs", "rhs"]
+    attributes:
+      - name: "alpha"
+        type: "float"
+        default: 1.0
+        required: false
+        description: "Optional scaling factor applied to rhs before addition"
+    compute_policy:
+      kind: "promote"
+      inputs: ["lhs", "rhs"]
+    shape_inference:
+      kind: "broadcast"
+      description: "Applies NumPy-style broadcasting rules"
+    metadata:
+      description: "Elementwise addition that supports broadcasting"
+      tags: ["elementwise", "commutative"]
+      commutative: true
+      differentiable: true
+      aliases: ["add", "sum"]
+
+  - id: "MatMul"
+    display_name: "MatMul"
+    category: "linear_algebra"
+    arity: 2
+    inputs:
+      - name: "lhs"
+        description: "Left matrix operand ([..., M, K])"
+        dtype_constraints:
+          mode: "allow"
+          categories: ["floating_point"]
+      - name: "rhs"
+        description: "Right matrix operand ([..., K, N])"
+        dtype_constraints:
+          mode: "allow"
+          categories: ["floating_point"]
+      - name: "bias"
+        description: "Optional bias vector ([..., N])"
+        optional: true
+        dtype_constraints:
+          mode: "allow"
+          categories: ["floating_point"]
+    outputs:
+      - name: "output"
+        description: "Matrix product with optional bias add"
+        dtype_rule:
+          kind: "same_as"
+          input: "lhs"
+    attributes:
+      - name: "transposed_lhs"
+        type: "bool"
+        default: false
+        description: "Interpret lhs as already transposed (K, M)"
+      - name: "transposed_rhs"
+        type: "bool"
+        default: false
+        description: "Interpret rhs as already transposed (N, K)"
+    compute_policy:
+      kind: "derived_compute_type"
+      function: "MatMulAccumulatorType"
+      inputs: ["lhs", "rhs"]
+    shape_inference:
+      kind: "matmul"
+      description: "Uses standard matrix multiplication dimension rules"
+    metadata:
+      description: "Batched matrix multiplication with optional bias"
+      tags: ["batched", "linear_algebra"]
+      commutative: false
+      differentiable: true
+
+  - id: "Relu"
+    display_name: "ReLU"
+    category: "activation"
+    arity: 1
+    inputs:
+      - name: "input"
+        description: "Input tensor"
+        dtype_constraints:
+          mode: "allow"
+          categories: ["floating_point"]
+    outputs:
+      - name: "output"
+        description: "Rectified tensor"
+        dtype_rule:
+          kind: "same_as"
+          input: "input"
+    compute_policy:
+      kind: "same_as"
+      input: "input"
+    shape_inference:
+      kind: "identity"
+    metadata:
+      description: "Rectified Linear Unit activation"
+      tags: ["elementwise", "activation"]
+      commutative: false
+      differentiable: true
+
+  - id: "SpikeThreshold"
+    display_name: "Spike Threshold"
+    category: "spiking"
+    arity: 2
+    inputs:
+      - name: "membrane_potential"
+        description: "Membrane potential inputs"
+        dtype_constraints:
+          mode: "allow"
+          categories: ["floating_point"]
+      - name: "threshold"
+        description: "Firing threshold per neuron"
+        dtype_constraints:
+          mode: "deny"
+          categories: ["boolean"]
+          dtypes: ["Bool"]
+    outputs:
+      - name: "spike"
+        description: "Binary spike events"
+        dtype_rule:
+          kind: "fixed"
+          dtype: "Bool"
+    compute_policy:
+      kind: "fixed"
+      dtype: "Bool"
+    shape_inference:
+      kind: "elementwise"
+    metadata:
+      description: "Generates binary spike events when membrane potential exceeds threshold"
+      tags: ["spiking", "non-differentiable"]
+      commutative: false
+      differentiable: false
+
+  - id: "CustomQuantize"
+    display_name: "Custom Quantize"
+    category: "arithmetic"
+    arity: 1
+    inputs:
+      - name: "input"
+        description: "Tensor to quantize"
+        dtype_constraints:
+          mode: "allow"
+          categories: ["floating_point"]
+    outputs:
+      - name: "quantized"
+        description: "Quantized tensor using user-provided rule"
+        dtype_rule:
+          kind: "custom"
+          function: "InferQuantizedDType"
+    attributes:
+      - name: "bit_width"
+        type: "int"
+        default: 8
+        description: "Number of bits per quantized element"
+      - name: "symmetric"
+        type: "bool"
+        default: true
+        description: "Use symmetric quantization range"
+    compute_policy:
+      kind: "custom"
+      handler: "SelectQuantizedComputeType"
+    shape_inference:
+      kind: "custom"
+      function: "QuantizeShapeRule"
+      description: "Consults backend-specific quantization layout"
+    metadata:
+      description: "Delegates quantization specifics to a backend-provided rule"
+      tags: ["quantization", "backend-specific"]
+      commutative: false
+      differentiable: false
