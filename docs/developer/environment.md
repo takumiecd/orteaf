@@ -16,7 +16,8 @@
 
 ## macOS (MPS)
 - Metal (MPS) 用の依存関係は Docker で扱えないため、ホスト macOS 上でセットアップする。
-- `scripts/setup-mps.sh` を実行すると Xcode Command Line Tools の検出と Homebrew での依存関係 (`cmake`, `ninja`, `doxygen`, `yaml-cpp`) のインストールを行います。手動で必要なパッケージを追加する場合は `brew install <package>` を利用してください。
+- `scripts/setup-mps.sh` を実行すると Xcode Command Line Tools の検出、Homebrew での依存関係 (`cmake`, `ninja`, `doxygen`, `yaml-cpp`) のインストールに加え、`sudo xcodebuild -downloadComponent MetalToolchain` を使った Metal CLI の導入まで自動で行います（途中でパスワード入力が必要です）。  
+  完了後は `xcrun -sdk macosx metal -help` が成功することを確認してから `cmake -S . -B build -DENABLE_MPS=ON` でビルドしてください。
 - スクリプトが完了したら、`cmake -S . -B build -DORTEAF_FETCH_GTEST=ON` などでビルド環境を構築できます。
 
 ## Windows

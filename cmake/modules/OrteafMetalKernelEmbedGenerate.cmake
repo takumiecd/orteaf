@@ -124,3 +124,6 @@ string(APPEND content "} // namespace orteaf::internal::backend::mps::metal_kern
 
 message(STATUS "OrteafMetalKernelEmbedGenerate: writing ${OUTPUT}")
 file(WRITE "${OUTPUT}" "${content}")
+if(NOT EXISTS "${OUTPUT}")
+    message(FATAL_ERROR "Failed to create Metal kernel registry at ${OUTPUT}")
+endif()

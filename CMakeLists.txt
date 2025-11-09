@@ -271,18 +271,6 @@ add_dependencies(orteaf generate_backends generate_ops generate_dtypes generate_
 
 if(TARGET orteaf)
     if(ORTEAF_CUDA_EMBED_SOURCE)
-        set_source_files_properties(${ORTEAF_CUDA_EMBED_SOURCE} PROPERTIES GENERATED TRUE)
-        target_sources(orteaf PRIVATE ${ORTEAF_CUDA_EMBED_SOURCE})
-        if(ORTEAF_CUDA_EMBED_OBJECTS)
-            foreach(obj ${ORTEAF_CUDA_EMBED_OBJECTS})
-                set_source_files_properties(${obj}
-                    PROPERTIES
-                        GENERATED TRUE
-                        EXTERNAL_OBJECT TRUE
-                )
-            endforeach()
-            target_sources(orteaf PRIVATE ${ORTEAF_CUDA_EMBED_OBJECTS})
-        endif()
         if(TARGET orteaf_cuda_kernel_binaries)
             add_dependencies(orteaf orteaf_cuda_kernel_binaries)
         endif()
@@ -300,22 +288,8 @@ if(TARGET orteaf)
         endif()
     endif()
 
-    if(ORTEAF_METAL_EMBED_SOURCE)
-        set_source_files_properties(${ORTEAF_METAL_EMBED_SOURCE} PROPERTIES GENERATED TRUE)
-        target_sources(orteaf PRIVATE ${ORTEAF_METAL_EMBED_SOURCE})
-        if(ORTEAF_METAL_EMBED_OBJECTS)
-            foreach(obj ${ORTEAF_METAL_EMBED_OBJECTS})
-                set_source_files_properties(${obj}
-                    PROPERTIES
-                        GENERATED TRUE
-                        EXTERNAL_OBJECT TRUE
-                )
-            endforeach()
-            target_sources(orteaf PRIVATE ${ORTEAF_METAL_EMBED_OBJECTS})
-        endif()
-        if(TARGET orteaf_metal_kernel_binaries)
-            add_dependencies(orteaf orteaf_metal_kernel_binaries)
-        endif()
+    if(ORTEAF_METAL_EMBED_SOURCE AND TARGET orteaf_metal_kernel_binaries)
+        add_dependencies(orteaf orteaf_metal_kernel_binaries)
     endif()
 endif()
 

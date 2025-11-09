@@ -24,6 +24,21 @@ function(orteaf_add_metal_kernel_binaries)
     endif()
 
     find_program(XCRUN_EXECUTABLE xcrun REQUIRED)
+    execute_process(
+        COMMAND ${CMAKE_COMMAND} -E env TOOLCHAINS=metal "${XCRUN_EXECUTABLE}" -sdk macosx -find metal
+        RESULT_VARIABLE _metal_find_result
+        OUTPUT_VARIABLE _metal_tool
+        ERROR_QUIET
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(NOT _metal_find_result EQUAL 0 OR _metal_tool STREQUAL "")
+        message(WARNING "[ORTEAF][Metal] 'xcrun metal' unavailable; skipping embedded kernels. Run scripts/setup-mps.sh to install the Metal toolchain.")
+        add_custom_target(orteaf_metal_kernel_binaries)
+        set(ORTEAF_METAL_EMBED_SOURCE "" PARENT_SCOPE)
+        set(ORTEAF_METAL_EMBED_OBJECTS "" PARENT_SCOPE)
+        set(ORTEAF_METAL_GENERATED_LIBS "" PARENT_SCOPE)
+        return()
+    endif()
 
     set(_kernel_root "${ORTEAF_SOURCE_ROOT}/src/extension/kernel/mps/impl")
     file(GLOB_RECURSE METAL_KERNEL_SOURCES
@@ -34,7 +49,9 @@ function(orteaf_add_metal_kernel_binaries)
     endif()
 
     set(_output_dir "${BACKEND_GEN_DIR}/mps/kernels")
+    set(_module_cache_dir "${BACKEND_GEN_DIR}/mps/module_cache")
     file(MAKE_DIRECTORY "${_output_dir}")
+    file(MAKE_DIRECTORY "${_module_cache_dir}")
 
     set(ALL_METALLIBS)
     foreach(metal_file IN LISTS METAL_KERNEL_SOURCES)
@@ -45,11 +62,13 @@ function(orteaf_add_metal_kernel_binaries)
 
         add_custom_command(
             OUTPUT "${metallib_file}"
-            COMMAND "${XCRUN_EXECUTABLE}" -sdk macosx metal
+            COMMAND ${CMAKE_COMMAND} -E env TOOLCHAINS=metal "${XCRUN_EXECUTABLE}" -sdk macosx metal
+                -fmodules
+                -fmodules-cache-path="${_module_cache_dir}"
                 -c "${metal_file}"
                 -o "${air_file}"
                 -I"$<SHELL_PATH:${CMAKE_SOURCE_DIR}>"
-            COMMAND "${XCRUN_EXECUTABLE}" -sdk macosx metallib
+            COMMAND ${CMAKE_COMMAND} -E env TOOLCHAINS=metal "${XCRUN_EXECUTABLE}" -sdk macosx metallib
                 "${air_file}"
                 -o "${metallib_file}"
             DEPENDS "${metal_file}"
@@ -91,13 +110,26 @@ function(orteaf_add_metal_kernel_binaries)
     endforeach()
 
     string(REPLACE ";" "|" KERNEL_RECORDS_SERIALIZED "${KERNEL_RECORDS}")
-    set(GENERATED_SOURCE "${BACKEND_GEN_DIR}/mps/metal_kernel_registry.cpp")
+    get_filename_component(GENERATED_SOURCE_CANONICAL
+        "${BACKEND_GEN_DIR}/mps/metal_kernel_registry.cpp"
+        ABSOLUTE
+    )
+    set(GENERATED_SOURCE_MIRROR
+        "${CMAKE_BINARY_DIR}/orteaf/generated/orteaf/backend/mps/metal_kernel_registry.cpp"
+    )
     add_custom_command(
-        OUTPUT "${GENERATED_SOURCE}"
+        OUTPUT
+            "${GENERATED_SOURCE_CANONICAL}"
+            "${GENERATED_SOURCE_MIRROR}"
         COMMAND "${CMAKE_COMMAND}"
-            -DOUTPUT:PATH="${GENERATED_SOURCE}"
+            -DOUTPUT:PATH="${GENERATED_SOURCE_CANONICAL}"
             -DKERNEL_RECORDS:STRING="${KERNEL_RECORDS_SERIALIZED}"
             -P "${CMAKE_SOURCE_DIR}/cmake/modules/OrteafMetalKernelEmbedGenerate.cmake"
+        COMMAND "${CMAKE_COMMAND}" -E make_directory
+            "${CMAKE_BINARY_DIR}/orteaf/generated/orteaf/backend/mps"
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+            "${GENERATED_SOURCE_CANONICAL}"
+            "${GENERATED_SOURCE_MIRROR}"
         DEPENDS
             ${EMBEDDED_OBJECTS}
             "${CMAKE_SOURCE_DIR}/cmake/modules/OrteafMetalKernelEmbedGenerate.cmake"
@@ -106,10 +138,13 @@ function(orteaf_add_metal_kernel_binaries)
     )
 
     add_custom_target(orteaf_metal_kernel_binaries
-        DEPENDS ${EMBEDDED_OBJECTS} "${GENERATED_SOURCE}"
+        DEPENDS
+            ${EMBEDDED_OBJECTS}
+            "${GENERATED_SOURCE_CANONICAL}"
+            "${GENERATED_SOURCE_MIRROR}"
     )
 
-    set(ORTEAF_METAL_EMBED_SOURCE "${GENERATED_SOURCE}" PARENT_SCOPE)
+    set(ORTEAF_METAL_EMBED_SOURCE "${GENERATED_SOURCE_MIRROR}" PARENT_SCOPE)
     set(ORTEAF_METAL_EMBED_OBJECTS "${EMBEDDED_OBJECTS}" PARENT_SCOPE)
     set(ORTEAF_METAL_GENERATED_LIBS "${ALL_METALLIBS}" PARENT_SCOPE)
 endfunction()
