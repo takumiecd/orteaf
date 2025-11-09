@@ -28,8 +28,13 @@ docs/
   developer/testing-strategy.md # Checklist-oriented TDD guidance
   developer/environment.md      # Docker/shared environment instructions
   Doxyfile.*                      # Doxygen configs (English only)
-docker/dev/Dockerfile  # Linux dev container with cmake/clang/doxygen
-scripts/setup-mps.sh   # Placeholder for macOS Metal setup
+docker/cpu/Dockerfile  # CPU-only dev container (clang/cmake/ninja/yaml-cpp)
+docker/cuda/Dockerfile # CUDA dev container (nvidia/cuda base)
+docker/run-cpu.sh      # Helper to build/run the CPU container
+docker/run-cuda.sh     # Helper to build/run the CUDA container with --gpus=all
+scripts/setup-cpu.sh   # Linux/macOS CPU toolchain bootstrapper
+scripts/setup-cuda.sh  # Linux CUDA toolchain bootstrapper
+scripts/setup-mps.sh   # macOS Metal/MPS setup helper
 ```
 
 ## Build & Test Workflow
@@ -55,6 +60,6 @@ scripts/setup-mps.sh   # Placeholder for macOS Metal setup
 - When adding tests, start from the checklist in `testing-strategy.md` and create files under the matching `tests/<layer>/…` directory.
 - Do not delete the placeholder translation unit `orteaf/src/internal/placeholder.cpp` until real sources are present (the library needs at least one TU).
 - Generated docs (`docs/api/`) are ignored via `.gitignore`; avoid committing them.
-- Docker image (`docker/dev`) offers a reproducible environment; CUDA support would require a separate image based on `nvidia/cuda`.
+- Docker images (`docker/cpu`, `docker/cuda`) plus helper scripts (`docker/run-*.sh`) offer reproducible environments for CPU/CUDA workflows without polluting the host.
 
 Keep this file updated as new subsystems or workflows are introduced so future agents can ramp up quickly.

@@ -57,6 +57,16 @@ If both are disabled, the build will default to the CPU runtime.
 - Place CUDA kernels under `orteaf/src/extension/kernel/cuda/impl/`. Use `-DENABLE_CUDA=ON` and control emitted binary formats via `-DORTEAF_CUDA_KERNEL_FORMATS=fatbin;cubin;ptx` (semicolon-separated; defaults to `fatbin` only).
 - Place Metal kernels under `orteaf/src/extension/kernel/mps/impl/` when building on macOS with `-DENABLE_MPS=ON`. The build will invoke `xcrun metal`/`metallib` automatically and expose the blobs through the Metal kernel embed API.
 
+## 🛠 Environment Setup
+
+| Scenario | Setup Script | Docker Helper | Notes |
+| --- | --- | --- | --- |
+| CPU-only (Linux/macOS) | `scripts/setup-cpu.sh` | `docker/run-cpu.sh` | Installs clang/LLVM, CMake, Ninja, Doxygen, yaml-cpp (0.8.0) and friends. |
+| CUDA (Linux) | `scripts/setup-cuda.sh` | `docker/run-cuda.sh` | Extends the CPU toolchain, verifies `nvidia-smi`, `nvcc`, and `llvm-objcopy`, and launches the CUDA base image with `--gpus=all`. |
+| Metal / MPS (macOS) | `scripts/setup-mps.sh` | — | Automates Homebrew deps plus the `xcrun metal` toolchain install on macOS. |
+
+Each script prints the follow-up CMake invocations once dependencies are in place. See [docs/developer/environment.md](docs/developer/environment.md) for detailed walkthroughs and CI usage tips.
+
 ## 🗂 Documentation
 
 - Core architecture and access boundaries: [docs/developer/design.md](docs/developer/design.md)

@@ -16,6 +16,15 @@ cmake -G Ninja ..
 ninja
 ```
 
+For repeatable toolchains, the repository provides helper scripts and containers:
+
+- `scripts/setup-cpu.sh`: installs clang/LLVM, CMake, Ninja, Doxygen, yaml-cpp (0.8.0), etc. on Linux/macOS hosts.
+- `scripts/setup-cuda.sh`: extends the CPU setup on Linux and verifies CUDA drivers/toolkit (`nvidia-smi`, `nvcc`, `llvm-objcopy`).
+- `scripts/setup-mps.sh`: prepares macOS hosts for Metal/MPS development (Homebrew deps + Metal toolchain download).
+- `docker/run-cpu.sh`, `docker/run-cuda.sh`: build/run containers with the CPU or CUDA stacks (`docker run ... --gpus=all` handled for you).
+
+See [docs/developer/environment.md](docs/developer/environment.md) for details.
+
 ### Directory structure
 - `orteaf/include/orteaf/user`: User-facing wrapper API (`Tensor`, `Model`, etc.)
 - `orteaf/include/orteaf/extension`: Extension points (`Kernel`, `Ops`, `TensorImpl`)
