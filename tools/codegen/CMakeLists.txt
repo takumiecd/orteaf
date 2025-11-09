@@ -25,3 +25,12 @@ target_link_libraries(gen_ops
 )
 
 target_compile_features(gen_ops PRIVATE cxx_std_20)
+
+add_executable(gen_backends gen_backends.cpp)
+
+target_link_libraries(gen_backends
+    PRIVATE
+        "${YAML_CPP_TARGET}"
+)
+
+target_compile_features(gen_backends PRIVATE cxx_std_20)

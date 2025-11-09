@@ -8,7 +8,7 @@ backends:
       description: "NVIDIA CUDA 実装"
 
   - id: "mps"
-    display_name: "Metal Performance Shaders"
+    display_name: "MPS"
     module_path: "@orteaf/internal/backend/mps"
     metadata:
       description: "macOS/iOS 向け Metal Performance Shaders 実装"
