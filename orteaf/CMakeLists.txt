@@ -129,3 +129,33 @@ target_compile_definitions(orteaf
 )
 
 target_compile_features(orteaf PUBLIC cxx_std_20)
+
+if(ORTEAF_CUDA_EMBED_SOURCE)
+    set_source_files_properties(${ORTEAF_CUDA_EMBED_SOURCE} PROPERTIES GENERATED TRUE)
+    target_sources(orteaf PRIVATE ${ORTEAF_CUDA_EMBED_SOURCE})
+    if(ORTEAF_CUDA_EMBED_OBJECTS)
+        foreach(obj ${ORTEAF_CUDA_EMBED_OBJECTS})
+            set_source_files_properties(${obj}
+                PROPERTIES
+                    GENERATED TRUE
+                    EXTERNAL_OBJECT TRUE
+            )
+        endforeach()
+        target_sources(orteaf PRIVATE ${ORTEAF_CUDA_EMBED_OBJECTS})
+    endif()
+endif()
+
+if(ORTEAF_METAL_EMBED_SOURCE)
+    set_source_files_properties(${ORTEAF_METAL_EMBED_SOURCE} PROPERTIES GENERATED TRUE)
+    target_sources(orteaf PRIVATE ${ORTEAF_METAL_EMBED_SOURCE})
+    if(ORTEAF_METAL_EMBED_OBJECTS)
+        foreach(obj ${ORTEAF_METAL_EMBED_OBJECTS})
+            set_source_files_properties(${obj}
+                PROPERTIES
+                    GENERATED TRUE
+                    EXTERNAL_OBJECT TRUE
+            )
+        endforeach()
+        target_sources(orteaf PRIVATE ${ORTEAF_METAL_EMBED_OBJECTS})
+    endif()
+endif()

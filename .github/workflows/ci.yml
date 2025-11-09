@@ -4,44 +4,70 @@ on:
   push:
     branches: [ main ]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      run_mps:
+        description: "Run macOS MPS job"
+        required: false
+        default: "false"
+      run_cuda:
+        description: "Run CUDA job"
+        required: false
+        default: "false"
 
 jobs:
-  build-and-test:
-    name: ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-
+  linux-cpu:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup dependencies (macOS)
-        if: matrix.os == 'macos-latest'
-        run: scripts/setup-mps.sh
+      - name: Setup toolchain
+        run: ./scripts/setup-cpu.sh
 
-      - name: Setup (Ubuntu via Docker)
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          docker build -f docker/dev/Dockerfile -t orteaf-dev .
-          docker run --rm \
-            --user "$(id -u):$(id -g)" \
-            -v "${{ github.workspace }}":/workspace \
-            -w /workspace \
-            orteaf-dev \
-            bash -lc "cmake -S . -B build -DORTEAF_FETCH_GTEST=ON && cmake --build build --parallel && cd build && ctest --output-on-failure"
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DENABLE_CPU=ON -DENABLE_CUDA=OFF -DENABLE_MPS=OFF -DORTEAF_FETCH_GTEST=ON
 
-      - name: Configure (macOS)
-        if: matrix.os == 'macos-latest'
-        run: cmake -S . -B build -DORTEAF_FETCH_GTEST=ON
-
-      - name: Build (macOS)
-        if: matrix.os == 'macos-latest'
+      - name: Build
         run: cmake --build build --parallel
 
-      - name: Test (macOS)
-        if: matrix.os == 'macos-latest'
+      - name: Test
+        working-directory: build
+        run: ctest --output-on-failure
+
+  macos-mps-build:
+    if: ${{ (vars.CI_ENABLE_MPS == 'true') || (github.event_name == 'workflow_dispatch' && github.event.inputs.run_mps == 'true') }}
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup macOS Metal toolchain
+        run: ./scripts/setup-mps.sh
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DENABLE_MPS=ON -DENABLE_CPU=ON -DENABLE_CUDA=OFF -DORTEAF_FETCH_GTEST=ON
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test (CPU suite; Metal tests excluded due to lack of device)
+        working-directory: build
+        run: ctest --output-on-failure -E "Mps"
+
+  linux-cuda:
+    if: ${{ (vars.CI_ENABLE_CUDA == 'true') || (github.event_name == 'workflow_dispatch' && github.event.inputs.run_cuda == 'true') }}
+    runs-on: [self-hosted, linux, x64, cuda]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup CUDA toolchain
+        run: ./scripts/setup-cuda.sh
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DENABLE_CUDA=ON -DENABLE_CPU=ON -DENABLE_MPS=OFF -DORTEAF_FETCH_GTEST=ON
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test
         working-directory: build
         run: ctest --output-on-failure
