@@ -100,7 +100,7 @@ dtypes:
       description: "64-bit unsigned integer"
       tags: ["native"]
   - id: "F16"
-    cpp_type: "_Float16"
+    cpp_type: "::orteaf::internal::Float16"
     display_name: "float16"
     category: "floating_point"
     promotion_priority: 500

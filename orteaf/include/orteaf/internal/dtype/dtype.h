@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <string_view>
 
+#include "float16.h"
+
 namespace orteaf::internal {
 
 enum class DType : std::uint16_t {
@@ -94,7 +96,7 @@ constexpr bool CanCast(DType from, DType to, CastMode mode) {
     const auto& matrix = (mode == CastMode::Implicit)
                              ? generated_tables::kImplicitCastMatrix[from_index]
                              : generated_tables::kExplicitCastMatrix[from_index];
-    return matrix.test(to_index);
+    return matrix[to_index];
 }
 
 constexpr bool CanImplicitlyCast(DType from, DType to) {

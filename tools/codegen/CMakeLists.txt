@@ -1,4 +1,4 @@
-find_package(yaml-cpp REQUIRED)
+find_package(yaml-cpp 0.8 REQUIRED CONFIG)
 
 if(TARGET yaml-cpp::yaml-cpp)
     set(YAML_CPP_TARGET yaml-cpp::yaml-cpp)

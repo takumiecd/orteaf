@@ -11,7 +11,7 @@
   docker run --rm -it -v "$(pwd)":/workspace -w /workspace orteaf-dev
   ```
 - イメージには `clang`, `cmake`, `ninja`, `doxygen`, `graphviz` などが含まれる。
-- `yaml-cpp` を使うコード生成ツールのために、コンテナでは `libyaml-cpp-dev` も事前にインストールされています。
+- `yaml-cpp` を使うコード生成ツールのために、コンテナでは `yaml-cpp` 0.8.0 をソースからビルドしてインストールしています（`std::string_view` サポートのため、macOS Homebrew と同バージョン）。
 - CUDA を利用する場合は別途 `nvidia/cuda` ベースの派生イメージを作成する予定（未実装）。
 
 ## macOS (MPS)
