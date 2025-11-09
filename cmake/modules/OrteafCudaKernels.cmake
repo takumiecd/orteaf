@@ -202,8 +202,8 @@ function(orteaf_add_cuda_kernel_binaries)
     add_custom_command(
         OUTPUT "${GENERATED_SOURCE}"
         COMMAND "${CMAKE_COMMAND}"
-            -DOUTPUT:PATH="${GENERATED_SOURCE}"
-            -DKERNEL_RECORDS:STRING="${KERNEL_RECORDS_SERIALIZED}"
+            -DOUTPUT:PATH=${GENERATED_SOURCE}
+            -DKERNEL_RECORDS:STRING=${KERNEL_RECORDS_SERIALIZED}
             -P "${CMAKE_SOURCE_DIR}/cmake/modules/OrteafKernelEmbedGenerate.cmake"
         DEPENDS
             ${EMBEDDED_OBJECTS}
