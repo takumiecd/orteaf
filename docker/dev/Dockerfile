@@ -10,6 +10,7 @@ RUN apt-get update \
         clang \
         cmake \
         ninja-build \
+        libyaml-cpp-dev \
         git \
         python3 \
         python3-pip \

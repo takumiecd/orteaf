@@ -11,15 +11,13 @@
   docker run --rm -it -v "$(pwd)":/workspace -w /workspace orteaf-dev
   ```
 - イメージには `clang`, `cmake`, `ninja`, `doxygen`, `graphviz` などが含まれる。
+- `yaml-cpp` を使うコード生成ツールのために、コンテナでは `libyaml-cpp-dev` も事前にインストールされています。
 - CUDA を利用する場合は別途 `nvidia/cuda` ベースの派生イメージを作成する予定（未実装）。
 
 ## macOS (MPS)
 - Metal (MPS) 用の依存関係は Docker で扱えないため、ホスト macOS 上でセットアップする。
-- 暫定的に `scripts/setup-mps.sh` を用意。現状はプレースホルダーなので、具体的な手順が固まり次第実装する。
-- 少なくとも以下を想定:
-  - Xcode Command Line Tools のインストール
-  - Homebrew でのツール導入 (`cmake`, `ninja`, `doxygen` 等)
-  - 環境変数（`DEVELOPER_DIR` など）の設定
+- `scripts/setup-mps.sh` を実行すると Xcode Command Line Tools の検出と Homebrew での依存関係 (`cmake`, `ninja`, `doxygen`, `yaml-cpp`) のインストールを行います。手動で必要なパッケージを追加する場合は `brew install <package>` を利用してください。
+- スクリプトが完了したら、`cmake -S . -B build -DORTEAF_FETCH_GTEST=ON` などでビルド環境を構築できます。
 
 ## Windows
 - 推奨する方法は WSL2 + Docker。WSL 上で Linux 版コンテナを利用し、同じツールチェーンを共有する。

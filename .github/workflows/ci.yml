@@ -18,6 +18,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup dependencies (macOS)
+        if: matrix.os == 'macos-latest'
+        run: scripts/setup-mps.sh
+
       - name: Setup (Ubuntu via Docker)
         if: matrix.os == 'ubuntu-latest'
         run: |
