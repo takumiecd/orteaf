@@ -1,6 +1,6 @@
 # Float16 型メモ
 
-`orteaf/include/orteaf/internal/dtype/float16.h` に定義されている `orteaf::internal::Float16` は、CPU / CUDA 双方で同じインターフェイスを提供する 16bit 浮動小数フォーマットです。以下に主なユースケースをまとめます。
+`orteaf/include/orteaf/internal/dtype/float16.h` に定義されている `orteaf::internal::Float16` は、CPU / CUDA 双方で同じインターフェイスを提供する 16bit 浮動小数フォーマットです。以下に主なユースケースをまとめます。FP8 変換については `docs/notes/float8.md` も参照してください。
 
 ---
 

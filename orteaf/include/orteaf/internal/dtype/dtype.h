@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <string_view>
 
+#include "float8.h"
 #include "float16.h"
 
 namespace orteaf::internal {

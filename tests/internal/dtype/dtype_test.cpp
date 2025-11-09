@@ -20,15 +20,17 @@ TEST(DTypeBasic, EnumValuesAreDefined) {
     EXPECT_EQ(static_cast<std::uint16_t>(dtype::DType::U8), 5u);
     EXPECT_EQ(static_cast<std::uint16_t>(dtype::DType::U32), 7u);
     EXPECT_EQ(static_cast<std::uint16_t>(dtype::DType::U64), 8u);
-    EXPECT_EQ(static_cast<std::uint16_t>(dtype::DType::F16), 9u);
-    EXPECT_EQ(static_cast<std::uint16_t>(dtype::DType::F32), 10u);
-    EXPECT_EQ(static_cast<std::uint16_t>(dtype::DType::F64), 11u);
+    EXPECT_EQ(static_cast<std::uint16_t>(dtype::DType::F8E4M3), 9u);
+    EXPECT_EQ(static_cast<std::uint16_t>(dtype::DType::F8E5M2), 10u);
+    EXPECT_EQ(static_cast<std::uint16_t>(dtype::DType::F16), 11u);
+    EXPECT_EQ(static_cast<std::uint16_t>(dtype::DType::F32), 12u);
+    EXPECT_EQ(static_cast<std::uint16_t>(dtype::DType::F64), 13u);
 }
 
 TEST(DTypeBasic, CountIsCorrect) {
-    // 境界条件: DType::Countが正しい値（12）か
-    EXPECT_EQ(static_cast<std::size_t>(dtype::DType::Count), 12u);
-    EXPECT_EQ(dtype::kDTypeCount, 12u);
+    // 境界条件: DType::Countが正しい値（14）か
+    EXPECT_EQ(static_cast<std::size_t>(dtype::DType::Count), 14u);
+    EXPECT_EQ(dtype::kDTypeCount, 14u);
     EXPECT_EQ(dtype::kDTypeCount, static_cast<std::size_t>(dtype::DType::Count));
 }
 
@@ -37,12 +39,12 @@ TEST(DTypeBasic, IndexConversion) {
     EXPECT_EQ(dtype::ToIndex(dtype::DType::Bool), 0u);
     EXPECT_EQ(dtype::ToIndex(dtype::DType::I8), 1u);
     EXPECT_EQ(dtype::ToIndex(dtype::DType::I32), 3u);
-    EXPECT_EQ(dtype::ToIndex(dtype::DType::F64), 11u);
+    EXPECT_EQ(dtype::ToIndex(dtype::DType::F64), 13u);
 
     EXPECT_EQ(dtype::FromIndex(0), dtype::DType::Bool);
     EXPECT_EQ(dtype::FromIndex(1), dtype::DType::I8);
     EXPECT_EQ(dtype::FromIndex(3), dtype::DType::I32);
-    EXPECT_EQ(dtype::FromIndex(11), dtype::DType::F64);
+    EXPECT_EQ(dtype::FromIndex(13), dtype::DType::F64);
 }
 
 TEST(DTypeBasic, IndexConversionRoundTrip) {
@@ -85,6 +87,7 @@ TEST(DTypeMetadata, IdOf) {
     EXPECT_EQ(dtype::IdOf(dtype::DType::I32), std::string_view("I32"));
     EXPECT_EQ(dtype::IdOf(dtype::DType::F64), std::string_view("F64"));
     EXPECT_EQ(dtype::IdOf(dtype::DType::U8), std::string_view("U8"));
+    EXPECT_EQ(dtype::IdOf(dtype::DType::F8E4M3), std::string_view("F8E4M3"));
     EXPECT_EQ(dtype::IdOf(dtype::DType::F16), std::string_view("F16"));
 }
 
@@ -94,6 +97,8 @@ TEST(DTypeMetadata, DisplayNameOf) {
     EXPECT_EQ(dtype::DisplayNameOf(dtype::DType::I32), std::string_view("int32"));
     EXPECT_EQ(dtype::DisplayNameOf(dtype::DType::F64), std::string_view("float64"));
     EXPECT_EQ(dtype::DisplayNameOf(dtype::DType::U8), std::string_view("uint8"));
+    EXPECT_EQ(dtype::DisplayNameOf(dtype::DType::F8E4M3), std::string_view("float8 (e4m3)"));
+    EXPECT_EQ(dtype::DisplayNameOf(dtype::DType::F8E5M2), std::string_view("float8 (e5m2)"));
     EXPECT_EQ(dtype::DisplayNameOf(dtype::DType::F16), std::string_view("float16"));
 }
 
@@ -104,6 +109,8 @@ TEST(DTypeMetadata, CategoryOf) {
     EXPECT_EQ(dtype::CategoryOf(dtype::DType::I32), std::string_view("signed_integer"));
     EXPECT_EQ(dtype::CategoryOf(dtype::DType::U8), std::string_view("unsigned_integer"));
     EXPECT_EQ(dtype::CategoryOf(dtype::DType::U32), std::string_view("unsigned_integer"));
+    EXPECT_EQ(dtype::CategoryOf(dtype::DType::F8E4M3), std::string_view("floating_point"));
+    EXPECT_EQ(dtype::CategoryOf(dtype::DType::F8E5M2), std::string_view("floating_point"));
     EXPECT_EQ(dtype::CategoryOf(dtype::DType::F32), std::string_view("floating_point"));
     EXPECT_EQ(dtype::CategoryOf(dtype::DType::F64), std::string_view("floating_point"));
 }
@@ -132,6 +139,8 @@ TEST(DTypeProperties, SizeOf) {
     EXPECT_EQ(dtype::SizeOf(dtype::DType::I32), sizeof(std::int32_t));
     EXPECT_EQ(dtype::SizeOf(dtype::DType::I64), sizeof(std::int64_t));
     EXPECT_EQ(dtype::SizeOf(dtype::DType::U8), sizeof(std::uint8_t));
+    EXPECT_EQ(dtype::SizeOf(dtype::DType::F8E4M3), sizeof(::orteaf::internal::Float8E4M3));
+    EXPECT_EQ(dtype::SizeOf(dtype::DType::F8E5M2), sizeof(::orteaf::internal::Float8E5M2));
     EXPECT_EQ(dtype::SizeOf(dtype::DType::F32), sizeof(float));
     EXPECT_EQ(dtype::SizeOf(dtype::DType::F64), sizeof(double));
 }
@@ -143,6 +152,8 @@ TEST(DTypeProperties, AlignmentOf) {
     EXPECT_EQ(dtype::AlignmentOf(dtype::DType::I32), alignof(std::int32_t));
     EXPECT_EQ(dtype::AlignmentOf(dtype::DType::I64), alignof(std::int64_t));
     EXPECT_EQ(dtype::AlignmentOf(dtype::DType::U8), alignof(std::uint8_t));
+    EXPECT_EQ(dtype::AlignmentOf(dtype::DType::F8E4M3), alignof(::orteaf::internal::Float8E4M3));
+    EXPECT_EQ(dtype::AlignmentOf(dtype::DType::F8E5M2), alignof(::orteaf::internal::Float8E5M2));
     EXPECT_EQ(dtype::AlignmentOf(dtype::DType::F32), alignof(float));
     EXPECT_EQ(dtype::AlignmentOf(dtype::DType::F64), alignof(double));
 }
@@ -156,6 +167,8 @@ TEST(DTypeProperties, PromotionPriority) {
     EXPECT_EQ(dtype::PromotionPriority(dtype::DType::I64), 400);
     EXPECT_EQ(dtype::PromotionPriority(dtype::DType::U8), 110);
     EXPECT_EQ(dtype::PromotionPriority(dtype::DType::U32), 310);
+    EXPECT_EQ(dtype::PromotionPriority(dtype::DType::F8E4M3), 420);
+    EXPECT_EQ(dtype::PromotionPriority(dtype::DType::F8E5M2), 430);
     EXPECT_EQ(dtype::PromotionPriority(dtype::DType::F16), 500);
     EXPECT_EQ(dtype::PromotionPriority(dtype::DType::F32), 600);
     EXPECT_EQ(dtype::PromotionPriority(dtype::DType::F64), 700);
@@ -167,6 +180,12 @@ TEST(DTypeProperties, PromotionPriorityOrdering) {
               dtype::PromotionPriority(dtype::DType::I8));
     EXPECT_LT(dtype::PromotionPriority(dtype::DType::I8),
               dtype::PromotionPriority(dtype::DType::I32));
+    EXPECT_LT(dtype::PromotionPriority(dtype::DType::I32),
+              dtype::PromotionPriority(dtype::DType::F8E4M3));
+    EXPECT_LT(dtype::PromotionPriority(dtype::DType::F8E4M3),
+              dtype::PromotionPriority(dtype::DType::F8E5M2));
+    EXPECT_LT(dtype::PromotionPriority(dtype::DType::F8E5M2),
+              dtype::PromotionPriority(dtype::DType::F16));
     EXPECT_LT(dtype::PromotionPriority(dtype::DType::I32),
               dtype::PromotionPriority(dtype::DType::F32));
     EXPECT_LT(dtype::PromotionPriority(dtype::DType::F32),
@@ -297,7 +316,7 @@ TEST(DTypePromotion, BoundaryConditions) {
 TEST(DTypeCasting, SameTypeImplicit) {
     // 等価クラス: 同じ型へのキャスト
     EXPECT_TRUE(dtype::CanImplicitlyCast(dtype::DType::I32, dtype::DType::I32));
-    EXPECT_TRUE(dtype::CanImplicitlyCast(dtype::DType::F32, dtype::DType::F32));
+    EXPECT_TRUE(dtype::CanExplicitlyCast(dtype::DType::F32, dtype::DType::F32));
     EXPECT_TRUE(dtype::CanExplicitlyCast(dtype::DType::I32, dtype::DType::I32));
     EXPECT_TRUE(dtype::CanExplicitlyCast(dtype::DType::F32, dtype::DType::F32));
 }
@@ -390,6 +409,8 @@ TEST(DTypeComputeType, Basic) {
     EXPECT_EQ(dtype::ComputeType(dtype::DType::I8), dtype::DType::I32);
     EXPECT_EQ(dtype::ComputeType(dtype::DType::I32), dtype::DType::I32);
     EXPECT_EQ(dtype::ComputeType(dtype::DType::I64), dtype::DType::I64);
+    EXPECT_EQ(dtype::ComputeType(dtype::DType::F8E4M3), dtype::DType::F16);
+    EXPECT_EQ(dtype::ComputeType(dtype::DType::F8E5M2), dtype::DType::F16);
     EXPECT_EQ(dtype::ComputeType(dtype::DType::F16), dtype::DType::F32);
     EXPECT_EQ(dtype::ComputeType(dtype::DType::F32), dtype::DType::F32);
     EXPECT_EQ(dtype::ComputeType(dtype::DType::F64), dtype::DType::F64);
@@ -410,6 +431,8 @@ TEST(DTypeComputeType, CategoryRepresentatives) {
     EXPECT_EQ(dtype::ComputeType(dtype::DType::U32), dtype::DType::I32);
     EXPECT_EQ(dtype::ComputeType(dtype::DType::U64), dtype::DType::I64);
     // floating_point
+    EXPECT_EQ(dtype::ComputeType(dtype::DType::F8E4M3), dtype::DType::F16);
+    EXPECT_EQ(dtype::ComputeType(dtype::DType::F8E5M2), dtype::DType::F16);
     EXPECT_EQ(dtype::ComputeType(dtype::DType::F16), dtype::DType::F32);
     EXPECT_EQ(dtype::ComputeType(dtype::DType::F32), dtype::DType::F32);
     EXPECT_EQ(dtype::ComputeType(dtype::DType::F64), dtype::DType::F64);

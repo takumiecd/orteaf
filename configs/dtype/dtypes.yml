@@ -99,6 +99,28 @@ dtypes:
     metadata:
       description: "64-bit unsigned integer"
       tags: ["native"]
+  - id: "F8E4M3"
+    cpp_type: "::orteaf::internal::Float8E4M3"
+    display_name: "float8 (e4m3)"
+    category: "floating_point"
+    promotion_priority: 420
+    compute_dtype: "F16"
+    implicit_cast_to: ["F16", "F32", "F64"]
+    explicit_cast_to: ["I16", "I32", "I64", "U16", "U32", "U64", "Bool", "F8E5M2"]
+    metadata:
+      description: "8-bit float (E4M3 format)"
+      tags: ["fp8", "compute-promote"]
+  - id: "F8E5M2"
+    cpp_type: "::orteaf::internal::Float8E5M2"
+    display_name: "float8 (e5m2)"
+    category: "floating_point"
+    promotion_priority: 430
+    compute_dtype: "F16"
+    implicit_cast_to: ["F16", "F32", "F64"]
+    explicit_cast_to: ["I16", "I32", "I64", "U16", "U32", "U64", "Bool", "F8E4M3"]
+    metadata:
+      description: "8-bit float (E5M2 format)"
+      tags: ["fp8", "compute-promote"]
   - id: "F16"
     cpp_type: "::orteaf::internal::Float16"
     display_name: "float16"
