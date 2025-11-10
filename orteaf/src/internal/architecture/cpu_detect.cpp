@@ -14,6 +14,8 @@
 #include <vector>
 
 #if defined(__APPLE__)
+#include <CoreFoundation/CoreFoundation.h>
+#include <IOKit/IOKitLib.h>
 #include <sys/sysctl.h>
 #endif
 
@@ -65,6 +67,34 @@ std::string ReadSysctlString(const char* key) {
 }
 #endif
 
+#if defined(__APPLE__)
+std::string ReadHardwareModelFromIORegistry() {
+    io_registry_entry_t entry = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPlatformExpertDevice"));
+    if (entry == MACH_PORT_NULL) {
+        return {};
+    }
+
+    std::string result;
+    if (CFTypeRef model = IORegistryEntryCreateCFProperty(entry, CFSTR("model"), kCFAllocatorDefault, 0)) {
+        if (CFGetTypeID(model) == CFDataGetTypeID()) {
+            CFDataRef data = static_cast<CFDataRef>(model);
+            const UInt8* bytes = CFDataGetBytePtr(data);
+            if (bytes != nullptr) {
+                result.assign(reinterpret_cast<const char*>(bytes),
+                              reinterpret_cast<const char*>(bytes) + CFDataGetLength(data));
+                while (!result.empty() && result.back() == '\0') {
+                    result.pop_back();
+                }
+            }
+        }
+        CFRelease(model);
+    }
+
+    IOObjectRelease(entry);
+    return result;
+}
+#endif
+
 std::string ReadFirstExistingFileLower(std::initializer_list<const char*> paths) {
     for (const char* path : paths) {
         std::ifstream stream(path);
@@ -106,6 +136,9 @@ CpuInfo CollectCpuInfo() {
 #if defined(__APPLE__)
     if (info.machine_id.empty()) {
         info.machine_id = ToLowerCopy(ReadSysctlString("hw.model"));
+    }
+    if (info.machine_id.empty()) {
+        info.machine_id = ToLowerCopy(ReadHardwareModelFromIORegistry());
     }
 #else
     if (info.machine_id.empty()) {

@@ -83,14 +83,21 @@ if(ORTEAF_TEST_SOURCES)
             ORTEAF_EMBED_HAS_PTX=${ORTEAF_CUDA_EMBED_HAS_PTX}
     )
     
-    # Link Metal/MPS frameworks on macOS when MPS tests are present
-    if(APPLE AND ORTEAF_ENABLE_MPS_INT)
+    # macOS frameworks
+    if(APPLE)
         target_link_libraries(orteaf_tests
             PRIVATE
-                "-framework Metal"
-                "-framework MetalPerformanceShaders"
-                "-framework Foundation"
+                "-framework CoreFoundation"
+                "-framework IOKit"
         )
+        if(ORTEAF_ENABLE_MPS_INT)
+            target_link_libraries(orteaf_tests
+                PRIVATE
+                    "-framework Metal"
+                    "-framework MetalPerformanceShaders"
+                    "-framework Foundation"
+            )
+        endif()
     endif()
 
     include(GoogleTest)

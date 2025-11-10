@@ -83,7 +83,7 @@ architectures:
       description: "Apple Silicon M4 Pro アーキテクチャ (Avalanche/Blizzard) 向け最適化"
       detect:
         vendor: "apple"
-        machine_ids: ["Mac15,4", "Mac15,6", "Mac15,7"]
+        machine_ids: ["Mac15,4", "Mac15,6", "Mac15,7", "Mac16,6", "Mac16,7", "Mac16,8"]
 
   - id: "intel_comet_lake"
     display_name: "Intel Comet Lake"
