@@ -14,17 +14,17 @@
 namespace orteaf::internal::backend::cuda {
 
 /**
- * @copydoc orteaf::internal::backend::cuda::load_module_from_file
+ * @copydoc orteaf::internal::backend::cuda::loadModuleFromFile
  */
-CUmodule_t load_module_from_file(const char* filepath) {
+CUmodule_t loadModuleFromFile(const char* filepath) {
 #ifdef ORTEAF_ENABLE_CUDA
     if (filepath == nullptr) {
         using namespace orteaf::internal::diagnostics::error;
-        throw_error(OrteafErrc::NullPointer, "load_module_from_file: filepath cannot be nullptr");
+        throwError(OrteafErrc::NullPointer, "loadModuleFromFile: filepath cannot be nullptr");
     }
     CUmodule module;
     CU_CHECK(cuModuleLoad(&module, filepath));
-    return opaque_from_objc_noown<CUmodule_t, CUmodule>(module);
+    return opaqueFromObjcNoown<CUmodule_t, CUmodule>(module);
 #else
     (void)filepath;
     return nullptr;
@@ -32,17 +32,17 @@ CUmodule_t load_module_from_file(const char* filepath) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::load_module_from_image
+ * @copydoc orteaf::internal::backend::cuda::loadModuleFromImage
  */
-CUmodule_t load_module_from_image(const void* image) {
+CUmodule_t loadModuleFromImage(const void* image) {
 #ifdef ORTEAF_ENABLE_CUDA
     if (image == nullptr) {
         using namespace orteaf::internal::diagnostics::error;
-        throw_error(OrteafErrc::NullPointer, "load_module_from_image: image cannot be nullptr");
+        throwError(OrteafErrc::NullPointer, "loadModuleFromImage: image cannot be nullptr");
     }
     CUmodule module;
     CU_CHECK(cuModuleLoadData(&module, image));
-    return opaque_from_objc_noown<CUmodule_t, CUmodule>(module);
+    return opaqueFromObjcNoown<CUmodule_t, CUmodule>(module);
 #else
     (void)image;
     return nullptr;
@@ -50,22 +50,22 @@ CUmodule_t load_module_from_image(const void* image) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::get_function
+ * @copydoc orteaf::internal::backend::cuda::getFunction
  */
-CUfunction_t get_function(CUmodule_t module, const char* kernel_name) {
+CUfunction_t getFunction(CUmodule_t module, const char* kernel_name) {
 #ifdef ORTEAF_ENABLE_CUDA
     if (module == nullptr) {
         using namespace orteaf::internal::diagnostics::error;
-        throw_error(OrteafErrc::NullPointer, "get_function: module cannot be nullptr");
+        throwError(OrteafErrc::NullPointer, "getFunction: module cannot be nullptr");
     }
     if (kernel_name == nullptr) {
         using namespace orteaf::internal::diagnostics::error;
-        throw_error(OrteafErrc::NullPointer, "get_function: kernel_name cannot be nullptr");
+        throwError(OrteafErrc::NullPointer, "getFunction: kernel_name cannot be nullptr");
     }
-    CUmodule objc_module = objc_from_opaque_noown<CUmodule>(module);
+    CUmodule objc_module = objcFromOpaqueNoown<CUmodule>(module);
     CUfunction function;
     CU_CHECK(cuModuleGetFunction(&function, objc_module, kernel_name));
-    return opaque_from_objc_noown<CUfunction_t, CUfunction>(function);
+    return opaqueFromObjcNoown<CUfunction_t, CUfunction>(function);
 #else
     (void)module;
     (void)kernel_name;
@@ -74,12 +74,12 @@ CUfunction_t get_function(CUmodule_t module, const char* kernel_name) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::unload_module
+ * @copydoc orteaf::internal::backend::cuda::unloadModule
  */
-void unload_module(CUmodule_t module) {
+void unloadModule(CUmodule_t module) {
 #ifdef ORTEAF_ENABLE_CUDA
     if (module == nullptr) return;
-    CUmodule objc_module = objc_from_opaque_noown<CUmodule>(module);
+    CUmodule objc_module = objcFromOpaqueNoown<CUmodule>(module);
     CU_CHECK(cuModuleUnload(objc_module));
 #else
     (void)module;

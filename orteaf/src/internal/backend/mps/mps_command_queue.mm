@@ -14,18 +14,18 @@
 namespace orteaf::internal::backend::mps {
 
 /**
- * @copydoc orteaf::internal::backend::mps::create_command_queue
+ * @copydoc orteaf::internal::backend::mps::createCommandQueue
  */
-MPSCommandQueue_t create_command_queue(MPSDevice_t device) {
+MPSCommandQueue_t createCommandQueue(MPSDevice_t device) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (device == nullptr) {
         using namespace orteaf::internal::diagnostics::error;
-        throw_error(OrteafErrc::NullPointer, "create_command_queue: device cannot be nullptr");
+        throwError(OrteafErrc::NullPointer, "createCommandQueue: device cannot be nullptr");
     }
-    id<MTLDevice> objc_device = objc_from_opaque_noown<id<MTLDevice>>(device);
+    id<MTLDevice> objc_device = objcFromOpaqueNoown<id<MTLDevice>>(device);
     id<MTLCommandQueue> objc_command_queue = [objc_device newCommandQueue];
-    update_create_command_queue();
-    return (MPSCommandQueue_t)opaque_from_objc_retained(objc_command_queue);
+    updateCreateCommandQueue();
+    return (MPSCommandQueue_t)opaqueFromObjcRetained(objc_command_queue);
 #else
     (void)device;
     return nullptr;
@@ -33,13 +33,13 @@ MPSCommandQueue_t create_command_queue(MPSDevice_t device) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::destroy_command_queue
+ * @copydoc orteaf::internal::backend::mps::destroyCommandQueue
  */
-void destroy_command_queue(MPSCommandQueue_t command_queue) {
+void destroyCommandQueue(MPSCommandQueue_t command_queue) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (!command_queue) return;
-    opaque_release_retained(command_queue);
-    update_destroy_command_queue();
+    opaqueReleaseRetained(command_queue);
+    updateDestroyCommandQueue();
 #else
     (void)command_queue;
 #endif

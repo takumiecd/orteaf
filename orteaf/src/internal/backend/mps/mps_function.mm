@@ -14,17 +14,17 @@
 namespace orteaf::internal::backend::mps {
 
 /**
- * @copydoc orteaf::internal::backend::mps::create_function
+ * @copydoc orteaf::internal::backend::mps::createFunction
  */
-MPSFunction_t create_function(MPSLibrary_t library, std::string_view name) {
+MPSFunction_t createFunction(MPSLibrary_t library, std::string_view name) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (library == nullptr) {
         using namespace orteaf::internal::diagnostics::error;
-        throw_error(OrteafErrc::NullPointer, "create_function: library cannot be nullptr");
+        throwError(OrteafErrc::NullPointer, "createFunction: library cannot be nullptr");
     }
     if (name.empty()) {
         using namespace orteaf::internal::diagnostics::error;
-        throw_error(OrteafErrc::InvalidParameter, "create_function: name cannot be empty");
+        throwError(OrteafErrc::InvalidParameter, "createFunction: name cannot be empty");
     }
     NSString* function_name = [[[NSString alloc] initWithBytes:name.data()
                                                    length:name.size()
@@ -32,9 +32,9 @@ MPSFunction_t create_function(MPSLibrary_t library, std::string_view name) {
     if (function_name == nil) {
         return nullptr;
     }
-    id<MTLLibrary> objc_library = objc_from_opaque_noown<id<MTLLibrary>>(library);
+    id<MTLLibrary> objc_library = objcFromOpaqueNoown<id<MTLLibrary>>(library);
     id<MTLFunction> objc_function = [objc_library newFunctionWithName:function_name];
-    return (MPSFunction_t)opaque_from_objc_retained(objc_function);
+    return (MPSFunction_t)opaqueFromObjcRetained(objc_function);
 #else
     (void)library;
     (void)name;
@@ -43,12 +43,12 @@ MPSFunction_t create_function(MPSLibrary_t library, std::string_view name) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::destroy_function
+ * @copydoc orteaf::internal::backend::mps::destroyFunction
  */
-void destroy_function(MPSFunction_t function) {
+void destroyFunction(MPSFunction_t function) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (function != nullptr) {
-        opaque_release_retained(function);
+        opaqueReleaseRetained(function);
     }
 #else
     (void)function;

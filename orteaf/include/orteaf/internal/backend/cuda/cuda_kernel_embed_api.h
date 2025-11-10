@@ -30,9 +30,9 @@ namespace orteaf::internal::backend::cuda::kernel_embed {
  *
  * // Prefer a fatbin, but fall back to a PTX blob if fatbin generation was
  * // disabled for the current build.
- * Blob bin = find_kernel_data("embed_test_library",
+ * Blob bin = findKernelData("embed_test_library",
  *                             CudaKernelFmt::Fatbin,
- *                             find_kernel_data("embed_test_library", CudaKernelFmt::Ptx));
+ *                             findKernelData("embed_test_library", CudaKernelFmt::Ptx));
  * if (!bin.data) {
  *     throw std::runtime_error("Kernel not embedded in this build");
  * }
@@ -47,7 +47,7 @@ namespace orteaf::internal::backend::cuda::kernel_embed {
 
 enum class CudaKernelFmt { Fatbin, Cubin, Ptx };
 
-constexpr const char* to_string(CudaKernelFmt fmt) noexcept {
+constexpr const char* toString(CudaKernelFmt fmt) noexcept {
     switch (fmt) {
     case CudaKernelFmt::Fatbin: return "fatbin";
     case CudaKernelFmt::Cubin: return "cubin";

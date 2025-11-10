@@ -15,6 +15,6 @@ namespace orteaf::internal::backend::cuda {
  *
  * Uses an internal one-time guard to ensure `cuInit(0)` runs only once.
  */
-void cuda_init();
+void cudaInit();
 
 } // namespace orteaf::internal::backend::cuda

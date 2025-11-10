@@ -21,24 +21,24 @@ TEST(CudaDetect, ManualEnvironmentCheck) {
         device_index = static_cast<std::uint32_t>(std::strtoul(index_env, nullptr, 10));
     }
 
-    const auto arch = architecture::detect_cuda_architecture_for_device_index(device_index);
+    const auto arch = architecture::detectCudaArchitecture_for_device_index(device_index);
     ASSERT_NE(arch, architecture::Architecture::cuda_generic)
         << "Generic fallback indicates CUDA backend is disabled or device index "
         << device_index << " is unavailable.";
-    EXPECT_STREQ(expected_env, architecture::IdOf(arch).data());
+    EXPECT_STREQ(expected_env, architecture::idOf(arch).data());
 }
 
 TEST(CudaDetect, MatchesSm80ViaComputeCapability) {
-    const auto arch = architecture::detect_cuda_architecture(80, "NVIDIA");
+    const auto arch = architecture::detectCudaArchitecture(80, "NVIDIA");
     EXPECT_EQ(arch, architecture::Architecture::cuda_sm80);
 }
 
 TEST(CudaDetect, FallsBackToGenericIfNoMatch) {
-    const auto arch = architecture::detect_cuda_architecture(999, "nvidia");
+    const auto arch = architecture::detectCudaArchitecture(999, "nvidia");
     EXPECT_EQ(arch, architecture::Architecture::cuda_generic);
 }
 
 TEST(CudaDetect, DeviceIndexOutOfRangeFallsBackToGeneric) {
-    const auto arch = architecture::detect_cuda_architecture_for_device_index(std::numeric_limits<std::uint32_t>::max());
+    const auto arch = architecture::detectCudaArchitecture_for_device_index(std::numeric_limits<std::uint32_t>::max());
     EXPECT_EQ(arch, architecture::Architecture::cuda_generic);
 }

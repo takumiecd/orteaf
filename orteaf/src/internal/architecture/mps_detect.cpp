@@ -56,10 +56,10 @@ Architecture detectMpsArchitecture(std::string_view metal_family, std::string_vi
 
     for (std::size_t index = 0; index < count; ++index) {
         const Architecture arch = kAllArchitectures[index];
-        if (LocalIndexOf(arch) == 0) {
+        if (localIndexOf(arch) == 0) {
             continue;
         }
-        if (BackendOf(arch) != backend::Backend::mps) {
+        if (backendOf(arch) != backend::Backend::mps) {
             continue;
         }
 

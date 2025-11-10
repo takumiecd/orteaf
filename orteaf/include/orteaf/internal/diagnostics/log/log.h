@@ -143,7 +143,7 @@ constexpr int levelToInt(LogLevel level) {
  * @return Integer threshold value for the category.
  */
 template <LogCategory Category>
-constexpr int category_threshold();
+constexpr int categoryThreshold();
 
 /**
  * @brief Specialization for Core category threshold.
@@ -199,7 +199,7 @@ constexpr int category_threshold<LogCategory::Io>() {
  * @param category The category of the log message.
  * @param level The severity level of the log message.
  * @param message The log message content.
- * @param context User-provided context pointer passed to set_log_sink().
+ * @param context User-provided context pointer passed to setLogSink().
  */
 using LogSink = void (*)(LogCategory category, LogLevel level, std::string_view message, void* context);
 
@@ -252,7 +252,7 @@ void logMessage(LogCategory category, LogLevel level, std::string message);
  * @param builder Functor or lambda that builds the log message.
  */
 template <LogCategory Category, LogLevel Level, typename MessageBuilder>
-inline void log_lazy(MessageBuilder&& builder) {
+inline void logLazy(MessageBuilder&& builder) {
     if constexpr (levelToInt(Level) >= category_threshold<Category>()) {
         logMessage(Category, Level, std::forward<MessageBuilder>(builder)());
     }
@@ -273,7 +273,7 @@ inline void log_lazy(MessageBuilder&& builder) {
  * @param message_builder Functor or lambda that builds the log message.
  */
 template <LogCategory Category, LogLevel Level, typename ConditionBuilder, typename MessageBuilder>
-inline void log_lazy_if(ConditionBuilder&& condition_builder, MessageBuilder&& message_builder) {
+inline void logLazyIf(ConditionBuilder&& condition_builder, MessageBuilder&& message_builder) {
     if constexpr (levelToInt(Level) >= category_threshold<Category>()) {
         if (std::forward<ConditionBuilder>(condition_builder)()) {
             logMessage(Category, Level, std::forward<MessageBuilder>(message_builder)());
@@ -394,7 +394,7 @@ constexpr const char* categoryToString(LogCategory category) {
  */
 
 #define ORTEAF_LOG_INTERNAL(category, level, expr)                                                        \
-    ::orteaf::internal::diagnostics::log::detail::log_lazy<                                                \
+    ::orteaf::internal::diagnostics::log::detail::logLazy<                                                \
         ::orteaf::internal::diagnostics::log::LogCategory::category,                                       \
         ::orteaf::internal::diagnostics::log::LogLevel::level>(                                            \
         [&]() -> std::string { return std::string(expr); })
@@ -473,7 +473,7 @@ constexpr const char* categoryToString(LogCategory category) {
  */
 
 #define ORTEAF_LOG_INTERNAL_IF(category, level, condition, expr)                                             \
-    ::orteaf::internal::diagnostics::log::detail::log_lazy_if<                                                \
+    ::orteaf::internal::diagnostics::log::detail::logLazyIf<                                                \
         ::orteaf::internal::diagnostics::log::LogCategory::category,                                         \
         ::orteaf::internal::diagnostics::log::LogLevel::level>(                                              \
         [&]() -> bool { return (condition); },                                                               \
@@ -492,7 +492,7 @@ constexpr const char* categoryToString(LogCategory category) {
  *
  * If the expression evaluates to false, this macro:
  * 1. Logs a CRITICAL level message to the Core category.
- * 2. Calls fatal_error() with an InvalidState error code.
+ * 2. Calls fatalError() with an InvalidState error code.
  *
  * This macro is intended for runtime assertions that indicate an invalid program state.
  * The program will terminate after logging and error handling.
@@ -505,8 +505,8 @@ constexpr const char* categoryToString(LogCategory category) {
         if (!(expr)) {                                                                                      \
             const std::string _orteaf_assert_message = std::string(message);                                \
             ORTEAF_LOG_CRITICAL(Core, _orteaf_assert_message);                                              \
-            ::orteaf::internal::diagnostics::error::fatal_error(                                            \
-                ::orteaf::internal::diagnostics::error::make_error(                                         \
+            ::orteaf::internal::diagnostics::error::fatalError(                                            \
+                ::orteaf::internal::diagnostics::error::makeError(                                         \
                     ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,                       \
                     _orteaf_assert_message));                                                               \
         }                                                                                                   \

@@ -19,7 +19,7 @@ struct StrongId {
     explicit constexpr operator T() const noexcept { return value; }
 
     static constexpr StrongId invalid() noexcept { return StrongId{static_cast<T>(~T{})}; }
-    constexpr bool is_valid() const noexcept { return value != static_cast<T>(~T{}); }
+    constexpr bool isValid() const noexcept { return value != static_cast<T>(~T{}); }
 };
 
 struct DeviceTag {};

@@ -13,12 +13,12 @@ TEST(StrongId, BasicComparisonAndConversion) {
     EXPECT_NE(stream1, stream3);
     EXPECT_EQ(static_cast<uint8_t>(stream1), 3u);
     EXPECT_LT(stream1, stream3);
-    EXPECT_TRUE(stream1.is_valid());
+    EXPECT_TRUE(stream1.isValid());
 }
 
 TEST(StrongId, InvalidHelper) {
     constexpr auto bad = runtime::ContextId::invalid();
-    EXPECT_FALSE(bad.is_valid());
+    EXPECT_FALSE(bad.isValid());
     EXPECT_EQ(static_cast<uint8_t>(bad), static_cast<uint8_t>(~0));
 }
 

@@ -15,18 +15,18 @@ TEST(CpuDetect, ManualEnvironmentCheck) {
         GTEST_SKIP() << "Set ORTEAF_EXPECT_CPU_ARCH to run this test on your environment.";
     }
     std::cout << "expected_env: " << expected_env << std::endl;
-    const auto arch = architecture::detect_cpu_architecture();
-    std::cout << "arch: " << architecture::IdOf(arch).data() << std::endl;
-    EXPECT_STREQ(expected_env, architecture::IdOf(arch).data());
+    const auto arch = architecture::detectCpuArchitecture();
+    std::cout << "arch: " << architecture::idOf(arch).data() << std::endl;
+    EXPECT_STREQ(expected_env, architecture::idOf(arch).data());
 }
 
 TEST(CpuDetect, ReportsCpuBackendArchitecture) {
-    const auto arch = architecture::detect_cpu_architecture();
-    EXPECT_EQ(architecture::BackendOf(arch), backend::Backend::cpu);
+    const auto arch = architecture::detectCpuArchitecture();
+    EXPECT_EQ(architecture::backendOf(arch), backend::Backend::cpu);
     EXPECT_GE(static_cast<std::uint16_t>(arch), 0);
 }
 
 TEST(CpuDetect, GenericIsAlwaysValid) {
     constexpr auto generic = architecture::Architecture::cpu_generic;
-    EXPECT_TRUE(architecture::IsValidIndex(static_cast<std::size_t>(generic)));
+    EXPECT_TRUE(architecture::isValidIndex(static_cast<std::size_t>(generic)));
 }

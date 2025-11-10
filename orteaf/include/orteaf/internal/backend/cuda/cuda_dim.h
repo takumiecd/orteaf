@@ -50,22 +50,22 @@ namespace orteaf::internal::backend::cuda {
 /**
  * @brief Construct a `CudaDim3_t` from components.
  */
-CudaDim3_t make_dim3(std::uint32_t x, std::uint32_t y, std::uint32_t z) noexcept;
+CudaDim3_t makeDim3(std::uint32_t x, std::uint32_t y, std::uint32_t z) noexcept;
 /**
  * @brief Construct a `CudaUInt3_t` from components.
  */
-CudaUInt3_t make_uint3(std::uint32_t x, std::uint32_t y, std::uint32_t z) noexcept;
+CudaUInt3_t makeUInt3(std::uint32_t x, std::uint32_t y, std::uint32_t z) noexcept;
 
 #ifndef ORTEAF_ENABLE_CUDA
 /** Convert `CudaDim3_t` to CUDA `dim3`. */
-dim3 to_cuda_dim3(CudaDim3_t value) noexcept;
+dim3 toCudaDim3(CudaDim3_t value) noexcept;
 /** Convert CUDA `dim3` to `CudaDim3_t`. */
-CudaDim3_t from_cuda_dim3(dim3 value) noexcept;
+CudaDim3_t fromCudaDim3(dim3 value) noexcept;
 
 /** Convert `CudaUInt3_t` to CUDA `uint3`. */
-uint3 to_cuda_uint3(CudaUInt3_t value) noexcept;
+uint3 toCudaUInt3(CudaUInt3_t value) noexcept;
 /** Convert CUDA `uint3` to `CudaUInt3_t`. */
-CudaUInt3_t from_cuda_uint3(uint3 value) noexcept;
+CudaUInt3_t fromCudaUInt3(uint3 value) noexcept;
 #endif
 
 } // namespace orteaf::internal::backend::cuda

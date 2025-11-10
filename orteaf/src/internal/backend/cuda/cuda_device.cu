@@ -39,7 +39,7 @@ CUdevice_t getDevice(uint32_t device_id) {
 #ifdef ORTEAF_ENABLE_CUDA
     CUdevice device;
     CU_CHECK(cuDeviceGet(&device, static_cast<int>(device_id)));
-    return opaque_from_cu_device(device);
+    return opaqueFromCuDevice(device);
 #else
     (void)device_id;
     return 0;
@@ -51,7 +51,7 @@ CUdevice_t getDevice(uint32_t device_id) {
  */
 ComputeCapability getComputeCapability(CUdevice_t device) {
 #ifdef ORTEAF_ENABLE_CUDA
-    CUdevice objc_device = cu_device_from_opaque(device);
+    CUdevice objc_device = cuDeviceFromOpaque(device);
     ComputeCapability capability;
     CU_CHECK(cuDeviceGetAttribute(&capability.major, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, objc_device));
     CU_CHECK(cuDeviceGetAttribute(&capability.minor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, objc_device));
@@ -74,7 +74,7 @@ int getSmCount(ComputeCapability capability) {
  */
 std::string getDeviceName(CUdevice_t device) {
 #ifdef ORTEAF_ENABLE_CUDA
-    CUdevice objc_device = cu_device_from_opaque(device);
+    CUdevice objc_device = cuDeviceFromOpaque(device);
     char name[256];
     CU_CHECK(cuDeviceGetName(name, sizeof(name), objc_device));
     return std::string(name);

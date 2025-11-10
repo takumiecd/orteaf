@@ -26,7 +26,7 @@ namespace orteaf::internal::backend::mps::metal_kernel_embed {
  *
  * MPSDevice_t device = acquire_default_device();  // user-defined helper
  * MPSError_t error = nullptr;
- * MPSFunction_t fn = load_embedded_function(device,
+ * MPSFunction_t fn = loadEmbeddedFunction(device,
  *                                           "embed_test_library",
  *                                           "my_kernel",
  *                                           &error);

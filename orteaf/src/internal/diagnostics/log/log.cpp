@@ -48,13 +48,13 @@ void defaultSink(LogCategory category, LogLevel level, std::string_view message)
 /**
  * @brief Set a custom log sink function.
  *
- * Implementation of set_log_sink() declared in log.h.
+ * Implementation of setLogSink() declared in log.h.
  * Atomically stores the sink function pointer and context using release memory ordering.
  *
  * @param sink Pointer to the log sink function, or nullptr to use default.
  * @param context Optional user-provided context pointer passed to the sink function.
  */
-void set_log_sink(LogSink sink, void* context) {
+void setLogSink(LogSink sink, void* context) {
     g_context.store(context, std::memory_order_release);
     g_sink.store(sink, std::memory_order_release);
 }
@@ -62,8 +62,8 @@ void set_log_sink(LogSink sink, void* context) {
 /**
  * @brief Reset the log sink to the default behavior.
  *
- * Implementation of reset_log_sink() declared in log.h.
- * Equivalent to calling set_log_sink(nullptr, nullptr).
+ * Implementation of resetLogSink() declared in log.h.
+ * Equivalent to calling setLogSink(nullptr, nullptr).
  */
 void resetLogSink() {
     setLogSink(nullptr, nullptr);
@@ -74,7 +74,7 @@ namespace detail {
 /**
  * @brief Internal function to log a message.
  *
- * Implementation of log_message() declared in log.h.
+ * Implementation of logMessage() declared in log.h.
  * Routes the message to the configured sink (if set) or the default sink.
  * Uses acquire memory ordering to read the sink and context atomically.
  *

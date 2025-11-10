@@ -15,23 +15,23 @@
 namespace orteaf::internal::backend::mps {
 
 /**
- * @copydoc orteaf::internal::backend::mps::create_buffer
+ * @copydoc orteaf::internal::backend::mps::createBuffer
  */
-MPSBuffer_t create_buffer(MPSDevice_t device, size_t size, MPSBufferUsage_t usage) {
+MPSBuffer_t createBuffer(MPSDevice_t device, size_t size, MPSBufferUsage_t usage) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (device == nullptr) {
         using namespace orteaf::internal::diagnostics::error;
-        throw_error(OrteafErrc::NullPointer, "create_buffer: device cannot be nullptr");
+        throwError(OrteafErrc::NullPointer, "createBuffer: device cannot be nullptr");
     }
     if (size == 0) {
         using namespace orteaf::internal::diagnostics::error;
-        throw_error(OrteafErrc::InvalidParameter, "create_buffer: size cannot be 0");
+        throwError(OrteafErrc::InvalidParameter, "createBuffer: size cannot be 0");
     }
-    id<MTLDevice> objc_device = objc_from_opaque_noown<id<MTLDevice>>(device);
+    id<MTLDevice> objc_device = objcFromOpaqueNoown<id<MTLDevice>>(device);
     MTLResourceOptions objc_usage = static_cast<MTLResourceOptions>(usage);
     id<MTLBuffer> objc_buffer = [objc_device newBufferWithLength:size options:objc_usage];
-    update_alloc(size);
-    return (MPSBuffer_t)opaque_from_objc_retained(objc_buffer);
+    updateAlloc(size);
+    return (MPSBuffer_t)opaqueFromObjcRetained(objc_buffer);
 #else
     (void)device;
     (void)size;
@@ -41,15 +41,15 @@ MPSBuffer_t create_buffer(MPSDevice_t device, size_t size, MPSBufferUsage_t usag
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::destroy_buffer
+ * @copydoc orteaf::internal::backend::mps::destroyBuffer
  */
-void destroy_buffer(MPSBuffer_t buffer) {
+void destroyBuffer(MPSBuffer_t buffer) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (buffer != nullptr) {
-        id<MTLBuffer> objc_buffer = objc_from_opaque_noown<id<MTLBuffer>>(buffer);
+        id<MTLBuffer> objc_buffer = objcFromOpaqueNoown<id<MTLBuffer>>(buffer);
         size_t size = objc_buffer ? [objc_buffer length] : 0;
-        opaque_release_retained(buffer);
-        update_dealloc(size);
+        opaqueReleaseRetained(buffer);
+        updateDealloc(size);
     }
 #else
     (void)buffer;
@@ -57,12 +57,12 @@ void destroy_buffer(MPSBuffer_t buffer) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::get_buffer_contents_const
+ * @copydoc orteaf::internal::backend::mps::getBufferContentsConst
  */
-const void* get_buffer_contents_const(MPSBuffer_t buffer) {
+const void* getBufferContentsConst(MPSBuffer_t buffer) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (!buffer) return nullptr;
-    id<MTLBuffer> objc_buffer = objc_from_opaque_noown<id<MTLBuffer>>(buffer);
+    id<MTLBuffer> objc_buffer = objcFromOpaqueNoown<id<MTLBuffer>>(buffer);
     return [objc_buffer contents];
 #else
     (void)buffer;
@@ -71,9 +71,9 @@ const void* get_buffer_contents_const(MPSBuffer_t buffer) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::get_buffer_contents
+ * @copydoc orteaf::internal::backend::mps::getBufferContents
  */
-void* get_buffer_contents(MPSBuffer_t buffer) {
-    return const_cast<void*>(get_buffer_contents_const(buffer));
+void* getBufferContents(MPSBuffer_t buffer) {
+    return const_cast<void*>(getBufferContentsConst(buffer));
 }
 } // namespace orteaf::internal::backend::mps

@@ -304,10 +304,10 @@ Architecture detectCpuArchitecture() {
 
     for (std::size_t index = 0; index < count; ++index) {
         const Architecture arch = kAllArchitectures[index];
-        if (LocalIndexOf(arch) == 0) {
+        if (localIndexOf(arch) == 0) {
             continue; // skip generic, reserve as fallback
         }
-        if (BackendOf(arch) != backend::Backend::cpu) {
+        if (backendOf(arch) != backend::Backend::cpu) {
             continue;
         }
         if (!MatchesDetectSpec(index, info)) {

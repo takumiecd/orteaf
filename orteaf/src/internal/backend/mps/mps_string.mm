@@ -14,9 +14,9 @@ namespace orteaf::internal::backend::mps {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
 
 /**
- * @copydoc orteaf::internal::backend::mps::to_ns_string
+ * @copydoc orteaf::internal::backend::mps::toNsString
  */
-MPSString_t to_ns_string(std::string_view view) {
+MPSString_t toNsString(std::string_view view) {
     if (view.empty()) {
         return (MPSString_t)@"";
     }
@@ -37,7 +37,7 @@ MPSString_t to_ns_string(std::string_view view) {
 #else // !(defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__))
 
 /** No-op on non-ObjC builds or when MPS is disabled. */
-MPSString_t to_ns_string(std::string_view view) {
+MPSString_t toNsString(std::string_view view) {
     (void)view;
     return nullptr;
 }

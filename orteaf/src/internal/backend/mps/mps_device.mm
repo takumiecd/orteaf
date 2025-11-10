@@ -25,9 +25,9 @@ MPSDevice_t getDevice() {
     id<MTLDevice> device = MTLCreateSystemDefaultDevice();
     if (device == nil) {
         using namespace orteaf::internal::diagnostics::error;
-        throw_error(OrteafErrc::BackendUnavailable, "getDevice: no default Metal device available");
+        throwError(OrteafErrc::BackendUnavailable, "getDevice: no default Metal device available");
     }
-    return (MPSDevice_t)opaque_from_objc_retained(device);
+    return (MPSDevice_t)opaqueFromObjcRetained(device);
 #else
     return nullptr;
 #endif
@@ -41,13 +41,13 @@ MPSDevice_t getDevice(MPSInt_t device_id) {
     NSArray<id<MTLDevice>>* devices = MTLCopyAllDevices();
     if (devices == nil) {
         using namespace orteaf::internal::diagnostics::error;
-        throw_error(OrteafErrc::BackendUnavailable, "getDevice: no Metal devices available");
+        throwError(OrteafErrc::BackendUnavailable, "getDevice: no Metal devices available");
     }
     ORTEAF_LOG_WARN_IF(Mps, device_id < 0, "getDevice: device_id cannot be negative, returning nullptr");
     NSUInteger index = static_cast<NSUInteger>(device_id);
     ORTEAF_LOG_WARN_IF(Mps, index >= [devices count], "getDevice: device_id out of range, returning nullptr");
     id<MTLDevice> device = [devices objectAtIndex:index];
-    MPSDevice_t handle = (MPSDevice_t)opaque_from_objc_retained(device);
+    MPSDevice_t handle = (MPSDevice_t)opaqueFromObjcRetained(device);
     [devices release];
     return handle;
 #else
@@ -80,7 +80,7 @@ void deviceRetain(MPSDevice_t device) {
     if (device == nullptr) {
         return;
     }
-    id<MTLDevice> objc_device = objc_from_opaque_noown<id<MTLDevice>>(device);
+    id<MTLDevice> objc_device = objcFromOpaqueNoown<id<MTLDevice>>(device);
     [objc_device retain];
 #else
     (void)device;
@@ -95,7 +95,7 @@ void deviceRelease(MPSDevice_t device) {
     if (device == nullptr) {
         return;
     }
-    id<MTLDevice> objc_device = objc_from_opaque_noown<id<MTLDevice>>(device);
+    id<MTLDevice> objc_device = objcFromOpaqueNoown<id<MTLDevice>>(device);
     [objc_device release];
 #else
     (void)device;
@@ -108,7 +108,7 @@ void deviceRelease(MPSDevice_t device) {
 MPSDeviceArray_t getDeviceArray() {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     NSArray<id<MTLDevice>>* devices = MTLCopyAllDevices();
-    return (MPSDeviceArray_t)opaque_from_objc_noown(devices);
+    return (MPSDeviceArray_t)opaqueFromObjcNoown(devices);
 #else
     return nullptr;
 #endif
@@ -182,7 +182,7 @@ std::string getDeviceName(MPSDevice_t device) {
     if (device == nullptr) {
         return {};
     }
-    id<MTLDevice> objc_device = objc_from_opaque_noown<id<MTLDevice>>(device);
+    id<MTLDevice> objc_device = objcFromOpaqueNoown<id<MTLDevice>>(device);
     return ToStdString([objc_device name]);
 #else
     (void)device;
@@ -211,7 +211,7 @@ std::string getDeviceMetalFamily(MPSDevice_t device) {
     if (device == nullptr) {
         return {};
     }
-    id<MTLDevice> objc_device = objc_from_opaque_noown<id<MTLDevice>>(device);
+    id<MTLDevice> objc_device = objcFromOpaqueNoown<id<MTLDevice>>(device);
     if (auto family = GuessFamilyFromCapabilities(objc_device); !family.empty()) {
         return family;
     }

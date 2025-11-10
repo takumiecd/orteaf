@@ -14,24 +14,24 @@
 namespace orteaf::internal::backend::mps {
 
 /**
- * @copydoc orteaf::internal::backend::mps::create_compile_options
+ * @copydoc orteaf::internal::backend::mps::createCompileOptions
  */
-MPSCompileOptions_t create_compile_options() {
+MPSCompileOptions_t createCompileOptions() {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     MTLCompileOptions* options = [[MTLCompileOptions alloc] init];
-    return (MPSCompileOptions_t)opaque_from_objc_retained(options);
+    return (MPSCompileOptions_t)opaqueFromObjcRetained(options);
 #else
     return nullptr;
 #endif
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::destroy_compile_options
+ * @copydoc orteaf::internal::backend::mps::destroyCompileOptions
  */
-void destroy_compile_options(MPSCompileOptions_t options) {
+void destroyCompileOptions(MPSCompileOptions_t options) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (options != nullptr) {
-        opaque_release_retained(options);
+        opaqueReleaseRetained(options);
     }
 #else
     (void)options;
@@ -39,16 +39,16 @@ void destroy_compile_options(MPSCompileOptions_t options) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::set_compile_options_math_mode
+ * @copydoc orteaf::internal::backend::mps::setCompileOptionsMathMode
  */
-void set_compile_options_math_mode(MPSCompileOptions_t options, bool fast_math_enabled) {
+void setCompileOptionsMathMode(MPSCompileOptions_t options, bool fast_math_enabled) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (options == nullptr) {
         using namespace orteaf::internal::diagnostics::error;
-        throw_error(OrteafErrc::NullPointer, "set_compile_options_math_mode: options cannot be nullptr");
+        throwError(OrteafErrc::NullPointer, "setCompileOptionsMathMode: options cannot be nullptr");
     }
     
-    MTLCompileOptions* objc_options = objc_from_opaque_noown<MTLCompileOptions*>(options);
+    MTLCompileOptions* objc_options = objcFromOpaqueNoown<MTLCompileOptions*>(options);
 #if defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 150000
     objc_options.mathMode = fast_math_enabled ? MTLMathModeFast : MTLMathModeSafe;
 #else
@@ -61,16 +61,16 @@ void set_compile_options_math_mode(MPSCompileOptions_t options, bool fast_math_e
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::set_compile_options_preserve_invariance
+ * @copydoc orteaf::internal::backend::mps::setCompileOptionsPreserveInvariance
  */
-void set_compile_options_preserve_invariance(MPSCompileOptions_t options, bool preserve_invariance) {
+void setCompileOptionsPreserveInvariance(MPSCompileOptions_t options, bool preserve_invariance) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (options == nullptr) {
         using namespace orteaf::internal::diagnostics::error;
-        throw_error(OrteafErrc::NullPointer, "set_compile_options_preserve_invariance: options cannot be nullptr");
+        throwError(OrteafErrc::NullPointer, "setCompileOptionsPreserveInvariance: options cannot be nullptr");
     }
     
-    MTLCompileOptions* objc_options = objc_from_opaque_noown<MTLCompileOptions*>(options);
+    MTLCompileOptions* objc_options = objcFromOpaqueNoown<MTLCompileOptions*>(options);
     objc_options.preserveInvariance = preserve_invariance;
 #else
     (void)options;
@@ -79,17 +79,17 @@ void set_compile_options_preserve_invariance(MPSCompileOptions_t options, bool p
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::set_compile_options_preprocessor_macros
+ * @copydoc orteaf::internal::backend::mps::setCompileOptionsPreprocessorMacros
  */
-void set_compile_options_preprocessor_macros(MPSCompileOptions_t options, void* macros_dictionary) {
+void setCompileOptionsPreprocessorMacros(MPSCompileOptions_t options, void* macros_dictionary) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (options == nullptr) {
         using namespace orteaf::internal::diagnostics::error;
-        throw_error(OrteafErrc::NullPointer, "set_compile_options_preprocessor_macros: options cannot be nullptr");
+        throwError(OrteafErrc::NullPointer, "setCompileOptionsPreprocessorMacros: options cannot be nullptr");
     }
     
-    MTLCompileOptions* objc_options = objc_from_opaque_noown<MTLCompileOptions*>(options);
-    NSDictionary* objc_dict = objc_from_opaque_noown<NSDictionary*>(macros_dictionary);
+    MTLCompileOptions* objc_options = objcFromOpaqueNoown<MTLCompileOptions*>(options);
+    NSDictionary* objc_dict = objcFromOpaqueNoown<NSDictionary*>(macros_dictionary);
     objc_options.preprocessorMacros = objc_dict;
 #else
     (void)options;

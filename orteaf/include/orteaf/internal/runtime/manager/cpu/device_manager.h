@@ -12,7 +12,7 @@ struct CpuDeviceManager {
         if (initialized_) {
             return;
         }
-        state_.arch = ::orteaf::internal::architecture::detect_cpu_architecture();
+        state_.arch = ::orteaf::internal::architecture::detectCpuArchitecture();
         state_.is_alive = true;
         initialized_ = true;
     }
@@ -42,7 +42,7 @@ struct CpuDeviceManager {
 private:
     void ensureValid(DeviceId id) const {
         if (!initialized_ || id != kPrimaryDevice) {
-            ::orteaf::internal::diagnostics::error::throw_error(
+            ::orteaf::internal::diagnostics::error::throwError(
                 ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
                 "invalid CPU device");
         }

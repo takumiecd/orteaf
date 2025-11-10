@@ -14,34 +14,34 @@ namespace diag = orteaf::internal::diagnostics::error;
 #if ORTEAF_ENABLE_CUDA
 
 /**
- * @brief Test that map_runtime_errc maps CUDA errors correctly.
+ * @brief Test that mapRuntimeErrc maps CUDA errors correctly.
  */
 TEST(CudaCheckError, MapRuntimeErrcMapsCorrectly) {
-    EXPECT_EQ(cuda::map_runtime_errc(cudaSuccess), diag::OrteafErrc::Success);
-    EXPECT_EQ(cuda::map_runtime_errc(cudaErrorMemoryAllocation), diag::OrteafErrc::OutOfMemory);
-    EXPECT_EQ(cuda::map_runtime_errc(cudaErrorInvalidValue), diag::OrteafErrc::InvalidParameter);
-    EXPECT_EQ(cuda::map_runtime_errc(cudaErrorInitializationError), diag::OrteafErrc::BackendUnavailable);
-    EXPECT_EQ(cuda::map_runtime_errc(cudaErrorInitializationError), diag::OrteafErrc::BackendUnavailable);
-    EXPECT_EQ(cuda::map_runtime_errc(cudaErrorUnknown), diag::OrteafErrc::Unknown);
+    EXPECT_EQ(cuda::mapRuntimeErrc(cudaSuccess), diag::OrteafErrc::Success);
+    EXPECT_EQ(cuda::mapRuntimeErrc(cudaErrorMemoryAllocation), diag::OrteafErrc::OutOfMemory);
+    EXPECT_EQ(cuda::mapRuntimeErrc(cudaErrorInvalidValue), diag::OrteafErrc::InvalidParameter);
+    EXPECT_EQ(cuda::mapRuntimeErrc(cudaErrorInitializationError), diag::OrteafErrc::BackendUnavailable);
+    EXPECT_EQ(cuda::mapRuntimeErrc(cudaErrorInitializationError), diag::OrteafErrc::BackendUnavailable);
+    EXPECT_EQ(cuda::mapRuntimeErrc(cudaErrorUnknown), diag::OrteafErrc::Unknown);
 }
 
 /**
- * @brief Test that map_driver_errc maps CUDA Driver errors correctly.
+ * @brief Test that mapDriverErrc maps CUDA Driver errors correctly.
  */
 TEST(CudaCheckError, MapDriverErrcMapsCorrectly) {
-    EXPECT_EQ(cuda::map_driver_errc(CUDA_SUCCESS), diag::OrteafErrc::Success);
-    EXPECT_EQ(cuda::map_driver_errc(CUDA_ERROR_DEINITIALIZED), diag::OrteafErrc::BackendUnavailable);
-    EXPECT_EQ(cuda::map_driver_errc(CUDA_ERROR_NOT_INITIALIZED), diag::OrteafErrc::BackendUnavailable);
-    EXPECT_EQ(cuda::map_driver_errc(CUDA_ERROR_OUT_OF_MEMORY), diag::OrteafErrc::OutOfMemory);
-    EXPECT_EQ(cuda::map_driver_errc(CUDA_ERROR_INVALID_VALUE), diag::OrteafErrc::InvalidParameter);
-    EXPECT_EQ(cuda::map_driver_errc(CUDA_ERROR_INVALID_CONTEXT), diag::OrteafErrc::InvalidState);
+    EXPECT_EQ(cuda::mapDriverErrc(CUDA_SUCCESS), diag::OrteafErrc::Success);
+    EXPECT_EQ(cuda::mapDriverErrc(CUDA_ERROR_DEINITIALIZED), diag::OrteafErrc::BackendUnavailable);
+    EXPECT_EQ(cuda::mapDriverErrc(CUDA_ERROR_NOT_INITIALIZED), diag::OrteafErrc::BackendUnavailable);
+    EXPECT_EQ(cuda::mapDriverErrc(CUDA_ERROR_OUT_OF_MEMORY), diag::OrteafErrc::OutOfMemory);
+    EXPECT_EQ(cuda::mapDriverErrc(CUDA_ERROR_INVALID_VALUE), diag::OrteafErrc::InvalidParameter);
+    EXPECT_EQ(cuda::mapDriverErrc(CUDA_ERROR_INVALID_CONTEXT), diag::OrteafErrc::InvalidState);
 }
 
 /**
  * @brief Test that cuda_check does not throw on success.
  */
 TEST(CudaCheckError, CudaCheckSuccessDoesNotThrow) {
-    EXPECT_NO_THROW(cuda::cuda_check(cudaSuccess, "test_expr", "test_file", 42));
+    EXPECT_NO_THROW(cuda::cudaCheck(cudaSuccess, "test_expr", "test_file", 42));
 }
 
 /**
@@ -49,7 +49,7 @@ TEST(CudaCheckError, CudaCheckSuccessDoesNotThrow) {
  */
 TEST(CudaCheckError, CudaCheckErrorThrows) {
     EXPECT_THROW(
-        cuda::cuda_check(cudaErrorMemoryAllocation, "test_expr", "test_file", 42),
+        cuda::cudaCheck(cudaErrorMemoryAllocation, "test_expr", "test_file", 42),
         std::system_error
     );
 }
@@ -59,7 +59,7 @@ TEST(CudaCheckError, CudaCheckErrorThrows) {
  */
 TEST(CudaCheckError, CudaCheckThrowsCorrectErrorCode) {
     try {
-        cuda::cuda_check(cudaErrorMemoryAllocation, "alloc_test", "file.cpp", 100);
+        cuda::cudaCheck(cudaErrorMemoryAllocation, "alloc_test", "file.cpp", 100);
         FAIL() << "Expected std::system_error to be thrown";
     } catch (const std::system_error& ex) {
         EXPECT_EQ(static_cast<diag::OrteafErrc>(ex.code().value()), diag::OrteafErrc::OutOfMemory);
@@ -76,7 +76,7 @@ TEST(CudaCheckError, CudaCheckThrowsCorrectErrorCode) {
 TEST(CudaCheckError, CudaCheckLastSuccessDoesNotThrow) {
     // Clear any previous errors
     cudaGetLastError();
-    EXPECT_NO_THROW(cuda::cuda_check_last("test_file", 42));
+    EXPECT_NO_THROW(cuda::cudaCheck_last("test_file", 42));
 }
 
 /**
@@ -85,14 +85,14 @@ TEST(CudaCheckError, CudaCheckLastSuccessDoesNotThrow) {
 TEST(CudaCheckError, CudaCheckSyncIsNoOpWhenDebugDisabled) {
     // Without ORTEAF_DEBUG_CUDA_SYNC, this should be a no-op
     cudaStream_t stream = nullptr;
-    EXPECT_NO_THROW(cuda::cuda_check_sync(stream, "test_file", 42));
+    EXPECT_NO_THROW(cuda::cudaCheck_sync(stream, "test_file", 42));
 }
 
 /**
  * @brief Test that cu_driver_check does not throw on success.
  */
 TEST(CudaCheckError, CuDriverCheckSuccessDoesNotThrow) {
-    EXPECT_NO_THROW(cuda::cu_driver_check(CUDA_SUCCESS, "test_expr", "test_file", 42));
+    EXPECT_NO_THROW(cuda::cuDriverCheck(CUDA_SUCCESS, "test_expr", "test_file", 42));
 }
 
 /**
@@ -100,7 +100,7 @@ TEST(CudaCheckError, CuDriverCheckSuccessDoesNotThrow) {
  */
 TEST(CudaCheckError, CuDriverCheckErrorThrows) {
     EXPECT_THROW(
-        cuda::cu_driver_check(CUDA_ERROR_OUT_OF_MEMORY, "test_expr", "test_file", 42),
+        cuda::cuDriverCheck(CUDA_ERROR_OUT_OF_MEMORY, "test_expr", "test_file", 42),
         std::system_error
     );
 }
@@ -110,7 +110,7 @@ TEST(CudaCheckError, CuDriverCheckErrorThrows) {
  */
 TEST(CudaCheckError, CuDriverCheckThrowsCorrectErrorCode) {
     try {
-        cuda::cu_driver_check(CUDA_ERROR_INVALID_VALUE, "driver_test", "driver.cpp", 200);
+        cuda::cuDriverCheck(CUDA_ERROR_INVALID_VALUE, "driver_test", "driver.cpp", 200);
         FAIL() << "Expected std::system_error to be thrown";
     } catch (const std::system_error& ex) {
         EXPECT_EQ(static_cast<diag::OrteafErrc>(ex.code().value()), diag::OrteafErrc::InvalidParameter);
@@ -125,7 +125,7 @@ TEST(CudaCheckError, CuDriverCheckThrowsCorrectErrorCode) {
  * @brief Test that try_driver_call returns true on success.
  */
 TEST(CudaCheckError, TryDriverCallReturnsTrueOnSuccess) {
-    bool result = cuda::try_driver_call([]() {
+    bool result = cuda::tryDriverCall([]() {
         // Success case
     });
     EXPECT_TRUE(result);
@@ -136,7 +136,7 @@ TEST(CudaCheckError, TryDriverCallReturnsTrueOnSuccess) {
  */
 TEST(CudaCheckError, TryDriverCallReturnsFalseForDeinitialized) {
     // Simulate DEINITIALIZED error by throwing a system_error with that message
-    bool result = cuda::try_driver_call([]() {
+    bool result = cuda::tryDriverCall([]() {
         throw std::system_error(
             static_cast<int>(CUDA_ERROR_DEINITIALIZED),
             std::generic_category(),
@@ -151,7 +151,7 @@ TEST(CudaCheckError, TryDriverCallReturnsFalseForDeinitialized) {
  */
 TEST(CudaCheckError, TryDriverCallRethrowsOtherErrors) {
     EXPECT_THROW(
-        cuda::try_driver_call([]() {
+        cuda::tryDriverCall([]() {
             throw std::system_error(
                 static_cast<int>(CUDA_ERROR_OUT_OF_MEMORY),
                 std::generic_category(),
@@ -167,7 +167,7 @@ TEST(CudaCheckError, TryDriverCallRethrowsOtherErrors) {
  */
 TEST(CudaCheckError, TryDriverCallRethrowsNonSystemError) {
     EXPECT_THROW(
-        cuda::try_driver_call([]() {
+        cuda::tryDriverCall([]() {
             throw std::runtime_error("other error");
         }),
         std::runtime_error
@@ -209,12 +209,12 @@ TEST(CudaCheckError, ErrorMessagesContainExpression) {
  * @brief Test that error checking functions are no-ops when CUDA is disabled.
  */
 TEST(CudaCheckError, DisabledFunctionsAreNoOps) {
-    EXPECT_NO_THROW(cuda::cuda_check(0, "expr", "file", 1));
-    EXPECT_NO_THROW(cuda::cuda_check_last("file", 1));
-    EXPECT_NO_THROW(cuda::cuda_check_sync(nullptr, "file", 1));
-    EXPECT_NO_THROW(cuda::cu_driver_check(0, "expr", "file", 1));
+    EXPECT_NO_THROW(cuda::cudaCheck(0, "expr", "file", 1));
+    EXPECT_NO_THROW(cuda::cudaCheck_last("file", 1));
+    EXPECT_NO_THROW(cuda::cudaCheck_sync(nullptr, "file", 1));
+    EXPECT_NO_THROW(cuda::cuDriverCheck(0, "expr", "file", 1));
     
-    bool result = cuda::try_driver_call([]() {});
+    bool result = cuda::tryDriverCall([]() {});
     EXPECT_TRUE(result);
 }
 

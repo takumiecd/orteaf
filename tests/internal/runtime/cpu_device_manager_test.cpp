@@ -32,12 +32,12 @@ TEST_F(CpuDeviceManagerTest, ManualEnvironmentCheck) {
         GTEST_SKIP() << "Set " ORTEAF_CPU_ENV_VAR " to run this test on your environment.";
     }
     const auto arch = cpu_rt::CpuDeviceManager.get_arch(runtime::DeviceId{0});
-    EXPECT_STREQ(expected_env, architecture::IdOf(arch).data());
+    EXPECT_STREQ(expected_env, architecture::idOf(arch).data());
 }
 
 TEST_F(CpuDeviceManagerTest, GetArchitecture) {
     runtime::DeviceId device_id{0};
-    EXPECT_EQ(cpu_rt::CpuDeviceManager.get_arch(device_id), architecture::detect_cpu_architecture());
+    EXPECT_EQ(cpu_rt::CpuDeviceManager.get_arch(device_id), architecture::detectCpuArchitecture());
 }
 
 TEST_F(CpuDeviceManagerTest, GetIsAlive) {

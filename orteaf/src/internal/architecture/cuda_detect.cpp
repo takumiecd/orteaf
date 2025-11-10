@@ -31,17 +31,17 @@ bool MatchesVendor(std::string_view required, std::string_view actual_lower) {
 
 } // namespace
 
-Architecture detect_cuda_architecture(int compute_capability, std::string_view vendor_hint) {
+Architecture detectCudaArchitecture(int compute_capability, std::string_view vendor_hint) {
     const auto vendor_lower = ToLowerCopy(vendor_hint);
     const auto count = tables::kArchitectureCount;
     Architecture fallback = Architecture::cuda_generic;
 
     for (std::size_t index = 0; index < count; ++index) {
         const Architecture arch = kAllArchitectures[index];
-        if (LocalIndexOf(arch) == 0) {
+        if (localIndexOf(arch) == 0) {
             continue;
         }
-        if (BackendOf(arch) != backend::Backend::cuda) {
+        if (backendOf(arch) != backend::Backend::cuda) {
             continue;
         }
 

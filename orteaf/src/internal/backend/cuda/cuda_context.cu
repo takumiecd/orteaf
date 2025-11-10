@@ -19,14 +19,14 @@
 namespace orteaf::internal::backend::cuda {
 
 /**
- * @copydoc orteaf::internal::backend::cuda::get_primary_context
+ * @copydoc orteaf::internal::backend::cuda::getPrimaryContext
  */
-CUcontext_t get_primary_context(CUdevice_t device) {
+CUcontext_t getPrimaryContext(CUdevice_t device) {
 #ifdef ORTEAF_ENABLE_CUDA
-    CUdevice objc_device = cu_device_from_opaque(device);
+    CUdevice objc_device = cuDeviceFromOpaque(device);
     CUcontext context = nullptr;
     CU_CHECK(cuDevicePrimaryCtxRetain(&context, objc_device));
-    return opaque_from_objc_noown<CUcontext_t, CUcontext>(context);
+    return opaqueFromObjcNoown<CUcontext_t, CUcontext>(context);
 #else
     (void)device;
     return nullptr;
@@ -34,11 +34,11 @@ CUcontext_t get_primary_context(CUdevice_t device) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::create_context
+ * @copydoc orteaf::internal::backend::cuda::createContext
  */
-CUcontext_t create_context(CUdevice_t device) {
+CUcontext_t createContext(CUdevice_t device) {
 #ifdef ORTEAF_ENABLE_CUDA
-    CUdevice objc_device = cu_device_from_opaque(device);
+    CUdevice objc_device = cuDeviceFromOpaque(device);
     CUcontext context = nullptr;
 #if defined(CUDA_VERSION) && CUDA_VERSION >= 13000
     // CUDA 13 switched cuCtxCreate -> cuCtxCreate_v4 with an extra params struct.
@@ -50,7 +50,7 @@ CUcontext_t create_context(CUdevice_t device) {
 #else
     CU_CHECK(cuCtxCreate(&context, 0, objc_device));
 #endif
-    return opaque_from_objc_noown<CUcontext_t, CUcontext>(context);
+    return opaqueFromObjcNoown<CUcontext_t, CUcontext>(context);
 #else
     (void)device;
     return nullptr;
@@ -58,15 +58,15 @@ CUcontext_t create_context(CUdevice_t device) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::set_context
+ * @copydoc orteaf::internal::backend::cuda::setContext
  */
-void set_context(CUcontext_t context) {
+void setContext(CUcontext_t context) {
 #ifdef ORTEAF_ENABLE_CUDA
     if (context == nullptr) {
         using namespace orteaf::internal::diagnostics::error;
-        throw_error(OrteafErrc::NullPointer, "set_context: context cannot be nullptr");
+        throwError(OrteafErrc::NullPointer, "setContext: context cannot be nullptr");
     }
-    CUcontext objc_context = objc_from_opaque_noown<CUcontext>(context);
+    CUcontext objc_context = objcFromOpaqueNoown<CUcontext>(context);
     CU_CHECK(cuCtxSetCurrent(objc_context));
 #else
     (void)context;
@@ -74,11 +74,11 @@ void set_context(CUcontext_t context) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::release_primary_context
+ * @copydoc orteaf::internal::backend::cuda::releasePrimaryContext
  */
-void release_primary_context(CUdevice_t device) {
+void releasePrimaryContext(CUdevice_t device) {
 #ifdef ORTEAF_ENABLE_CUDA
-    CUdevice objc_device = cu_device_from_opaque(device);
+    CUdevice objc_device = cuDeviceFromOpaque(device);
     CU_CHECK(cuDevicePrimaryCtxRelease(objc_device));
 #else
     (void)device;
@@ -86,12 +86,12 @@ void release_primary_context(CUdevice_t device) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::release_context
+ * @copydoc orteaf::internal::backend::cuda::releaseContext
  */
-void release_context(CUcontext_t context) {
+void releaseContext(CUcontext_t context) {
 #ifdef ORTEAF_ENABLE_CUDA
     if (context == nullptr) return;
-    CUcontext objc_context = objc_from_opaque_noown<CUcontext>(context);
+    CUcontext objc_context = objcFromOpaqueNoown<CUcontext>(context);
     CU_CHECK(cuCtxDestroy(objc_context));
 #else
     (void)context;

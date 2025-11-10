@@ -18,7 +18,7 @@ namespace cuda = orteaf::internal::backend::cuda;
 class CudaDeviceTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        cuda::cuda_init();
+        cuda::cudaInit();
     }
 };
 

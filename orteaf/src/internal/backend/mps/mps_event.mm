@@ -17,19 +17,19 @@
 namespace orteaf::internal::backend::mps {
 
 /**
- * @copydoc orteaf::internal::backend::mps::create_event
+ * @copydoc orteaf::internal::backend::mps::createEvent
  */
-MPSEvent_t create_event(MPSDevice_t device) {
+MPSEvent_t createEvent(MPSDevice_t device) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     orteaf::internal::backend::mps::AutoreleasePool pool{};
-    id<MTLDevice> objc_device = objc_from_opaque_noown<id<MTLDevice>>(device);
+    id<MTLDevice> objc_device = objcFromOpaqueNoown<id<MTLDevice>>(device);
     id<MTLSharedEvent> objc_event = [objc_device newSharedEvent];
     if (!objc_event) {
         return nullptr;
     }
     [objc_event setSignaledValue:0];
-    update_create_event();
-    auto retained = opaque_from_objc_retained(objc_event);
+    updateCreateEvent();
+    auto retained = opaqueFromObjcRetained(objc_event);
     return (MPSEvent_t)retained;
 #else
     (void)device;
@@ -38,28 +38,28 @@ MPSEvent_t create_event(MPSDevice_t device) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::destroy_event
+ * @copydoc orteaf::internal::backend::mps::destroyEvent
  */
-void destroy_event(MPSEvent_t event) {
+void destroyEvent(MPSEvent_t event) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (!event) return;
     orteaf::internal::backend::mps::AutoreleasePool pool{};
-    opaque_release_retained(event);
-    update_destroy_event();
+    opaqueReleaseRetained(event);
+    updateDestroyEvent();
 #else
     (void)event;
 #endif
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::record_event
+ * @copydoc orteaf::internal::backend::mps::recordEvent
  */
-void record_event(MPSEvent_t event, MPSCommandBuffer_t command_buffer, uint64_t value) {
+void recordEvent(MPSEvent_t event, MPSCommandBuffer_t command_buffer, uint64_t value) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (!event) return;
-    id<MTLSharedEvent> objc_event = objc_from_opaque_noown<id<MTLSharedEvent>>(event);
+    id<MTLSharedEvent> objc_event = objcFromOpaqueNoown<id<MTLSharedEvent>>(event);
     if (command_buffer) {
-        id<MTLCommandBuffer> objc_command_buffer = objc_from_opaque_noown<id<MTLCommandBuffer>>(command_buffer);
+        id<MTLCommandBuffer> objc_command_buffer = objcFromOpaqueNoown<id<MTLCommandBuffer>>(command_buffer);
         [objc_command_buffer encodeSignalEvent:objc_event value:value];
     } else {
         [objc_event setSignaledValue:value];
@@ -72,12 +72,12 @@ void record_event(MPSEvent_t event, MPSCommandBuffer_t command_buffer, uint64_t 
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::query_event
+ * @copydoc orteaf::internal::backend::mps::queryEvent
  */
-bool query_event(MPSEvent_t event, uint64_t expected_value) {
+bool queryEvent(MPSEvent_t event, uint64_t expected_value) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (!event) return true;
-    id<MTLSharedEvent> objc_event = objc_from_opaque_noown<id<MTLSharedEvent>>(event);
+    id<MTLSharedEvent> objc_event = objcFromOpaqueNoown<id<MTLSharedEvent>>(event);
     return [objc_event signaledValue] >= expected_value;
 #else
     (void)event;
@@ -87,12 +87,12 @@ bool query_event(MPSEvent_t event, uint64_t expected_value) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::event_value
+ * @copydoc orteaf::internal::backend::mps::eventValue
  */
-uint64_t event_value(MPSEvent_t event) {
+uint64_t eventValue(MPSEvent_t event) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (!event) return 0;
-    id<MTLSharedEvent> e = objc_from_opaque_noown<id<MTLSharedEvent>>(event);
+    id<MTLSharedEvent> e = objcFromOpaqueNoown<id<MTLSharedEvent>>(event);
     return [e signaledValue];
 #else
     (void)event; return 0;
@@ -100,13 +100,13 @@ uint64_t event_value(MPSEvent_t event) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::wait_event
+ * @copydoc orteaf::internal::backend::mps::waitEvent
  */
-void wait_event(MPSCommandBuffer_t command_buffer, MPSEvent_t event, uint64_t value) {
+void waitEvent(MPSCommandBuffer_t command_buffer, MPSEvent_t event, uint64_t value) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (!command_buffer || !event) return;
-    id<MTLCommandBuffer> objc_command_buffer = objc_from_opaque_noown<id<MTLCommandBuffer>>(command_buffer);
-    id<MTLSharedEvent> objc_event = objc_from_opaque_noown<id<MTLSharedEvent>>(event);
+    id<MTLCommandBuffer> objc_command_buffer = objcFromOpaqueNoown<id<MTLCommandBuffer>>(command_buffer);
+    id<MTLSharedEvent> objc_event = objcFromOpaqueNoown<id<MTLSharedEvent>>(event);
     [objc_command_buffer encodeWaitForEvent:objc_event value:value];
 #else
     (void)command_buffer;

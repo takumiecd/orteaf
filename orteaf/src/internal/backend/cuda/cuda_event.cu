@@ -15,48 +15,48 @@
 namespace orteaf::internal::backend::cuda {
 
 /**
- * @copydoc orteaf::internal::backend::cuda::create_event
+ * @copydoc orteaf::internal::backend::cuda::createEvent
  */
-CUevent_t create_event() {
+CUevent_t createEvent() {
 #ifdef ORTEAF_ENABLE_CUDA
     CUevent event;
     CU_CHECK(cuEventCreate(&event, CU_EVENT_DISABLE_TIMING));
-    update_create_event();
-    return opaque_from_objc_noown<CUevent_t, CUevent>(event);
+    updateCreateEvent();
+    return opaqueFromObjcNoown<CUevent_t, CUevent>(event);
 #else
     return nullptr;
 #endif
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::destroy_event
+ * @copydoc orteaf::internal::backend::cuda::destroyEvent
  */
-void destroy_event(CUevent_t event) {
+void destroyEvent(CUevent_t event) {
 #ifdef ORTEAF_ENABLE_CUDA
     if (event == nullptr) return;
-    CUevent objc_event = objc_from_opaque_noown<CUevent>(event);
+    CUevent objc_event = objcFromOpaqueNoown<CUevent>(event);
     CU_CHECK(cuEventDestroy(objc_event));
-    update_destroy_event();
+    updateDestroyEvent();
 #else
     (void)event;
 #endif
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::record_event
+ * @copydoc orteaf::internal::backend::cuda::recordEvent
  */
-void record_event(CUevent_t event, CUstream_t stream) {
+void recordEvent(CUevent_t event, CUstream_t stream) {
 #ifdef ORTEAF_ENABLE_CUDA
     if (event == nullptr) {
         using namespace orteaf::internal::diagnostics::error;
-        throw_error(OrteafErrc::NullPointer, "record_event: event cannot be nullptr");
+        throwError(OrteafErrc::NullPointer, "recordEvent: event cannot be nullptr");
     }
     if (stream == nullptr) {
         using namespace orteaf::internal::diagnostics::error;
-        throw_error(OrteafErrc::NullPointer, "record_event: stream cannot be nullptr");
+        throwError(OrteafErrc::NullPointer, "recordEvent: stream cannot be nullptr");
     }
-    CUevent objc_event = objc_from_opaque_noown<CUevent>(event);
-    CUstream objc_stream = objc_from_opaque_noown<CUstream>(stream);
+    CUevent objc_event = objcFromOpaqueNoown<CUevent>(event);
+    CUstream objc_stream = objcFromOpaqueNoown<CUstream>(stream);
     CU_CHECK(cuEventRecord(objc_event, objc_stream));
 #else
     (void)event;
@@ -65,12 +65,12 @@ void record_event(CUevent_t event, CUstream_t stream) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::query_event
+ * @copydoc orteaf::internal::backend::cuda::queryEvent
  */
-bool query_event(CUevent_t event) {
+bool queryEvent(CUevent_t event) {
 #ifdef ORTEAF_ENABLE_CUDA
     if (event == nullptr) return true;
-    CUevent objc_event = objc_from_opaque_noown<CUevent>(event);
+    CUevent objc_event = objcFromOpaqueNoown<CUevent>(event);
     CUresult status = cuEventQuery(objc_event);
     if (status == CUDA_SUCCESS) return true;
     if (status == CUDA_ERROR_NOT_READY) return false;
@@ -83,20 +83,20 @@ bool query_event(CUevent_t event) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::wait_event
+ * @copydoc orteaf::internal::backend::cuda::waitEvent
  */
-void wait_event(CUstream_t stream, CUevent_t event) {
+void waitEvent(CUstream_t stream, CUevent_t event) {
 #ifdef ORTEAF_ENABLE_CUDA
     if (stream == nullptr) {
         using namespace orteaf::internal::diagnostics::error;
-        throw_error(OrteafErrc::NullPointer, "wait_event: stream cannot be nullptr");
+        throwError(OrteafErrc::NullPointer, "waitEvent: stream cannot be nullptr");
     }
     if (event == nullptr) {
         using namespace orteaf::internal::diagnostics::error;
-        throw_error(OrteafErrc::NullPointer, "wait_event: event cannot be nullptr");
+        throwError(OrteafErrc::NullPointer, "waitEvent: event cannot be nullptr");
     }
-    CUstream objc_stream = objc_from_opaque_noown<CUstream>(stream);
-    CUevent objc_event = objc_from_opaque_noown<CUevent>(event);
+    CUstream objc_stream = objcFromOpaqueNoown<CUstream>(stream);
+    CUevent objc_event = objcFromOpaqueNoown<CUevent>(event);
     CU_CHECK(cuStreamWaitEvent(objc_stream, objc_event, 0));
 #else
     (void)stream;

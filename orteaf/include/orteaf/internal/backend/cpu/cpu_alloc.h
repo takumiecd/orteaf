@@ -35,7 +35,7 @@ constexpr std::size_t kCpuDefaultAlign = alignof(std::max_align_t);
  * @return `true` if `x` is a power of 2, `false` otherwise.
  *         Returns `false` if `x` is 0.
  */
-inline bool is_pow2(std::size_t x) { return x && ((x & (x-1))==0); }
+inline bool isPow2(std::size_t x) { return x && ((x & (x-1))==0); }
 
 /**
  * @brief Calculate the smallest power of 2 greater than or equal to the specified value.
@@ -47,7 +47,7 @@ inline bool is_pow2(std::size_t x) { return x && ((x & (x-1))==0); }
  * @return Smallest power of 2 greater than or equal to `x`.
  *         Returns 1 if `x` is 0 or 1.
  */
-inline std::size_t next_pow2(std::size_t x){
+inline std::size_t nextPow2(std::size_t x){
     if (x<=1) return 1u;
     --x; x|=x>>1; x|=x>>2; x|=x>>4; x|=x>>8; x|=x>>16;
     if constexpr (sizeof(std::size_t)==8) x|=x>>32;
@@ -55,14 +55,14 @@ inline std::size_t next_pow2(std::size_t x){
 }
 
 /**
- * @brief Forward declaration of alloc_aligned.
+ * @brief Forward declaration of allocAligned.
  */
-inline void* alloc_aligned(std::size_t size, std::size_t alignment);
+inline void* allocAligned(std::size_t size, std::size_t alignment);
 
 /**
  * @brief Allocate memory with default CPU alignment.
  *
- * Wrapper for `alloc_aligned(size, kCpuDefaultAlign)`.
+ * Wrapper for `allocAligned(size, kCpuDefaultAlign)`.
  * Statistics are automatically updated on allocation.
  *
  * @param size Size of memory to allocate in bytes.
@@ -70,7 +70,7 @@ inline void* alloc_aligned(std::size_t size, std::size_t alignment);
  * @throws std::bad_alloc If memory allocation fails.
  */
 inline void* alloc(std::size_t size) {
-    return alloc_aligned(size, kCpuDefaultAlign);
+    return allocAligned(size, kCpuDefaultAlign);
 }
 
 /**
@@ -91,12 +91,12 @@ inline void* alloc(std::size_t size) {
  *         Throws `std::bad_alloc` on failure.
  * @throws std::bad_alloc If memory allocation fails.
  */
-inline void* alloc_aligned(std::size_t size, std::size_t alignment) {
+inline void* allocAligned(std::size_t size, std::size_t alignment) {
     if (size == 0) return nullptr;
 
     const std::size_t min_align = alignof(std::max_align_t);
     if (alignment < min_align) alignment = min_align;
-    if (!is_pow2(alignment)) alignment = next_pow2(alignment);
+    if (!isPow2(alignment)) alignment = nextPow2(alignment);
 
 #if defined(_MSC_VER)
     void* p = _aligned_malloc(size, alignment);
@@ -108,7 +108,7 @@ inline void* alloc_aligned(std::size_t size, std::size_t alignment) {
     if (rc != 0 || !p) throw std::bad_alloc();
 #endif
 
-    update_alloc(size);
+    updateAlloc(size);
     return p;
 }
 
@@ -127,7 +127,7 @@ inline void* alloc_aligned(std::size_t size, std::size_t alignment) {
  */
 inline void dealloc(void* ptr, std::size_t size) noexcept {
     if (!ptr) return;
-    update_dealloc(size);
+    updateDealloc(size);
 #if defined(_MSC_VER)
     _aligned_free(ptr);
 #else

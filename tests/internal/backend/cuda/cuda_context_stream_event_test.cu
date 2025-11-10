@@ -24,7 +24,7 @@ namespace cuda = orteaf::internal::backend::cuda;
 class CudaContextStreamEventTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        cuda::cuda_init();
+        cuda::cudaInit();
         int count = cuda::get_device_count();
         if (count == 0) {
             GTEST_SKIP() << "No CUDA devices available";
