@@ -3,13 +3,12 @@
 #include "orteaf/internal/architecture/architecture.h"
 #include "orteaf/internal/architecture/cpu_detect.h"
 #include "orteaf/internal/runtime/strong_id.h"
-
-#include <stdexcept>
+#include "orteaf/internal/diagnostics/error/error.h"
 
 namespace orteaf::internal::runtime::cpu {
 
 struct CpuDeviceManager {
-    void initialize_devices() {
+    void initializeDevices() {
         if (initialized_) {
             return;
         }
@@ -26,24 +25,26 @@ struct CpuDeviceManager {
         initialized_ = false;
     }
 
-    std::size_t get_device_count() const {
+    std::size_t getDeviceCount() const {
         return initialized_ ? 1u : 0u;
     }
 
-    ::orteaf::internal::architecture::Architecture get_arch(DeviceId id) const {
-        ensure_valid(id);
+    ::orteaf::internal::architecture::Architecture getArch(DeviceId id) const {
+        ensureValid(id);
         return state_.arch;
     }
 
-    bool is_alive(DeviceId id) const {
-        ensure_valid(id);
+    bool isAlive(DeviceId id) const {
+        ensureValid(id);
         return state_.is_alive;
     }
 
 private:
-    void ensure_valid(DeviceId id) const {
+    void ensureValid(DeviceId id) const {
         if (!initialized_ || id != kPrimaryDevice) {
-            throw std::runtime_error("invalid CPU device");
+            ::orteaf::internal::diagnostics::error::throw_error(
+                ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+                "invalid CPU device");
         }
     }
 
