@@ -2,7 +2,7 @@
 
 #include "orteaf/internal/architecture/architecture.h"
 #include "orteaf/internal/architecture/cpu_detect.h"
-#include "orteaf/internal/runtime/strong_id.h"
+#include "orteaf/internal/base/strong_id.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 
 namespace orteaf::internal::runtime::cpu {
@@ -48,7 +48,7 @@ struct CpuDeviceManager {
      * The architecture originates from `detectCpuArchitecture()`, so the operating system's
      * signals determine the value.
      */
-    ::orteaf::internal::architecture::Architecture getArch(DeviceId id) const {
+    ::orteaf::internal::architecture::Architecture getArch(::orteaf::internal::base::DeviceId id) const {
         ensureValid(id);
         return state_.arch;
     }
@@ -59,7 +59,7 @@ struct CpuDeviceManager {
      * Only the primary device exists today, so this will be `true` when the manager is initialized
      * and the caller supplies `DeviceId{0}`.
      */
-    bool isAlive(DeviceId id) const {
+    bool isAlive(::orteaf::internal::base::DeviceId id) const {
         ensureValid(id);
         return state_.is_alive;
     }
@@ -71,7 +71,7 @@ private:
      * Throws `diagnostics::error::InvalidState` when validation fails, mirroring what the rest of
      * the runtime manager suite would expect from well-formed getters.
      */
-    void ensureValid(DeviceId id) const {
+    void ensureValid(::orteaf::internal::base::DeviceId id) const {
         if (!initialized_ || id != kPrimaryDevice) {
             ::orteaf::internal::diagnostics::error::throwError(
                 ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
@@ -87,7 +87,7 @@ private:
         bool is_alive{false};
     };
 
-    static constexpr DeviceId kPrimaryDevice{0};
+    static constexpr ::orteaf::internal::base::DeviceId kPrimaryDevice{0};
 
     State state_{};
     bool initialized_{false};

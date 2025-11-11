@@ -1,6 +1,6 @@
 #include "orteaf/internal/architecture/architecture.h"
 #include "orteaf/internal/architecture/mps_detect.h"
-#include "orteaf/internal/runtime/strong_id.h"
+#include "orteaf/internal/base/strong_id.h"
 
 #include <cstdint>
 #include <cstdlib>
@@ -20,7 +20,7 @@ TEST(MpsDetect, ManualEnvironmentCheck) {
     if (const char* index_env = std::getenv("ORTEAF_EXPECT_MPS_DEVICE_INDEX")) {
         device_index = static_cast<std::uint32_t>(std::strtoul(index_env, nullptr, 10));
     }
-    const ::orteaf::internal::runtime::DeviceId device_id(device_index);
+    const ::orteaf::internal::base::DeviceId device_id(device_index);
 
     const auto arch = architecture::detectMpsArchitectureForDeviceId(device_id);
     ASSERT_NE(arch, architecture::Architecture::mps_generic)
@@ -41,7 +41,7 @@ TEST(MpsDetect, FallsBackToGenericWhenUnknown) {
 }
 
 TEST(MpsDetect, DeviceIndexOutOfRangeFallsBackToGeneric) {
-    const ::orteaf::internal::runtime::DeviceId device_id(std::numeric_limits<std::uint32_t>::max());
+    const ::orteaf::internal::base::DeviceId device_id(std::numeric_limits<std::uint32_t>::max());
     const auto arch = architecture::detectMpsArchitectureForDeviceId(device_id);
     EXPECT_EQ(arch, architecture::Architecture::mps_generic);
 }

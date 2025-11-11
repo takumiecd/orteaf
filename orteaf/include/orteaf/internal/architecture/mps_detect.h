@@ -1,7 +1,7 @@
 #pragma once
 
 #include "orteaf/internal/architecture/architecture.h"
-#include "orteaf/internal/runtime/strong_id.h"
+#include "orteaf/internal/base/strong_id.h"
 
 #include <cstdint>
 #include <string_view>
@@ -32,6 +32,6 @@ Architecture detectMpsArchitecture(std::string_view metal_family, std::string_vi
  * @param device_id Strong-typed MPS device identifier.
  * @return The detected MPS `Architecture`, or `Architecture::mps_generic` on failure.
  */
-Architecture detectMpsArchitectureForDeviceId(::orteaf::internal::runtime::DeviceId device_id);
+Architecture detectMpsArchitectureForDeviceId(::orteaf::internal::base::DeviceId device_id);
 
 } // namespace orteaf::internal::architecture

@@ -5,7 +5,7 @@
 
 #include <cstdlib>
 
-namespace runtime = orteaf::internal::runtime;
+namespace base = orteaf::internal::base;
 namespace cpu_rt = orteaf::internal::runtime::cpu;
 namespace architecture = orteaf::internal::architecture;
 
@@ -31,16 +31,16 @@ TEST_F(CpuDeviceManagerTest, ManualEnvironmentCheck) {
     if (!expected_env) {
         GTEST_SKIP() << "Set " ORTEAF_CPU_ENV_VAR " to run this test on your environment.";
     }
-    const auto arch = cpu_rt::CpuDeviceManager.getArch(runtime::DeviceId{0});
+    const auto arch = cpu_rt::CpuDeviceManager.getArch(base::DeviceId{0});
     EXPECT_STREQ(expected_env, architecture::idOf(arch).data());
 }
 
 TEST_F(CpuDeviceManagerTest, GetArchitecture) {
-    runtime::DeviceId device_id{0};
+    base::DeviceId device_id{0};
     EXPECT_EQ(cpu_rt::CpuDeviceManager.getArch(device_id), architecture::detectCpuArchitecture());
 }
 
 TEST_F(CpuDeviceManagerTest, GetIsAlive) {
-    runtime::DeviceId device_id{0};
+    base::DeviceId device_id{0};
     EXPECT_TRUE(cpu_rt::CpuDeviceManager.isAlive(device_id));
 }

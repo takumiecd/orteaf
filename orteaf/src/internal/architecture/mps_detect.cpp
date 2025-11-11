@@ -88,7 +88,7 @@ Architecture detectMpsArchitecture(std::string_view metal_family, std::string_vi
 /**
  * @copydoc orteaf::internal::architecture::detectMpsArchitectureForDeviceId
  */
-Architecture detectMpsArchitectureForDeviceId(::orteaf::internal::runtime::DeviceId device_id) {
+Architecture detectMpsArchitectureForDeviceId(::orteaf::internal::base::DeviceId device_id) {
 #if ORTEAF_ENABLE_MPS
     const std::uint32_t device_index = static_cast<std::uint32_t>(device_id);
     int count = backend::mps::getDeviceCount();
