@@ -22,6 +22,11 @@ std::string toLowerCopy(std::string_view value) {
     return result;
 }
 
+/**
+ * @brief Compare optional vendor expectations against the normalized hint.
+ *
+ * When metadata leaves the vendor empty, any hint is acceptable.
+ */
 bool matchesVendor(std::string_view required, std::string_view actual_lower) {
     if (required.empty()) {
         return true;
@@ -31,6 +36,9 @@ bool matchesVendor(std::string_view required, std::string_view actual_lower) {
 
 } // namespace
 
+/**
+ * @copydoc orteaf::internal::architecture::detectCudaArchitecture
+ */
 Architecture detectCudaArchitecture(int compute_capability, std::string_view vendor_hint) {
     const auto vendor_lower = toLowerCopy(vendor_hint);
     const auto count = tables::kArchitectureCount;
@@ -61,6 +69,9 @@ Architecture detectCudaArchitecture(int compute_capability, std::string_view ven
     return fallback;
 }
 
+/**
+ * @copydoc orteaf::internal::architecture::detectCudaArchitectureForDeviceIndex
+ */
 Architecture detectCudaArchitectureForDeviceIndex(std::uint32_t device_index) {
 #if ORTEAF_ENABLE_CUDA
     using backend::cuda::ComputeCapability;

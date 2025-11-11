@@ -22,6 +22,9 @@ std::string toLowerCopy(std::string_view value) {
     return result;
 }
 
+/**
+ * @brief Compare optional vendor requirements against the normalized hint.
+ */
 bool matchesVendor(std::string_view required, std::string_view hint_lower) {
     if (required.empty()) {
         return true;
@@ -48,6 +51,9 @@ private:
 
 } // namespace
 
+/**
+ * @copydoc orteaf::internal::architecture::detectMpsArchitecture
+ */
 Architecture detectMpsArchitecture(std::string_view metal_family, std::string_view vendor_hint) {
     const auto metal_lower = toLowerCopy(metal_family);
     const auto vendor_lower = toLowerCopy(vendor_hint);
@@ -79,6 +85,9 @@ Architecture detectMpsArchitecture(std::string_view metal_family, std::string_vi
     return fallback;
 }
 
+/**
+ * @copydoc orteaf::internal::architecture::detectMpsArchitectureForDeviceIndex
+ */
 Architecture detectMpsArchitectureForDeviceIndex(std::uint32_t device_index) {
 #if ORTEAF_ENABLE_MPS
     int count = backend::mps::getDeviceCount();

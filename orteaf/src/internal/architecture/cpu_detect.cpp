@@ -128,8 +128,13 @@ bool cpuId(unsigned int leaf, unsigned int subleaf, unsigned int& eax, unsigned 
     return __get_cpuid_count(leaf, subleaf, &eax, &ebx, &ecx, &edx);
 }
 #endif
-#endif
-
+/**
+ * @brief Gather the signals used to match the host CPU against the architecture tables.
+ *
+ * The helper reads machine identifiers (sysctl or DMI strings), vendor/family/model via CPUID
+ * when available, and builds a lower-case feature set. This normalized `CpuInfo` is consumed by
+ * `matchesDetectSpec`.
+ */
 CpuInfo collectCpuInfo() {
     CpuInfo info;
 
@@ -297,6 +302,9 @@ bool matchesDetectSpec(std::size_t index, const CpuInfo& info) {
 
 }  // namespace
 
+/**
+ * @copydoc orteaf::internal::architecture::detectCpuArchitecture
+ */
 Architecture detectCpuArchitecture() {
     const CpuInfo info = collectCpuInfo();
     const std::size_t count = tables::kArchitectureCount;
