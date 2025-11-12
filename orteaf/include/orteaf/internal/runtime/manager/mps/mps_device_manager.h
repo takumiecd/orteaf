@@ -5,20 +5,21 @@
 #include <utility>
 
 #include "orteaf/internal/architecture/architecture.h"
-#include "orteaf/internal/architecture/mps_detect.h"
 #include "orteaf/internal/backend/mps/mps_device.h"
 #include "orteaf/internal/base/heap_vector.h"
 #include "orteaf/internal/base/strong_id.h"
 #include "orteaf/internal/diagnostics/error/error.h"
+#include "orteaf/internal/runtime/backend_ops/mps/mps_backend_ops.h"
 
 namespace orteaf::internal::runtime::mps {
 
+template <class BackendOps = ::orteaf::internal::runtime::backend_ops::mps::MpsBackendOps>
 class MpsDeviceManager {
 public:
     void initializeDevices() {
         shutdown();
 
-        const int device_count = ::orteaf::internal::backend::mps::getDeviceCount();
+        const int device_count = BackendOps::getDeviceCount();
         if (device_count <= 0) {
             initialized_ = true;
             return;
@@ -31,13 +32,13 @@ public:
             auto& state = states_[i];
             state.reset();
 
-            const auto device = ::orteaf::internal::backend::mps::getDevice(static_cast<::orteaf::internal::backend::mps::MPSInt_t>(i));
+            const auto device = BackendOps::getDevice(static_cast<::orteaf::internal::backend::mps::MPSInt_t>(i));
             state.device = device;
             state.is_alive = device != nullptr;
 
             const ::orteaf::internal::base::DeviceId device_id{static_cast<std::uint32_t>(i)};
             state.arch = state.is_alive
-                ? ::orteaf::internal::architecture::detectMpsArchitectureForDeviceId(device_id)
+                ? BackendOps::detectArchitecture(device_id)
                 : ::orteaf::internal::architecture::Architecture::mps_generic;
         }
 
@@ -106,7 +107,9 @@ private:
         }
 
         void reset() noexcept {
-            ::orteaf::internal::backend::mps::deviceRelease(device);
+            if (device != nullptr) {
+                BackendOps::releaseDevice(device);
+            }
             device = nullptr;
             arch = ::orteaf::internal::architecture::Architecture::mps_generic;
             is_alive = false;
@@ -147,6 +150,10 @@ private:
     bool initialized_{false};
 };
 
-inline MpsDeviceManager MpsDeviceManager{};
+inline MpsDeviceManager<> MpsDeviceManagerInstance{};
+
+inline MpsDeviceManager<>& GetMpsDeviceManager() {
+    return MpsDeviceManagerInstance;
+}
 
 } // namespace orteaf::internal::runtime::mps
