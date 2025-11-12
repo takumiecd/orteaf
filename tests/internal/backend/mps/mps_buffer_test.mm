@@ -6,10 +6,12 @@
 #import <Metal/Metal.h>
 #import <Foundation/Foundation.h>
 
-#include "orteaf/internal/backend/mps/mps_device.h"
 #include "orteaf/internal/backend/mps/mps_buffer.h"
+#include "orteaf/internal/backend/mps/mps_device.h"
+#include "orteaf/internal/backend/mps/mps_heap.h"
 
 #include <gtest/gtest.h>
+#include <exception>
 
 namespace mps = orteaf::internal::backend::mps;
 
@@ -25,22 +27,43 @@ protected:
         if (device_ == nullptr) {
             GTEST_SKIP() << "No Metal devices available";
         }
+        heap_descriptor_ = mps::createHeapDescriptor();
+        if (heap_descriptor_ == nullptr) {
+            GTEST_SKIP() << "Failed to create heap descriptor";
+        }
+        try {
+            mps::setHeapDescriptorSize(heap_descriptor_, 1 << 20);
+            heap_ = mps::createHeap(device_, heap_descriptor_);
+        } catch (const std::exception& ex) {
+            GTEST_SKIP() << "Failed to configure heap: " << ex.what();
+        }
     }
     
     void TearDown() override {
+        if (heap_ != nullptr) {
+            mps::destroyHeap(heap_);
+            heap_ = nullptr;
+        }
+        if (heap_descriptor_ != nullptr) {
+            mps::destroyHeapDescriptor(heap_descriptor_);
+            heap_descriptor_ = nullptr;
+        }
         if (device_ != nullptr) {
             mps::deviceRelease(device_);
+            device_ = nullptr;
         }
     }
     
     mps::MPSDevice_t device_ = nullptr;
+    mps::MPSHeapDescriptor_t heap_descriptor_ = nullptr;
+    mps::MPSHeap_t heap_ = nullptr;
 };
 
 /**
  * @brief Test that buffer creation succeeds.
  */
 TEST_F(MpsBufferTest, CreateBufferSucceeds) {
-    mps::MPSBuffer_t buffer = mps::createBuffer(device_, 1024, 0);
+    mps::MPSBuffer_t buffer = mps::createBuffer(heap_, 1024, 0);
     EXPECT_NE(buffer, nullptr);
     
     mps::destroyBuffer(buffer);
@@ -49,7 +72,7 @@ TEST_F(MpsBufferTest, CreateBufferSucceeds) {
 /**
  * @brief Test that create_buffer with nullptr device throws.
  */
-TEST_F(MpsBufferTest, CreateBufferNullptrDeviceThrows) {
+TEST_F(MpsBufferTest, CreateBufferNullptrHeapThrows) {
     EXPECT_THROW(mps::createBuffer(nullptr, 1024, 0), std::system_error);
 }
 
@@ -57,14 +80,14 @@ TEST_F(MpsBufferTest, CreateBufferNullptrDeviceThrows) {
  * @brief Test that create_buffer with zero size throws.
  */
 TEST_F(MpsBufferTest, CreateBufferZeroSizeThrows) {
-    EXPECT_THROW(mps::createBuffer(device_, 0, 0), std::system_error);
+    EXPECT_THROW(mps::createBuffer(heap_, 0, 0), std::system_error);
 }
 
 /**
  * @brief Test that buffer destruction works.
  */
 TEST_F(MpsBufferTest, DestroyBufferSucceeds) {
-    mps::MPSBuffer_t buffer = mps::createBuffer(device_, 1024, 0);
+    mps::MPSBuffer_t buffer = mps::createBuffer(heap_, 1024, 0);
     ASSERT_NE(buffer, nullptr);
     
     EXPECT_NO_THROW(mps::destroyBuffer(buffer));
@@ -81,8 +104,8 @@ TEST_F(MpsBufferTest, DestroyBufferNullptrIsIgnored) {
  * @brief Test that multiple buffers can be created.
  */
 TEST_F(MpsBufferTest, CreateMultipleBuffers) {
-    mps::MPSBuffer_t buffer1 = mps::createBuffer(device_, 256, 0);
-    mps::MPSBuffer_t buffer2 = mps::createBuffer(device_, 512, 0);
+    mps::MPSBuffer_t buffer1 = mps::createBuffer(heap_, 256, 0);
+    mps::MPSBuffer_t buffer2 = mps::createBuffer(heap_, 512, 0);
     
     EXPECT_NE(buffer1, nullptr);
     EXPECT_NE(buffer2, nullptr);
@@ -96,7 +119,7 @@ TEST_F(MpsBufferTest, CreateMultipleBuffers) {
  * @brief Test that buffer contents can be accessed.
  */
 TEST_F(MpsBufferTest, GetBufferContentsSucceeds) {
-    mps::MPSBuffer_t buffer = mps::createBuffer(device_, 1024, 0);
+    mps::MPSBuffer_t buffer = mps::createBuffer(heap_, 1024, 0);
     ASSERT_NE(buffer, nullptr);
     
     const void* contents = mps::getBufferContentsConst(buffer);
@@ -124,4 +147,3 @@ TEST(MpsBuffer, DisabledReturnsNeutralValues) {
 }
 
 #endif  // ORTEAF_ENABLE_MPS
-

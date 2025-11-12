@@ -4,7 +4,7 @@
  */
 #pragma once
 
-#include "orteaf/internal/backend/mps/mps_device.h"
+#include "orteaf/internal/backend/mps/mps_heap.h"
 
 #include <cstddef>
 
@@ -18,12 +18,12 @@ static_assert(sizeof(MPSBuffer_t) == sizeof(void*), "MPSBuffer must be pointer-s
 
 /**
  * @brief Create a new Metal buffer.
- * @param device Opaque Metal device
+ * @param heap Opaque Metal heap handle
  * @param size Buffer length in bytes
  * @param usage Resource options bitmask (defaults to 0)
  * @return Opaque buffer handle, or nullptr when unavailable/disabled.
  */
-MPSBuffer_t createBuffer(MPSDevice_t device, size_t size, MPSBufferUsage_t usage = kMPSDefaultBufferUsage);
+MPSBuffer_t createBuffer(MPSHeap_t heap, size_t size, MPSBufferUsage_t usage = kMPSDefaultBufferUsage);
 
 /**
  * @brief Destroy a Metal buffer; ignores nullptr.

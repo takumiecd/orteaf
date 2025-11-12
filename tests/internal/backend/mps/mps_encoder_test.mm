@@ -10,6 +10,7 @@
 #include "orteaf/internal/backend/mps/mps_command_queue.h"
 #include "orteaf/internal/backend/mps/mps_command_buffer.h"
 #include "orteaf/internal/backend/mps/mps_buffer.h"
+#include "orteaf/internal/backend/mps/mps_heap.h"
 #include "orteaf/internal/backend/mps/mps_compute_command_encorder.h"
 #include "orteaf/internal/backend/mps/mps_size.h"
 #include "orteaf/internal/backend/mps/mps_library.h"
@@ -20,6 +21,7 @@
 #include "orteaf/internal/backend/mps/mps_error.h"
 
 #include <gtest/gtest.h>
+#include <exception>
 
 namespace mps = orteaf::internal::backend::mps;
 
@@ -39,9 +41,27 @@ protected:
         if (queue_ == nullptr) {
             GTEST_SKIP() << "Failed to create command queue";
         }
+        heap_descriptor_ = mps::createHeapDescriptor();
+        if (heap_descriptor_ == nullptr) {
+            GTEST_SKIP() << "Failed to create heap descriptor";
+        }
+        try {
+            mps::setHeapDescriptorSize(heap_descriptor_, 1 << 20);
+            heap_ = mps::createHeap(device_, heap_descriptor_);
+        } catch (const std::exception& ex) {
+            GTEST_SKIP() << "Failed to configure heap: " << ex.what();
+        }
     }
     
     void TearDown() override {
+        if (heap_ != nullptr) {
+            mps::destroyHeap(heap_);
+            heap_ = nullptr;
+        }
+        if (heap_descriptor_ != nullptr) {
+            mps::destroyHeapDescriptor(heap_descriptor_);
+            heap_descriptor_ = nullptr;
+        }
         if (queue_ != nullptr) {
             mps::destroyCommandQueue(queue_);
         }
@@ -52,6 +72,8 @@ protected:
     
     mps::MPSDevice_t device_ = nullptr;
     mps::MPSCommandQueue_t queue_ = nullptr;
+    mps::MPSHeapDescriptor_t heap_descriptor_ = nullptr;
+    mps::MPSHeap_t heap_ = nullptr;
 };
 
 /**
@@ -148,7 +170,7 @@ TEST_F(MpsEncoderTest, SetBufferSucceeds) {
     mps::MPSComputeCommandEncoder_t encoder = mps::createComputeCommandEncoder(buffer);
     ASSERT_NE(encoder, nullptr);
     
-    mps::MPSBuffer_t mps_buffer = mps::createBuffer(device_, 1024);
+    mps::MPSBuffer_t mps_buffer = mps::createBuffer(heap_, 1024);
     if (mps_buffer != nullptr) {
         EXPECT_NO_THROW(mps::setBuffer(encoder, mps_buffer, 0, 0));
         mps::destroyBuffer(mps_buffer);
@@ -242,7 +264,7 @@ TEST_F(MpsEncoderTest, EncoderWithBuffer) {
     mps::MPSComputeCommandEncoder_t encoder = mps::createComputeCommandEncoder(buffer);
     ASSERT_NE(encoder, nullptr);
     
-    mps::MPSBuffer_t mps_buffer = mps::createBuffer(device_, 256);
+    mps::MPSBuffer_t mps_buffer = mps::createBuffer(heap_, 256);
     if (mps_buffer != nullptr) {
         mps::setBuffer(encoder, mps_buffer, 0, 0);
         mps::endEncoding(encoder);
