@@ -42,3 +42,41 @@ protected:
     test_mps::MpsBackendOpsMockRegistry::Guard guard_;
     MockMpsStreamManager manager_;
 };
+
+TEST_F(MpsStreamManagerMockTest, InitializesWithCapacity) {
+    const std::size_t initial_capacity = 8;
+    
+    manager_.initialize(initial_capacity);
+    EXPECT_EQ(manager_.capacity(), initial_capacity);
+    
+    manager_.shutdown();
+    EXPECT_EQ(manager_.capacity(), 0u);
+}
+
+TEST_F(MpsStreamManagerMockTest, ZeroCapacityStillMarksInitialized) {
+    manager_.initialize(0);
+    EXPECT_EQ(manager_.capacity(), 0u);
+    
+    manager_.shutdown();
+}
+
+TEST_F(MpsStreamManagerMockTest, ReinitializeResetsCapacity) {
+    {
+        ::testing::InSequence seq;
+        // First initialization
+        // Second initialization should reset
+    }
+    
+    manager_.initialize(4);
+    EXPECT_EQ(manager_.capacity(), 4u);
+    
+    manager_.initialize(8);
+    EXPECT_EQ(manager_.capacity(), 8u);
+    
+    manager_.shutdown();
+}
+
+TEST_F(MpsStreamManagerMockTest, AccessBeforeInitializationThrows) {
+    EXPECT_THROW(manager_.getStream(base::StreamId{0}), std::system_error);
+    EXPECT_FALSE(manager_.isAlive(base::StreamId{0}));
+}
