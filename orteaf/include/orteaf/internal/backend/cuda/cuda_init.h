@@ -7,6 +7,8 @@
  */
 #pragma once
 
+#if ORTEAF_ENABLE_CUDA
+
 namespace orteaf::internal::backend::cuda {
 
 /**
@@ -18,3 +20,5 @@ namespace orteaf::internal::backend::cuda {
 void cudaInit();
 
 } // namespace orteaf::internal::backend::cuda
+
+#endif  // ORTEAF_ENABLE_CUDA

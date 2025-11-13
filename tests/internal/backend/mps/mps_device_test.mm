@@ -8,6 +8,8 @@
 
 #include "orteaf/internal/backend/mps/mps_device.h"
 
+#include "tests/internal/testing/error_assert.h"
+
 #include <gtest/gtest.h>
 
 namespace mps = orteaf::internal::backend::mps;
@@ -76,29 +78,23 @@ TEST_F(MpsDeviceTest, GetDeviceByIndexSucceeds) {
 }
 
 /**
- * @brief Test that get_device with invalid index throws NSRangeException.
+ * @brief Test that get_device with invalid index throws InvalidParameter.
  */
-TEST_F(MpsDeviceTest, GetDeviceInvalidIndexReturnsNullptr) {
+TEST_F(MpsDeviceTest, GetDeviceInvalidIndexThrows) {
     int count = mps::getDeviceCount();
     if (count == 0) {
         GTEST_SKIP() << "No Metal devices available";
     }
     
-    // Out of range - should throw NSRangeException
-    @try {
-        mps::MPSDevice_t device = mps::getDevice(count);
-        FAIL() << "Expected NSRangeException for out of range device_id";
-    } @catch (NSException* exception) {
-        EXPECT_TRUE([exception.name isEqualToString:NSRangeException]);
-    }
+    // Out of range - should throw InvalidParameter
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+        [count] { mps::getDevice(count); });
     
-    // Negative index - should throw NSRangeException
-    @try {
-        mps::MPSDevice_t device = mps::getDevice(-1);
-        FAIL() << "Expected NSRangeException for negative device_id";
-    } @catch (NSException* exception) {
-        EXPECT_TRUE([exception.name isEqualToString:NSRangeException]);
-    }
+    // Negative index - should throw InvalidParameter
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+        [] { mps::getDevice(-1); });
 }
 
 /**

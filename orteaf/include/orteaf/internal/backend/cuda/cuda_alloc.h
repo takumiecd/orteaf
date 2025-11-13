@@ -1,5 +1,7 @@
 #pragma once
 
+#if ORTEAF_ENABLE_CUDA
+
 #include <cstddef>
 #include "orteaf/internal/backend/cuda/cuda_stream.h"
 
@@ -110,3 +112,5 @@ void copyToDevice(void* host_ptr, CUdeviceptr_t ptr, size_t size);
 void freeHost(void* ptr, size_t size);
 
 } // namespace orteaf::internal::backend::cuda
+
+#endif  // ORTEAF_ENABLE_CUDA

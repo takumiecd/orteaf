@@ -1,5 +1,7 @@
 #pragma once
 
+#if ORTEAF_ENABLE_CUDA
+
 #include <atomic>
 #include <string>
 #include <sstream>
@@ -441,3 +443,5 @@ inline void updateActiveEvent() {
 }
 
 } // namespace orteaf::internal::backend::cuda
+
+#endif  // ORTEAF_ENABLE_CUDA

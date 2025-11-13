@@ -1,5 +1,7 @@
 #pragma once
 
+#if ORTEAF_ENABLE_CUDA
+
 #include <cstddef>
 #include <string_view>
 
@@ -68,3 +70,5 @@ Blob findKernelData(std::string_view name,
 bool available(std::string_view name, CudaKernelFmt fmt);
 
 } // namespace orteaf::internal::backend::cuda::kernel_embed
+
+#endif  // ORTEAF_ENABLE_CUDA

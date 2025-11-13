@@ -8,7 +8,8 @@
  */
 #pragma once
 
-#ifdef ORTEAF_ENABLE_CUDA
+#if ORTEAF_ENABLE_CUDA
+
 #include <cuda.h>
 #include <cstddef>
 #include <cstdint>
@@ -94,4 +95,4 @@ static inline CUdevice cuDeviceFromOpaque(int p) noexcept {
 
 } // namespace orteaf::internal::backend::cuda
 
-#endif
+#endif  // ORTEAF_ENABLE_CUDA

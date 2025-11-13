@@ -8,6 +8,9 @@
  * {0,0}) and perform no operations.
  */
 #pragma once
+
+#if ORTEAF_ENABLE_CUDA
+
 #include <cstdint>
 #include <string>
 
@@ -84,3 +87,5 @@ std::string getDeviceName(CUdevice_t device);
 std::string getDeviceVendor(CUdevice_t device);
 
 } // namespace orteaf::internal::backend::cuda
+
+#endif  // ORTEAF_ENABLE_CUDA

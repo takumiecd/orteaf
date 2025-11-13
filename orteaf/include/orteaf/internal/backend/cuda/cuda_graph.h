@@ -8,6 +8,8 @@
  */
 #pragma once
 
+#if ORTEAF_ENABLE_CUDA
+
 #include "orteaf/internal/backend/cuda/cuda_stream.h"
 
 namespace orteaf::internal::backend::cuda {
@@ -79,3 +81,5 @@ void instantiateGraph(CUgraph_t graph, CUgraphExec_t* graph_exec);
 void graphLaunch(CUgraphExec_t graph_exec, CUstream_t stream);
 
 } // namespace orteaf::internal::backend::cuda
+
+#endif  // ORTEAF_ENABLE_CUDA

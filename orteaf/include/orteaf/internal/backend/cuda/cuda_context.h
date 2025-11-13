@@ -8,6 +8,8 @@
  */
 #pragma once
 
+#if ORTEAF_ENABLE_CUDA
+
 #include "orteaf/internal/backend/cuda/cuda_device.h"
 
 namespace orteaf::internal::backend::cuda {
@@ -55,3 +57,5 @@ void releasePrimaryContext(CUdevice_t device);
 void releaseContext(CUcontext_t context);
 
 } // namespace orteaf::internal::backend::cuda
+
+#endif  // ORTEAF_ENABLE_CUDA

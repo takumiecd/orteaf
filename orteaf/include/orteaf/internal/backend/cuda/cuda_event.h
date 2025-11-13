@@ -8,6 +8,8 @@
  */
 #pragma once
 
+#if ORTEAF_ENABLE_CUDA
+
 #include "orteaf/internal/backend/cuda/cuda_stream.h"
 
 namespace orteaf::internal::backend::cuda {
@@ -58,4 +60,7 @@ bool queryEvent(CUevent_t event);
  * @throws std::system_error On CUDA driver error (via `OrteafErrc`).
  */
 void waitEvent(CUstream_t stream, CUevent_t event);
+
 } // namespace orteaf::internal::backend::cuda
+
+#endif  // ORTEAF_ENABLE_CUDA

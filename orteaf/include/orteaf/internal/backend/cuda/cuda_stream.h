@@ -6,6 +6,9 @@
  * functions exist but behave as no-ops and return neutral values.
  */
 #pragma once
+
+#if ORTEAF_ENABLE_CUDA
+
 #include <cstdint>
 #include "orteaf/internal/backend/cuda/cuda_device.h"
 
@@ -62,4 +65,7 @@ void waitStream(CUstream_t stream, CUdeviceptr_t addr, uint32_t value);
  * @throws std::system_error On CUDA driver error (via `OrteafErrc`).
  */
 void writeStream(CUstream_t stream, CUdeviceptr_t addr, uint32_t value);
+
 } // namespace orteaf::internal::backend::cuda
+
+#endif  // ORTEAF_ENABLE_CUDA
