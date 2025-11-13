@@ -47,9 +47,8 @@ MPSFunction_t createFunction(MPSLibrary_t library, std::string_view name) {
  */
 void destroyFunction(MPSFunction_t function) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
-    if (function != nullptr) {
-        opaqueReleaseRetained(function);
-    }
+    if (!function) return;
+    opaqueReleaseRetained(function);
 #else
     (void)function;
 #endif

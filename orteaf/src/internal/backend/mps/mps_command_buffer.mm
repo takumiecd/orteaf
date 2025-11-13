@@ -41,10 +41,9 @@ MPSCommandBuffer_t createCommandBuffer(MPSCommandQueue_t command_queue) {
  */
 void destroyCommandBuffer(MPSCommandBuffer_t command_buffer) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
-    if (command_buffer != nullptr) {
-        AutoreleasePool pool{};
-        opaqueReleaseRetained(command_buffer);
-    }
+    if (!command_buffer) return;
+    AutoreleasePool pool{};
+    opaqueReleaseRetained(command_buffer);
 #else
     (void)command_buffer;
 #endif

@@ -14,6 +14,8 @@
 #include "orteaf/internal/backend/mps/mps_compile_options.h"
 #include "orteaf/internal/backend/mps/mps_error.h"
 
+#include "tests/internal/testing/error_assert.h"
+
 #include <gtest/gtest.h>
 #include <string>
 
@@ -95,7 +97,9 @@ TEST_F(MpsLibraryFunctionPipelineTest, CreateLibraryWithDataInvalidData) {
  * @brief Test that create_function with nullptr library throws.
  */
 TEST_F(MpsLibraryFunctionPipelineTest, CreateFunctionNullptrLibraryThrows) {
-    EXPECT_THROW(mps::createFunction(nullptr, "kernel_name"), std::system_error);
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
+        [] { mps::createFunction(nullptr, "kernel_name"); });
 }
 
 /**
@@ -109,7 +113,9 @@ TEST_F(MpsLibraryFunctionPipelineTest, CreateFunctionEmptyNameThrows) {
     mps::MPSLibrary_t library = mps::createLibraryWithSource(device_, source, options, &error);
     
     if (library != nullptr) {
-        EXPECT_THROW(mps::createFunction(library, ""), std::system_error);
+        ::orteaf::tests::ExpectError(
+            ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+            [&] { mps::createFunction(library, ""); });
         mps::destroyLibrary(library);
     }
     
@@ -120,7 +126,9 @@ TEST_F(MpsLibraryFunctionPipelineTest, CreateFunctionEmptyNameThrows) {
  * @brief Test that create_pipeline_state with nullptr device throws.
  */
 TEST_F(MpsLibraryFunctionPipelineTest, CreateComputePipelineStateNullptrDevice) {
-    EXPECT_THROW(mps::createComputePipelineState(nullptr, nullptr), std::system_error);
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
+        [] { mps::createComputePipelineState(nullptr, nullptr); });
 }
 
 /**
@@ -128,7 +136,9 @@ TEST_F(MpsLibraryFunctionPipelineTest, CreateComputePipelineStateNullptrDevice) 
  */
 TEST_F(MpsLibraryFunctionPipelineTest, CreateComputePipelineStateNullptrFunction) {
     mps::MPSError_t error = nullptr;
-    EXPECT_THROW(mps::createComputePipelineState(device_, nullptr, &error), std::system_error);
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
+        [&] { mps::createComputePipelineState(device_, nullptr, &error); });
 }
 
 /**
@@ -165,21 +175,27 @@ TEST_F(MpsLibraryFunctionPipelineTest, ConfigureCompileOptions) {
  * @brief Test that set_compile_options_math_mode with nullptr throws.
  */
 TEST_F(MpsLibraryFunctionPipelineTest, SetCompileOptionsMathModeNullptrThrows) {
-    EXPECT_THROW(mps::setCompileOptionsMathMode(nullptr, true), std::system_error);
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
+        [] { mps::setCompileOptionsMathMode(nullptr, true); });
 }
 
 /**
  * @brief Test that set_compile_options_preserve_invariance with nullptr throws.
  */
 TEST_F(MpsLibraryFunctionPipelineTest, SetCompileOptionsPreserveInvarianceNullptrThrows) {
-    EXPECT_THROW(mps::setCompileOptionsPreserveInvariance(nullptr, true), std::system_error);
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
+        [] { mps::setCompileOptionsPreserveInvariance(nullptr, true); });
 }
 
 /**
  * @brief Test that set_compile_options_preprocessor_macros with nullptr throws.
  */
 TEST_F(MpsLibraryFunctionPipelineTest, SetCompileOptionsPreprocessorMacrosNullptrThrows) {
-    EXPECT_THROW(mps::setCompileOptionsPreprocessorMacros(nullptr, nullptr), std::system_error);
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
+        [] { mps::setCompileOptionsPreprocessorMacros(nullptr, nullptr); });
 }
 
 /**
@@ -199,14 +215,18 @@ TEST_F(MpsLibraryFunctionPipelineTest, StringConversionWorks) {
  */
 TEST_F(MpsLibraryFunctionPipelineTest, CreateLibraryNullptrDeviceThrows) {
     mps::MPSString_t name = mps::toNsString(std::string_view("default"));
-    EXPECT_THROW((void)mps::createLibrary(nullptr, name), std::system_error);
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
+        [&] { (void)mps::createLibrary(nullptr, name); });
 }
 
 /**
  * @brief Test that library creation with nullptr name throws.
  */
 TEST_F(MpsLibraryFunctionPipelineTest, CreateLibraryNullptrNameThrows) {
-    EXPECT_THROW((void)mps::createLibrary(device_, nullptr), std::system_error);
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
+        [&] { (void)mps::createLibrary(device_, nullptr); });
 }
 
 /**
@@ -214,7 +234,9 @@ TEST_F(MpsLibraryFunctionPipelineTest, CreateLibraryNullptrNameThrows) {
  */
 TEST_F(MpsLibraryFunctionPipelineTest, CreateLibraryEmptyNameThrows) {
     mps::MPSString_t empty_name = mps::toNsString(std::string_view(""));
-    EXPECT_THROW((void)mps::createLibrary(device_, empty_name), std::system_error);
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+        [&] { (void)mps::createLibrary(device_, empty_name); });
 }
 
 /**
@@ -222,7 +244,9 @@ TEST_F(MpsLibraryFunctionPipelineTest, CreateLibraryEmptyNameThrows) {
  */
 TEST_F(MpsLibraryFunctionPipelineTest, CreateLibraryWithSourceNullptrSourceThrows) {
     mps::MPSCompileOptions_t options = mps::createCompileOptions();
-    EXPECT_THROW((void)mps::createLibraryWithSource(device_, nullptr, options, nullptr), std::system_error);
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
+        [&] { (void)mps::createLibraryWithSource(device_, nullptr, options, nullptr); });
     mps::destroyCompileOptions(options);
 }
 
@@ -232,7 +256,9 @@ TEST_F(MpsLibraryFunctionPipelineTest, CreateLibraryWithSourceNullptrSourceThrow
 TEST_F(MpsLibraryFunctionPipelineTest, CreateLibraryWithSourceEmptySourceThrows) {
     mps::MPSString_t empty_source = mps::toNsString(std::string_view(""));
     mps::MPSCompileOptions_t options = mps::createCompileOptions();
-    EXPECT_THROW((void)mps::createLibraryWithSource(device_, empty_source, options, nullptr), std::system_error);
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+        [&] { (void)mps::createLibraryWithSource(device_, empty_source, options, nullptr); });
     mps::destroyCompileOptions(options);
 }
 
@@ -240,7 +266,9 @@ TEST_F(MpsLibraryFunctionPipelineTest, CreateLibraryWithSourceEmptySourceThrows)
  * @brief Test that create_library_with_data with nullptr data throws.
  */
 TEST_F(MpsLibraryFunctionPipelineTest, CreateLibraryWithDataNullptrDataThrows) {
-    EXPECT_THROW((void)mps::createLibraryWithData(device_, nullptr, 100, nullptr), std::system_error);
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
+        [&] { (void)mps::createLibraryWithData(device_, nullptr, 100, nullptr); });
 }
 
 /**
@@ -248,7 +276,9 @@ TEST_F(MpsLibraryFunctionPipelineTest, CreateLibraryWithDataNullptrDataThrows) {
  */
 TEST_F(MpsLibraryFunctionPipelineTest, CreateLibraryWithDataZeroSizeThrows) {
     const char data[] = "test data";
-    EXPECT_THROW((void)mps::createLibraryWithData(device_, data, 0, nullptr), std::system_error);
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+        [&] { (void)mps::createLibraryWithData(device_, data, 0, nullptr); });
 }
 
 #else  // !ORTEAF_ENABLE_MPS

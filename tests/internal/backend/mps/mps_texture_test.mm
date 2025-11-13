@@ -10,6 +10,8 @@
 #include "orteaf/internal/backend/mps/mps_heap.h"
 #include "orteaf/internal/backend/mps/mps_texture.h"
 
+#include "tests/internal/testing/error_assert.h"
+
 #include <gtest/gtest.h>
 #include <array>
 #include <vector>
@@ -108,18 +110,26 @@ TEST_F(MpsTextureTest, ReplaceAndReadBackRegion) {
 }
 
 TEST_F(MpsTextureTest, CreateTextureNullptrDeviceThrows) {
-    EXPECT_THROW(static_cast<void>(mps::createTexture(nullptr, descriptor_)), std::system_error);
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
+        [&] { (void)mps::createTexture(nullptr, descriptor_); });
 }
 
 TEST_F(MpsTextureTest, CreateTextureFromHeapNullptrThrows) {
-    EXPECT_THROW(static_cast<void>(mps::createTextureFromHeap(nullptr, descriptor_)), std::system_error);
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
+        [&] { (void)mps::createTextureFromHeap(nullptr, descriptor_); });
 }
 
 TEST_F(MpsTextureTest, ReplaceRegionNullptrBytesThrows) {
     texture_ = mps::createTexture(device_, descriptor_);
     ASSERT_NE(texture_, nullptr);
-    EXPECT_THROW(mps::replaceTextureRegion(texture_, nullptr, kWidth * 4, kWidth * kHeight * 4,
-                                           0, 0, 0, kWidth, kHeight, 1), std::system_error);
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
+        [&] {
+            mps::replaceTextureRegion(texture_, nullptr, kWidth * 4, kWidth * kHeight * 4,
+                                      0, 0, 0, kWidth, kHeight, 1);
+        });
 }
 
 #else  // !ORTEAF_ENABLE_MPS

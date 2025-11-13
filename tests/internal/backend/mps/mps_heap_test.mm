@@ -9,6 +9,8 @@
 #include "orteaf/internal/backend/mps/mps_device.h"
 #include "orteaf/internal/backend/mps/mps_heap.h"
 
+#include "tests/internal/testing/error_assert.h"
+
 #include <gtest/gtest.h>
 #include <exception>
 #include <cstddef>
@@ -76,7 +78,9 @@ TEST_F(MpsHeapTest, CreateHeapDescriptorSetsSize) {
 
 TEST_F(MpsHeapTest, SetHeapDescriptorSizeZeroThrows) {
     ASSERT_NE(descriptor_, nullptr);
-    EXPECT_THROW(mps::setHeapDescriptorSize(descriptor_, 0), std::system_error);
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+        [&] { mps::setHeapDescriptorSize(descriptor_, 0); });
     EXPECT_EQ(mps::getHeapDescriptorSize(descriptor_), kDefaultHeapSize);
 }
 
@@ -99,12 +103,16 @@ TEST_F(MpsHeapTest, HeapMaxAvailableSizeRejectsZeroAlignment) {
     ASSERT_NE(descriptor_, nullptr);
     mps::MPSHeap_t heap = createDefaultHeap();
     ASSERT_NE(heap, nullptr);
-    EXPECT_THROW(mps::heapMaxAvailableSize(heap, 0), std::system_error);
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+        [&] { (void)mps::heapMaxAvailableSize(heap, 0); });
 }
 
 TEST_F(MpsHeapTest, CreateHeapNullptrDeviceThrows) {
     ASSERT_NE(descriptor_, nullptr);
-    EXPECT_THROW(static_cast<void>(mps::createHeap(nullptr, descriptor_)), std::system_error);
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
+        [&] { (void)mps::createHeap(nullptr, descriptor_); });
 }
 
 TEST_F(MpsHeapTest, DestroyHeapNullptrIsIgnored) {

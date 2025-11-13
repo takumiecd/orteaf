@@ -9,6 +9,9 @@
 #include "orteaf/internal/backend/mps/mps_device.h"
 #include "orteaf/internal/backend/mps/mps_command_queue.h"
 #include "orteaf/internal/backend/mps/mps_command_buffer.h"
+#include "orteaf/internal/backend/mps/mps_event.h"
+
+#include "tests/internal/testing/error_assert.h"
 
 #include <gtest/gtest.h>
 
@@ -49,6 +52,12 @@ TEST_F(MpsCommandQueueBufferTest, CreateCommandQueueSucceeds) {
     EXPECT_NE(objc_queue, nil);
     
     mps::destroyCommandQueue(queue);
+}
+
+TEST_F(MpsCommandQueueBufferTest, CreateCommandQueueNullDeviceThrows) {
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
+        [] { mps::createCommandQueue(nullptr); });
 }
 
 /**
@@ -122,6 +131,12 @@ TEST_F(MpsCommandQueueBufferTest, DestroyCommandBufferNullptrIsIgnored) {
     EXPECT_NO_THROW(mps::destroyCommandBuffer(nullptr));
 }
 
+TEST_F(MpsCommandQueueBufferTest, CreateCommandBufferNullQueueThrows) {
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
+        [] { mps::createCommandBuffer(nullptr); });
+}
+
 /**
  * @brief Test that multiple command buffers can be created.
  */
@@ -157,6 +172,12 @@ TEST_F(MpsCommandQueueBufferTest, CommitCommandBufferSucceeds) {
     mps::destroyCommandQueue(queue);
 }
 
+TEST_F(MpsCommandQueueBufferTest, CommitNullCommandBufferThrows) {
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
+        [] { mps::commit(nullptr); });
+}
+
 /**
  * @brief Test that command buffer can be waited for completion.
  */
@@ -172,6 +193,12 @@ TEST_F(MpsCommandQueueBufferTest, WaitUntilCompletedSucceeds) {
     
     mps::destroyCommandBuffer(buffer);
     mps::destroyCommandQueue(queue);
+}
+
+TEST_F(MpsCommandQueueBufferTest, WaitUntilCompletedNullCommandBufferThrows) {
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
+        [] { mps::waitUntilCompleted(nullptr); });
 }
 
 /**
@@ -256,43 +283,50 @@ TEST_F(MpsCommandQueueBufferTest, EncodeWaitSucceeds) {
 /**
  * @brief Test that encode_signal_event with nullptr is handled.
  */
-TEST_F(MpsCommandQueueBufferTest, EncodeSignalEventNullptrHandled) {
+TEST_F(MpsCommandQueueBufferTest, EncodeSignalEventNullEventThrows) {
     mps::MPSCommandQueue_t queue = mps::createCommandQueue(device_);
     ASSERT_NE(queue, nullptr);
-    
     mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue);
     ASSERT_NE(buffer, nullptr);
-    
-    // Should handle nullptr gracefully (may throw or ignore)
-    try {
-        mps::encodeSignalEvent(buffer, nullptr, 1);
-    } catch (...) {
-        // Exception is acceptable
-    }
-    
+
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
+        [&] { mps::encodeSignalEvent(buffer, nullptr, 1); });
+
     mps::destroyCommandBuffer(buffer);
     mps::destroyCommandQueue(queue);
 }
 
-/**
- * @brief Test that encode_wait with nullptr is handled.
- */
-TEST_F(MpsCommandQueueBufferTest, EncodeWaitNullptrHandled) {
+TEST_F(MpsCommandQueueBufferTest, EncodeSignalEventNullCommandBufferThrows) {
+    mps::MPSEvent_t event = mps::createEvent(device_);
+    ASSERT_NE(event, nullptr);
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
+        [&] { mps::encodeSignalEvent(nullptr, event, 1); });
+    mps::destroyEvent(event);
+}
+
+TEST_F(MpsCommandQueueBufferTest, EncodeWaitNullEventThrows) {
     mps::MPSCommandQueue_t queue = mps::createCommandQueue(device_);
     ASSERT_NE(queue, nullptr);
-    
     mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue);
     ASSERT_NE(buffer, nullptr);
-    
-    // Should handle nullptr gracefully (may throw or ignore)
-    try {
-        mps::encodeWait(buffer, nullptr, 1);
-    } catch (...) {
-        // Exception is acceptable
-    }
-    
+
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
+        [&] { mps::encodeWait(buffer, nullptr, 1); });
+
     mps::destroyCommandBuffer(buffer);
     mps::destroyCommandQueue(queue);
+}
+
+TEST_F(MpsCommandQueueBufferTest, EncodeWaitNullCommandBufferThrows) {
+    mps::MPSEvent_t event = mps::createEvent(device_);
+    ASSERT_NE(event, nullptr);
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
+        [&] { mps::encodeWait(nullptr, event, 1); });
+    mps::destroyEvent(event);
 }
 
 #else  // !ORTEAF_ENABLE_MPS

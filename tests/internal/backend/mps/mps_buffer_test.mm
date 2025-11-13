@@ -10,6 +10,8 @@
 #include "orteaf/internal/backend/mps/mps_device.h"
 #include "orteaf/internal/backend/mps/mps_heap.h"
 
+#include "tests/internal/testing/error_assert.h"
+
 #include <gtest/gtest.h>
 #include <exception>
 
@@ -73,14 +75,18 @@ TEST_F(MpsBufferTest, CreateBufferSucceeds) {
  * @brief Test that create_buffer with nullptr device throws.
  */
 TEST_F(MpsBufferTest, CreateBufferNullptrHeapThrows) {
-    EXPECT_THROW(mps::createBuffer(nullptr, 1024, 0), std::system_error);
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
+        [] { mps::createBuffer(nullptr, 1024, 0); });
 }
 
 /**
  * @brief Test that create_buffer with zero size throws.
  */
 TEST_F(MpsBufferTest, CreateBufferZeroSizeThrows) {
-    EXPECT_THROW(mps::createBuffer(heap_, 0, 0), std::system_error);
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+        [&] { mps::createBuffer(heap_, 0, 0); });
 }
 
 /**

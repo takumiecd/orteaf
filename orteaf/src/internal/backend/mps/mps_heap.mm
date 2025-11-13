@@ -57,9 +57,8 @@ MPSHeapDescriptor_t createHeapDescriptor() {
 
 void destroyHeapDescriptor(MPSHeapDescriptor_t descriptor) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
-    if (descriptor) {
-        opaqueReleaseRetained(descriptor);
-    }
+    if (!descriptor) return;
+    opaqueReleaseRetained(descriptor);
 #else
     (void)descriptor;
 #endif
@@ -277,4 +276,3 @@ MPSHeapType_t heapType(MPSHeap_t heap) {
 }
 
 } // namespace orteaf::internal::backend::mps
-

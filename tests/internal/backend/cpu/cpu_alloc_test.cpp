@@ -5,9 +5,10 @@
 
 #include "orteaf/internal/backend/cpu/cpu_alloc.h"
 
+#include "tests/internal/testing/error_assert.h"
+
 #include <gtest/gtest.h>
 #include <cstring>
-#include <system_error>
 #include <vector>
 
 namespace cpu = orteaf::internal::backend::cpu;
@@ -26,7 +27,9 @@ TEST(CpuAlloc, AllocReturnsValidPointer) {
  * @brief Test that alloc with zero size throws.
  */
 TEST(CpuAlloc, AllocZeroSizeReturnsNullptr) {
-    EXPECT_THROW(cpu::alloc(0), std::system_error);
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+        [] { cpu::alloc(0); });
 }
 
 /**
@@ -108,7 +111,9 @@ TEST(CpuAlloc, AllocAlignedAdjustsSmallAlignment) {
  * @brief Test that alloc_aligned with zero size throws.
  */
 TEST(CpuAlloc, AllocAlignedZeroSizeReturnsNullptr) {
-    EXPECT_THROW(cpu::allocAligned(0, 16), std::system_error);
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+        [] { cpu::allocAligned(0, 16); });
 }
 
 /**

@@ -42,9 +42,8 @@ MPSComputePipelineState_t createComputePipelineState(MPSDevice_t device, MPSFunc
  */
 void destroyComputePipelineState(MPSComputePipelineState_t pipeline_state) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
-    if (pipeline_state) {
-        opaqueReleaseRetained(pipeline_state);
-    }
+    if (!pipeline_state) return;
+    opaqueReleaseRetained(pipeline_state);
 #else
     (void)pipeline_state;
 #endif

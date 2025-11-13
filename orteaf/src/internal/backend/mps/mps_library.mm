@@ -137,9 +137,8 @@ namespace orteaf::internal::backend::mps {
  */
 void destroyLibrary(MPSLibrary_t library) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
-    if (library != nullptr) {
-        opaqueReleaseRetained(library);
-    }
+    if (!library) return;
+    opaqueReleaseRetained(library);
 #else
     (void)library;
 #endif

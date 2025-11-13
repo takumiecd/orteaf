@@ -63,9 +63,8 @@ MPSTextureDescriptor_t createTextureDescriptor() {
 
 void destroyTextureDescriptor(MPSTextureDescriptor_t descriptor) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
-    if (descriptor) {
-        opaqueReleaseRetained(descriptor);
-    }
+    if (!descriptor) return;
+    opaqueReleaseRetained(descriptor);
 #else
     (void)descriptor;
 #endif
@@ -192,9 +191,8 @@ MPSTexture_t createTextureFromHeap(MPSHeap_t heap, MPSTextureDescriptor_t descri
 
 void destroyTexture(MPSTexture_t texture) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
-    if (texture) {
-        opaqueReleaseRetained(texture);
-    }
+    if (!texture) return;
+    opaqueReleaseRetained(texture);
 #else
     (void)texture;
 #endif

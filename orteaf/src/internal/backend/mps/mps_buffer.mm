@@ -48,9 +48,8 @@ MPSBuffer_t createBuffer(MPSHeap_t heap, size_t size, MPSBufferUsage_t usage) {
  */
 void destroyBuffer(MPSBuffer_t buffer) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
-    if (buffer != nullptr) {
-        opaqueReleaseRetained(buffer);
-    }
+    if (!buffer) return;
+    opaqueReleaseRetained(buffer);
 #else
     (void)buffer;
 #endif

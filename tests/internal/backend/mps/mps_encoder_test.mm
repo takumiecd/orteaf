@@ -20,6 +20,8 @@
 #include "orteaf/internal/backend/mps/mps_compile_options.h"
 #include "orteaf/internal/backend/mps/mps_error.h"
 
+#include "tests/internal/testing/error_assert.h"
+
 #include <gtest/gtest.h>
 #include <exception>
 
@@ -191,7 +193,9 @@ TEST_F(MpsEncoderTest, SetBufferNullptrThrows) {
     mps::MPSComputeCommandEncoder_t encoder = mps::createComputeCommandEncoder(buffer);
     ASSERT_NE(encoder, nullptr);
     
-    EXPECT_THROW(mps::setBuffer(encoder, nullptr, 0, 0), std::system_error);
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
+        [&] { mps::setBuffer(encoder, nullptr, 0, 0); });
     
     mps::endEncoding(encoder);
     mps::destroyComputeCommandEncoder(encoder);

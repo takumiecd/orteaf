@@ -56,7 +56,10 @@ void destroyEvent(MPSEvent_t event) {
  */
 void recordEvent(MPSEvent_t event, MPSCommandBuffer_t command_buffer, uint64_t value) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
-    if (!event) return;
+    if (!event) {
+        using namespace orteaf::internal::diagnostics::error;
+        throwError(OrteafErrc::NullPointer, "recordEvent: event cannot be nullptr");
+    }
     id<MTLSharedEvent> objc_event = objcFromOpaqueNoown<id<MTLSharedEvent>>(event);
     if (command_buffer) {
         id<MTLCommandBuffer> objc_command_buffer = objcFromOpaqueNoown<id<MTLCommandBuffer>>(command_buffer);
@@ -76,7 +79,10 @@ void recordEvent(MPSEvent_t event, MPSCommandBuffer_t command_buffer, uint64_t v
  */
 bool queryEvent(MPSEvent_t event, uint64_t expected_value) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
-    if (!event) return true;
+    if (!event) {
+        using namespace orteaf::internal::diagnostics::error;
+        throwError(OrteafErrc::NullPointer, "queryEvent: event cannot be nullptr");
+    }
     id<MTLSharedEvent> objc_event = objcFromOpaqueNoown<id<MTLSharedEvent>>(event);
     return [objc_event signaledValue] >= expected_value;
 #else
@@ -91,7 +97,10 @@ bool queryEvent(MPSEvent_t event, uint64_t expected_value) {
  */
 uint64_t eventValue(MPSEvent_t event) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
-    if (!event) return 0;
+    if (!event) {
+        using namespace orteaf::internal::diagnostics::error;
+        throwError(OrteafErrc::NullPointer, "eventValue: event cannot be nullptr");
+    }
     id<MTLSharedEvent> e = objcFromOpaqueNoown<id<MTLSharedEvent>>(event);
     return [e signaledValue];
 #else
@@ -104,7 +113,14 @@ uint64_t eventValue(MPSEvent_t event) {
  */
 void waitEvent(MPSCommandBuffer_t command_buffer, MPSEvent_t event, uint64_t value) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
-    if (!command_buffer || !event) return;
+    if (!command_buffer) {
+        using namespace orteaf::internal::diagnostics::error;
+        throwError(OrteafErrc::NullPointer, "waitEvent: command_buffer cannot be nullptr");
+    }
+    if (!event) {
+        using namespace orteaf::internal::diagnostics::error;
+        throwError(OrteafErrc::NullPointer, "waitEvent: event cannot be nullptr");
+    }
     id<MTLCommandBuffer> objc_command_buffer = objcFromOpaqueNoown<id<MTLCommandBuffer>>(command_buffer);
     id<MTLSharedEvent> objc_event = objcFromOpaqueNoown<id<MTLSharedEvent>>(event);
     [objc_command_buffer encodeWaitForEvent:objc_event value:value];

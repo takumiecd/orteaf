@@ -30,9 +30,8 @@ MPSCompileOptions_t createCompileOptions() {
  */
 void destroyCompileOptions(MPSCompileOptions_t options) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
-    if (options != nullptr) {
-        opaqueReleaseRetained(options);
-    }
+    if (!options) return;
+    opaqueReleaseRetained(options);
 #else
     (void)options;
 #endif
