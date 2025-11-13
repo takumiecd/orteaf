@@ -1,8 +1,8 @@
 /**
- * @file mps_pipeline_state.mm
+ * @file mps_compute_pipeline_state.mm
  * @brief Implementation of MPS/Metal compute pipeline state helpers.
  */
-#include "orteaf/internal/backend/mps/mps_pipeline_state.h"
+#include "orteaf/internal/backend/mps/mps_compute_pipeline_state.h"
 #include "orteaf/internal/backend/mps/mps_objc_bridge.h"
 
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
@@ -14,21 +14,21 @@
 namespace orteaf::internal::backend::mps {
 
 /**
- * @copydoc orteaf::internal::backend::mps::createPipelineState
+ * @copydoc orteaf::internal::backend::mps::createComputePipelineState
  */
-MPSPipelineState_t createPipelineState(MPSDevice_t device, MPSFunction_t function, MPSError_t* error) {
+MPSComputePipelineState_t createComputePipelineState(MPSDevice_t device, MPSFunction_t function, MPSError_t* error) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (!device || !function) {
         (void)error;
         using namespace orteaf::internal::diagnostics::error;
-        throwError(OrteafErrc::NullPointer, "createPipelineState: device and function cannot be nullptr");
+        throwError(OrteafErrc::NullPointer, "createComputePipelineState: device and function cannot be nullptr");
     }
     id<MTLDevice> objc_device = objcFromOpaqueNoown<id<MTLDevice>>(device);
     id<MTLFunction> objc_function = objcFromOpaqueNoown<id<MTLFunction>>(function);
     NSError** objc_error = error ? (NSError**)error : nullptr;
     
     id<MTLComputePipelineState> objc_pipeline_state = [objc_device newComputePipelineStateWithFunction:objc_function error:objc_error];
-    return (MPSPipelineState_t)opaqueFromObjcRetained(objc_pipeline_state);
+    return (MPSComputePipelineState_t)opaqueFromObjcRetained(objc_pipeline_state);
 #else
     (void)device;
     (void)function;
@@ -38,9 +38,9 @@ MPSPipelineState_t createPipelineState(MPSDevice_t device, MPSFunction_t functio
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::destroyPipelineState
+ * @copydoc orteaf::internal::backend::mps::destroyComputePipelineState
  */
-void destroyPipelineState(MPSPipelineState_t pipeline_state) {
+void destroyComputePipelineState(MPSComputePipelineState_t pipeline_state) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (pipeline_state) {
         opaqueReleaseRetained(pipeline_state);

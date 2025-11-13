@@ -9,7 +9,7 @@
 #include "orteaf/internal/backend/mps/mps_device.h"
 #include "orteaf/internal/backend/mps/mps_library.h"
 #include "orteaf/internal/backend/mps/mps_function.h"
-#include "orteaf/internal/backend/mps/mps_pipeline_state.h"
+#include "orteaf/internal/backend/mps/mps_compute_pipeline_state.h"
 #include "orteaf/internal/backend/mps/mps_string.h"
 #include "orteaf/internal/backend/mps/mps_compile_options.h"
 #include "orteaf/internal/backend/mps/mps_error.h"
@@ -59,8 +59,8 @@ TEST_F(MpsLibraryFunctionPipelineTest, DestroyFunctionNullptrIsIgnored) {
 /**
  * @brief Test that destroy_pipeline_state with nullptr is ignored.
  */
-TEST_F(MpsLibraryFunctionPipelineTest, DestroyPipelineStateNullptrIsIgnored) {
-    EXPECT_NO_THROW(mps::destroyPipelineState(nullptr));
+TEST_F(MpsLibraryFunctionPipelineTest, DestroyComputePipelineStateNullptrIsIgnored) {
+    EXPECT_NO_THROW(mps::destroyComputePipelineState(nullptr));
 }
 
 /**
@@ -119,16 +119,16 @@ TEST_F(MpsLibraryFunctionPipelineTest, CreateFunctionEmptyNameThrows) {
 /**
  * @brief Test that create_pipeline_state with nullptr device throws.
  */
-TEST_F(MpsLibraryFunctionPipelineTest, CreatePipelineStateNullptrDevice) {
-    EXPECT_THROW(mps::createPipelineState(nullptr, nullptr), std::system_error);
+TEST_F(MpsLibraryFunctionPipelineTest, CreateComputePipelineStateNullptrDevice) {
+    EXPECT_THROW(mps::createComputePipelineState(nullptr, nullptr), std::system_error);
 }
 
 /**
  * @brief Test that create_pipeline_state with nullptr function throws.
  */
-TEST_F(MpsLibraryFunctionPipelineTest, CreatePipelineStateNullptrFunction) {
+TEST_F(MpsLibraryFunctionPipelineTest, CreateComputePipelineStateNullptrFunction) {
     mps::MPSError_t error = nullptr;
-    EXPECT_THROW(mps::createPipelineState(device_, nullptr, &error), std::system_error);
+    EXPECT_THROW(mps::createComputePipelineState(device_, nullptr, &error), std::system_error);
 }
 
 /**
@@ -261,11 +261,11 @@ TEST(MpsLibraryFunctionPipeline, DisabledReturnsNeutralValues) {
     EXPECT_EQ(mps::createLibraryWithSource(nullptr, nullptr, nullptr, nullptr), nullptr);
     EXPECT_EQ(mps::createLibraryWithData(nullptr, nullptr, 0, nullptr), nullptr);
     EXPECT_EQ(mps::createFunction(nullptr, "name"), nullptr);
-    EXPECT_EQ(mps::createPipelineState(nullptr, nullptr), nullptr);
+    EXPECT_EQ(mps::createComputePipelineState(nullptr, nullptr), nullptr);
     
     EXPECT_NO_THROW(mps::destroyLibrary(nullptr));
     EXPECT_NO_THROW(mps::destroyFunction(nullptr));
-    EXPECT_NO_THROW(mps::destroyPipelineState(nullptr));
+    EXPECT_NO_THROW(mps::destroyComputePipelineState(nullptr));
 }
 
 #endif  // ORTEAF_ENABLE_MPS

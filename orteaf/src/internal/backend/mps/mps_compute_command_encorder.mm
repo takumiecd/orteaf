@@ -45,7 +45,7 @@ void destroyComputeCommandEncoder(MPSComputeCommandEncoder_t compute_command_enc
 /**
  * @copydoc orteaf::internal::backend::mps::setPipelineState
  */
-void setPipelineState(MPSComputeCommandEncoder_t compute_command_encoder, MPSPipelineState_t pipeline_state) {
+void setPipelineState(MPSComputeCommandEncoder_t compute_command_encoder, MPSComputePipelineState_t pipeline_state) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (compute_command_encoder == nullptr) {
         using namespace orteaf::internal::diagnostics::error;

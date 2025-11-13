@@ -15,7 +15,7 @@
 #include "orteaf/internal/backend/mps/mps_size.h"
 #include "orteaf/internal/backend/mps/mps_library.h"
 #include "orteaf/internal/backend/mps/mps_function.h"
-#include "orteaf/internal/backend/mps/mps_pipeline_state.h"
+#include "orteaf/internal/backend/mps/mps_compute_pipeline_state.h"
 #include "orteaf/internal/backend/mps/mps_string.h"
 #include "orteaf/internal/backend/mps/mps_compile_options.h"
 #include "orteaf/internal/backend/mps/mps_error.h"
@@ -145,7 +145,7 @@ TEST_F(MpsEncoderTest, SetPipelineStateSucceeds) {
     ASSERT_NE(library, nullptr);
     mps::MPSFunction_t function = mps::createFunction(library, "test");
     ASSERT_NE(function, nullptr);
-    mps::MPSPipelineState_t pipeline = mps::createPipelineState(device_, function, &error);
+    mps::MPSComputePipelineState_t pipeline = mps::createComputePipelineState(device_, function, &error);
     ASSERT_NE(pipeline, nullptr);
 
     EXPECT_NO_THROW(mps::setPipelineState(encoder, pipeline));
@@ -154,7 +154,7 @@ TEST_F(MpsEncoderTest, SetPipelineStateSucceeds) {
     mps::destroyComputeCommandEncoder(encoder);
     mps::destroyCommandBuffer(buffer);
 
-    mps::destroyPipelineState(pipeline);
+    mps::destroyComputePipelineState(pipeline);
     mps::destroyFunction(function);
     mps::destroyLibrary(library);
     mps::destroyCompileOptions(options);
@@ -234,7 +234,7 @@ TEST_F(MpsEncoderTest, SetThreadgroupsSucceeds) {
     ASSERT_NE(library, nullptr);
     mps::MPSFunction_t function = mps::createFunction(library, "test");
     ASSERT_NE(function, nullptr);
-    mps::MPSPipelineState_t pipeline = mps::createPipelineState(device_, function, &error);
+    mps::MPSComputePipelineState_t pipeline = mps::createComputePipelineState(device_, function, &error);
     ASSERT_NE(pipeline, nullptr);
 
     EXPECT_NO_THROW(mps::setPipelineState(encoder, pipeline));
@@ -248,7 +248,7 @@ TEST_F(MpsEncoderTest, SetThreadgroupsSucceeds) {
     mps::destroyComputeCommandEncoder(encoder);
     mps::destroyCommandBuffer(buffer);
 
-    mps::destroyPipelineState(pipeline);
+    mps::destroyComputePipelineState(pipeline);
     mps::destroyFunction(function);
     mps::destroyLibrary(library);
     mps::destroyCompileOptions(options);

@@ -6,7 +6,7 @@
 
 #include "orteaf/internal/backend/mps/mps_command_buffer.h"
 #include "orteaf/internal/backend/mps/mps_buffer.h"
-#include "orteaf/internal/backend/mps/mps_pipeline_state.h"
+#include "orteaf/internal/backend/mps/mps_compute_pipeline_state.h"
 #include "orteaf/internal/backend/mps/mps_size.h"
 
 #include <cstddef>
@@ -25,7 +25,7 @@ void destroyComputeCommandEncoder(MPSComputeCommandEncoder_t compute_command_enc
 void endEncoding(MPSComputeCommandEncoder_t compute_command_encoder);
 
 /** Bind a compute pipeline state. */
-void setPipelineState(MPSComputeCommandEncoder_t compute_command_encoder, MPSPipelineState_t pipeline_state);
+void setPipelineState(MPSComputeCommandEncoder_t compute_command_encoder, MPSComputePipelineState_t pipeline_state);
 /** Bind a buffer at the given index with an offset. */
 void setBuffer(MPSComputeCommandEncoder_t compute_command_encoder, MPSBuffer_t buffer, size_t offset, size_t index);
 /** Bind raw bytes at the given index. */
