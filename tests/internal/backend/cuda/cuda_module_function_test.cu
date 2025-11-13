@@ -120,14 +120,7 @@ TEST_F(CudaModuleFunctionTest, GetFunctionNonExistentKernelThrows) {
  * @brief Test that unload_module with nullptr is handled (implementation may throw or ignore).
  */
 TEST_F(CudaModuleFunctionTest, UnloadModuleNullptr) {
-    // According to documentation, nullptr should be ignored, but implementation may throw
-    // We test both behaviors
-    try {
-        cuda::unload_module(nullptr);
-        // If no exception, that's fine (documentation says nullptr is ignored)
-    } catch (const std::system_error&) {
-        // If exception is thrown, that's also acceptable
-    }
+    EXPECT_NO_THROW(cuda::unload_module(nullptr));
 }
 
 /**

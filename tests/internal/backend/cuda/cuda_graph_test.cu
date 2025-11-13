@@ -77,12 +77,7 @@ TEST_F(CudaGraphTest, DestroyGraphSucceeds) {
  * @brief Test that destroy_graph with nullptr is handled.
  */
 TEST_F(CudaGraphTest, DestroyGraphNullptr) {
-    // Implementation may throw or ignore nullptr
-    try {
-        cuda::destroy_graph(nullptr);
-    } catch (const std::system_error&) {
-        // Exception is acceptable
-    }
+    EXPECT_NO_THROW(cuda::destroy_graph(nullptr));
 }
 
 /**
@@ -119,12 +114,7 @@ TEST_F(CudaGraphTest, DestroyGraphExecSucceeds) {
  * @brief Test that destroy_graph_exec with nullptr is handled.
  */
 TEST_F(CudaGraphTest, DestroyGraphExecNullptr) {
-    // Implementation may throw or ignore nullptr
-    try {
-        cuda::destroy_graph_exec(nullptr);
-    } catch (const std::system_error&) {
-        // Exception is acceptable
-    }
+    EXPECT_NO_THROW(cuda::destroy_graph_exec(nullptr));
 }
 
 /**

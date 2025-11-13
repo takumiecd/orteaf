@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "orteaf/internal/backend/cuda/cuda_kernel_embed_api.h"
+#include "tests/internal/testing/error_assert.h"
 
 using namespace orteaf::internal::backend::cuda::kernel_embed;
 
@@ -76,3 +77,13 @@ TEST(CudaKernelEmbedTest, SkippedWhenCudaDisabled) {
 }
 
 #endif  // ORTEAF_ENABLE_CUDA
+
+TEST(CudaKernelEmbedTest, EmptyKernelNameThrows) {
+#if ORTEAF_ENABLE_CUDA
+    ::orteaf::tests::ExpectError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+        [] { find_kernel_data(std::string_view{}, CudaKernelFmt::Fatbin); });
+#else
+    GTEST_SKIP() << "CUDA backend disabled";
+#endif
+}

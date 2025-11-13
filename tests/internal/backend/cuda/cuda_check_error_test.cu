@@ -5,6 +5,7 @@
 
 #include "orteaf/internal/backend/cuda/cuda_check.h"
 #include "orteaf/internal/diagnostics/error/error.h"
+#include "tests/internal/testing/error_assert.h"
 
 #include <gtest/gtest.h>
 
@@ -58,16 +59,10 @@ TEST(CudaCheckError, CudaCheckErrorThrows) {
  * @brief Test that cuda_check throws with correct error code.
  */
 TEST(CudaCheckError, CudaCheckThrowsCorrectErrorCode) {
-    try {
-        cuda::cudaCheck(cudaErrorMemoryAllocation, "alloc_test", "file.cpp", 100);
-        FAIL() << "Expected std::system_error to be thrown";
-    } catch (const std::system_error& ex) {
-        EXPECT_EQ(static_cast<diag::OrteafErrc>(ex.code().value()), diag::OrteafErrc::OutOfMemory);
-        std::string what = ex.what();
-        EXPECT_NE(what.find("alloc_test"), std::string::npos);
-        EXPECT_NE(what.find("file.cpp"), std::string::npos);
-        EXPECT_NE(what.find("100"), std::string::npos);
-    }
+    ::orteaf::tests::ExpectErrorMessage(
+        diag::OrteafErrc::OutOfMemory,
+        {"alloc_test", "file.cpp", "100"},
+        []() { cuda::cudaCheck(cudaErrorMemoryAllocation, "alloc_test", "file.cpp", 100); });
 }
 
 /**
@@ -109,16 +104,10 @@ TEST(CudaCheckError, CuDriverCheckErrorThrows) {
  * @brief Test that cu_driver_check throws with correct error code.
  */
 TEST(CudaCheckError, CuDriverCheckThrowsCorrectErrorCode) {
-    try {
-        cuda::cuDriverCheck(CUDA_ERROR_INVALID_VALUE, "driver_test", "driver.cpp", 200);
-        FAIL() << "Expected std::system_error to be thrown";
-    } catch (const std::system_error& ex) {
-        EXPECT_EQ(static_cast<diag::OrteafErrc>(ex.code().value()), diag::OrteafErrc::InvalidParameter);
-        std::string what = ex.what();
-        EXPECT_NE(what.find("driver_test"), std::string::npos);
-        EXPECT_NE(what.find("driver.cpp"), std::string::npos);
-        EXPECT_NE(what.find("200"), std::string::npos);
-    }
+    ::orteaf::tests::ExpectErrorMessage(
+        diag::OrteafErrc::InvalidParameter,
+        {"driver_test", "driver.cpp", "200"},
+        []() { cuda::cuDriverCheck(CUDA_ERROR_INVALID_VALUE, "driver_test", "driver.cpp", 200); });
 }
 
 /**
@@ -194,13 +183,10 @@ TEST(CudaCheckError, CuCheckMacroWorks) {
  * @brief Test that error messages contain expression information.
  */
 TEST(CudaCheckError, ErrorMessagesContainExpression) {
-    try {
-        CUDA_CHECK(cudaErrorInvalidValue);
-        FAIL() << "Expected exception";
-    } catch (const std::system_error& ex) {
-        std::string what = ex.what();
-        EXPECT_NE(what.find("cudaErrorInvalidValue"), std::string::npos);
-    }
+    ::orteaf::tests::ExpectErrorMessage(
+        diag::OrteafErrc::InvalidParameter,
+        {"cudaErrorInvalidValue"},
+        []() { CUDA_CHECK(cudaErrorInvalidValue); });
 }
 
 #else  // !ORTEAF_ENABLE_CUDA

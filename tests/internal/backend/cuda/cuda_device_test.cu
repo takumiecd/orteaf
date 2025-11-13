@@ -5,6 +5,7 @@
 
 #include "orteaf/internal/backend/cuda/cuda_device.h"
 #include "orteaf/internal/backend/cuda/cuda_init.h"
+#include "tests/internal/testing/error_assert.h"
 
 #include <gtest/gtest.h>
 
@@ -63,8 +64,9 @@ TEST_F(CudaDeviceTest, GetDeviceZero) {
 TEST_F(CudaDeviceTest, GetDeviceInvalidIndexThrows) {
     int count = cuda::getDeviceCount();
     if (count > 0) {
-        // Try to get a device beyond the available count
-        EXPECT_THROW(cuda::get_device(static_cast<uint32_t>(count)), std::system_error);
+        ::orteaf::tests::ExpectError(
+            ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+            [&]() { cuda::get_device(static_cast<uint32_t>(count)); });
     } else {
         GTEST_SKIP() << "No CUDA devices available";
     }
