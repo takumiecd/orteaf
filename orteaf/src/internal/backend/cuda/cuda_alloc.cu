@@ -4,10 +4,7 @@
 #include "orteaf/internal/backend/cuda/cuda_objc_bridge.h"
 
 #include "orteaf/internal/diagnostics/error/error_impl.h"
-
-#ifdef ORTEAF_ENABLE_CUDA
 #include <cuda.h>
-#endif
 
 namespace orteaf::internal::backend::cuda {
 
@@ -22,7 +19,6 @@ namespace orteaf::internal::backend::cuda {
  * @throws std::runtime_error If CUDA allocation fails (when ORTEAF_ENABLE_CUDA is defined).
  */
 CUdeviceptr_t alloc(size_t size) {
-#ifdef ORTEAF_ENABLE_CUDA
     if (size == 0) {
         using namespace orteaf::internal::diagnostics::error;
         throwError(OrteafErrc::InvalidParameter, "alloc: size cannot be 0");
@@ -31,11 +27,6 @@ CUdeviceptr_t alloc(size_t size) {
     CU_CHECK(cuMemAlloc(&ptr, size));
     updateAlloc(size);
     return opaqueFromCuDeviceptr(ptr);
-#else
-    (void)size;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "alloc: CUDA backend is not available (CUDA disabled)");
-#endif
 }
 
 /**
@@ -48,17 +39,10 @@ CUdeviceptr_t alloc(size_t size) {
  * @param size Size of memory to free in bytes. Used for statistics update.
  */
 void free(CUdeviceptr_t ptr, size_t size) {
-#ifdef ORTEAF_ENABLE_CUDA
     if (ptr == 0) return;
-    CUdeviceptr objc_ptr = cuDeviceptrFromOpaque(ptr)
-    CU_CHECK(cuMemFree(objc_ptr))
+    CUdeviceptr objc_ptr = cuDeviceptrFromOpaque(ptr);
+    CU_CHECK(cuMemFree(objc_ptr));
     updateDealloc(size);
-#else
-    (void)ptr;
-    (void)size;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "free: CUDA backend is not available (CUDA disabled)");
-#endif
 }
 
 /**
@@ -73,7 +57,6 @@ void free(CUdeviceptr_t ptr, size_t size) {
  * @throws std::runtime_error If stream is nullptr or CUDA allocation fails.
  */
 CUdeviceptr_t allocStream(size_t size, CUstream_t stream) {
-#ifdef ORTEAF_ENABLE_CUDA
     if (size == 0) {
         using namespace orteaf::internal::diagnostics::error;
         throwError(OrteafErrc::InvalidParameter, "allocStream: size cannot be 0");
@@ -87,12 +70,6 @@ CUdeviceptr_t allocStream(size_t size, CUstream_t stream) {
     CU_CHECK(cuMemAllocAsync(&ptr, size, objc_stream));
     updateAlloc(size);
     return opaqueFromCuDeviceptr(ptr);
-#else
-    (void)size;
-    (void)stream;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "allocStream: CUDA backend is not available (CUDA disabled)");
-#endif
 }
 
 /**
@@ -107,7 +84,6 @@ CUdeviceptr_t allocStream(size_t size, CUstream_t stream) {
  * @throws std::runtime_error If stream is nullptr or CUDA deallocation fails.
  */
 void freeStream(CUdeviceptr_t ptr, size_t size, CUstream_t stream) {
-#ifdef ORTEAF_ENABLE_CUDA
     CUdeviceptr objc_ptr = cuDeviceptrFromOpaque(ptr);
     if (stream == nullptr) {
         using namespace orteaf::internal::diagnostics::error;
@@ -116,13 +92,6 @@ void freeStream(CUdeviceptr_t ptr, size_t size, CUstream_t stream) {
     CUstream objc_stream = objcFromOpaqueNoown<CUstream>(stream);
     CU_CHECK(cuMemFreeAsync(objc_ptr, objc_stream));
     updateDealloc(size);
-#else
-    (void)ptr;
-    (void)size;
-    (void)stream;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "freeStream: CUDA backend is not available (CUDA disabled)");
-#endif
 }
 
 /**
@@ -136,7 +105,6 @@ void freeStream(CUdeviceptr_t ptr, size_t size, CUstream_t stream) {
  * @throws std::runtime_error If CUDA allocation fails (when ORTEAF_ENABLE_CUDA is defined).
  */
 void* allocHost(std::size_t size) {
-#ifdef ORTEAF_ENABLE_CUDA
     if (size == 0) {
         using namespace orteaf::internal::diagnostics::error;
         throwError(OrteafErrc::InvalidParameter, "allocHost: size cannot be 0");
@@ -145,11 +113,6 @@ void* allocHost(std::size_t size) {
     CU_CHECK(cuMemAllocHost(&ptr, size));
     updateAlloc(size);
     return ptr;
-#else
-    (void)size;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "allocHost: CUDA backend is not available (CUDA disabled)");
-#endif
 }
 
 /**
@@ -165,7 +128,6 @@ void* allocHost(std::size_t size) {
  * @throws std::runtime_error If CUDA copy operation fails (when ORTEAF_ENABLE_CUDA is defined).
  */
 void copyToHost(CUdeviceptr_t ptr, void* host_ptr, size_t size) {
-#ifdef ORTEAF_ENABLE_CUDA
     if (ptr == 0) {
         using namespace orteaf::internal::diagnostics::error;
         throwError(OrteafErrc::InvalidParameter, "copyToHost: ptr cannot be 0");
@@ -176,13 +138,6 @@ void copyToHost(CUdeviceptr_t ptr, void* host_ptr, size_t size) {
     }
     CUdeviceptr objc_ptr = cuDeviceptrFromOpaque(ptr);
     CU_CHECK(cuMemcpyDtoH(host_ptr, objc_ptr, size));
-#else
-    (void)ptr;
-    (void)host_ptr;
-    (void)size;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "copyToHost: CUDA backend is not available (CUDA disabled)");
-#endif
 }
 
 /**
@@ -198,7 +153,6 @@ void copyToHost(CUdeviceptr_t ptr, void* host_ptr, size_t size) {
  * @throws std::runtime_error If CUDA copy operation fails (when ORTEAF_ENABLE_CUDA is defined).
  */
 void copyToDevice(void* host_ptr, CUdeviceptr_t ptr, size_t size) {
-#ifdef ORTEAF_ENABLE_CUDA
     if (ptr == 0) {
         using namespace orteaf::internal::diagnostics::error;
         throwError(OrteafErrc::InvalidParameter, "copyToDevice: ptr cannot be 0");
@@ -209,13 +163,6 @@ void copyToDevice(void* host_ptr, CUdeviceptr_t ptr, size_t size) {
     }
     CUdeviceptr objc_ptr = cuDeviceptrFromOpaque(ptr);
     CU_CHECK(cuMemcpyHtoD(objc_ptr, host_ptr, size));
-#else
-    (void)host_ptr;
-    (void)ptr;
-    (void)size;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "copyToDevice: CUDA backend is not available (CUDA disabled)");
-#endif
 }
 
 /**
@@ -229,19 +176,12 @@ void copyToDevice(void* host_ptr, CUdeviceptr_t ptr, size_t size) {
  * @throws std::runtime_error If CUDA deallocation fails (when ORTEAF_ENABLE_CUDA is defined).
  */
 void freeHost(void* ptr, size_t size) {
-#ifdef ORTEAF_ENABLE_CUDA
     if (ptr == nullptr) {
         using namespace orteaf::internal::diagnostics::error;
         throwError(OrteafErrc::NullPointer, "freeHost: ptr cannot be nullptr");
     }
     CU_CHECK(cuMemFreeHost(ptr));
     updateDealloc(size);
-#else
-    (void)ptr;
-    (void)size;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "freeHost: CUDA backend is not available (CUDA disabled)");
-#endif
 }
 
 } // namespace orteaf::internal::backend::cuda

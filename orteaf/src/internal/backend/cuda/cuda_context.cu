@@ -11,11 +11,8 @@
 #include "orteaf/internal/backend/cuda/cuda_objc_bridge.h"
 
 #include "orteaf/internal/diagnostics/error/error_impl.h"
-
-#ifdef ORTEAF_ENABLE_CUDA
 #include <cuda.h>
 #include "orteaf/internal/backend/cuda/cuda_check.h"
-#endif
 
 namespace orteaf::internal::backend::cuda {
 
@@ -23,23 +20,16 @@ namespace orteaf::internal::backend::cuda {
  * @copydoc orteaf::internal::backend::cuda::getPrimaryContext
  */
 CUcontext_t getPrimaryContext(CUdevice_t device) {
-#ifdef ORTEAF_ENABLE_CUDA
     CUdevice objc_device = cuDeviceFromOpaque(device);
     CUcontext context = nullptr;
     CU_CHECK(cuDevicePrimaryCtxRetain(&context, objc_device));
     return opaqueFromObjcNoown<CUcontext_t, CUcontext>(context);
-#else
-    (void)device;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "getPrimaryContext: CUDA backend is not available (CUDA disabled)");
-#endif
 }
 
 /**
  * @copydoc orteaf::internal::backend::cuda::createContext
  */
 CUcontext_t createContext(CUdevice_t device) {
-#ifdef ORTEAF_ENABLE_CUDA
     CUdevice objc_device = cuDeviceFromOpaque(device);
     CUcontext context = nullptr;
 #if defined(CUDA_VERSION) && CUDA_VERSION >= 13000
@@ -53,58 +43,35 @@ CUcontext_t createContext(CUdevice_t device) {
     CU_CHECK(cuCtxCreate(&context, 0, objc_device));
 #endif
     return opaqueFromObjcNoown<CUcontext_t, CUcontext>(context);
-#else
-    (void)device;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "createContext: CUDA backend is not available (CUDA disabled)");
-#endif
 }
 
 /**
  * @copydoc orteaf::internal::backend::cuda::setContext
  */
 void setContext(CUcontext_t context) {
-#ifdef ORTEAF_ENABLE_CUDA
     if (context == nullptr) {
         using namespace orteaf::internal::diagnostics::error;
         throwError(OrteafErrc::NullPointer, "setContext: context cannot be nullptr");
     }
     CUcontext objc_context = objcFromOpaqueNoown<CUcontext>(context);
     CU_CHECK(cuCtxSetCurrent(objc_context));
-#else
-    (void)context;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "setContext: CUDA backend is not available (CUDA disabled)");
-#endif
 }
 
 /**
  * @copydoc orteaf::internal::backend::cuda::releasePrimaryContext
  */
 void releasePrimaryContext(CUdevice_t device) {
-#ifdef ORTEAF_ENABLE_CUDA
     CUdevice objc_device = cuDeviceFromOpaque(device);
     CU_CHECK(cuDevicePrimaryCtxRelease(objc_device));
-#else
-    (void)device;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "releasePrimaryContext: CUDA backend is not available (CUDA disabled)");
-#endif
 }
 
 /**
  * @copydoc orteaf::internal::backend::cuda::releaseContext
  */
 void releaseContext(CUcontext_t context) {
-#ifdef ORTEAF_ENABLE_CUDA
     if (context == nullptr) return;
     CUcontext objc_context = objcFromOpaqueNoown<CUcontext>(context);
     CU_CHECK(cuCtxDestroy(objc_context));
-#else
-    (void)context;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "releaseContext: CUDA backend is not available (CUDA disabled)");
-#endif
 }
 
 } // namespace orteaf::internal::backend::cuda

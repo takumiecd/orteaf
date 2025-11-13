@@ -20,7 +20,6 @@ CudaUInt3_t makeUInt3(std::uint32_t x, std::uint32_t y, std::uint32_t z) noexcep
     return CudaUInt3_t{x, y, z};
 }
 
-#ifndef ORTEAF_ENABLE_CUDA
 /** Convert `CudaDim3_t` to CUDA `dim3`. */
 dim3 toCudaDim3(CudaDim3_t value) noexcept {
     dim3 result{};
@@ -48,6 +47,5 @@ uint3 toCudaUInt3(CudaUInt3_t value) noexcept {
 CudaUInt3_t fromCudaUInt3(uint3 value) noexcept {
     return CudaUInt3_t{value.x, value.y, value.z};
 }
-#endif
 
 } // namespace orteaf::internal::backend::cuda
