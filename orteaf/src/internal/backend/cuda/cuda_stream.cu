@@ -29,22 +29,11 @@ CUstream_t getStream() {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::setStream
- */
-void setStream(CUstream_t stream) {
-#ifdef ORTEAF_ENABLE_CUDA
-    (void)stream; // No driver API to set a global current stream.
-#else
-    (void)stream;
-#endif
-}
-
-/**
  * @copydoc orteaf::internal::backend::cuda::releaseStream
  */
 void releaseStream(CUstream_t stream) {
 #ifdef ORTEAF_ENABLE_CUDA
-    if (!stream) return;
+    if (stream == nullptr) return;
     CUstream objc_stream = objcFromOpaqueNoown<CUstream>(stream);
     CU_CHECK(cuStreamDestroy(objc_stream));
     updateDestroyStream();

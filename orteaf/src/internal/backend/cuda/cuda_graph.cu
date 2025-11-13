@@ -50,6 +50,7 @@ CUgraphExec_t createGraphExec(CUgraph_t graph) {
  */
 void destroyGraph(CUgraph_t graph) {
 #ifdef ORTEAF_ENABLE_CUDA
+    if (graph == nullptr) return;
     CUgraph objc_graph = objcFromOpaqueNoown<CUgraph>(graph);
     CU_CHECK(cuGraphDestroy(objc_graph));
 #else
@@ -62,6 +63,7 @@ void destroyGraph(CUgraph_t graph) {
  */
 void destroyGraphExec(CUgraphExec_t graph_exec) {
 #ifdef ORTEAF_ENABLE_CUDA
+    if (graph_exec == nullptr) return;
     CUgraphExec objc_graph_exec = objcFromOpaqueNoown<CUgraphExec>(graph_exec);
     CU_CHECK(cuGraphExecDestroy(objc_graph_exec));
 #else

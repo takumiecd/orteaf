@@ -47,11 +47,13 @@ CUdeviceptr_t alloc(size_t size) {
  */
 void free(CUdeviceptr_t ptr, size_t size) {
 #ifdef ORTEAF_ENABLE_CUDA
-    CUdeviceptr objc_ptr = cuDeviceptrFromOpaque(ptr);
-    CU_CHECK(cuMemFree(objc_ptr));
+    if (ptr == 0) return;
+    CUdeviceptr objc_ptr = cuDeviceptrFromOpaque(ptr)
+    CU_CHECK(cuMemFree(objc_ptr))
     updateDealloc(size);
 #else
     (void)ptr;
+    (void)size;
 #endif
 }
 

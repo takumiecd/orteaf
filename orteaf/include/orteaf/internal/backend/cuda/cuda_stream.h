@@ -30,14 +30,6 @@ static_assert(sizeof(CUstream_t) == sizeof(void*), "CUstream_t must be pointer-s
 CUstream_t getStream();
 
 /**
- * @brief Set the current stream (no-op for CUDA Driver API).
- * @param stream Opaque stream handle; ignored.
- *
- * Provided for API symmetry; Driver API has no notion of a global current stream.
- */
-void setStream(CUstream_t stream);
-
-/**
  * @brief Destroy a CUDA stream.
  * @param stream Opaque stream handle; nullptr is ignored.
  * @throws std::system_error On CUDA driver error (via `OrteafErrc`).

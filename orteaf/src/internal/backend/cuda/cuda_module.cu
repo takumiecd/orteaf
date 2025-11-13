@@ -22,6 +22,10 @@ CUmodule_t loadModuleFromFile(const char* filepath) {
         using namespace orteaf::internal::diagnostics::error;
         throwError(OrteafErrc::NullPointer, "loadModuleFromFile: filepath cannot be nullptr");
     }
+    if (filepath[0] == '\0') {
+        using namespace orteaf::internal::diagnostics::error;
+        throwError(OrteafErrc::InvalidParameter, "loadModuleFromFile: filepath cannot be empty");
+    }
     CUmodule module;
     CU_CHECK(cuModuleLoad(&module, filepath));
     return opaqueFromObjcNoown<CUmodule_t, CUmodule>(module);
@@ -61,6 +65,10 @@ CUfunction_t getFunction(CUmodule_t module, const char* kernel_name) {
     if (kernel_name == nullptr) {
         using namespace orteaf::internal::diagnostics::error;
         throwError(OrteafErrc::NullPointer, "getFunction: kernel_name cannot be nullptr");
+    }
+    if (kernel_name[0] == '\0') {
+        using namespace orteaf::internal::diagnostics::error;
+        throwError(OrteafErrc::InvalidParameter, "getFunction: kernel_name cannot be empty");
     }
     CUmodule objc_module = objcFromOpaqueNoown<CUmodule>(module);
     CUfunction function;
