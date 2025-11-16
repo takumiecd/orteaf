@@ -1,12 +1,15 @@
 #pragma once
 
+#include <cstdint>
 #include <initializer_list>
 #include <type_traits>
 #include <utility>
 
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "tests/internal/runtime/mps/testing/backend_mock_expectations.h"
+#include "orteaf/internal/backend/mps/mps_device.h"
 
 namespace orteaf::tests::runtime::mps::testing {
 
@@ -93,9 +96,40 @@ public:
         }
     }
 
+    ::orteaf::internal::backend::mps::MPSDevice_t device() {
+        if (!device_initialized_) {
+            acquireDeviceOrSkip();
+        }
+        return device_;
+    }
+
 private:
+    static ::orteaf::internal::backend::mps::MPSDevice_t mockDeviceHandle() {
+        return reinterpret_cast<::orteaf::internal::backend::mps::MPSDevice_t>(0xD1);
+    }
+
+    void acquireDeviceOrSkip() {
+        if constexpr (Provider::is_mock) {
+            auto& mock = Provider::mock(*context_);
+            BackendMockExpectations::expectGetDeviceCount(mock, 1);
+            BackendMockExpectations::expectGetDevices(mock, {{0, mockDeviceHandle()}});
+        }
+        const int count = Provider::BackendOps::getDeviceCount();
+        if (count <= 0) {
+            GTEST_SKIP() << "No MPS devices available";
+        }
+        auto acquired = Provider::BackendOps::getDevice(0);
+        if (acquired == nullptr) {
+            GTEST_SKIP() << "Unable to acquire MPS device";
+        }
+        device_ = acquired;
+        device_initialized_ = true;
+    }
+
     Manager* manager_{nullptr};
     Context* context_{nullptr};
+    ::orteaf::internal::backend::mps::MPSDevice_t device_{nullptr};
+    bool device_initialized_{false};
 };
 
 }  // namespace orteaf::tests::runtime::mps::testing

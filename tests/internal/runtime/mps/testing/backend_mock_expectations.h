@@ -1,6 +1,9 @@
 #pragma once
 
+#include <cstddef>
 #include <initializer_list>
+#include <memory>
+#include <vector>
 
 #include <gmock/gmock.h>
 
@@ -62,9 +65,21 @@ struct BackendMockExpectations {
             EXPECT_CALL(mock, createCommandQueue(device_matcher)).Times(0);
             return;
         }
-        for (auto handle : handles) {
-            EXPECT_CALL(mock, createCommandQueue(device_matcher)).WillOnce(::testing::Return(handle));
-        }
+        struct State {
+            std::vector<::orteaf::internal::backend::mps::MPSCommandQueue_t> values;
+            std::size_t next{0};
+        };
+        auto state = std::make_shared<State>();
+        state->values.assign(handles.begin(), handles.end());
+        const auto call_count = state->values.size();
+        EXPECT_CALL(mock, createCommandQueue(device_matcher))
+            .Times(call_count)
+            .WillRepeatedly(::testing::Invoke(
+                [state](::orteaf::internal::backend::mps::MPSDevice_t /*device*/) mutable {
+                    const auto handle = state->values[state->next];
+                    ++state->next;
+                    return handle;
+                }));
     }
 
     static void expectDestroyCommandQueues(
@@ -100,9 +115,21 @@ struct BackendMockExpectations {
             EXPECT_CALL(mock, createEvent(device_matcher)).Times(0);
             return;
         }
-        for (auto handle : handles) {
-            EXPECT_CALL(mock, createEvent(device_matcher)).WillOnce(::testing::Return(handle));
-        }
+        struct State {
+            std::vector<::orteaf::internal::backend::mps::MPSEvent_t> values;
+            std::size_t next{0};
+        };
+        auto state = std::make_shared<State>();
+        state->values.assign(handles.begin(), handles.end());
+        const auto call_count = state->values.size();
+        EXPECT_CALL(mock, createEvent(device_matcher))
+            .Times(call_count)
+            .WillRepeatedly(::testing::Invoke(
+                [state](::orteaf::internal::backend::mps::MPSDevice_t /*device*/) mutable {
+                    const auto handle = state->values[state->next];
+                    ++state->next;
+                    return handle;
+                }));
     }
 
     static void expectDestroyEvents(
