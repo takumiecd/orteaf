@@ -1,19 +1,24 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <cstdint>
 #include <limits>
-#include <memory>
 
+#include "orteaf/internal/backend/mps/mps_command_queue.h"
+#include "orteaf/internal/backend/mps/mps_event.h"
+#include "orteaf/internal/diagnostics/error/error.h"
 #include "orteaf/internal/runtime/manager/mps/mps_command_queue_manager.h"
-#include "tests/internal/runtime/mps/testing/backend_mock.h"
+#include "tests/internal/runtime/mps/testing/backend_ops_provider.h"
+#include "tests/internal/runtime/mps/testing/manager_test_fixture.h"
+#include "tests/internal/testing/error_assert.h"
 
 namespace backend = orteaf::internal::backend;
 namespace base = orteaf::internal::base;
+namespace diag_error = orteaf::internal::diagnostics::error;
 namespace mps_rt = orteaf::internal::runtime::mps;
-namespace test_mps = orteaf::tests::runtime::mps;
+namespace testing_mps = orteaf::tests::runtime::mps::testing;
 
-using ::testing::NiceMock;
-using ::testing::_;
+using orteaf::tests::ExpectError;
 
 namespace {
 
@@ -25,114 +30,224 @@ backend::mps::MPSEvent_t makeEvent(std::uintptr_t value) {
     return reinterpret_cast<backend::mps::MPSEvent_t>(value);
 }
 
-struct MockManagerProvider {
-    using Manager = mps_rt::MpsCommandQueueManager<test_mps::MpsBackendOpsMockAdapter>;
-
-    void setUp() {
-        mock_ = std::make_unique<NiceMock<test_mps::MpsBackendOpsMock>>();
-        guard_ = std::make_unique<test_mps::MpsBackendOpsMockRegistry::Guard>(*mock_);
-
-        using ::testing::Invoke;
-        ON_CALL(*mock_, createCommandQueue(_)).WillByDefault(Invoke([this](auto) {
-            return makeQueue(next_queue_++);
-        }));
-        ON_CALL(*mock_, createEvent(_)).WillByDefault(Invoke([this](auto) {
-            return makeEvent(next_event_++);
-        }));
-    }
-
-    void tearDown() {
-        if (mock_) {
-            test_mps::MpsBackendOpsMockRegistry::unbind(*mock_);
-        }
-        guard_.reset();
-        mock_.reset();
-    }
-
-private:
-    std::unique_ptr<NiceMock<test_mps::MpsBackendOpsMock>> mock_;
-    std::unique_ptr<test_mps::MpsBackendOpsMockRegistry::Guard> guard_;
-    std::uintptr_t next_queue_{0xA000};
-    std::uintptr_t next_event_{0xB000};
-};
-
-struct RealManagerProvider {
-    using Manager = mps_rt::MpsCommandQueueManager<>;
-    void setUp() {}
-    void tearDown() {}
-};
-
 template <class Provider>
-class MpsCommandQueueManagerTypedTest : public ::testing::Test {
+class MpsCommandQueueManagerTypedTest
+    : public testing_mps::RuntimeManagerFixture<Provider, mps_rt::MpsCommandQueueManager> {
 protected:
-    using Manager = typename Provider::Manager;
+    using Base = testing_mps::RuntimeManagerFixture<Provider, mps_rt::MpsCommandQueueManager>;
 
-    void SetUp() override {
-        provider_.setUp();
+    mps_rt::MpsCommandQueueManager<typename Provider::BackendOps>& manager() {
+        return Base::manager();
     }
 
-    void TearDown() override {
-        manager_.shutdown();
-        provider_.tearDown();
-    }
-
-    Manager manager_;
-    Provider provider_;
+    auto& adapter() { return Base::adapter(); }
 };
 
 #if ORTEAF_ENABLE_MPS
-using ManagerProviders = ::testing::Types<MockManagerProvider, RealManagerProvider>;
+using ProviderTypes = ::testing::Types<
+    testing_mps::MockBackendOpsProvider,
+    testing_mps::RealBackendOpsProvider>;
 #else
-using ManagerProviders = ::testing::Types<MockManagerProvider>;
+using ProviderTypes = ::testing::Types<
+    testing_mps::MockBackendOpsProvider>;
 #endif
 
-TYPED_TEST_SUITE(MpsCommandQueueManagerTypedTest, ManagerProviders);
+}  // namespace
 
-TYPED_TEST(MpsCommandQueueManagerTypedTest, AcquireReleaseRoundTrip) {
-    auto& manager = this->manager_;
-    manager.setGrowthChunkSize(1);
+TYPED_TEST_SUITE(MpsCommandQueueManagerTypedTest, ProviderTypes);
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest, GrowthChunkSizeCanBeAdjusted) {
+    auto& manager = this->manager();
+    EXPECT_EQ(manager.growthChunkSize(), 1u);
+    manager.setGrowthChunkSize(4);
+    EXPECT_EQ(manager.growthChunkSize(), 4u);
+}
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest, GrowthChunkSizeRejectsZero) {
+    auto& manager = this->manager();
+    ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
+        manager.setGrowthChunkSize(0);
+    });
+}
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest, InitializeCreatesConfiguredNumberOfResources) {
+    auto& manager = this->manager();
+    this->adapter().expectCreateCommandQueues({makeQueue(0x1), makeQueue(0x2)});
+    this->adapter().expectCreateEvents({makeEvent(0x10), makeEvent(0x20)});
+    manager.initialize(2);
+    EXPECT_EQ(manager.capacity(), 2u);
+}
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest, InitializeRejectsCapacityAboveLimit) {
+    auto& manager = this->manager();
+    ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
+        manager.initialize(std::numeric_limits<std::size_t>::max());
+    });
+}
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest, AcquireFailsBeforeInitialization) {
+    auto& manager = this->manager();
+    ExpectError(diag_error::OrteafErrc::InvalidState, [&] {
+        (void)manager.acquire();
+    });
+}
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest, AcquireReturnsDistinctIdsWithinCapacity) {
+    auto& manager = this->manager();
+    this->adapter().expectCreateCommandQueues({makeQueue(0x100), makeQueue(0x200)});
+    this->adapter().expectCreateEvents({makeEvent(0x1000), makeEvent(0x2000)});
     manager.initialize(2);
 
-    auto id0 = manager.acquire();
-    auto id1 = manager.acquire();
+    const auto id0 = manager.acquire();
+    const auto id1 = manager.acquire();
     EXPECT_NE(id0, id1);
-
-    manager.setSubmitSerial(id0, 1);
-    manager.setCompletedSerial(id0, 1);
-    manager.release(id0);
-
-    manager.setSubmitSerial(id1, 2);
-    manager.setCompletedSerial(id1, 2);
-    manager.release(id1);
 }
 
-TYPED_TEST(MpsCommandQueueManagerTypedTest, ShutdownThenReinitialize) {
-    auto& manager = this->manager_;
+TYPED_TEST(MpsCommandQueueManagerTypedTest, AcquireGrowsPoolWhenFreelistEmpty) {
+    auto& manager = this->manager();
+    manager.setGrowthChunkSize(1);
+    this->adapter().expectCreateCommandQueues({makeQueue(0x300)});
+    this->adapter().expectCreateEvents({makeEvent(0x3000)});
     manager.initialize(1);
-    EXPECT_EQ(manager.capacity(), 1u);
-    manager.shutdown();
-    EXPECT_EQ(manager.capacity(), 0u);
-
-    manager.initialize(1);
-    auto id = manager.acquire();
-    manager.setSubmitSerial(id, 3);
-    manager.setCompletedSerial(id, 3);
-    manager.release(id);
+    const auto first = manager.acquire();
+    this->adapter().expectCreateCommandQueues({makeQueue(0x301)});
+    this->adapter().expectCreateEvents({makeEvent(0x3010)});
+    const auto second = manager.acquire();
+    EXPECT_NE(first, second);
 }
 
-TYPED_TEST(MpsCommandQueueManagerTypedTest, HazardCountersResetAfterRelease) {
-    auto& manager = this->manager_;
+TYPED_TEST(MpsCommandQueueManagerTypedTest, AcquireFailsWhenGrowthWouldExceedLimit) {
+    auto& manager = this->manager();
+    manager.setGrowthChunkSize(std::numeric_limits<std::size_t>::max());
+    this->adapter().expectCreateCommandQueues({makeQueue(0x400)});
+    this->adapter().expectCreateEvents({makeEvent(0x4010)});
     manager.initialize(1);
-    auto id = manager.acquire();
+    (void)manager.acquire();
+
+    ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
+        (void)manager.acquire();
+    });
+}
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest, ReleaseFailsBeforeInitialization) {
+    auto& manager = this->manager();
+    ExpectError(diag_error::OrteafErrc::InvalidState, [&] {
+        manager.release(base::CommandQueueId{0});
+    });
+}
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest, ReleaseRejectsNonAcquiredId) {
+    auto& manager = this->manager();
+    this->adapter().expectCreateCommandQueues({makeQueue(0x500)});
+    this->adapter().expectCreateEvents({makeEvent(0x5000)});
+    manager.initialize(1);
+
+    ExpectError(diag_error::OrteafErrc::InvalidState, [&] {
+        manager.release(base::CommandQueueId{0});
+    });
+}
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest, ReleaseRequiresCompletedWork) {
+    auto& manager = this->manager();
+    this->adapter().expectCreateCommandQueues({makeQueue(0x510)});
+    this->adapter().expectCreateEvents({makeEvent(0x5110)});
+    manager.initialize(1);
+    const auto id = manager.acquire();
     manager.setSubmitSerial(id, 5);
+    manager.setCompletedSerial(id, 4);
+    ExpectError(diag_error::OrteafErrc::InvalidState, [&] { manager.release(id); });
     manager.setCompletedSerial(id, 5);
+    EXPECT_NO_THROW(manager.release(id));
+}
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest, ReleaseMakesHandleStaleAndRecyclesState) {
+    auto& manager = this->manager();
+    manager.setGrowthChunkSize(1);
+    this->adapter().expectCreateCommandQueues({makeQueue(0x520)});
+    this->adapter().expectCreateEvents({makeEvent(0x5210)});
+    manager.initialize(1);
+
+    const auto id = manager.acquire();
+    manager.setSubmitSerial(id, 1);
+    manager.setCompletedSerial(id, 1);
     manager.release(id);
 
-    auto recycled = manager.acquire();
+    ExpectError(diag_error::OrteafErrc::InvalidState, [&] { manager.release(id); });
+
+    const auto recycled = manager.acquire();
+    EXPECT_NE(recycled, id);
+}
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest, HazardCountersDefaultToZero) {
+    auto& manager = this->manager();
+    this->adapter().expectCreateCommandQueues({makeQueue(0x900)});
+    this->adapter().expectCreateEvents({makeEvent(0x9010)});
+    manager.initialize(1);
+    const auto id = manager.acquire();
+    EXPECT_EQ(manager.submitSerial(id), 0u);
+    EXPECT_EQ(manager.completedSerial(id), 0u);
+}
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest, HazardCountersResetOnRelease) {
+    auto& manager = this->manager();
+    this->adapter().expectCreateCommandQueues({makeQueue(0x910)});
+    this->adapter().expectCreateEvents({makeEvent(0x9110)});
+    manager.initialize(1);
+    const auto id = manager.acquire();
+    manager.setSubmitSerial(id, 7);
+    manager.setCompletedSerial(id, 7);
+    manager.release(id);
+
+    const auto recycled = manager.acquire();
     EXPECT_EQ(manager.submitSerial(recycled), 0u);
     EXPECT_EQ(manager.completedSerial(recycled), 0u);
-    manager.setCompletedSerial(recycled, 0);
-    manager.release(recycled);
 }
 
-}  // namespace
+#if ORTEAF_ENABLE_TEST
+TYPED_TEST(MpsCommandQueueManagerTypedTest, DebugStateReflectsSetterUpdates) {
+    auto& manager = this->manager();
+    this->adapter().expectCreateCommandQueues({makeQueue(0x920)});
+    this->adapter().expectCreateEvents({makeEvent(0x9210)});
+    manager.initialize(1);
+    const auto id = manager.acquire();
+    manager.setSubmitSerial(id, 11);
+    manager.setCompletedSerial(id, 9);
+
+    const auto snapshot = manager.debugState(id);
+    EXPECT_TRUE(snapshot.in_use);
+    EXPECT_EQ(snapshot.submit_serial, 11u);
+    EXPECT_EQ(snapshot.completed_serial, 9u);
+
+    manager.setCompletedSerial(id, 11);
+    manager.release(id);
+    const auto after_release = manager.debugState(id);
+    EXPECT_FALSE(after_release.in_use);
+}
+#endif
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest, GetCommandQueueRejectsOutOfRangeId) {
+    auto& manager = this->manager();
+    this->adapter().expectCreateCommandQueues({makeQueue(0x810)});
+    this->adapter().expectCreateEvents({makeEvent(0x8110)});
+    manager.initialize(1);
+
+    ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
+        (void)manager.getCommandQueue(base::CommandQueueId{10});
+    });
+}
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest, GetCommandQueueRejectsStaleId) {
+    auto& manager = this->manager();
+    manager.setGrowthChunkSize(1);
+    this->adapter().expectCreateCommandQueues({makeQueue(0x820)});
+    this->adapter().expectCreateEvents({makeEvent(0x8210)});
+    manager.initialize(1);
+    const auto id = manager.acquire();
+    manager.setSubmitSerial(id, 1);
+    manager.setCompletedSerial(id, 1);
+    manager.release(id);
+
+    ExpectError(diag_error::OrteafErrc::InvalidState, [&] {
+        (void)manager.getCommandQueue(id);
+    });
+}

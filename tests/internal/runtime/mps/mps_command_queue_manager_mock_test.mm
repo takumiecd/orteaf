@@ -8,6 +8,7 @@
 #include "orteaf/internal/runtime/manager/mps/mps_command_queue_manager.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include "tests/internal/runtime/mps/testing/backend_mock.h"
+#include "tests/internal/runtime/mps/testing/backend_mock_expectations.h"
 #include "tests/internal/testing/error_assert.h"
 
 namespace backend = orteaf::internal::backend;
@@ -21,6 +22,7 @@ using ::testing::InSequence;
 using ::testing::_;
 namespace diag_error = orteaf::internal::diagnostics::error;
 using orteaf::tests::ExpectError;
+using test_mps::BackendMockExpectations;
 
 namespace {
 
