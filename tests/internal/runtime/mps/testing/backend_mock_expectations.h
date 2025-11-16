@@ -79,6 +79,19 @@ struct BackendMockExpectations {
         }
     }
 
+    static void expectDestroyCommandQueuesInOrder(
+        MpsBackendOpsMock& mock,
+        std::initializer_list<::orteaf::internal::backend::mps::MPSCommandQueue_t> handles) {
+        if (handles.size() == 0) {
+            EXPECT_CALL(mock, destroyCommandQueue(::testing::_)).Times(0);
+            return;
+        }
+        ::testing::InSequence seq;
+        for (auto handle : handles) {
+            EXPECT_CALL(mock, destroyCommandQueue(handle)).Times(1);
+        }
+    }
+
     static void expectCreateEvents(
         MpsBackendOpsMock& mock,
         std::initializer_list<::orteaf::internal::backend::mps::MPSEvent_t> handles,
@@ -103,7 +116,19 @@ struct BackendMockExpectations {
             EXPECT_CALL(mock, destroyEvent(handle)).Times(1);
         }
     }
+
+    static void expectDestroyEventsInOrder(
+        MpsBackendOpsMock& mock,
+        std::initializer_list<::orteaf::internal::backend::mps::MPSEvent_t> handles) {
+        if (handles.size() == 0) {
+            EXPECT_CALL(mock, destroyEvent(::testing::_)).Times(0);
+            return;
+        }
+        ::testing::InSequence seq;
+        for (auto handle : handles) {
+            EXPECT_CALL(mock, destroyEvent(handle)).Times(1);
+        }
+    }
 };
 
 }  // namespace orteaf::tests::runtime::mps
-

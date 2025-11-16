@@ -66,6 +66,26 @@ public:
         }
     }
 
+    template <class... Args>
+    void expectDestroyCommandQueuesInOrder(Args&&... args) {
+        if constexpr (Provider::is_mock) {
+            auto& mock = Provider::mock(*context_);
+            BackendMockExpectations::expectDestroyCommandQueuesInOrder(mock, std::forward<Args>(args)...);
+        } else {
+            (void)sizeof...(args);
+        }
+    }
+
+    template <class... Args>
+    void expectDestroyEventsInOrder(Args&&... args) {
+        if constexpr (Provider::is_mock) {
+            auto& mock = Provider::mock(*context_);
+            BackendMockExpectations::expectDestroyEventsInOrder(mock, std::forward<Args>(args)...);
+        } else {
+            (void)sizeof...(args);
+        }
+    }
+
 private:
     Manager* manager_{nullptr};
     Context* context_{nullptr};
