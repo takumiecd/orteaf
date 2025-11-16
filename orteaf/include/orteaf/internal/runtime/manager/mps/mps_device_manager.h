@@ -18,7 +18,7 @@ template <class BackendOps = ::orteaf::internal::runtime::backend_ops::mps::MpsB
 requires ::orteaf::internal::runtime::backend_ops::mps::MpsRuntimeBackendOps<BackendOps>
 class MpsDeviceManager {
 public:
-    void initializeDevices() {
+    void initialize() {
         shutdown();
 
         const int device_count = BackendOps::getDeviceCount();
@@ -80,6 +80,17 @@ public:
         }
         return states_[index].is_alive;
     }
+
+#if ORTEAF_ENABLE_TEST
+    struct DebugState {
+        std::size_t device_count{0};
+        bool initialized{false};
+    };
+
+    DebugState debugState() const {
+        return DebugState{states_.size(), initialized_};
+    }
+#endif
 
 private:
     struct State {
