@@ -102,6 +102,38 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, CapacityReflectsPoolSize) {
     EXPECT_EQ(manager.capacity(), 0u);
 }
 
+TYPED_TEST(MpsCommandQueueManagerTypedTest, GrowCapacityAddsAdditionalQueues) {
+    auto& manager = this->manager();
+    const auto device = this->adapter().device();
+    this->adapter().expectCreateCommandQueues({makeQueue(0x350)});
+    this->adapter().expectCreateEvents({makeEvent(0x351)});
+    manager.initialize(device, 1);
+    EXPECT_EQ(manager.capacity(), 1u);
+
+    this->adapter().expectCreateCommandQueues({makeQueue(0x360), makeQueue(0x370)});
+    this->adapter().expectCreateEvents({makeEvent(0x361), makeEvent(0x371)});
+    manager.growCapacity(2);
+    EXPECT_EQ(manager.capacity(), 3u);
+
+    manager.growCapacity(0);
+    EXPECT_EQ(manager.capacity(), 3u);
+
+    const auto id0 = manager.acquire();
+    const auto id1 = manager.acquire();
+    const auto id2 = manager.acquire();
+    EXPECT_NE(id0, id1);
+    EXPECT_NE(id1, id2);
+    EXPECT_NE(id0, id2);
+
+    manager.release(id0);
+    manager.release(id1);
+    manager.release(id2);
+
+    this->adapter().expectDestroyEvents({makeEvent(0x351), makeEvent(0x361), makeEvent(0x371)});
+    this->adapter().expectDestroyCommandQueues({makeQueue(0x350), makeQueue(0x360), makeQueue(0x370)});
+    manager.shutdown();
+}
+
 TYPED_TEST(MpsCommandQueueManagerTypedTest, AcquireFailsBeforeInitialization) {
     auto& manager = this->manager();
     ExpectError(diag_error::OrteafErrc::InvalidState, [&] { (void)manager.acquire(); });
