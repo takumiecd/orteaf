@@ -2,8 +2,9 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <utility>
 #include <limits>
+#include <utility>
+#include <vector>
 
 #include "orteaf/internal/backend/mps/mps_command_queue.h"
 #include "orteaf/internal/backend/mps/mps_event.h"
@@ -95,6 +96,36 @@ public:
             return;
         }
         growStatePool(additional);
+    }
+
+    void releaseUnusedQueues() {
+        ensureInitialized();
+        if (free_list_.empty()) {
+            return;
+        }
+        std::vector<bool> is_free(states_.size(), false);
+        for (std::size_t i = 0; i < free_list_.size(); ++i) {
+            const std::size_t index = free_list_[i];
+            if (index < is_free.size()) {
+                is_free[index] = true;
+            }
+        }
+
+        std::size_t compact_index = 0;
+        for (std::size_t i = 0; i < states_.size(); ++i) {
+            if (!is_free[i]) {
+                if (compact_index != i) {
+                    states_[compact_index] = std::move(states_[i]);
+                }
+                ++compact_index;
+            } else {
+                states_[i].destroy();
+            }
+        }
+        if (compact_index < states_.size()) {
+            states_.resize(compact_index);
+        }
+        free_list_.clear();
     }
 
     base::CommandQueueId acquire() {
