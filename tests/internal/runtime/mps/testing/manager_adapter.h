@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <initializer_list>
+#include <string>
 #include <type_traits>
 #include <utility>
 
@@ -56,6 +57,18 @@ public:
         }
     }
 
+    void expectCreateLibraries(
+        std::initializer_list<std::pair<std::string, ::orteaf::internal::backend::mps::MPSLibrary_t>> expectations,
+        ::testing::Matcher<::orteaf::internal::backend::mps::MPSDevice_t> matcher = ::testing::_) {
+        if constexpr (Provider::is_mock) {
+            auto& mock = Provider::mock(*context_);
+            BackendMockExpectations::expectCreateLibraries(mock, expectations, matcher);
+        } else {
+            (void)expectations;
+            (void)matcher;
+        }
+    }
+
     void expectDestroyCommandQueues(
         std::initializer_list<::orteaf::internal::backend::mps::MPSCommandQueue_t> handles) {
         if constexpr (Provider::is_mock) {
@@ -71,6 +84,16 @@ public:
         if constexpr (Provider::is_mock) {
             auto& mock = Provider::mock(*context_);
             BackendMockExpectations::expectDestroyEvents(mock, handles);
+        } else {
+            (void)handles;
+        }
+    }
+
+    void expectDestroyLibraries(
+        std::initializer_list<::orteaf::internal::backend::mps::MPSLibrary_t> handles) {
+        if constexpr (Provider::is_mock) {
+            auto& mock = Provider::mock(*context_);
+            BackendMockExpectations::expectDestroyLibraries(mock, handles);
         } else {
             (void)handles;
         }

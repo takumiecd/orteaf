@@ -1,11 +1,14 @@
 #pragma once
 
+#include <string_view>
+
 #include <gmock/gmock.h>
 
 #include "tests/internal/testing/static_mock.h"
 #include "orteaf/internal/runtime/backend_ops/mps/mps_backend_ops.h"
 #include "orteaf/internal/backend/mps/mps_command_queue.h"
 #include "orteaf/internal/backend/mps/mps_event.h"
+#include "orteaf/internal/backend/mps/mps_library.h"
 #include "orteaf/internal/base/strong_id.h"
 
 namespace orteaf::tests::runtime::mps {
@@ -25,6 +28,10 @@ struct MpsBackendOpsMock {
                 (::orteaf::internal::backend::mps::MPSDevice_t));
     MOCK_METHOD(void, destroyEvent,
                 (::orteaf::internal::backend::mps::MPSEvent_t));
+    MOCK_METHOD(::orteaf::internal::backend::mps::MPSLibrary_t, createLibraryWithName,
+                (::orteaf::internal::backend::mps::MPSDevice_t, std::string_view));
+    MOCK_METHOD(void, destroyLibrary,
+                (::orteaf::internal::backend::mps::MPSLibrary_t));
 };
 
 using MpsBackendOpsMockRegistry = ::orteaf::tests::StaticMockRegistry<MpsBackendOpsMock>;
@@ -62,6 +69,16 @@ struct MpsBackendOpsMockAdapter {
 
     static void destroyEvent(::orteaf::internal::backend::mps::MPSEvent_t event) {
         MpsBackendOpsMockRegistry::get().destroyEvent(event);
+    }
+
+    static ::orteaf::internal::backend::mps::MPSLibrary_t createLibraryWithName(
+            ::orteaf::internal::backend::mps::MPSDevice_t device,
+            std::string_view name) {
+        return MpsBackendOpsMockRegistry::get().createLibraryWithName(device, name);
+    }
+
+    static void destroyLibrary(::orteaf::internal::backend::mps::MPSLibrary_t library) {
+        MpsBackendOpsMockRegistry::get().destroyLibrary(library);
     }
 };
 

@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <initializer_list>
 #include <memory>
+#include <string>
+#include <string_view>
 #include <vector>
 
 #include <gmock/gmock.h>
@@ -10,6 +12,7 @@
 #include "orteaf/internal/backend/mps/mps_command_queue.h"
 #include "orteaf/internal/backend/mps/mps_device.h"
 #include "orteaf/internal/backend/mps/mps_event.h"
+#include "orteaf/internal/backend/mps/mps_library.h"
 #include "orteaf/internal/base/strong_id.h"
 #include "orteaf/internal/architecture/architecture.h"
 #include "tests/internal/runtime/mps/testing/backend_mock.h"
@@ -154,6 +157,53 @@ struct BackendMockExpectations {
         ::testing::InSequence seq;
         for (auto handle : handles) {
             EXPECT_CALL(mock, destroyEvent(handle)).Times(1);
+        }
+    }
+
+    static void expectCreateLibraries(
+        MpsBackendOpsMock& mock,
+        std::initializer_list<std::pair<std::string, ::orteaf::internal::backend::mps::MPSLibrary_t>> expectations,
+        ::testing::Matcher<::orteaf::internal::backend::mps::MPSDevice_t> device_matcher = ::testing::_) {
+        if (expectations.size() == 0) {
+            EXPECT_CALL(mock, createLibraryWithName(device_matcher, ::testing::_)).Times(0);
+            return;
+        }
+        struct State {
+            std::vector<::orteaf::internal::backend::mps::MPSLibrary_t> handles;
+            std::vector<std::string> names;
+            std::size_t next{0};
+        };
+        auto state = std::make_shared<State>();
+        for (const auto& [name, handle] : expectations) {
+            state->names.push_back(name);
+            state->handles.push_back(handle);
+        }
+        const auto call_count = state->handles.size();
+        EXPECT_CALL(mock, createLibraryWithName(device_matcher, ::testing::_))
+            .Times(call_count)
+            .WillRepeatedly(::testing::Invoke(
+                [state](::orteaf::internal::backend::mps::MPSDevice_t /*device*/,
+                        std::string_view requested_name) mutable {
+                    const auto index = state->next;
+                    EXPECT_LT(index, state->names.size());
+                    if (index < state->names.size()) {
+                        EXPECT_EQ(requested_name, state->names[index]);
+                    }
+                    const auto handle = state->handles[index];
+                    ++state->next;
+                    return handle;
+                }));
+    }
+
+    static void expectDestroyLibraries(
+        MpsBackendOpsMock& mock,
+        std::initializer_list<::orteaf::internal::backend::mps::MPSLibrary_t> handles) {
+        if (handles.size() == 0) {
+            EXPECT_CALL(mock, destroyLibrary(::testing::_)).Times(0);
+            return;
+        }
+        for (auto handle : handles) {
+            EXPECT_CALL(mock, destroyLibrary(handle)).Times(1);
         }
     }
 };
