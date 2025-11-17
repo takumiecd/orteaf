@@ -96,6 +96,49 @@ public:
         }
     }
 
+    void expectGetDeviceCount(int count) {
+        if constexpr (Provider::is_mock) {
+            auto& mock = Provider::mock(*context_);
+            BackendMockExpectations::expectGetDeviceCount(mock, count);
+        } else {
+            (void)count;
+        }
+    }
+
+    void expectGetDevices(
+        std::initializer_list<std::pair<
+            ::orteaf::internal::backend::mps::MPSInt_t,
+            ::orteaf::internal::backend::mps::MPSDevice_t>> expectations) {
+        if constexpr (Provider::is_mock) {
+            auto& mock = Provider::mock(*context_);
+            BackendMockExpectations::expectGetDevices(mock, expectations);
+        } else {
+            (void)expectations;
+        }
+    }
+
+    void expectDetectArchitectures(
+        std::initializer_list<std::pair<
+            ::orteaf::internal::base::DeviceId,
+            ::orteaf::internal::architecture::Architecture>> expectations) {
+        if constexpr (Provider::is_mock) {
+            auto& mock = Provider::mock(*context_);
+            BackendMockExpectations::expectDetectArchitectures(mock, expectations);
+        } else {
+            (void)expectations;
+        }
+    }
+
+    void expectReleaseDevices(
+        std::initializer_list<::orteaf::internal::backend::mps::MPSDevice_t> devices) {
+        if constexpr (Provider::is_mock) {
+            auto& mock = Provider::mock(*context_);
+            BackendMockExpectations::expectReleaseDevices(mock, devices);
+        } else {
+            (void)devices;
+        }
+    }
+
     ::orteaf::internal::backend::mps::MPSDevice_t device() {
         if (!device_initialized_) {
             acquireDeviceOrSkip();

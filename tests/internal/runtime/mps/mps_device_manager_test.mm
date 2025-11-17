@@ -1,85 +1,360 @@
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <cstdint>
 #include <cstdlib>
 #include <system_error>
+#include <vector>
 
-#include "orteaf/internal/runtime/manager/mps/mps_device_manager.h"
 #include "orteaf/internal/architecture/architecture.h"
+#include "orteaf/internal/runtime/manager/mps/mps_device_manager.h"
+#include "tests/internal/runtime/mps/testing/backend_ops_provider.h"
+#include "tests/internal/runtime/mps/testing/manager_test_fixture.h"
 
-namespace mps_rt = orteaf::internal::runtime::mps;
 namespace architecture = orteaf::internal::architecture;
 namespace backend = orteaf::internal::backend;
 namespace base = orteaf::internal::base;
-
-class MpsDeviceManagerTest : public ::testing::Test {
-protected:
-    void SetUp() override { mps_rt::GetMpsDeviceManager().shutdown(); }
-    void TearDown() override { mps_rt::GetMpsDeviceManager().shutdown(); }
-};
+namespace mps_rt = orteaf::internal::runtime::mps;
+namespace testing_mps = orteaf::tests::runtime::mps::testing;
 
 #define ORTEAF_MPS_ENV_COUNT "ORTEAF_EXPECT_MPS_DEVICE_COUNT"
 #define ORTEAF_MPS_ENV_ARCH "ORTEAF_EXPECT_MPS_DEVICE_ARCH"
 
 namespace {
 
+backend::mps::MPSDevice_t makeDevice(std::uintptr_t value) {
+    return reinterpret_cast<backend::mps::MPSDevice_t>(value);
+}
+
 bool shouldRunHardwareTests() {
     const char* expected_env = std::getenv(ORTEAF_MPS_ENV_COUNT);
     return expected_env != nullptr && std::stoi(expected_env) > 0;
 }
 
+template <class Provider>
+class MpsDeviceManagerTypedTest
+    : public testing_mps::RuntimeManagerFixture<Provider, mps_rt::MpsDeviceManager> {
+protected:
+    using Base = testing_mps::RuntimeManagerFixture<Provider, mps_rt::MpsDeviceManager>;
+
+    mps_rt::MpsDeviceManager<typename Provider::BackendOps>& manager() {
+        return Base::manager();
+    }
+
+    auto& adapter() { return Base::adapter(); }
+
+    void onPreManagerTearDown() override { manager().shutdown(); }
+};
+
+#if ORTEAF_ENABLE_MPS
+using ProviderTypes = ::testing::Types<
+    testing_mps::MockBackendOpsProvider,
+    testing_mps::RealBackendOpsProvider>;
+#else
+using ProviderTypes = ::testing::Types<
+    testing_mps::MockBackendOpsProvider>;
+#endif
+
 }  // namespace
 
-TEST_F(MpsDeviceManagerTest, GetDeviceCount) {
-    const char* expected_env = std::getenv(ORTEAF_MPS_ENV_COUNT);
-    if (!expected_env) {
-        GTEST_SKIP() << "Set " ORTEAF_MPS_ENV_COUNT " to run this test on your environment.";
+TYPED_TEST_SUITE(MpsDeviceManagerTypedTest, ProviderTypes);
+
+TYPED_TEST(MpsDeviceManagerTypedTest, AccessBeforeInitializationThrows) {
+    auto& manager = this->manager();
+    EXPECT_THROW(manager.getDevice(base::DeviceId{0}), std::system_error);
+    EXPECT_THROW(manager.getArch(base::DeviceId{0}), std::system_error);
+    EXPECT_FALSE(manager.isAlive(base::DeviceId{0}));
+    const auto snapshot = manager.debugState(base::DeviceId{0});
+    EXPECT_FALSE(snapshot.in_range);
+    EXPECT_FALSE(snapshot.is_alive);
+}
+
+TYPED_TEST(MpsDeviceManagerTypedTest, InitializeMarksManagerInitialized) {
+    auto& manager = this->manager();
+    int expected_count = -1;
+
+    if constexpr (!TypeParam::is_mock) {
+        const char* expected_env = std::getenv(ORTEAF_MPS_ENV_COUNT);
+        if (!expected_env || std::stoi(expected_env) <= 0) {
+            GTEST_SKIP() << "Set " ORTEAF_MPS_ENV_COUNT " to a positive integer to run this test.";
+        }
+        expected_count = std::stoi(expected_env);
+    } else {
+        const auto device0 = makeDevice(0xCAFE);
+        this->adapter().expectGetDeviceCount(1);
+        this->adapter().expectGetDevices({{0, device0}});
+        this->adapter().expectDetectArchitectures({
+            {base::DeviceId{0}, architecture::Architecture::mps_m3},
+        });
+        this->adapter().expectReleaseDevices({device0});
+        expected_count = 1;
     }
-    auto& manager = mps_rt::GetMpsDeviceManager();
-    manager.initializeDevices();
+
+    manager.initialize();
+
+    const auto state = manager.debugState();
+    EXPECT_TRUE(state.initialized);
+    EXPECT_EQ(state.device_count, manager.getDeviceCount());
+    if (expected_count >= 0) {
+        EXPECT_EQ(manager.getDeviceCount(), static_cast<std::size_t>(expected_count));
+    }
+
+    manager.shutdown();
+    const auto after_shutdown = manager.debugState();
+    EXPECT_FALSE(after_shutdown.initialized);
+    EXPECT_EQ(after_shutdown.device_count, 0u);
+}
+
+TYPED_TEST(MpsDeviceManagerTypedTest, GetDeviceReturnsRegisteredHandle) {
+    auto& manager = this->manager();
+
+    std::vector<backend::mps::MPSDevice_t> expected_handles;
+    int expected_count = -1;
+    if (const char* expected_env = std::getenv(ORTEAF_MPS_ENV_COUNT)) {
+        expected_count = std::stoi(expected_env);
+    }
+
+    expected_handles = {makeDevice(0xBEEF), makeDevice(0xC001)};
+    const int mock_count = static_cast<int>(expected_handles.size());
+    this->adapter().expectGetDeviceCount(mock_count);
+    this->adapter().expectGetDevices({
+        {0, expected_handles[0]},
+        {1, expected_handles[1]},
+    });
+    this->adapter().expectDetectArchitectures({
+        {base::DeviceId{0}, architecture::Architecture::mps_m3},
+        {base::DeviceId{1}, architecture::Architecture::mps_m4},
+    });
+    this->adapter().expectReleaseDevices({expected_handles[0], expected_handles[1]});
+
+    manager.initialize();
     const auto count = manager.getDeviceCount();
-    EXPECT_EQ(std::stoi(expected_env), count);
+    if (expected_count >= 0) {
+        EXPECT_EQ(count, static_cast<std::size_t>(expected_count));
+    }
+    if (count == 0u) {
+        GTEST_SKIP() << "No MPS devices available";
+    }
+
+    for (std::uint32_t idx = 0; idx < count; ++idx) {
+        const auto device = manager.getDevice(base::DeviceId{idx});
+        const auto snapshot = manager.debugState(base::DeviceId{idx});
+        EXPECT_TRUE(snapshot.in_range);
+        EXPECT_EQ(snapshot.has_device, device != nullptr);
+        EXPECT_EQ(snapshot.is_alive, device != nullptr);
+        if constexpr (TypeParam::is_mock) {
+            EXPECT_EQ(device, expected_handles[idx]);
+            const auto expected_arch = (idx == 0)
+                ? architecture::Architecture::mps_m3
+                : architecture::Architecture::mps_m4;
+            EXPECT_EQ(snapshot.arch, expected_arch);
+        } else {
+            EXPECT_NE(device, nullptr);
+            if (expected_count >= 0 && idx == 0) {
+                EXPECT_NE(snapshot.arch, architecture::Architecture::mps_generic);
+            }
+        }
+    }
+
+    manager.shutdown();
 }
 
-TEST_F(MpsDeviceManagerTest, GetDevice) {
-    if (!shouldRunHardwareTests()) {
-        GTEST_SKIP() << "Set " ORTEAF_MPS_ENV_COUNT " to a positive integer to run this test.";
+TYPED_TEST(MpsDeviceManagerTypedTest, GetArchMatchesReportedArchitecture) {
+    auto& manager = this->manager();
+
+    const char* expected_arch_env = nullptr;
+    if constexpr (TypeParam::is_mock) {
+        const auto device0 = makeDevice(0xAB);
+        const auto device1 = makeDevice(0xCD);
+        this->adapter().expectGetDeviceCount(2);
+        this->adapter().expectGetDevices({{0, device0}, {1, device1}});
+        this->adapter().expectDetectArchitectures({
+            {base::DeviceId{0}, architecture::Architecture::mps_m4},
+            {base::DeviceId{1}, architecture::Architecture::mps_m3},
+        });
+        this->adapter().expectReleaseDevices({device0, device1});
+    } else {
+        expected_arch_env = std::getenv(ORTEAF_MPS_ENV_ARCH);
     }
-    auto& manager = mps_rt::GetMpsDeviceManager();
-    manager.initializeDevices();
-    base::DeviceId device_id{0};
-    backend::mps::MPSDevice_t device = manager.getDevice(device_id);
-    EXPECT_NE(device, nullptr);
+
+    manager.initialize();
+    const auto count = manager.getDeviceCount();
+    if (count == 0u) {
+        GTEST_SKIP() << "No MPS devices available";
+    }
+
+    for (std::uint32_t idx = 0; idx < count; ++idx) {
+        const auto arch = manager.getArch(base::DeviceId{idx});
+        const auto snapshot = manager.debugState(base::DeviceId{idx});
+        EXPECT_TRUE(snapshot.in_range);
+        if constexpr (TypeParam::is_mock) {
+            const auto expected_arch = (idx == 0)
+                ? architecture::Architecture::mps_m4
+                : architecture::Architecture::mps_m3;
+            EXPECT_EQ(arch, expected_arch);
+            EXPECT_EQ(snapshot.arch, expected_arch);
+            EXPECT_TRUE(snapshot.has_device);
+            EXPECT_TRUE(snapshot.is_alive);
+        } else if (expected_arch_env && *expected_arch_env != '\0' && idx == 0) {
+            EXPECT_STREQ(expected_arch_env, architecture::idOf(arch).data());
+            EXPECT_STREQ(expected_arch_env, architecture::idOf(snapshot.arch).data());
+        } else {
+            EXPECT_FALSE(architecture::idOf(arch).empty());
+            EXPECT_FALSE(architecture::idOf(snapshot.arch).empty());
+        }
+    }
+
+    manager.shutdown();
 }
 
-TEST_F(MpsDeviceManagerTest, GetArch) {
-    const char* expected_env = std::getenv(ORTEAF_MPS_ENV_ARCH);
-    if (!expected_env) {
-        GTEST_SKIP() << "Set " ORTEAF_MPS_ENV_ARCH " to run this test on your environment.";
-    }
-    auto& manager = mps_rt::GetMpsDeviceManager();
-    manager.initializeDevices();
-    const auto arch = manager.getArch(base::DeviceId{0});
-    EXPECT_STREQ(expected_env, architecture::idOf(arch).data());
-}
+TYPED_TEST(MpsDeviceManagerTypedTest, InvalidDeviceIdRejectsAccess) {
+    auto& manager = this->manager();
 
-TEST_F(MpsDeviceManagerTest, GetIsAlive) {
-    if (!shouldRunHardwareTests()) {
-        GTEST_SKIP() << "Set " ORTEAF_MPS_ENV_COUNT " to a positive integer to run this test.";
-    }
-    auto& manager = mps_rt::GetMpsDeviceManager();
-    manager.initializeDevices();
-    base::DeviceId device_id{0};
-    EXPECT_TRUE(manager.isAlive(device_id));
-}
+    const auto device0 = makeDevice(0x77);
+    this->adapter().expectGetDeviceCount(1);
+    this->adapter().expectGetDevices({{0, device0}});
+    this->adapter().expectDetectArchitectures({
+        {base::DeviceId{0}, architecture::Architecture::mps_m3},
+    });
+    this->adapter().expectReleaseDevices({device0});
 
-TEST_F(MpsDeviceManagerTest, OutOfRangeDeviceIdFails) {
-    if (!shouldRunHardwareTests()) {
-        GTEST_SKIP() << "Set " ORTEAF_MPS_ENV_COUNT " to a positive integer to run this test.";
-    }
-    auto& manager = mps_rt::GetMpsDeviceManager();
-    manager.initializeDevices();
-    const auto invalid = base::DeviceId{static_cast<std::uint32_t>(manager.getDeviceCount())};
+    manager.initialize();
+    const auto invalid = base::DeviceId{
+        static_cast<std::uint32_t>(manager.getDeviceCount() + 1)};
+
     EXPECT_THROW(manager.getDevice(invalid), std::system_error);
     EXPECT_THROW(manager.getArch(invalid), std::system_error);
     EXPECT_FALSE(manager.isAlive(invalid));
+    const auto invalid_snapshot = manager.debugState(invalid);
+    EXPECT_FALSE(invalid_snapshot.in_range);
+    EXPECT_FALSE(invalid_snapshot.is_alive);
+
+    manager.shutdown();
+}
+
+TYPED_TEST(MpsDeviceManagerTypedTest, IsAliveReflectsReportedDeviceCount) {
+    auto& manager = this->manager();
+
+    if constexpr (TypeParam::is_mock) {
+        const auto device0 = makeDevice(0xAA);
+        const auto device1 = makeDevice(0xBB);
+        this->adapter().expectGetDeviceCount(2);
+        this->adapter().expectGetDevices({{0, device0}, {1, device1}});
+        this->adapter().expectDetectArchitectures({
+            {base::DeviceId{0}, architecture::Architecture::mps_m3},
+            {base::DeviceId{1}, architecture::Architecture::mps_m4},
+        });
+        this->adapter().expectReleaseDevices({device0, device1});
+    }
+
+    manager.initialize();
+
+    const std::size_t count = manager.getDeviceCount();
+    if (const char* expected_env = std::getenv(ORTEAF_MPS_ENV_COUNT); expected_env && std::stoi(expected_env) >= 0) {
+        EXPECT_EQ(count, static_cast<std::size_t>(std::stoi(expected_env)));
+    }
+
+    for (std::uint32_t index = 0; index < static_cast<std::uint32_t>(count); ++index) {
+        const auto id = base::DeviceId{index};
+        const auto snapshot = manager.debugState(id);
+        EXPECT_TRUE(manager.isAlive(id)) << "Device " << index << " should be alive";
+        EXPECT_TRUE(snapshot.in_range);
+        EXPECT_TRUE(snapshot.is_alive);
+    }
+
+    const auto invalid = base::DeviceId{static_cast<std::uint32_t>(count)};
+    EXPECT_FALSE(manager.isAlive(invalid));
+    const auto invalid_snapshot = manager.debugState(invalid);
+    EXPECT_FALSE(invalid_snapshot.in_range);
+    EXPECT_FALSE(invalid_snapshot.is_alive);
+
+    manager.shutdown();
+    for (std::uint32_t index = 0; index < static_cast<std::uint32_t>(count); ++index) {
+        const auto id = base::DeviceId{index};
+        EXPECT_FALSE(manager.isAlive(id)) << "Device " << index << " should be inactive after shutdown";
+        const auto snapshot = manager.debugState(id);
+        EXPECT_FALSE(snapshot.in_range);
+        EXPECT_FALSE(snapshot.is_alive);
+    }
+}
+
+TYPED_TEST(MpsDeviceManagerTypedTest, ReinitializeReleasesPreviousDevices) {
+    auto& manager = this->manager();
+
+    const auto first0 = makeDevice(0x301);
+    const auto first1 = makeDevice(0x302);
+    const auto second0 = makeDevice(0x401);
+    const auto second1 = makeDevice(0x402);
+
+    this->adapter().expectGetDeviceCount(2);
+    this->adapter().expectGetDevices({{0, first0}, {1, first1}});
+    this->adapter().expectDetectArchitectures({
+        {base::DeviceId{0}, architecture::Architecture::mps_m3},
+        {base::DeviceId{1}, architecture::Architecture::mps_m4},
+    });
+
+    manager.initialize();
+    const auto initial_count = manager.getDeviceCount();
+    if (initial_count == 0u) {
+        manager.shutdown();
+        GTEST_SKIP() << "No MPS devices available";
+    }
+
+    if constexpr (TypeParam::is_mock) {
+        EXPECT_EQ(manager.getDevice(base::DeviceId{0}), first0);
+    }
+
+    this->adapter().expectReleaseDevices({first0, first1});
+    this->adapter().expectGetDeviceCount(2);
+    this->adapter().expectGetDevices({{0, second0}, {1, second1}});
+    this->adapter().expectDetectArchitectures({
+        {base::DeviceId{0}, architecture::Architecture::mps_m4},
+        {base::DeviceId{1}, architecture::Architecture::mps_m3},
+    });
+
+    manager.initialize();
+    const auto reinit_count = manager.getDeviceCount();
+    EXPECT_EQ(reinit_count, initial_count);
+    if constexpr (TypeParam::is_mock) {
+        EXPECT_EQ(manager.getDevice(base::DeviceId{0}), second0);
+        EXPECT_NE(second0, first0);
+    }
+
+    this->adapter().expectReleaseDevices({second0, second1});
+    manager.shutdown();
+}
+
+TYPED_TEST(MpsDeviceManagerTypedTest, ShutdownClearsDeviceState) {
+    auto& manager = this->manager();
+
+    if constexpr (TypeParam::is_mock) {
+        const auto device0 = makeDevice(0x111);
+        const auto device1 = makeDevice(0x222);
+        this->adapter().expectGetDeviceCount(2);
+        this->adapter().expectGetDevices({{0, device0}, {1, device1}});
+        this->adapter().expectDetectArchitectures({
+            {base::DeviceId{0}, architecture::Architecture::mps_m3},
+            {base::DeviceId{1}, architecture::Architecture::mps_m4},
+        });
+        this->adapter().expectReleaseDevices({device0, device1});
+    }
+
+    manager.initialize();
+    const auto count = manager.getDeviceCount();
+    if (count == 0u) {
+        GTEST_SKIP() << "No MPS devices available";
+    }
+
+    manager.shutdown();
+    EXPECT_EQ(manager.getDeviceCount(), 0u);
+    const auto state = manager.debugState();
+    EXPECT_FALSE(state.initialized);
+    EXPECT_EQ(state.device_count, 0u);
+    for (std::uint32_t i = 0; i < static_cast<std::uint32_t>(count); ++i) {
+        const auto id = base::DeviceId{i};
+        EXPECT_FALSE(manager.isAlive(id));
+        const auto snapshot = manager.debugState(id);
+        EXPECT_FALSE(snapshot.in_range);
+        EXPECT_FALSE(snapshot.is_alive);
+    }
 }
