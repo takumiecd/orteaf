@@ -39,6 +39,7 @@ public:
     std::size_t growthChunkSize() const noexcept {
         return growth_chunk_size_;
     }
+    
     void initialize(::orteaf::internal::backend::mps::MPSDevice_t device, std::size_t capacity) {
         shutdown();
         device_ = device;
@@ -98,23 +99,6 @@ public:
         growStatePool(additional);
     }
 
-    void releaseUnusedQueues() {
-        ensureInitialized();
-        if (states_.empty() || free_list_.empty()) {
-            return;
-        }
-        if (free_list_.size() != states_.size()) {
-            ::orteaf::internal::diagnostics::error::throwError(
-                ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-                "Cannot release unused queues while queues are in use");
-        }
-        for (std::size_t i = 0; i < states_.size(); ++i) {
-            states_[i].destroy();
-        }
-        states_.clear();
-        free_list_.clear();
-    }
-
     base::CommandQueueId acquire() {
         const std::size_t index = allocateSlot();
         State& state = states_[index];
@@ -134,6 +118,23 @@ public:
         state.resetHazards();
         ++state.generation;
         free_list_.pushBack(indexFromId(id));
+    }
+
+    void releaseUnusedQueues() {
+        ensureInitialized();
+        if (states_.empty() || free_list_.empty()) {
+            return;
+        }
+        if (free_list_.size() != states_.size()) {
+            ::orteaf::internal::diagnostics::error::throwError(
+                ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+                "Cannot release unused queues while queues are in use");
+        }
+        for (std::size_t i = 0; i < states_.size(); ++i) {
+            states_[i].destroy();
+        }
+        states_.clear();
+        free_list_.clear();
     }
 
     ::orteaf::internal::backend::mps::MPSCommandQueue_t getCommandQueue(base::CommandQueueId id) const {
@@ -230,53 +231,6 @@ private:
         }
     }
 
-    base::CommandQueueId encodeId(std::size_t index, std::uint32_t generation) const {
-        const std::uint32_t encoded_generation = generation & kGenerationMask;
-        const std::uint32_t encoded =
-            (encoded_generation << kGenerationShift) |
-            static_cast<std::uint32_t>(index);
-        return base::CommandQueueId{encoded};
-    }
-
-    std::size_t indexFromId(base::CommandQueueId id) const {
-        return indexFromIdRaw(id);
-    }
-
-    std::size_t indexFromIdRaw(base::CommandQueueId id) const {
-        return static_cast<std::size_t>(static_cast<std::uint32_t>(id) & kIndexMask);
-    }
-
-    std::uint32_t generationFromId(base::CommandQueueId id) const {
-        return (static_cast<std::uint32_t>(id) >> kGenerationShift) & kGenerationMask;
-    }
-
-    State& ensureActiveState(base::CommandQueueId id) {
-        ensureInitialized();
-        const std::size_t index = indexFromId(id);
-        if (index >= states_.size()) {
-            ::orteaf::internal::diagnostics::error::throwError(
-                ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-                "MPS command queue id out of range");
-        }
-        State& state = states_[index];
-        if (!state.in_use) {
-            ::orteaf::internal::diagnostics::error::throwError(
-                ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-                "MPS command queue is inactive");
-        }
-        const std::uint32_t expected_generation = generationFromId(id);
-        if ((state.generation & kGenerationMask) != expected_generation) {
-            ::orteaf::internal::diagnostics::error::throwError(
-                ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-                "MPS command queue handle is stale");
-        }
-        return state;
-    }
-
-    const State& ensureActiveState(base::CommandQueueId id) const {
-        return const_cast<MpsCommandQueueManager*>(this)->ensureActiveState(id);
-    }
-
     std::size_t allocateSlot() {
         ensureInitialized();
         if (free_list_.empty()) {
@@ -315,6 +269,53 @@ private:
             states_.pushBack(std::move(state));
             free_list_.pushBack(start_index + i);
         }
+    }
+
+    State& ensureActiveState(base::CommandQueueId id) {
+        ensureInitialized();
+        const std::size_t index = indexFromId(id);
+        if (index >= states_.size()) {
+            ::orteaf::internal::diagnostics::error::throwError(
+                ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+                "MPS command queue id out of range");
+        }
+        State& state = states_[index];
+        if (!state.in_use) {
+            ::orteaf::internal::diagnostics::error::throwError(
+                ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+                "MPS command queue is inactive");
+        }
+        const std::uint32_t expected_generation = generationFromId(id);
+        if ((state.generation & kGenerationMask) != expected_generation) {
+            ::orteaf::internal::diagnostics::error::throwError(
+                ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+                "MPS command queue handle is stale");
+        }
+        return state;
+    }
+
+    const State& ensureActiveState(base::CommandQueueId id) const {
+        return const_cast<MpsCommandQueueManager*>(this)->ensureActiveState(id);
+    }
+
+    base::CommandQueueId encodeId(std::size_t index, std::uint32_t generation) const {
+        const std::uint32_t encoded_generation = generation & kGenerationMask;
+        const std::uint32_t encoded =
+            (encoded_generation << kGenerationShift) |
+            static_cast<std::uint32_t>(index);
+        return base::CommandQueueId{encoded};
+    }
+
+    std::size_t indexFromId(base::CommandQueueId id) const {
+        return indexFromIdRaw(id);
+    }
+
+    std::size_t indexFromIdRaw(base::CommandQueueId id) const {
+        return static_cast<std::size_t>(static_cast<std::uint32_t>(id) & kIndexMask);
+    }
+
+    std::uint32_t generationFromId(base::CommandQueueId id) const {
+        return (static_cast<std::uint32_t>(id) >> kGenerationShift) & kGenerationMask;
     }
 
     ::orteaf::internal::base::HeapVector<State> states_;

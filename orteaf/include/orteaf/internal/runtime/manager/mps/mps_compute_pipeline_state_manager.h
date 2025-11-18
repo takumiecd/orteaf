@@ -213,38 +213,6 @@ private:
         }
     }
 
-    std::size_t allocateSlot() {
-        if (free_list_.empty()) {
-            growStatePool(growth_chunk_size_);
-            if (free_list_.empty()) {
-                ::orteaf::internal::diagnostics::error::throwError(
-                    ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-                    "No available MPS compute pipeline slots");
-            }
-        }
-        const std::size_t index = free_list_.back();
-        free_list_.resize(free_list_.size() - 1);
-        return index;
-    }
-
-    void growStatePool(std::size_t additional) {
-        if (additional == 0) {
-            return;
-        }
-        if (additional > (kMaxStateCount - states_.size())) {
-            ::orteaf::internal::diagnostics::error::throwError(
-                ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-                "Requested MPS compute pipeline capacity exceeds supported limit");
-        }
-        const std::size_t start = states_.size();
-        states_.reserve(states_.size() + additional);
-        free_list_.reserve(free_list_.size() + additional);
-        for (std::size_t offset = 0; offset < additional; ++offset) {
-            states_.emplaceBack();
-            free_list_.pushBack(start + offset);
-        }
-    }
-
     void destroyState(State& state) {
         if (state.pipeline_state != nullptr) {
             BackendOps::destroyComputePipelineState(state.pipeline_state);
@@ -282,6 +250,38 @@ private:
 
     const State& ensureAliveState(base::FunctionId id) const {
         return const_cast<MpsComputePipelineStateManager*>(this)->ensureAliveState(id);
+    }
+
+    std::size_t allocateSlot() {
+        if (free_list_.empty()) {
+            growStatePool(growth_chunk_size_);
+            if (free_list_.empty()) {
+                ::orteaf::internal::diagnostics::error::throwError(
+                    ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+                    "No available MPS compute pipeline slots");
+            }
+        }
+        const std::size_t index = free_list_.back();
+        free_list_.resize(free_list_.size() - 1);
+        return index;
+    }
+
+    void growStatePool(std::size_t additional) {
+        if (additional == 0) {
+            return;
+        }
+        if (additional > (kMaxStateCount - states_.size())) {
+            ::orteaf::internal::diagnostics::error::throwError(
+                ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+                "Requested MPS compute pipeline capacity exceeds supported limit");
+        }
+        const std::size_t start = states_.size();
+        states_.reserve(states_.size() + additional);
+        free_list_.reserve(free_list_.size() + additional);
+        for (std::size_t offset = 0; offset < additional; ++offset) {
+            states_.emplaceBack();
+            free_list_.pushBack(start + offset);
+        }
     }
 
     base::FunctionId encodeId(std::size_t index, std::uint32_t generation) const {

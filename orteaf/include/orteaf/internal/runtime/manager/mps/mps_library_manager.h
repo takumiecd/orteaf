@@ -214,6 +214,33 @@ private:
         }
     }
 
+    State& ensureAliveState(base::LibraryId id) {
+        ensureInitialized();
+        const std::size_t index = indexFromId(id);
+        if (index >= states_.size()) {
+            ::orteaf::internal::diagnostics::error::throwError(
+                ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+                "MPS library id out of range");
+        }
+        State& state = states_[index];
+        if (!state.alive) {
+            ::orteaf::internal::diagnostics::error::throwError(
+                ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+                "MPS library handle is inactive");
+        }
+        const std::uint32_t expected_generation = generationFromId(id);
+        if ((state.generation & kGenerationMask) != expected_generation) {
+            ::orteaf::internal::diagnostics::error::throwError(
+                ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+                "MPS library handle is stale");
+        }
+        return state;
+    }
+
+    const State& ensureAliveState(base::LibraryId id) const {
+        return const_cast<MpsLibraryManager*>(this)->ensureAliveState(id);
+    }
+
     std::size_t allocateSlot() {
         if (free_list_.empty()) {
             growStatePool(growth_chunk_size_);
@@ -244,33 +271,6 @@ private:
             states_.pushBack(State{});
             free_list_.pushBack(start + offset);
         }
-    }
-
-    State& ensureAliveState(base::LibraryId id) {
-        ensureInitialized();
-        const std::size_t index = indexFromId(id);
-        if (index >= states_.size()) {
-            ::orteaf::internal::diagnostics::error::throwError(
-                ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-                "MPS library id out of range");
-        }
-        State& state = states_[index];
-        if (!state.alive) {
-            ::orteaf::internal::diagnostics::error::throwError(
-                ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-                "MPS library handle is inactive");
-        }
-        const std::uint32_t expected_generation = generationFromId(id);
-        if ((state.generation & kGenerationMask) != expected_generation) {
-            ::orteaf::internal::diagnostics::error::throwError(
-                ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-                "MPS library handle is stale");
-        }
-        return state;
-    }
-
-    const State& ensureAliveState(base::LibraryId id) const {
-        return const_cast<MpsLibraryManager*>(this)->ensureAliveState(id);
     }
 
     base::LibraryId encodeId(std::size_t index, std::uint32_t generation) const {
