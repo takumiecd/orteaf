@@ -85,7 +85,7 @@ string(APPEND content "    MetallibBlob blob = findLibraryData(library_name);\n"
 string(APPEND content "    return blob.data != nullptr && blob.size > 0;\n")
 string(APPEND content "}\n\n")
 
-string(APPEND content "MPSFunction_t load_embedded_function(MPSDevice_t device,\n")
+string(APPEND content "MPSFunction_t loadEmbeddedFunction(MPSDevice_t device,\n")
 string(APPEND content "                                     std::string_view library_name,\n")
 string(APPEND content "                                     std::string_view function_name,\n")
 string(APPEND content "                                     MPSError_t* error) {\n")

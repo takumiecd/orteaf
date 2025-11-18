@@ -119,7 +119,7 @@ string(APPEND content "    }\n")
 string(APPEND content "    return {nullptr, 0};\n")
 string(APPEND content "}\n\n")
 
-string(APPEND content "Blob find_kernel_data(std::string_view name, CudaKernelFmt prefer, Blob fallback) {\n")
+string(APPEND content "Blob findKernelData(std::string_view name, CudaKernelFmt prefer, Blob fallback) {\n")
 string(APPEND content "    Blob primary = try_format(name, prefer);\n")
 string(APPEND content "    if (primary.data != nullptr && primary.size > 0) {\n")
 string(APPEND content "        return primary;\n")
