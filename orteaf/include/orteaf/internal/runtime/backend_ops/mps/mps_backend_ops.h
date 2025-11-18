@@ -5,8 +5,10 @@
 #include "orteaf/internal/architecture/architecture.h"
 #include "orteaf/internal/architecture/mps_detect.h"
 #include "orteaf/internal/backend/mps/mps_command_queue.h"
+#include "orteaf/internal/backend/mps/mps_compute_pipeline_state.h"
 #include "orteaf/internal/backend/mps/mps_device.h"
 #include "orteaf/internal/backend/mps/mps_event.h"
+#include "orteaf/internal/backend/mps/mps_function.h"
 #include "orteaf/internal/backend/mps/mps_library.h"
 #include "orteaf/internal/backend/mps/mps_string.h"
 #include "orteaf/internal/base/strong_id.h"
@@ -55,6 +57,27 @@ struct MpsBackendOps {
 
     static void destroyLibrary(::orteaf::internal::backend::mps::MPSLibrary_t library) {
         ::orteaf::internal::backend::mps::destroyLibrary(library);
+    }
+
+    static ::orteaf::internal::backend::mps::MPSFunction_t createFunction(
+        ::orteaf::internal::backend::mps::MPSLibrary_t library,
+        std::string_view name) {
+        return ::orteaf::internal::backend::mps::createFunction(library, name);
+    }
+
+    static void destroyFunction(::orteaf::internal::backend::mps::MPSFunction_t function) {
+        ::orteaf::internal::backend::mps::destroyFunction(function);
+    }
+
+    static ::orteaf::internal::backend::mps::MPSComputePipelineState_t createComputePipelineState(
+        ::orteaf::internal::backend::mps::MPSDevice_t device,
+        ::orteaf::internal::backend::mps::MPSFunction_t function) {
+        return ::orteaf::internal::backend::mps::createComputePipelineState(device, function);
+    }
+
+    static void destroyComputePipelineState(
+        ::orteaf::internal::backend::mps::MPSComputePipelineState_t pipeline_state) {
+        ::orteaf::internal::backend::mps::destroyComputePipelineState(pipeline_state);
     }
 };
 
