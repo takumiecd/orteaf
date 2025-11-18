@@ -1,9 +1,0 @@
-// Auto-generated. Do not edit.
-DEVICE(cuda_generic, "Generic CUDA Device")
-DEVICE(cuda_h100_pcie_80gb, "H100 PCIe (80GB)")
-DEVICE(cuda_rtx_3070, "GeForce RTX 3070")
-DEVICE(mps_generic, "Generic MPS Device")
-DEVICE(mps_m3_max_40c, "M3 Max (40-core GPU)")
-DEVICE(mps_m4_pro, "M4 Pro (Integrated GPU)")
-DEVICE(cpu_generic, "Generic CPU")
-DEVICE(cpu_zen4, "Zen 4 (AVX-512)")
