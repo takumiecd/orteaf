@@ -1,6 +1,7 @@
 #include "orteaf/internal/architecture/mps_detect.h"
 
 #include "orteaf/internal/backend/backend.h"
+#include "orteaf/internal/diagnostics/error/error.h"
 
 #if ORTEAF_ENABLE_MPS
 #include "orteaf/internal/backend/mps/mps_device.h"
@@ -10,8 +11,11 @@
 #include <cctype>
 #include <string>
 #include <string_view>
+#include <system_error>
 
 namespace orteaf::internal::architecture {
+
+namespace diagnostics = ::orteaf::internal::diagnostics;
 
 namespace {
 
@@ -96,23 +100,34 @@ Architecture detectMpsArchitecture(std::string_view metal_family, std::string_vi
 Architecture detectMpsArchitectureForDeviceId(::orteaf::internal::base::DeviceId device_id) {
 #if ORTEAF_ENABLE_MPS
     const std::uint32_t device_index = static_cast<std::uint32_t>(device_id);
-    int count = backend::mps::getDeviceCount();
-    if (count <= 0 || device_index >= static_cast<std::uint32_t>(count)) {
-        return Architecture::mps_generic;
-    }
+    const auto backend_unavailable = diagnostics::error::makeErrorCode(
+        diagnostics::error::OrteafErrc::BackendUnavailable);
 
-    backend::mps::MPSDevice_t device = backend::mps::getDevice(static_cast<backend::mps::MPSInt_t>(device_index));
-    if (device == nullptr) {
-        return Architecture::mps_generic;
-    }
+    try {
+        int count = backend::mps::getDeviceCount();
+        if (count <= 0 || device_index >= static_cast<std::uint32_t>(count)) {
+            return Architecture::mps_generic;
+        }
 
-    ScopedDevice guard(device);
-    std::string metal_family = backend::mps::getDeviceMetalFamily(device);
-    std::string vendor = backend::mps::getDeviceVendor(device);
-    if (vendor.empty()) {
-        vendor = "apple";
+        backend::mps::MPSDevice_t device =
+            backend::mps::getDevice(static_cast<backend::mps::MPSInt_t>(device_index));
+        if (device == nullptr) {
+            return Architecture::mps_generic;
+        }
+
+        ScopedDevice guard(device);
+        std::string metal_family = backend::mps::getDeviceMetalFamily(device);
+        std::string vendor = backend::mps::getDeviceVendor(device);
+        if (vendor.empty()) {
+            vendor = "apple";
+        }
+        return detectMpsArchitecture(metal_family, vendor);
+    } catch (const std::system_error& err) {
+        if (err.code() == backend_unavailable) {
+            return Architecture::mps_generic;
+        }
+        throw;
     }
-    return detectMpsArchitecture(metal_family, vendor);
 #else
     (void)device_id;
     return Architecture::mps_generic;

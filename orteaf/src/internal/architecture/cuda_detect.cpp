@@ -2,13 +2,17 @@
 
 #include "orteaf/internal/backend/backend.h"
 #include "orteaf/internal/backend/cuda/cuda_device.h"
+#include "orteaf/internal/diagnostics/error/error.h"
 
 #include <algorithm>
 #include <cctype>
 #include <string>
 #include <string_view>
+#include <system_error>
 
 namespace orteaf::internal::architecture {
+
+namespace diagnostics = ::orteaf::internal::diagnostics;
 
 namespace {
 
@@ -76,25 +80,36 @@ Architecture detectCudaArchitectureForDeviceId(::orteaf::internal::base::DeviceI
 #if ORTEAF_ENABLE_CUDA
     using backend::cuda::ComputeCapability;
     using backend::cuda::CUdevice_t;
+    using diagnostics::error::OrteafErrc;
 
     const std::uint32_t device_index = static_cast<std::uint32_t>(device_id);
-    int count = backend::cuda::getDeviceCount();
-    if (count <= 0 || device_index >= static_cast<std::uint32_t>(count)) {
-        return Architecture::cuda_generic;
-    }
+    const auto backend_unavailable = diagnostics::error::makeErrorCode(OrteafErrc::BackendUnavailable);
 
-    CUdevice_t device = backend::cuda::getDevice(device_index);
-    if (!device) {
-        return Architecture::cuda_generic;
-    }
+    try {
+        int count = backend::cuda::getDeviceCount();
+        if (count <= 0 || device_index >= static_cast<std::uint32_t>(count)) {
+            return Architecture::cuda_generic;
+        }
 
-    ComputeCapability capability = backend::cuda::getComputeCapability(device);
-    const int cc_value = capability.major * 10 + capability.minor;
-    std::string vendor = backend::cuda::getDeviceVendor(device);
-    if (vendor.empty()) {
-        vendor = "nvidia";
+        CUdevice_t device = backend::cuda::getDevice(device_index);
+        if (!device) {
+            return Architecture::cuda_generic;
+        }
+
+        ComputeCapability capability = backend::cuda::getComputeCapability(device);
+        const int cc_value = capability.major * 10 + capability.minor;
+        std::string vendor = backend::cuda::getDeviceVendor(device);
+        if (vendor.empty()) {
+            vendor = "nvidia";
+        }
+        return detectCudaArchitecture(cc_value, vendor);
+    } catch (const std::system_error& err) {
+        if (err.code() == backend_unavailable) {
+            // CUDA driver not ready on this environment; pretend it's generic.
+            return Architecture::cuda_generic;
+        }
+        throw;
     }
-    return detectCudaArchitecture(cc_value, vendor);
 #else
     (void)device_id;
     return Architecture::cuda_generic;

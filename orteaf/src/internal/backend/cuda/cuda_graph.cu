@@ -79,6 +79,12 @@ void endGraphCapture(CUstream_t stream, CUgraph_t* graph) {
         throwError(OrteafErrc::NullPointer, "endGraphCapture: graph cannot be nullptr");
     }
     CUstream objc_stream = objcFromOpaqueNoown<CUstream>(stream);
+    CUstreamCaptureStatus capture_status = CU_STREAM_CAPTURE_STATUS_NONE;
+    CUresult capture_query = cuStreamIsCapturing(objc_stream, &capture_status);
+    if (capture_query == CUDA_SUCCESS && capture_status != CU_STREAM_CAPTURE_STATUS_ACTIVE) {
+        using namespace orteaf::internal::diagnostics::error;
+        throwError(OrteafErrc::InvalidState, "endGraphCapture: stream is not actively capturing");
+    }
     CUgraph objc_graph;
     CU_CHECK(cuStreamEndCapture(objc_stream, &objc_graph));
     *graph = opaqueFromObjcNoown<CUgraph_t, CUgraph>(objc_graph);

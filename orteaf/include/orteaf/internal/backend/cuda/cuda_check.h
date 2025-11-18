@@ -269,6 +269,19 @@ inline orteaf::internal::diagnostics::error::OrteafErrc mapDriverErrc(CUresult e
         case CUDA_ERROR_PRIMARY_CONTEXT_ACTIVE:
         case CUDA_ERROR_CONTEXT_IS_DESTROYED:
             return OrteafErrc::InvalidState;
+
+#if defined(CUDA_VERSION) && CUDA_VERSION >= 10000
+        case CUDA_ERROR_STREAM_CAPTURE_UNSUPPORTED:
+        case CUDA_ERROR_STREAM_CAPTURE_INVALIDATED:
+        case CUDA_ERROR_STREAM_CAPTURE_MERGE:
+        case CUDA_ERROR_STREAM_CAPTURE_UNMATCHED:
+        case CUDA_ERROR_STREAM_CAPTURE_UNJOINED:
+        case CUDA_ERROR_STREAM_CAPTURE_ISOLATION:
+        case CUDA_ERROR_STREAM_CAPTURE_IMPLICIT:
+        case CUDA_ERROR_STREAM_CAPTURE_WRONG_THREAD:
+        case CUDA_ERROR_CAPTURED_EVENT:
+            return OrteafErrc::InvalidState;
+#endif
         
         // Asynchronous operation not yet completed (not a failure, but "not ready yet")
         case CUDA_ERROR_NOT_READY:
@@ -277,6 +290,10 @@ inline orteaf::internal::diagnostics::error::OrteafErrc mapDriverErrc(CUresult e
         // Timeout
         case CUDA_ERROR_LAUNCH_TIMEOUT:
             return OrteafErrc::Timeout;
+#if defined(CUDA_ERROR_TIMEOUT)
+        case CUDA_ERROR_TIMEOUT:
+            return OrteafErrc::Timeout;
+#endif
         
         // Device lost / hardware failure
 #if defined(CUDA_ERROR_DEVICE_LOST)
@@ -303,9 +320,19 @@ inline orteaf::internal::diagnostics::error::OrteafErrc mapDriverErrc(CUresult e
             return OrteafErrc::CompilationFailed;
         
         // Known but miscellaneous failures and unknown
-        default:
+        default: {
+#if defined(CUDA_VERSION) && CUDA_VERSION >= 10000
+            const int err_value = static_cast<int>(err);
+            if (err_value >= 900 && err_value <= 908) {
+                return OrteafErrc::InvalidState;
+            }
+            if (err_value == 909) {
+                return OrteafErrc::Timeout;
+            }
+#endif
             // Unknown future error codes fall back to safe side
             return OrteafErrc::OperationFailed;
+        }
     }
 }
 
