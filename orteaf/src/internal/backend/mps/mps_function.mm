@@ -8,13 +8,9 @@
 #include "orteaf/internal/backend/mps/mps_function.h"
 #include "orteaf/internal/backend/mps/mps_objc_bridge.h"
 
-#if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
 #import <Metal/Metal.h>
 #import <Foundation/Foundation.h>
 #include "orteaf/internal/diagnostics/error/error.h"
-#else
-#include "orteaf/internal/diagnostics/error/error_impl.h"
-#endif
 
 namespace orteaf::internal::backend::mps {
 
@@ -22,7 +18,6 @@ namespace orteaf::internal::backend::mps {
  * @copydoc orteaf::internal::backend::mps::createFunction
  */
 MPSFunction_t createFunction(MPSLibrary_t library, std::string_view name) {
-#if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (library == nullptr) {
         using namespace orteaf::internal::diagnostics::error;
         throwError(OrteafErrc::NullPointer, "createFunction: library cannot be nullptr");
@@ -40,26 +35,14 @@ MPSFunction_t createFunction(MPSLibrary_t library, std::string_view name) {
     id<MTLLibrary> objc_library = objcFromOpaqueNoown<id<MTLLibrary>>(library);
     id<MTLFunction> objc_function = [objc_library newFunctionWithName:function_name];
     return (MPSFunction_t)opaqueFromObjcRetained(objc_function);
-#else
-    (void)library;
-    (void)name;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "createFunction: MPS backend is not available (MPS disabled)");
-#endif
 }
 
 /**
  * @copydoc orteaf::internal::backend::mps::destroyFunction
  */
 void destroyFunction(MPSFunction_t function) {
-#if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (function == nullptr) return;
     opaqueReleaseRetained(function);
-#else
-    (void)function;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "destroyFunction: MPS backend is not available (MPS disabled)");
-#endif
 }
 
 } // namespace orteaf::internal::backend::mps

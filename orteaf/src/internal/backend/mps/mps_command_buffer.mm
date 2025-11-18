@@ -11,12 +11,8 @@
 #include "orteaf/internal/backend/mps/mps_autorelease_pool.h"
 #include "orteaf/internal/backend/mps/mps_objc_bridge.h"
 
-#if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
 #import <Metal/Metal.h>
 #include "orteaf/internal/diagnostics/error/error.h"
-#else
-#include "orteaf/internal/diagnostics/error/error_impl.h"
-#endif
 
 namespace orteaf::internal::backend::mps {
 
@@ -26,7 +22,6 @@ using orteaf::internal::backend::mps::AutoreleasePool;
  * @copydoc orteaf::internal::backend::mps::createCommandBuffer
  */
 MPSCommandBuffer_t createCommandBuffer(MPSCommandQueue_t command_queue) {
-#if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (command_queue == nullptr) {
         using namespace orteaf::internal::diagnostics::error;
         throwError(OrteafErrc::NullPointer, "createCommandBuffer: command_queue cannot be nullptr");
@@ -35,33 +30,21 @@ MPSCommandBuffer_t createCommandBuffer(MPSCommandQueue_t command_queue) {
     id<MTLCommandQueue> objc_command_queue = objcFromOpaqueNoown<id<MTLCommandQueue>>(command_queue);
     id<MTLCommandBuffer> objc_command_buffer = [objc_command_queue commandBuffer];
     return (MPSCommandBuffer_t)opaqueFromObjcRetained(objc_command_buffer);
-#else
-    (void)command_queue;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "createCommandBuffer: MPS backend is not available (MPS disabled)");
-#endif
 }
 
 /**
  * @copydoc orteaf::internal::backend::mps::destroyCommandBuffer
  */
 void destroyCommandBuffer(MPSCommandBuffer_t command_buffer) {
-#if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (command_buffer == nullptr) return;
     AutoreleasePool pool{};
     opaqueReleaseRetained(command_buffer);
-#else
-    (void)command_buffer;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "destroyCommandBuffer: MPS backend is not available (MPS disabled)");
-#endif
 }
 
 /**
  * @copydoc orteaf::internal::backend::mps::encodeSignalEvent
  */
 void encodeSignalEvent(MPSCommandBuffer_t command_buffer, MPSEvent_t event, uint32_t value) {
-#if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (command_buffer == nullptr) {
         using namespace orteaf::internal::diagnostics::error;
         throwError(OrteafErrc::NullPointer, "encodeSignalEvent: command_buffer cannot be nullptr");
@@ -73,20 +56,12 @@ void encodeSignalEvent(MPSCommandBuffer_t command_buffer, MPSEvent_t event, uint
     id<MTLCommandBuffer> objc_command_buffer = objcFromOpaqueNoown<id<MTLCommandBuffer>>(command_buffer);
     id<MTLSharedEvent> objc_event = objcFromOpaqueNoown<id<MTLSharedEvent>>(event);
     [objc_command_buffer encodeSignalEvent:objc_event value:value];
-#else
-    (void)command_buffer;
-    (void)event;
-    (void)value;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "encodeSignalEvent: MPS backend is not available (MPS disabled)");
-#endif
 }
 
 /**
  * @copydoc orteaf::internal::backend::mps::encodeWait
  */
 void encodeWait(MPSCommandBuffer_t command_buffer, MPSEvent_t event, uint32_t value) {
-#if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (command_buffer == nullptr) {
         using namespace orteaf::internal::diagnostics::error;
         throwError(OrteafErrc::NullPointer, "encodeWait: command_buffer cannot be nullptr");
@@ -98,49 +73,30 @@ void encodeWait(MPSCommandBuffer_t command_buffer, MPSEvent_t event, uint32_t va
     id<MTLCommandBuffer> objc_command_buffer = objcFromOpaqueNoown<id<MTLCommandBuffer>>(command_buffer);
     id<MTLSharedEvent> objc_event = objcFromOpaqueNoown<id<MTLSharedEvent>>(event);
     [objc_command_buffer encodeWaitForEvent:objc_event value:value];
-#else
-    (void)command_buffer;
-    (void)event;
-    (void)value;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "encodeWait: MPS backend is not available (MPS disabled)");
-#endif
 }
 
 /**
  * @copydoc orteaf::internal::backend::mps::commit
  */
 void commit(MPSCommandBuffer_t command_buffer) {
-#if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (command_buffer == nullptr) {
         using namespace orteaf::internal::diagnostics::error;
         throwError(OrteafErrc::NullPointer, "commit: command_buffer cannot be nullptr");
     }
     id<MTLCommandBuffer> objc_command_buffer = objcFromOpaqueNoown<id<MTLCommandBuffer>>(command_buffer);
     [objc_command_buffer commit];
-#else
-    (void)command_buffer;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "commit: MPS backend is not available (MPS disabled)");
-#endif
 }
 
 /**
  * @copydoc orteaf::internal::backend::mps::waitUntilCompleted
  */
 void waitUntilCompleted(MPSCommandBuffer_t command_buffer) {
-#if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (command_buffer == nullptr) {
         using namespace orteaf::internal::diagnostics::error;
         throwError(OrteafErrc::NullPointer, "waitUntilCompleted: command_buffer cannot be nullptr");
     }
     id<MTLCommandBuffer> objc_command_buffer = objcFromOpaqueNoown<id<MTLCommandBuffer>>(command_buffer);
     [objc_command_buffer waitUntilCompleted];
-#else
-    (void)command_buffer;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "waitUntilCompleted: MPS backend is not available (MPS disabled)");
-#endif
 }
 
 } // namespace orteaf::internal::backend::mps

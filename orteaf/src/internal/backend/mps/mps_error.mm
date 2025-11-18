@@ -9,15 +9,10 @@
 #include "orteaf/internal/backend/mps/mps_string.h"
 #include "orteaf/internal/backend/mps/mps_objc_bridge.h"
 
-#if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
 #import <Foundation/Foundation.h>
-#else
-#include "orteaf/internal/diagnostics/error/error_impl.h"
-#endif
+#include "orteaf/internal/diagnostics/error/error.h"
 
 namespace orteaf::internal::backend::mps {
-
-#if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
 
 namespace {
 
@@ -47,33 +42,18 @@ namespace {
 
 } // namespace
 
-#endif // defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
-
 /**
  * @copydoc orteaf::internal::backend::mps::createError(const std::string&)
  */
 MPSError_t createError(const std::string& message) {
-#if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     return makeError("NSCocoaErrorDomain", message);
-#else
-    (void)message;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "createError: MPS backend is not available (MPS disabled)");
-#endif
 }
 
 /**
  * @copydoc orteaf::internal::backend::mps::createError(std::string_view,std::string_view)
  */
 MPSError_t createError(std::string_view domain, std::string_view description) {
-#if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     return makeError(domain, description);
-#else
-    (void)domain;
-    (void)description;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "createError: MPS backend is not available (MPS disabled)");
-#endif
 }
 
 /**
@@ -82,30 +62,16 @@ MPSError_t createError(std::string_view domain, std::string_view description) {
 MPSError_t createError(std::string_view domain,
                         std::string_view description,
                         void* additional_user_info) {
-#if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     NSDictionary* objc_user_info = objcFromOpaqueNoown<NSDictionary*>(additional_user_info);
     return makeError(domain, description, objc_user_info);
-#else
-    (void)domain;
-    (void)description;
-    (void)additional_user_info;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "createError: MPS backend is not available (MPS disabled)");
-#endif
 }
 
 /**
  * @copydoc orteaf::internal::backend::mps::destroyError
  */
 void destroyError(MPSError_t error) {
-#if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (error == nullptr) return;
     opaqueReleaseRetained(error);
-#else
-    (void)error;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "destroyError: MPS backend is not available (MPS disabled)");
-#endif
 }
 
 } // namespace orteaf::internal::backend::mps

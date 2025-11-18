@@ -7,8 +7,6 @@
 #endif
 #include "orteaf/internal/backend/mps/mps_autorelease_pool.h"
 
-#ifdef ORTEAF_ENABLE_MPS
-
 #import <Foundation/Foundation.h>
 #include <chrono>
 #include <iostream>
@@ -38,7 +36,5 @@ AutoreleasePool::~AutoreleasePool() {
 }
 
 } // namespace orteaf::internal::backend::mps
-
-#endif // ORTEAF_ENABLE_MPS
 
 

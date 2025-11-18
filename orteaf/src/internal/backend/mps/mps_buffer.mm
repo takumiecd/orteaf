@@ -9,13 +9,9 @@
 #include "orteaf/internal/backend/mps/mps_heap.h"
 #include "orteaf/internal/backend/mps/mps_objc_bridge.h"
 
-#if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
 #import <Metal/Metal.h>
 #import <Foundation/Foundation.h>
 #include "orteaf/internal/diagnostics/error/error.h"
-#else
-#include "orteaf/internal/diagnostics/error/error_impl.h"
-#endif
 
 namespace orteaf::internal::backend::mps {
 
@@ -23,7 +19,6 @@ namespace orteaf::internal::backend::mps {
  * @copydoc orteaf::internal::backend::mps::createBuffer
  */
 MPSBuffer_t createBuffer(MPSHeap_t heap, size_t size, MPSBufferUsage_t usage) {
-#if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (heap == nullptr) {
         using namespace orteaf::internal::diagnostics::error;
         throwError(OrteafErrc::NullPointer, "createBuffer: heap cannot be nullptr");
@@ -40,42 +35,23 @@ MPSBuffer_t createBuffer(MPSHeap_t heap, size_t size, MPSBufferUsage_t usage) {
         throwError(OrteafErrc::OperationFailed, "createBuffer: heap allocation failed");
     }
     return (MPSBuffer_t)opaqueFromObjcRetained(objc_buffer);
-#else
-    (void)heap;
-    (void)size;
-    (void)usage;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "createBuffer: MPS backend is not available (MPS disabled)");
-#endif
 }
 
 /**
  * @copydoc orteaf::internal::backend::mps::destroyBuffer
  */
 void destroyBuffer(MPSBuffer_t buffer) {
-#if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (buffer == nullptr) return;
     opaqueReleaseRetained(buffer);
-#else
-    (void)buffer;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "destroyBuffer: MPS backend is not available (MPS disabled)");
-#endif
 }
 
 /**
  * @copydoc orteaf::internal::backend::mps::getBufferContentsConst
  */
 const void* getBufferContentsConst(MPSBuffer_t buffer) {
-#if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (buffer == nullptr) return nullptr;
     id<MTLBuffer> objc_buffer = objcFromOpaqueNoown<id<MTLBuffer>>(buffer);
     return [objc_buffer contents];
-#else
-    (void)buffer;
-    using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable, "getBufferContentsConst: MPS backend is not available (MPS disabled)");
-#endif
 }
 
 /**
