@@ -1,0 +1,42 @@
+[
+{
+  "directory": "/workspace/build-cpu",
+  "command": "/usr/bin/c++ -std=gnu++20 -o tools/codegen/CMakeFiles/gen_dtypes.dir/gen_dtypes.cpp.o -c /workspace/tools/codegen/gen_dtypes.cpp",
+  "file": "/workspace/tools/codegen/gen_dtypes.cpp"
+},
+{
+  "directory": "/workspace/build-cpu",
+  "command": "/usr/bin/c++ -std=gnu++20 -o tools/codegen/CMakeFiles/gen_ops.dir/gen_ops.cpp.o -c /workspace/tools/codegen/gen_ops.cpp",
+  "file": "/workspace/tools/codegen/gen_ops.cpp"
+},
+{
+  "directory": "/workspace/build-cpu",
+  "command": "/usr/bin/c++ -std=gnu++20 -o tools/codegen/CMakeFiles/gen_backends.dir/gen_backends.cpp.o -c /workspace/tools/codegen/gen_backends.cpp",
+  "file": "/workspace/tools/codegen/gen_backends.cpp"
+},
+{
+  "directory": "/workspace/build-cpu",
+  "command": "/usr/bin/c++ -std=gnu++20 -o tools/codegen/CMakeFiles/gen_architectures.dir/gen_architectures.cpp.o -c /workspace/tools/codegen/gen_architectures.cpp",
+  "file": "/workspace/tools/codegen/gen_architectures.cpp"
+},
+{
+  "directory": "/workspace/build-cpu",
+  "command": "/usr/bin/c++ -std=gnu++20 -o tools/codegen/CMakeFiles/gen_devices.dir/gen_devices.cpp.o -c /workspace/tools/codegen/gen_devices.cpp",
+  "file": "/workspace/tools/codegen/gen_devices.cpp"
+},
+{
+  "directory": "/workspace/build-cpu",
+  "command": "/usr/bin/c++ -DORTEAF_ENABLE_CPU=1 -DORTEAF_ENABLE_CUDA=0 -DORTEAF_ENABLE_MPS=0 -DORTEAF_ENABLE_TEST=0 -DORTEAF_LOG_LEVEL_CORE_VALUE=2 -DORTEAF_LOG_LEVEL_CUDA_VALUE=2 -DORTEAF_LOG_LEVEL_GLOBAL_VALUE=2 -DORTEAF_LOG_LEVEL_IO_VALUE=2 -DORTEAF_LOG_LEVEL_MPS_VALUE=2 -DORTEAF_LOG_LEVEL_TENSOR_VALUE=2 -DORTEAF_STATS_LEVEL_CORE_VALUE=8 -DORTEAF_STATS_LEVEL_CPU_VALUE=8 -DORTEAF_STATS_LEVEL_CUDA_VALUE=8 -DORTEAF_STATS_LEVEL_GLOBAL_VALUE=8 -DORTEAF_STATS_LEVEL_MPS_VALUE=8 -I/workspace/orteaf/include/orteaf -I/workspace/orteaf/include -I/workspace/build-cpu/generated -I/workspace/orteaf/include/orteaf/extension -I/workspace/orteaf/include/orteaf/user -std=gnu++20 -o orteaf/CMakeFiles/orteaf.dir/src/internal/architecture/cpu_detect.cpp.o -c /workspace/orteaf/src/internal/architecture/cpu_detect.cpp",
+  "file": "/workspace/orteaf/src/internal/architecture/cpu_detect.cpp"
+},
+{
+  "directory": "/workspace/build-cpu",
+  "command": "/usr/bin/c++ -DORTEAF_ENABLE_CPU=1 -DORTEAF_ENABLE_CUDA=0 -DORTEAF_ENABLE_MPS=0 -DORTEAF_ENABLE_TEST=0 -DORTEAF_LOG_LEVEL_CORE_VALUE=2 -DORTEAF_LOG_LEVEL_CUDA_VALUE=2 -DORTEAF_LOG_LEVEL_GLOBAL_VALUE=2 -DORTEAF_LOG_LEVEL_IO_VALUE=2 -DORTEAF_LOG_LEVEL_MPS_VALUE=2 -DORTEAF_LOG_LEVEL_TENSOR_VALUE=2 -DORTEAF_STATS_LEVEL_CORE_VALUE=8 -DORTEAF_STATS_LEVEL_CPU_VALUE=8 -DORTEAF_STATS_LEVEL_CUDA_VALUE=8 -DORTEAF_STATS_LEVEL_GLOBAL_VALUE=8 -DORTEAF_STATS_LEVEL_MPS_VALUE=8 -I/workspace/orteaf/include/orteaf -I/workspace/orteaf/include -I/workspace/build-cpu/generated -I/workspace/orteaf/include/orteaf/extension -I/workspace/orteaf/include/orteaf/user -std=gnu++20 -o orteaf/CMakeFiles/orteaf.dir/src/internal/diagnostics/log/log.cpp.o -c /workspace/orteaf/src/internal/diagnostics/log/log.cpp",
+  "file": "/workspace/orteaf/src/internal/diagnostics/log/log.cpp"
+},
+{
+  "directory": "/workspace/build-cpu",
+  "command": "/usr/bin/c++ -DORTEAF_ENABLE_CPU=1 -DORTEAF_ENABLE_CUDA=0 -DORTEAF_ENABLE_MPS=0 -DORTEAF_ENABLE_TEST=0 -DORTEAF_LOG_LEVEL_CORE_VALUE=2 -DORTEAF_LOG_LEVEL_CUDA_VALUE=2 -DORTEAF_LOG_LEVEL_GLOBAL_VALUE=2 -DORTEAF_LOG_LEVEL_IO_VALUE=2 -DORTEAF_LOG_LEVEL_MPS_VALUE=2 -DORTEAF_LOG_LEVEL_TENSOR_VALUE=2 -DORTEAF_STATS_LEVEL_CORE_VALUE=8 -DORTEAF_STATS_LEVEL_CPU_VALUE=8 -DORTEAF_STATS_LEVEL_CUDA_VALUE=8 -DORTEAF_STATS_LEVEL_GLOBAL_VALUE=8 -DORTEAF_STATS_LEVEL_MPS_VALUE=8 -I/workspace/orteaf/include/orteaf -I/workspace/orteaf/include -I/workspace/build-cpu/generated -I/workspace/orteaf/include/orteaf/extension -I/workspace/orteaf/include/orteaf/user -std=gnu++20 -o orteaf/CMakeFiles/orteaf.dir/src/internal/placeholder.cpp.o -c /workspace/orteaf/src/internal/placeholder.cpp",
+  "file": "/workspace/orteaf/src/internal/placeholder.cpp"
+}
+]

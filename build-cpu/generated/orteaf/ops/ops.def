@@ -1,0 +1,6 @@
+// Auto-generated. Do not edit.
+ORTEAF_OP(Add, "Add", "arithmetic")
+ORTEAF_OP(MatMul, "MatMul", "linear_algebra")
+ORTEAF_OP(Relu, "ReLU", "activation")
+ORTEAF_OP(SpikeThreshold, "Spike Threshold", "spiking")
+ORTEAF_OP(CustomQuantize, "Custom Quantize", "arithmetic")

@@ -1,0 +1,4 @@
+// Auto-generated. Do not edit.
+BACKEND(cuda, "CUDA", "@orteaf/internal/backend/cuda", "NVIDIA CUDA 実装")
+BACKEND(mps, "MPS", "@orteaf/internal/backend/mps", "macOS/iOS 向け Metal Performance Shaders 実装")
+BACKEND(cpu, "CPU", "@orteaf/internal/backend/cpu", "汎用 CPU 実装")
