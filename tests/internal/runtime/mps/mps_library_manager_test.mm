@@ -155,6 +155,7 @@ TYPED_TEST(MpsLibraryManagerTypedTest, ReleaseDestroysHandleAndAllowsRecreation)
         second_handle = makeLibrary(0x601);
         this->adapter().expectCreateLibraries({{*maybe_name, first_handle}, {*maybe_name, second_handle}});
         this->adapter().expectDestroyLibraries({first_handle});
+        this->adapter().expectDestroyLibraries({second_handle});
     }
 
     const auto id = manager.getOrCreate(key);
