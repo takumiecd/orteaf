@@ -62,3 +62,5 @@ gha-creds-*.json
 .cursor/
 
 .antigravity/
+
+.cache/
