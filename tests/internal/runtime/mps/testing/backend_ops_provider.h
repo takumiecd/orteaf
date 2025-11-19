@@ -1,49 +1,60 @@
 #pragma once
 
+#include <memory>
 #include <type_traits>
 
 #include <gmock/gmock.h>
 
-#include "orteaf/internal/runtime/backend_ops/mps/mps_backend_ops.h"
-#include "orteaf/internal/runtime/backend_ops/mps/mps_backend_ops_concepts.h"
+#include "orteaf/internal/runtime/backend_ops/mps/mps_slow_ops.h"
 #include "tests/internal/runtime/mps/testing/backend_mock.h"
 
 namespace orteaf::tests::runtime::mps::testing {
 
-template <class BackendOpsT, bool IsMockV>
-struct BackendOpsProvider {
-    using BackendOps = BackendOpsT;
-    static constexpr bool is_mock = IsMockV;
-    static_assert(::orteaf::internal::runtime::backend_ops::mps::MpsRuntimeBackendOps<BackendOps>);
+template <class BackendOpsT, bool IsMockV> struct BackendOpsProvider {
+  using BackendOps = BackendOpsT;
+  static constexpr bool is_mock = IsMockV;
 
-    struct Context {
-        Context() = default;
-    };
+  struct Context {
+    Context() = default;
+  };
 
-    static void setUp(Context&) {}
-    static void tearDown(Context&) {}
+  static void setUp(Context &) {}
+  static void tearDown(Context &) {}
 };
 
-using RealBackendOpsProvider = BackendOpsProvider<
-    ::orteaf::internal::runtime::backend_ops::mps::MpsBackendOps,
-    false>;
+// Real provider uses MpsSlowOpsImpl
+struct RealBackendOpsProvider {
+  using BackendOps =
+      ::orteaf::internal::runtime::backend_ops::mps::MpsSlowOpsImpl;
+  static constexpr bool is_mock = false;
 
-struct MockBackendOpsProvider
-    : BackendOpsProvider<::orteaf::tests::runtime::mps::MpsBackendOpsMockAdapter, true> {
-    using Mock = ::orteaf::tests::runtime::mps::MpsBackendOpsMock;
-    using Guard = ::orteaf::tests::runtime::mps::MpsBackendOpsMockRegistry::Guard;
+  struct Context {
+    // MpsSlowOpsImpl is stateless, so we can just instantiate it.
+    // Or if it needs to be a singleton, we handle it here.
+    // For now, let's assume we can just create one.
+    BackendOps ops;
+  };
 
-    struct Context {
-        ::testing::NiceMock<Mock> mock;
-        Guard guard;
+  static void setUp(Context &) {}
+  static void tearDown(Context &) {}
 
-        Context() : mock{}, guard(mock) {}
-    };
-
-    static void setUp(Context&) {}
-    static void tearDown(Context&) {}
-
-    static Mock& mock(Context& ctx) { return ctx.mock; }
+  static BackendOps &getOps(Context &ctx) { return ctx.ops; }
 };
 
-}  // namespace orteaf::tests::runtime::mps::testing
+// Mock provider uses MpsBackendOpsMock
+struct MockBackendOpsProvider {
+  using BackendOps = ::orteaf::tests::runtime::mps::MpsBackendOpsMock;
+  static constexpr bool is_mock = true;
+
+  struct Context {
+    ::testing::NiceMock<BackendOps> mock;
+  };
+
+  static void setUp(Context &) {}
+  static void tearDown(Context &) {}
+
+  static BackendOps &getOps(Context &ctx) { return ctx.mock; }
+  static BackendOps &mock(Context &ctx) { return ctx.mock; }
+};
+
+} // namespace orteaf::tests::runtime::mps::testing
