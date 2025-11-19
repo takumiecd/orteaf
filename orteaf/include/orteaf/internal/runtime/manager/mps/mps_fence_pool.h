@@ -61,8 +61,8 @@ public:
                 ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
                 "Cannot shutdown MPS fence pool while fences are in use");
         }
-        for (auto handle : free_list_) {
-            BackendOps::destroyFence(handle);
+        for (std::size_t i = 0; i < free_list_.size(); ++i) {
+            BackendOps::destroyFence(free_list_[i]);
         }
         free_list_.clear();
         active_handles_.clear();
@@ -136,7 +136,7 @@ private:
             auto handle = BackendOps::createFence(device_);
             if (handle == nullptr) {
                 ::orteaf::internal::diagnostics::error::throwError(
-                    ::orteaf::internal::diagnostics::error::OrteafErrc::RuntimeError,
+                    ::orteaf::internal::diagnostics::error::OrteafErrc::OperationFailed,
                     "Backend failed to create MPS fence");
             }
             free_list_.pushBack(handle);
