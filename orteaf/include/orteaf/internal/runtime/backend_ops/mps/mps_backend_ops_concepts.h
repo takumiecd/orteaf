@@ -9,6 +9,7 @@
 #include "orteaf/internal/backend/mps/mps_device.h"
 #include "orteaf/internal/backend/mps/mps_event.h"
 #include "orteaf/internal/backend/mps/mps_function.h"
+#include "orteaf/internal/backend/mps/mps_heap.h"
 #include "orteaf/internal/backend/mps/mps_library.h"
 #include "orteaf/internal/base/strong_id.h"
 
@@ -29,6 +30,8 @@ concept MpsRuntimeBackendOps = requires(
     ::orteaf::internal::backend::mps::MPSLibrary_t library,
     ::orteaf::internal::backend::mps::MPSFunction_t function,
     ::orteaf::internal::backend::mps::MPSComputePipelineState_t pipeline_state,
+    ::orteaf::internal::backend::mps::MPSHeapDescriptor_t heap_descriptor,
+    ::orteaf::internal::backend::mps::MPSHeap_t heap,
     std::string_view library_name,
     std::string_view function_name,
     ::orteaf::internal::base::DeviceId device_id) {
@@ -54,6 +57,23 @@ concept MpsRuntimeBackendOps = requires(
     { BackendOps::createComputePipelineState(device, function) }
         -> std::same_as<::orteaf::internal::backend::mps::MPSComputePipelineState_t>;
     { BackendOps::destroyComputePipelineState(pipeline_state) } -> std::same_as<void>;
+    { BackendOps::createHeapDescriptor() }
+        -> std::same_as<::orteaf::internal::backend::mps::MPSHeapDescriptor_t>;
+    { BackendOps::destroyHeapDescriptor(heap_descriptor) } -> std::same_as<void>;
+    { BackendOps::setHeapDescriptorSize(heap_descriptor, std::size_t{0}) } -> std::same_as<void>;
+    { BackendOps::setHeapDescriptorResourceOptions(heap_descriptor,
+        ::orteaf::internal::backend::mps::MPSResourceOptions_t{0}) } -> std::same_as<void>;
+    { BackendOps::setHeapDescriptorStorageMode(heap_descriptor,
+        ::orteaf::internal::backend::mps::MPSStorageMode_t{0}) } -> std::same_as<void>;
+    { BackendOps::setHeapDescriptorCPUCacheMode(heap_descriptor,
+        ::orteaf::internal::backend::mps::MPSCPUCacheMode_t{0}) } -> std::same_as<void>;
+    { BackendOps::setHeapDescriptorHazardTrackingMode(heap_descriptor,
+        ::orteaf::internal::backend::mps::MPSHazardTrackingMode_t{0}) } -> std::same_as<void>;
+    { BackendOps::setHeapDescriptorType(heap_descriptor,
+        ::orteaf::internal::backend::mps::MPSHeapType_t{0}) } -> std::same_as<void>;
+    { BackendOps::createHeap(device, heap_descriptor) }
+        -> std::same_as<::orteaf::internal::backend::mps::MPSHeap_t>;
+    { BackendOps::destroyHeap(heap) } -> std::same_as<void>;
 };
 
 }  // namespace orteaf::internal::runtime::backend_ops::mps
