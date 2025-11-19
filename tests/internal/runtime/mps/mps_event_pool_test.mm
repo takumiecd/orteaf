@@ -1,0 +1,155 @@
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+
+#include <cstdint>
+#include <utility>
+
+#include "orteaf/internal/diagnostics/error/error.h"
+#include "orteaf/internal/runtime/manager/mps/mps_event_pool.h"
+#include "tests/internal/runtime/mps/testing/backend_ops_provider.h"
+#include "tests/internal/runtime/mps/testing/manager_test_fixture.h"
+#include "tests/internal/testing/error_assert.h"
+
+namespace backend = orteaf::internal::backend;
+namespace diag_error = orteaf::internal::diagnostics::error;
+namespace mps_rt = orteaf::internal::runtime::mps;
+namespace testing_mps = orteaf::tests::runtime::mps::testing;
+
+using orteaf::tests::ExpectError;
+
+namespace {
+
+backend::mps::MPSEvent_t makeEvent(std::uintptr_t value) {
+    return reinterpret_cast<backend::mps::MPSEvent_t>(value);
+}
+
+template <class Provider>
+class MpsEventPoolTypedTest
+    : public testing_mps::RuntimeManagerFixture<Provider, mps_rt::MpsEventPool> {
+protected:
+    mps_rt::MpsEventPool<typename Provider::BackendOps>& pool() { return this->manager(); }
+};
+
+#if ORTEAF_ENABLE_MPS
+using ProviderTypes = ::testing::Types<
+    testing_mps::MockBackendOpsProvider,
+    testing_mps::RealBackendOpsProvider>;
+#else
+using ProviderTypes = ::testing::Types<
+    testing_mps::MockBackendOpsProvider>;
+#endif
+
+}  // namespace
+
+TYPED_TEST_SUITE(MpsEventPoolTypedTest, ProviderTypes);
+
+TYPED_TEST(MpsEventPoolTypedTest, GrowthChunkSizeCanBeAdjusted) {
+    auto& pool = this->pool();
+    EXPECT_EQ(pool.growthChunkSize(), 1u);
+    pool.setGrowthChunkSize(4);
+    EXPECT_EQ(pool.growthChunkSize(), 4u);
+}
+
+TYPED_TEST(MpsEventPoolTypedTest, GrowthChunkSizeRejectsZero) {
+    auto& pool = this->pool();
+    ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] { pool.setGrowthChunkSize(0); });
+}
+
+TYPED_TEST(MpsEventPoolTypedTest, InitializeRejectsNullDevice) {
+    auto& pool = this->pool();
+    ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] { pool.initialize(nullptr, 1); });
+}
+
+TYPED_TEST(MpsEventPoolTypedTest, OperationsBeforeInitializationThrow) {
+    auto& pool = this->pool();
+    ExpectError(diag_error::OrteafErrc::InvalidState, [&] { (void)pool.acquireEvent(); });
+}
+
+TYPED_TEST(MpsEventPoolTypedTest, InitializePreallocatesEvents) {
+    auto& pool = this->pool();
+    const auto device = this->adapter().device();
+    if constexpr (TypeParam::is_mock) {
+        this->adapter().expectCreateEvents({makeEvent(0x100), makeEvent(0x101)});
+    }
+    pool.initialize(device, 2);
+    EXPECT_EQ(pool.availableCount(), 2u);
+    auto first = pool.acquireEvent();
+    auto second = pool.acquireEvent();
+    EXPECT_NE(first, nullptr);
+    EXPECT_NE(second, nullptr);
+    EXPECT_EQ(pool.availableCount(), 0u);
+    pool.releaseEvent(first);
+    pool.releaseEvent(second);
+    if constexpr (TypeParam::is_mock) {
+        this->adapter().expectDestroyEvents({makeEvent(0x100), makeEvent(0x101)});
+    }
+    pool.shutdown();
+}
+
+TYPED_TEST(MpsEventPoolTypedTest, GrowChunkAllocatesInBlocks) {
+    auto& pool = this->pool();
+    pool.setGrowthChunkSize(2);
+    const auto device = this->adapter().device();
+    if constexpr (TypeParam::is_mock) {
+        this->adapter().expectCreateEvents({});
+    }
+    pool.initialize(device, 0);
+    if constexpr (TypeParam::is_mock) {
+        this->adapter().expectCreateEvents({makeEvent(0x200), makeEvent(0x201)});
+    }
+    auto first = pool.acquireEvent();
+    EXPECT_NE(first, nullptr);
+    EXPECT_EQ(pool.availableCount(), 1u);
+    auto second = pool.acquireEvent();
+    EXPECT_EQ(pool.availableCount(), 0u);
+    if constexpr (TypeParam::is_mock) {
+        this->adapter().expectCreateEvents({makeEvent(0x202), makeEvent(0x203)});
+    }
+    auto third = pool.acquireEvent();
+    EXPECT_NE(third, nullptr);
+    EXPECT_EQ(pool.availableCount(), 1u);
+    pool.releaseEvent(first);
+    pool.releaseEvent(second);
+    pool.releaseEvent(third);
+    if constexpr (TypeParam::is_mock) {
+        this->adapter().expectDestroyEvents({makeEvent(0x200), makeEvent(0x201), makeEvent(0x202), makeEvent(0x203)});
+    }
+    pool.shutdown();
+}
+
+TYPED_TEST(MpsEventPoolTypedTest, ShutdownRejectsInUseEvents) {
+    auto& pool = this->pool();
+    const auto device = this->adapter().device();
+    if constexpr (TypeParam::is_mock) {
+        this->adapter().expectCreateEvents({makeEvent(0x350)});
+    }
+    pool.initialize(device, 1);
+    auto handle = pool.acquireEvent();
+    ExpectError(diag_error::OrteafErrc::InvalidState, [&] { pool.shutdown(); });
+    pool.releaseEvent(handle);
+    if constexpr (TypeParam::is_mock) {
+        this->adapter().expectDestroyEvents({makeEvent(0x350)});
+    }
+    pool.shutdown();
+}
+
+TYPED_TEST(MpsEventPoolTypedTest, DebugStateReflectsCounts) {
+    auto& pool = this->pool();
+    pool.setGrowthChunkSize(5);
+    const auto device = this->adapter().device();
+    if constexpr (TypeParam::is_mock) {
+        this->adapter().expectCreateEvents({makeEvent(0x360), makeEvent(0x361)});
+    }
+    pool.initialize(device, 2);
+    auto handle = pool.acquireEvent();
+    const auto snapshot = pool.debugState();
+    EXPECT_EQ(snapshot.growth_chunk_size, 5u);
+    EXPECT_EQ(snapshot.available_count, 1u);
+    EXPECT_EQ(snapshot.in_use_count, 1u);
+    EXPECT_EQ(snapshot.total_created, 2u);
+    pool.releaseEvent(handle);
+    if constexpr (TypeParam::is_mock) {
+        this->adapter().expectDestroyEvents({makeEvent(0x360), makeEvent(0x361)});
+    }
+    pool.shutdown();
+}
