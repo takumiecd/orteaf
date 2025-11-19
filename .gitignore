@@ -58,3 +58,7 @@ gha-creds-*.json
 .vscode/
 
 .env
+
+.cursor/
+
+.antigravity/
