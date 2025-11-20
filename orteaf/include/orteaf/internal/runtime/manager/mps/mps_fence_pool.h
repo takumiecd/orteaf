@@ -1,20 +1,21 @@
 #pragma once
 
+#if ORTEAF_ENABLE_MPS
+
 #include <cstddef>
 #include <unordered_set>
 
 #include "orteaf/internal/backend/mps/mps_fence.h"
 #include "orteaf/internal/base/heap_vector.h"
 #include "orteaf/internal/diagnostics/error/error.h"
-#include "orteaf/internal/runtime/backend_ops/mps/mps_backend_ops.h"
-#include "orteaf/internal/runtime/backend_ops/mps/mps_backend_ops_concepts.h"
+#include "orteaf/internal/runtime/backend_ops/mps/mps_slow_ops.h"
 
 namespace orteaf::internal::runtime::mps {
 
-template <class BackendOps = ::orteaf::internal::runtime::backend_ops::mps::MpsBackendOps>
-requires ::orteaf::internal::runtime::backend_ops::mps::MpsRuntimeBackendOps<BackendOps>
 class MpsFencePool {
 public:
+    using BackendOps = ::orteaf::internal::runtime::backend_ops::mps::MpsSlowOps;
+
     void setGrowthChunkSize(std::size_t chunk) {
         if (chunk == 0) {
             ::orteaf::internal::diagnostics::error::throwError(
@@ -27,80 +28,14 @@ public:
     std::size_t growthChunkSize() const noexcept { return growth_chunk_size_; }
 
     void initialize(::orteaf::internal::backend::mps::MPSDevice_t device,
-                    std::size_t initial_capacity = 0) {
-        if (device == nullptr) {
-            ::orteaf::internal::diagnostics::error::throwError(
-                ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-                "MPS fence pool requires a valid device");
-        }
-        if (initialized_) {
-            shutdown();
-        }
-        device_ = device;
-        initialized_ = true;
-#if ORTEAF_ENABLE_TEST
-        total_created_ = 0;
-#endif
-        free_list_.clear();
-        free_list_.reserve(initial_capacity);
-        if (initial_capacity > 0) {
-            growFreeList(initial_capacity);
-        }
-    }
+                    BackendOps *ops,
+                    std::size_t initial_capacity = 0);
 
-    void shutdown() {
-        if (!initialized_) {
-            free_list_.clear();
-            active_handles_.clear();
-            device_ = nullptr;
-#if ORTEAF_ENABLE_TEST
-            total_created_ = 0;
-#endif
-            return;
-        }
-        if (!active_handles_.empty()) {
-            ::orteaf::internal::diagnostics::error::throwError(
-                ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-                "Cannot shutdown MPS fence pool while fences are in use");
-        }
-        for (std::size_t i = 0; i < free_list_.size(); ++i) {
-            BackendOps::destroyFence(free_list_[i]);
-        }
-        free_list_.clear();
-        active_handles_.clear();
-        device_ = nullptr;
-#if ORTEAF_ENABLE_TEST
-        total_created_ = 0;
-#endif
-        initialized_ = false;
-    }
+    void shutdown();
 
-    ::orteaf::internal::backend::mps::MPSFence_t acquireFence() {
-        ensureInitialized();
-        if (free_list_.empty()) {
-            growFreeList(growth_chunk_size_);
-        }
-        auto handle = free_list_.back();
-        free_list_.resize(free_list_.size() - 1);
-        active_handles_.insert(handle);
-        return handle;
-    }
+    ::orteaf::internal::backend::mps::MPSFence_t acquireFence();
 
-    void releaseFence(::orteaf::internal::backend::mps::MPSFence_t fence) {
-        ensureInitialized();
-        if (fence == nullptr) {
-            ::orteaf::internal::diagnostics::error::throwError(
-                ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-                "Cannot release null fence to MPS fence pool");
-        }
-        const auto erased = active_handles_.erase(fence);
-        if (erased == 0) {
-            ::orteaf::internal::diagnostics::error::throwError(
-                ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-                "Fence handle does not belong to this pool or is already released");
-        }
-        free_list_.pushBack(fence);
-    }
+    void releaseFence(::orteaf::internal::backend::mps::MPSFence_t fence);
 
     std::size_t availableCount() const noexcept { return free_list_.size(); }
 
@@ -125,37 +60,21 @@ public:
 #endif
 
 private:
-    void ensureInitialized() const {
-        if (!initialized_) {
-            ::orteaf::internal::diagnostics::error::throwError(
-                ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-                "MPS fence pool has not been initialized");
-        }
-    }
+    void ensureInitialized() const;
 
-    void growFreeList(std::size_t count) {
-        for (std::size_t i = 0; i < count; ++i) {
-            auto handle = BackendOps::createFence(device_);
-            if (handle == nullptr) {
-                ::orteaf::internal::diagnostics::error::throwError(
-                    ::orteaf::internal::diagnostics::error::OrteafErrc::OperationFailed,
-                    "Backend failed to create MPS fence");
-            }
-            free_list_.pushBack(handle);
-#if ORTEAF_ENABLE_TEST
-            ++total_created_;
-#endif
-        }
-    }
+    void growFreeList(std::size_t count);
 
     std::size_t growth_chunk_size_{1};
     bool initialized_{false};
     ::orteaf::internal::backend::mps::MPSDevice_t device_{nullptr};
     base::HeapVector<::orteaf::internal::backend::mps::MPSFence_t> free_list_{};
     std::unordered_set<::orteaf::internal::backend::mps::MPSFence_t> active_handles_{};
+    BackendOps *ops_{nullptr};
 #if ORTEAF_ENABLE_TEST
     std::size_t total_created_{0};
 #endif
 };
 
 }  // namespace orteaf::internal::runtime::mps
+
+#endif // ORTEAF_ENABLE_MPS
