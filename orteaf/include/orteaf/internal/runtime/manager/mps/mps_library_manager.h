@@ -14,8 +14,6 @@
 #include "orteaf/internal/base/heap_vector.h"
 #include "orteaf/internal/base/strong_id.h"
 #include "orteaf/internal/diagnostics/error/error.h"
-#include "orteaf/internal/runtime/backend_ops/mps/mps_backend_ops.h"
-#include "orteaf/internal/runtime/backend_ops/mps/mps_backend_ops_concepts.h"
 #include "orteaf/internal/runtime/manager/mps/mps_compute_pipeline_state_manager.h"
 
 namespace orteaf::internal::runtime::mps {

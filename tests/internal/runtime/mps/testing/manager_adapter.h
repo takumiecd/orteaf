@@ -39,9 +39,6 @@ public:
       auto &mock = Provider::mock(*context_);
       BackendMockExpectations::expectCreateCommandQueues(mock, handles,
                                                          matcher);
-    } else {
-      (void)handles;
-      (void)matcher;
     }
   }
 
@@ -53,9 +50,6 @@ public:
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
       BackendMockExpectations::expectCreateEvents(mock, handles, matcher);
-    } else {
-      (void)handles;
-      (void)matcher;
     }
   }
 
@@ -67,9 +61,6 @@ public:
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
       BackendMockExpectations::expectCreateFences(mock, handles, matcher);
-    } else {
-      (void)handles;
-      (void)matcher;
     }
   }
 
@@ -83,9 +74,6 @@ public:
       auto &mock = Provider::mock(*context_);
       BackendMockExpectations::expectCreateLibraries(mock, expectations,
                                                      matcher);
-    } else {
-      (void)expectations;
-      (void)matcher;
     }
   }
 
@@ -99,9 +87,6 @@ public:
       auto &mock = Provider::mock(*context_);
       BackendMockExpectations::expectCreateFunctions(mock, expectations,
                                                      matcher);
-    } else {
-      (void)expectations;
-      (void)matcher;
     }
   }
 
@@ -116,9 +101,6 @@ public:
       auto &mock = Provider::mock(*context_);
       BackendMockExpectations::expectCreateComputePipelineStates(
           mock, expectations, matcher);
-    } else {
-      (void)expectations;
-      (void)matcher;
     }
   }
 
@@ -128,8 +110,6 @@ public:
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
       BackendMockExpectations::expectDestroyCommandQueues(mock, handles);
-    } else {
-      (void)handles;
     }
   }
 
@@ -139,8 +119,6 @@ public:
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
       BackendMockExpectations::expectDestroyEvents(mock, handles);
-    } else {
-      (void)handles;
     }
   }
 
@@ -150,8 +128,6 @@ public:
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
       BackendMockExpectations::expectDestroyFences(mock, handles);
-    } else {
-      (void)handles;
     }
   }
 
@@ -161,8 +137,6 @@ public:
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
       BackendMockExpectations::expectDestroyLibraries(mock, handles);
-    } else {
-      (void)handles;
     }
   }
 
@@ -172,8 +146,6 @@ public:
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
       BackendMockExpectations::expectDestroyFunctions(mock, handles);
-    } else {
-      (void)handles;
     }
   }
 
@@ -185,8 +157,6 @@ public:
       auto &mock = Provider::mock(*context_);
       BackendMockExpectations::expectDestroyComputePipelineStates(mock,
                                                                   handles);
-    } else {
-      (void)handles;
     }
   }
 
@@ -201,10 +171,6 @@ public:
       auto &mock = Provider::mock(*context_);
       BackendMockExpectations::expectCreateHeaps(mock, handles, device_matcher,
                                                  descriptor_matcher);
-    } else {
-      (void)handles;
-      (void)device_matcher;
-      (void)descriptor_matcher;
     }
   }
 
@@ -214,8 +180,6 @@ public:
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
       BackendMockExpectations::expectDestroyHeaps(mock, handles);
-    } else {
-      (void)handles;
     }
   }
 
@@ -230,9 +194,6 @@ public:
       auto &mock = Provider::mock(*context_);
       BackendMockExpectations::expectCreateHeapsInOrder(mock, expectations,
                                                         device_matcher);
-    } else {
-      (void)expectations;
-      (void)device_matcher;
     }
   }
 
@@ -243,8 +204,6 @@ public:
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
       BackendMockExpectations::expectCreateHeapDescriptors(mock, handles);
-    } else {
-      (void)handles;
     }
   }
 
@@ -255,8 +214,6 @@ public:
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
       BackendMockExpectations::expectDestroyHeapDescriptors(mock, handles);
-    } else {
-      (void)handles;
     }
   }
 
@@ -268,8 +225,6 @@ public:
       auto &mock = Provider::mock(*context_);
       ORTEAF_EXPECT_SET_HEAP_DESCRIPTOR_VALUES(mock, setHeapDescriptorSize,
                                                expectations);
-    } else {
-      (void)expectations;
     }
   }
 
@@ -282,8 +237,6 @@ public:
       auto &mock = Provider::mock(*context_);
       ORTEAF_EXPECT_SET_HEAP_DESCRIPTOR_VALUES(
           mock, setHeapDescriptorResourceOptions, expectations);
-    } else {
-      (void)expectations;
     }
   }
 
@@ -296,8 +249,6 @@ public:
       auto &mock = Provider::mock(*context_);
       ORTEAF_EXPECT_SET_HEAP_DESCRIPTOR_VALUES(
           mock, setHeapDescriptorStorageMode, expectations);
-    } else {
-      (void)expectations;
     }
   }
 
@@ -310,8 +261,6 @@ public:
       auto &mock = Provider::mock(*context_);
       ORTEAF_EXPECT_SET_HEAP_DESCRIPTOR_VALUES(
           mock, setHeapDescriptorCPUCacheMode, expectations);
-    } else {
-      (void)expectations;
     }
   }
 
@@ -324,8 +273,6 @@ public:
       auto &mock = Provider::mock(*context_);
       ORTEAF_EXPECT_SET_HEAP_DESCRIPTOR_VALUES(
           mock, setHeapDescriptorHazardTrackingMode, expectations);
-    } else {
-      (void)expectations;
     }
   }
 
@@ -338,8 +285,6 @@ public:
       auto &mock = Provider::mock(*context_);
       ORTEAF_EXPECT_SET_HEAP_DESCRIPTOR_VALUES(mock, setHeapDescriptorType,
                                                expectations);
-    } else {
-      (void)expectations;
     }
   }
 
@@ -349,8 +294,6 @@ public:
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
       BackendMockExpectations::expectDestroyCommandQueuesInOrder(mock, handles);
-    } else {
-      (void)handles;
     }
   }
 
@@ -360,8 +303,6 @@ public:
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
       BackendMockExpectations::expectDestroyEventsInOrder(mock, handles);
-    } else {
-      (void)handles;
     }
   }
 
@@ -369,8 +310,6 @@ public:
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
       BackendMockExpectations::expectGetDeviceCount(mock, count);
-    } else {
-      (void)count;
     }
   }
 
@@ -382,8 +321,6 @@ public:
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
       BackendMockExpectations::expectGetDevices(mock, expectations);
-    } else {
-      (void)expectations;
     }
   }
 
@@ -395,8 +332,6 @@ public:
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
       BackendMockExpectations::expectDetectArchitectures(mock, expectations);
-    } else {
-      (void)expectations;
     }
   }
 
@@ -406,8 +341,6 @@ public:
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
       BackendMockExpectations::expectReleaseDevices(mock, devices);
-    } else {
-      (void)devices;
     }
   }
 
@@ -425,16 +358,16 @@ private:
   }
 
   void acquireDeviceOrSkip() {
-    auto &ops = Provider::getOps(*context_);
+    auto *ops = Provider::getOps(*context_);
     if constexpr (Provider::is_mock) {
-      BackendMockExpectations::expectGetDeviceCount(ops, 1);
-      BackendMockExpectations::expectGetDevices(ops, {{0, mockDeviceHandle()}});
+      BackendMockExpectations::expectGetDeviceCount(*ops, 1);
+      BackendMockExpectations::expectGetDevices(*ops, {{0, mockDeviceHandle()}});
     }
-    const int count = ops.getDeviceCount();
+    const int count = ops->getDeviceCount();
     if (count <= 0) {
       GTEST_SKIP() << "No MPS devices available";
     }
-    auto acquired = ops.getDevice(0);
+    auto acquired = ops->getDevice(0);
     if (acquired == nullptr) {
       GTEST_SKIP() << "Unable to acquire MPS device";
     }

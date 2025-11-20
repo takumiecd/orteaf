@@ -11,18 +11,16 @@
 #include "orteaf/internal/base/heap_vector.h"
 #include "orteaf/internal/base/strong_id.h"
 #include "orteaf/internal/diagnostics/error/error.h"
-#include "orteaf/internal/runtime/backend_ops/mps/mps_backend_ops.h"
-#include "orteaf/internal/runtime/backend_ops/mps/mps_backend_ops_concepts.h"
+#include "orteaf/internal/runtime/backend_ops/mps/mps_slow_ops.h"
 #include "orteaf/internal/runtime/manager/mps/mps_command_queue_manager.h"
 #include "orteaf/internal/runtime/manager/mps/mps_heap_manager.h"
 #include "orteaf/internal/runtime/manager/mps/mps_library_manager.h"
 
 namespace orteaf::internal::runtime::mps {
 
-template <class BackendOps = ::orteaf::internal::runtime::backend_ops::mps::MpsBackendOps>
-requires ::orteaf::internal::runtime::backend_ops::mps::MpsRuntimeBackendOps<BackendOps>
 class MpsDeviceManager {
 public:
+    using BackendOps = ::orteaf::internal::runtime::backend_ops::mps::MpsSlowOps;
     void setCommandQueueInitialCapacity(std::size_t capacity) {
         command_queue_initial_capacity_ = capacity;
     }

@@ -27,7 +27,9 @@ template <class Provider>
 class MpsEventPoolTypedTest
     : public testing_mps::RuntimeManagerFixture<Provider, mps_rt::MpsEventPool> {
 protected:
-    mps_rt::MpsEventPool<typename Provider::BackendOps>& pool() { return this->manager(); }
+    using Base = testing_mps::RuntimeManagerFixture<Provider, mps_rt::MpsEventPool>;
+    mps_rt::MpsEventPool& pool() { return Base::manager(); }
+    auto& adapter() { return Base::adapter(); }
 };
 
 #if ORTEAF_ENABLE_MPS
@@ -57,7 +59,7 @@ TYPED_TEST(MpsEventPoolTypedTest, GrowthChunkSizeRejectsZero) {
 
 TYPED_TEST(MpsEventPoolTypedTest, InitializeRejectsNullDevice) {
     auto& pool = this->pool();
-    ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] { pool.initialize(nullptr, 1); });
+    ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] { pool.initialize(nullptr, this->getOps(), 1); });
 }
 
 TYPED_TEST(MpsEventPoolTypedTest, OperationsBeforeInitializationThrow) {
@@ -71,7 +73,7 @@ TYPED_TEST(MpsEventPoolTypedTest, InitializePreallocatesEvents) {
     if constexpr (TypeParam::is_mock) {
         this->adapter().expectCreateEvents({makeEvent(0x100), makeEvent(0x101)});
     }
-    pool.initialize(device, 2);
+    pool.initialize(device, this->getOps(), 2);
     EXPECT_EQ(pool.availableCount(), 2u);
     auto first = pool.acquireEvent();
     auto second = pool.acquireEvent();
@@ -93,7 +95,7 @@ TYPED_TEST(MpsEventPoolTypedTest, GrowChunkAllocatesInBlocks) {
     if constexpr (TypeParam::is_mock) {
         this->adapter().expectCreateEvents({});
     }
-    pool.initialize(device, 0);
+    pool.initialize(device, this->getOps(), 0);
     if constexpr (TypeParam::is_mock) {
         this->adapter().expectCreateEvents({makeEvent(0x200), makeEvent(0x201)});
     }
@@ -123,7 +125,7 @@ TYPED_TEST(MpsEventPoolTypedTest, ShutdownRejectsInUseEvents) {
     if constexpr (TypeParam::is_mock) {
         this->adapter().expectCreateEvents({makeEvent(0x350)});
     }
-    pool.initialize(device, 1);
+    pool.initialize(device, this->getOps(), 1);
     auto handle = pool.acquireEvent();
     ExpectError(diag_error::OrteafErrc::InvalidState, [&] { pool.shutdown(); });
     pool.releaseEvent(handle);
@@ -140,7 +142,7 @@ TYPED_TEST(MpsEventPoolTypedTest, DebugStateReflectsCounts) {
     if constexpr (TypeParam::is_mock) {
         this->adapter().expectCreateEvents({makeEvent(0x360), makeEvent(0x361)});
     }
-    pool.initialize(device, 2);
+    pool.initialize(device, this->getOps(), 2);
     auto handle = pool.acquireEvent();
     const auto snapshot = pool.debugState();
     EXPECT_EQ(snapshot.growth_chunk_size, 5u);

@@ -43,7 +43,7 @@ class MpsLibraryManagerTypedTest
 protected:
     using Base = testing_mps::RuntimeManagerFixture<Provider, mps_rt::MpsLibraryManager>;
 
-    mps_rt::MpsLibraryManager<typename Provider::BackendOps>& manager() {
+    mps_rt::MpsLibraryManager& manager() {
         return Base::manager();
     }
 
@@ -73,7 +73,7 @@ protected:
 
     void initializeManager(std::size_t capacity = 0) {
         const auto device = adapter().device();
-        manager().initialize(device, capacity);
+        manager().initialize(device, this->getOps(), capacity);
     }
 
     void TearDown() override {
@@ -115,7 +115,7 @@ TYPED_TEST(MpsLibraryManagerTypedTest, GrowthChunkSizeControlsPoolExpansion) {
     }
     manager.setGrowthChunkSize(3);
     const auto device = this->adapter().device();
-    manager.initialize(device, 0);
+    manager.initialize(device, this->getOps(), 0);
 
     const auto key = mps_rt::LibraryKey::Named("ChunkedLibrary");
     const auto handle = makeLibrary(0x3501);
@@ -140,14 +140,14 @@ TYPED_TEST(MpsLibraryManagerTypedTest, AccessBeforeInitializationThrows) {
 
 TYPED_TEST(MpsLibraryManagerTypedTest, InitializeRejectsNullDevice) {
     auto& manager = this->manager();
-    ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] { manager.initialize(nullptr, 1); });
+    ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] { manager.initialize(nullptr, this->getOps(), 1); });
 }
 
 TYPED_TEST(MpsLibraryManagerTypedTest, InitializeRejectsCapacityAboveLimit) {
     auto& manager = this->manager();
     const auto device = this->adapter().device();
     ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
-        manager.initialize(device, std::numeric_limits<std::size_t>::max());
+        manager.initialize(device, this->getOps(), std::numeric_limits<std::size_t>::max());
     });
 }
 

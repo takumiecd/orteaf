@@ -26,7 +26,9 @@ template <class Provider>
 class MpsFencePoolTypedTest
     : public testing_mps::RuntimeManagerFixture<Provider, mps_rt::MpsFencePool> {
 protected:
-    mps_rt::MpsFencePool<typename Provider::BackendOps>& pool() { return this->manager(); }
+    using Base = testing_mps::RuntimeManagerFixture<Provider, mps_rt::MpsFencePool>;
+    mps_rt::MpsFencePool& pool() { return Base::manager(); }
+    auto& adapter() { return Base::adapter(); }
 };
 
 #if ORTEAF_ENABLE_MPS
@@ -56,7 +58,7 @@ TYPED_TEST(MpsFencePoolTypedTest, GrowthChunkSizeRejectsZero) {
 
 TYPED_TEST(MpsFencePoolTypedTest, InitializeRejectsNullDevice) {
     auto& pool = this->pool();
-    ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] { pool.initialize(nullptr, 1); });
+    ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] { pool.initialize(nullptr, this->getOps(), 1); });
 }
 
 TYPED_TEST(MpsFencePoolTypedTest, OperationsBeforeInitializationThrow) {
@@ -73,7 +75,7 @@ TYPED_TEST(MpsFencePoolTypedTest, InitializePreallocatesFences) {
     if constexpr (TypeParam::is_mock) {
         this->adapter().expectCreateFences({makeFence(0x100), makeFence(0x101)});
     }
-    pool.initialize(device, 2);
+    pool.initialize(device, this->getOps(), 2);
     EXPECT_EQ(pool.availableCount(), 2u);
     auto first = pool.acquireFence();
     auto second = pool.acquireFence();
@@ -95,7 +97,7 @@ TYPED_TEST(MpsFencePoolTypedTest, GrowChunkAllocatesInBlocks) {
     if constexpr (TypeParam::is_mock) {
         this->adapter().expectCreateFences({});
     }
-    pool.initialize(device, 0);
+    pool.initialize(device, this->getOps(), 0);
     if constexpr (TypeParam::is_mock) {
         this->adapter().expectCreateFences({makeFence(0x200), makeFence(0x201)});
     }
@@ -125,7 +127,7 @@ TYPED_TEST(MpsFencePoolTypedTest, ReleaseRejectsUnknownFence) {
     if constexpr (TypeParam::is_mock) {
         this->adapter().expectCreateFences({makeFence(0x300)});
     }
-    pool.initialize(device, 1);
+    pool.initialize(device, this->getOps(), 1);
     auto handle = pool.acquireFence();
     pool.releaseFence(handle);
     ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] { pool.releaseFence(handle); });
@@ -144,7 +146,7 @@ TYPED_TEST(MpsFencePoolTypedTest, ReleaseRejectsNullFence) {
     if constexpr (TypeParam::is_mock) {
         this->adapter().expectCreateFences({});
     }
-    pool.initialize(device, 0);
+    pool.initialize(device, this->getOps(), 0);
     ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] { pool.releaseFence(nullptr); });
     pool.shutdown();
 }
@@ -155,7 +157,7 @@ TYPED_TEST(MpsFencePoolTypedTest, ShutdownRejectsInUseFences) {
     if constexpr (TypeParam::is_mock) {
         this->adapter().expectCreateFences({makeFence(0x350)});
     }
-    pool.initialize(device, 1);
+    pool.initialize(device, this->getOps(), 1);
     auto handle = pool.acquireFence();
     ExpectError(diag_error::OrteafErrc::InvalidState, [&] { pool.shutdown(); });
     pool.releaseFence(handle);
@@ -172,7 +174,7 @@ TYPED_TEST(MpsFencePoolTypedTest, DebugStateReflectsCounts) {
     if constexpr (TypeParam::is_mock) {
         this->adapter().expectCreateFences({makeFence(0x360), makeFence(0x361)});
     }
-    pool.initialize(device, 2);
+    pool.initialize(device, this->getOps(), 2);
     auto handle = pool.acquireFence();
     const auto snapshot = pool.debugState();
     EXPECT_EQ(snapshot.growth_chunk_size, 5u);

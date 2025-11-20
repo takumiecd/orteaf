@@ -47,13 +47,11 @@ void MpsDeviceManager::initialize(BackendOps *ops) {
       state.library_manager.shutdown();
     }
   }
-
   initialized_ = true;
 }
 
 void MpsDeviceManager::shutdown() {
-  if (states_.empty()) {
-    initialized_ = false;
+  if (!initialized_) {
     return;
   }
   for (std::size_t i = 0; i < states_.size(); ++i) {
@@ -63,6 +61,76 @@ void MpsDeviceManager::shutdown() {
   ops_ = nullptr;
   initialized_ = false;
 }
+
+::orteaf::internal::backend::mps::MPSDevice_t
+MpsDeviceManager::getDevice(::orteaf::internal::base::DeviceId id) const {
+  return ensureValid(id).device;
+}
+
+::orteaf::internal::architecture::Architecture
+MpsDeviceManager::getArch(::orteaf::internal::base::DeviceId id) const {
+  return ensureValid(id).arch;
+}
+
+::orteaf::internal::runtime::mps::MpsCommandQueueManager &
+MpsDeviceManager::commandQueueManager(::orteaf::internal::base::DeviceId id) {
+  return ensureValidState(id).command_queue_manager;
+}
+
+const ::orteaf::internal::runtime::mps::MpsCommandQueueManager &
+MpsDeviceManager::commandQueueManager(
+    ::orteaf::internal::base::DeviceId id) const {
+  return ensureValid(id).command_queue_manager;
+}
+
+::orteaf::internal::runtime::mps::MpsHeapManager &
+MpsDeviceManager::heapManager(::orteaf::internal::base::DeviceId id) {
+  return ensureValidState(id).heap_manager;
+}
+
+const ::orteaf::internal::runtime::mps::MpsHeapManager &
+MpsDeviceManager::heapManager(::orteaf::internal::base::DeviceId id) const {
+  return ensureValid(id).heap_manager;
+}
+
+::orteaf::internal::runtime::mps::MpsLibraryManager &
+MpsDeviceManager::libraryManager(::orteaf::internal::base::DeviceId id) {
+  return ensureValidState(id).library_manager;
+}
+
+const ::orteaf::internal::runtime::mps::MpsLibraryManager &
+MpsDeviceManager::libraryManager(::orteaf::internal::base::DeviceId id) const {
+  return ensureValid(id).library_manager;
+}
+
+bool MpsDeviceManager::isAlive(::orteaf::internal::base::DeviceId id) const {
+  if (!initialized_) {
+    return false;
+  }
+  const std::size_t index =
+      static_cast<std::size_t>(static_cast<std::uint32_t>(id));
+  if (index >= states_.size()) {
+    return false;
+  }
+  return states_[index].is_alive;
+}
+
+#if ORTEAF_ENABLE_TEST
+MpsDeviceManager::DeviceDebugState
+MpsDeviceManager::debugState(::orteaf::internal::base::DeviceId id) const {
+  DeviceDebugState debug{};
+  const std::size_t index =
+      static_cast<std::size_t>(static_cast<std::uint32_t>(id));
+  if (index < states_.size()) {
+    debug.in_range = true;
+    const auto &state = states_[index];
+    debug.is_alive = state.is_alive;
+    debug.has_device = state.device != nullptr;
+    debug.arch = state.arch;
+  }
+  return debug;
+}
+#endif
 
 void MpsDeviceManager::State::reset(BackendOps *ops) noexcept {
   command_queue_manager.shutdown();

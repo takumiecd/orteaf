@@ -4,7 +4,6 @@
 
 #include <gtest/gtest.h>
 
-#include "orteaf/internal/runtime/backend_ops/mps/mps_backend_ops_concepts.h"
 #include "tests/internal/runtime/mps/testing/backend_ops_provider.h"
 #include "tests/internal/runtime/mps/testing/manager_adapter.h"
 

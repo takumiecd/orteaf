@@ -43,7 +43,7 @@ class MpsComputePipelineStateManagerTypedTest
 protected:
     using Base = testing_mps::RuntimeManagerFixture<Provider, mps_rt::MpsComputePipelineStateManager>;
 
-    mps_rt::MpsComputePipelineStateManager<typename Provider::BackendOps>& manager() {
+    mps_rt::MpsComputePipelineStateManager& manager() {
         return Base::manager();
     }
 
@@ -55,7 +55,7 @@ protected:
             if constexpr (Provider::is_mock) {
                 adapter().expectDestroyLibraries({library_});
             }
-            Provider::BackendOps::destroyLibrary(library_);
+            this->getOps()->destroyLibrary(library_);
             library_ = nullptr;
         }
         Base::TearDown();
@@ -64,7 +64,7 @@ protected:
     bool initializeManager(std::size_t capacity = 0) {
         const auto device = adapter().device();
         if (auto library = ensureLibrary()) {
-            manager().initialize(device, *library, capacity);
+            manager().initialize(device, *library, this->getOps(), capacity);
             return true;
         }
         return false;
@@ -106,7 +106,7 @@ protected:
             const auto expected = makeLibrary(0x701);
             adapter().expectCreateLibraries({{*maybe_name, expected}});
         }
-        library_ = Provider::BackendOps::createLibraryWithName(device, *maybe_name);
+        library_ = this->getOps()->createLibraryWithName(device, *maybe_name);
         return library_;
     }
 
@@ -185,13 +185,13 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest, InitializeRejectsNullDevice)
     if (!maybe_library.has_value()) {
         return;
     }
-    ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] { manager.initialize(nullptr, *maybe_library, 1); });
+    ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] { manager.initialize(nullptr, *maybe_library, this->getOps(), 1); });
 }
 
 TYPED_TEST(MpsComputePipelineStateManagerTypedTest, InitializeRejectsNullLibrary) {
     auto& manager = this->manager();
     const auto device = this->adapter().device();
-    ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] { manager.initialize(device, nullptr, 1); });
+    ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] { manager.initialize(device, nullptr, this->getOps(), 1); });
 }
 
 TYPED_TEST(MpsComputePipelineStateManagerTypedTest, InitializeRejectsCapacityAboveLimit) {
@@ -202,7 +202,7 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest, InitializeRejectsCapacityAbo
         return;
     }
     ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
-        manager.initialize(device, *maybe_library, std::numeric_limits<std::size_t>::max());
+        manager.initialize(device, *maybe_library, this->getOps(), std::numeric_limits<std::size_t>::max());
     });
 }
 

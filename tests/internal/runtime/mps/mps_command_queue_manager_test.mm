@@ -36,7 +36,7 @@ class MpsCommandQueueManagerTypedTest
 protected:
     using Base = testing_mps::RuntimeManagerFixture<Provider, mps_rt::MpsCommandQueueManager>;
 
-    mps_rt::MpsCommandQueueManager<typename Provider::BackendOps>& manager() {
+    mps_rt::MpsCommandQueueManager& manager() {
         return Base::manager();
     }
 
@@ -78,7 +78,7 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, GrowthChunkSizeReflectedInDebugState
     const auto device = this->adapter().device();
     this->adapter().expectCreateCommandQueues({makeQueue(0x510)});
     this->adapter().expectCreateEvents({makeEvent(0x610)});
-    manager.initialize(device, 1);
+    manager.initialize(device, this->getOps(), 1);
     const auto id = manager.acquire();
     const auto snapshot = manager.debugState(id);
     EXPECT_EQ(snapshot.growth_chunk_size, 3u);
@@ -93,7 +93,7 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, InitializeCreatesConfiguredNumberOfR
     this->adapter().expectCreateCommandQueues({makeQueue(0x1), makeQueue(0x2)});
     this->adapter().expectCreateEvents({makeEvent(0x10), makeEvent(0x20)});
     const auto device = this->adapter().device();
-    manager.initialize(device, 2);
+    manager.initialize(device, this->getOps(), 2);
     EXPECT_EQ(manager.capacity(), 2u);
     this->adapter().expectDestroyEventsInOrder({makeEvent(0x10), makeEvent(0x20)});
     this->adapter().expectDestroyCommandQueuesInOrder({makeQueue(0x1), makeQueue(0x2)});
@@ -104,7 +104,7 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, InitializeRejectsCapacityAboveLimit)
     auto& manager = this->manager();
     const auto device = this->adapter().device();
     ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
-        manager.initialize(device, std::numeric_limits<std::size_t>::max());
+        manager.initialize(device, this->getOps(), std::numeric_limits<std::size_t>::max());
     });
 }
 
@@ -114,7 +114,7 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, CapacityReflectsPoolSize) {
     EXPECT_EQ(manager.capacity(), 0u);
     this->adapter().expectCreateCommandQueues({makeQueue(0x301), makeQueue(0x302), makeQueue(0x303)});
     this->adapter().expectCreateEvents({makeEvent(0x310), makeEvent(0x320), makeEvent(0x330)});
-    manager.initialize(device, 3);
+    manager.initialize(device, this->getOps(), 3);
     EXPECT_EQ(manager.capacity(), 3u);
     this->adapter().expectDestroyEvents({makeEvent(0x310), makeEvent(0x320), makeEvent(0x330)});
     this->adapter().expectDestroyCommandQueues({makeQueue(0x301), makeQueue(0x302), makeQueue(0x303)});
@@ -127,7 +127,7 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, GrowCapacityAddsAdditionalQueues) {
     const auto device = this->adapter().device();
     this->adapter().expectCreateCommandQueues({makeQueue(0x350)});
     this->adapter().expectCreateEvents({makeEvent(0x351)});
-    manager.initialize(device, 1);
+    manager.initialize(device, this->getOps(), 1);
     EXPECT_EQ(manager.capacity(), 1u);
 
     this->adapter().expectCreateCommandQueues({makeQueue(0x360), makeQueue(0x370)});
@@ -160,7 +160,7 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, ReleaseUnusedQueuesFreesResourcesAnd
 
     this->adapter().expectCreateCommandQueues({makeQueue(0x400), makeQueue(0x401)});
     this->adapter().expectCreateEvents({makeEvent(0x410), makeEvent(0x411)});
-    manager.initialize(device, 2);
+    manager.initialize(device, this->getOps(), 2);
 
     const auto id = manager.acquire();
     manager.release(id);
@@ -189,7 +189,7 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, ReleaseUnusedQueuesFailsIfQueuesAreI
 
     this->adapter().expectCreateCommandQueues({makeQueue(0x430), makeQueue(0x431)});
     this->adapter().expectCreateEvents({makeEvent(0x440), makeEvent(0x441)});
-    manager.initialize(device, 2);
+    manager.initialize(device, this->getOps(), 2);
 
     const auto id = manager.acquire();
     ExpectError(diag_error::OrteafErrc::InvalidState, [&] { manager.releaseUnusedQueues(); });
@@ -210,7 +210,7 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, AcquireReturnsDistinctIdsWithinCapac
     const auto device = this->adapter().device();
     this->adapter().expectCreateCommandQueues({makeQueue(0x100), makeQueue(0x200)});
     this->adapter().expectCreateEvents({makeEvent(0x1000), makeEvent(0x2000)});
-    manager.initialize(device, 2);
+    manager.initialize(device, this->getOps(), 2);
     const auto id0 = manager.acquire();
     const auto id1 = manager.acquire();
     EXPECT_NE(id0, id1);
@@ -222,7 +222,7 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, AcquireGrowsPoolWhenFreelistEmpty) {
     manager.setGrowthChunkSize(1);
     this->adapter().expectCreateCommandQueues({makeQueue(0x300)});
     this->adapter().expectCreateEvents({makeEvent(0x3000)});
-    manager.initialize(device, 1);
+    manager.initialize(device, this->getOps(), 1);
     const auto first = manager.acquire();
     this->adapter().expectCreateCommandQueues({makeQueue(0x301)});
     this->adapter().expectCreateEvents({makeEvent(0x3010)});
@@ -236,7 +236,7 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, AcquireFailsWhenGrowthWouldExceedLim
     manager.setGrowthChunkSize(std::numeric_limits<std::size_t>::max());
     this->adapter().expectCreateCommandQueues({makeQueue(0x600)});
     this->adapter().expectCreateEvents({makeEvent(0x6000)});
-    manager.initialize(device, 1);
+    manager.initialize(device, this->getOps(), 1);
     (void)manager.acquire();
     ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] { (void)manager.acquire(); });
 }
@@ -251,7 +251,7 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, ReleaseRejectsNonAcquiredId) {
     const auto device = this->adapter().device();
     this->adapter().expectCreateCommandQueues({makeQueue(0x700)});
     this->adapter().expectCreateEvents({makeEvent(0x7000)});
-    manager.initialize(device, 1);
+    manager.initialize(device, this->getOps(), 1);
     ExpectError(diag_error::OrteafErrc::InvalidState, [&] { manager.release(base::CommandQueueId{0}); });
 }
 
@@ -260,7 +260,7 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, ReleaseRequiresCompletedWork) {
     const auto device = this->adapter().device();
     this->adapter().expectCreateCommandQueues({makeQueue(0x710)});
     this->adapter().expectCreateEvents({makeEvent(0x7110)});
-    manager.initialize(device, 1);
+    manager.initialize(device, this->getOps(), 1);
     const auto id = manager.acquire();
     manager.setSubmitSerial(id, 5);
     manager.setCompletedSerial(id, 4);
@@ -275,7 +275,7 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, ReleaseMakesHandleStaleAndRecyclesSt
     manager.setGrowthChunkSize(1);
     this->adapter().expectCreateCommandQueues({makeQueue(0x720)});
     this->adapter().expectCreateEvents({makeEvent(0x7210)});
-    manager.initialize(device, 1);
+    manager.initialize(device, this->getOps(), 1);
     const auto id = manager.acquire();
     manager.release(id);
     ExpectError(diag_error::OrteafErrc::InvalidState, [&] { manager.release(id); });
@@ -295,7 +295,7 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, HazardCountersDefaultToZero) {
     const auto device = this->adapter().device();
     this->adapter().expectCreateCommandQueues({makeQueue(0x900)});
     this->adapter().expectCreateEvents({makeEvent(0x9010)});
-    manager.initialize(device, 1);
+    manager.initialize(device, this->getOps(), 1);
     const auto id = manager.acquire();
     EXPECT_EQ(manager.submitSerial(id), 0u);
     EXPECT_EQ(manager.completedSerial(id), 0u);
@@ -306,7 +306,7 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, HazardCountersCanBeUpdatedAndResetOn
     const auto device = this->adapter().device();
     this->adapter().expectCreateCommandQueues({makeQueue(0x910)});
     this->adapter().expectCreateEvents({makeEvent(0x9110)});
-    manager.initialize(device, 1);
+    manager.initialize(device, this->getOps(), 1);
     const auto id = manager.acquire();
     manager.setSubmitSerial(id, 7);
     manager.setCompletedSerial(id, 7);
@@ -324,7 +324,7 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, DebugStateReflectsSetterUpdates) {
     const auto device = this->adapter().device();
     this->adapter().expectCreateCommandQueues({makeQueue(0x920)});
     this->adapter().expectCreateEvents({makeEvent(0x9210)});
-    manager.initialize(device, 1);
+    manager.initialize(device, this->getOps(), 1);
     const auto id = manager.acquire();
     manager.setSubmitSerial(id, 11);
     manager.setCompletedSerial(id, 9);
@@ -345,7 +345,7 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, GetCommandQueueReturnsHandleForAcqui
     const auto device = this->adapter().device();
     this->adapter().expectCreateCommandQueues({makeQueue(0x800)});
     this->adapter().expectCreateEvents({makeEvent(0x8000)});
-    manager.initialize(device, 1);
+    manager.initialize(device, this->getOps(), 1);
     const auto id = manager.acquire();
     const auto queue = manager.getCommandQueue(id);
     if constexpr (TypeParam::is_mock) {
@@ -360,7 +360,7 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, GetCommandQueueRejectsOutOfRangeId) 
     const auto device = this->adapter().device();
     this->adapter().expectCreateCommandQueues({makeQueue(0x810)});
     this->adapter().expectCreateEvents({makeEvent(0x8110)});
-    manager.initialize(device, 1);
+    manager.initialize(device, this->getOps(), 1);
     ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
         (void)manager.getCommandQueue(base::CommandQueueId{10});
     });
@@ -372,7 +372,7 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, GetCommandQueueRejectsStaleId) {
     manager.setGrowthChunkSize(1);
     this->adapter().expectCreateCommandQueues({makeQueue(0x820)});
     this->adapter().expectCreateEvents({makeEvent(0x8210)});
-    manager.initialize(device, 1);
+    manager.initialize(device, this->getOps(), 1);
     const auto id = manager.acquire();
     manager.release(id);
     ExpectError(diag_error::OrteafErrc::InvalidState, [&] { (void)manager.getCommandQueue(id); });

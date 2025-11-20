@@ -175,7 +175,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, GetDeviceReturnsRegisteredHandle) {
   this->adapter().expectReleaseDevices(
       {expected_handles[0], expected_handles[1]});
 
-  manager.initialize();
+  manager.initialize(this->getOps());
   const auto count = manager.getDeviceCount();
   if (expected_count >= 0) {
     EXPECT_EQ(count, static_cast<std::size_t>(expected_count));
@@ -504,7 +504,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest,
   });
   this->adapter().expectReleaseDevices({device0});
 
-  manager.initialize();
+  manager.initialize(this->getOps());
   const auto count = manager.getDeviceCount();
   if (count == 0u) {
     GTEST_SKIP() << "No MPS devices available";
