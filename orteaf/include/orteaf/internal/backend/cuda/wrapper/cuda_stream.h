@@ -10,7 +10,7 @@
 #if ORTEAF_ENABLE_CUDA
 
 #include <cstdint>
-#include "orteaf/internal/backend/cuda/cuda_device.h"
+#include "orteaf/internal/backend/cuda/wrapper/cuda_device.h"
 
 namespace orteaf::internal::backend::cuda {
 

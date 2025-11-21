@@ -5,7 +5,7 @@
 #ifndef __OBJC__
 #error "mps_size.mm must be compiled with an Objective-C++ compiler (__OBJC__ not defined)"
 #endif
-#include "orteaf/internal/backend/mps/mps_size.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_size.h"
 
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
 #import <Metal/Metal.h>

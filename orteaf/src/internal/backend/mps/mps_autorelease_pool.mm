@@ -5,7 +5,7 @@
 #ifndef __OBJC__
 #error "mps_autorelease_pool.mm must be compiled with an Objective-C++ compiler (__OBJC__ not defined)"
 #endif
-#include "orteaf/internal/backend/mps/mps_autorelease_pool.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_autorelease_pool.h"
 
 #import <Foundation/Foundation.h>
 #include <chrono>

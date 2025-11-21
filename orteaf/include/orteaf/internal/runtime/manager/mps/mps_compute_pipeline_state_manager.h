@@ -11,13 +11,13 @@
 #include <unordered_map>
 #include <utility>
 
-#include "orteaf/internal/backend/mps/mps_compute_pipeline_state.h"
-#include "orteaf/internal/backend/mps/mps_function.h"
-#include "orteaf/internal/backend/mps/mps_library.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_compute_pipeline_state.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_function.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_library.h"
 #include "orteaf/internal/base/heap_vector.h"
 #include "orteaf/internal/base/strong_id.h"
 #include "orteaf/internal/diagnostics/error/error.h"
-#include "orteaf/internal/runtime/backend_ops/mps/mps_slow_ops.h"
+#include "orteaf/internal/backend/mps/mps_slow_ops.h"
 
 namespace orteaf::internal::runtime::mps {
 

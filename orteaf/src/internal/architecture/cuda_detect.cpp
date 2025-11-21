@@ -1,7 +1,7 @@
 #include "orteaf/internal/architecture/cuda_detect.h"
 
 #include "orteaf/internal/backend/backend.h"
-#include "orteaf/internal/backend/cuda/cuda_device.h"
+#include "orteaf/internal/backend/cuda/wrapper/cuda_device.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 
 #include <algorithm>

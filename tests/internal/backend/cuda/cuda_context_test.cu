@@ -3,9 +3,9 @@
  * @brief Tests for CUDA context acquisition, creation, and release helpers.
  */
 
-#include "orteaf/internal/backend/cuda/cuda_context.h"
-#include "orteaf/internal/backend/cuda/cuda_init.h"
-#include "orteaf/internal/backend/cuda/cuda_device.h"
+#include "orteaf/internal/backend/cuda/wrapper/cuda_context.h"
+#include "orteaf/internal/backend/cuda/wrapper/cuda_init.h"
+#include "orteaf/internal/backend/cuda/wrapper/cuda_device.h"
 #include "tests/internal/testing/error_assert.h"
 
 #include <gtest/gtest.h>

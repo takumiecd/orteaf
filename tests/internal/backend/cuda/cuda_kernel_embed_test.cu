@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "orteaf/internal/backend/cuda/cuda_kernel_embed_api.h"
+#include "orteaf/internal/backend/cuda/wrapper/cuda_kernel_embed_api.h"
 #include "tests/internal/testing/error_assert.h"
 
 using namespace orteaf::internal::backend::cuda::kernel_embed;

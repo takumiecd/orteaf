@@ -6,7 +6,7 @@
 
 #if ORTEAF_ENABLE_MPS
 
-#include "orteaf/internal/backend/mps/mps_heap.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_heap.h"
 
 #include <cstddef>
 

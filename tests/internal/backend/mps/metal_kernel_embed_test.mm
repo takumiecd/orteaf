@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "orteaf/internal/backend/mps/metal_kernel_embed_api.h"
+#include "orteaf/internal/backend/mps/wrapper/metal_kernel_embed_api.h"
 
 using namespace orteaf::internal::backend::mps::metal_kernel_embed;
 

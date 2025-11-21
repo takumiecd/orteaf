@@ -6,10 +6,10 @@
 #import <Metal/Metal.h>
 #import <Foundation/Foundation.h>
 
-#include "orteaf/internal/backend/mps/mps_device.h"
-#include "orteaf/internal/backend/mps/mps_command_queue.h"
-#include "orteaf/internal/backend/mps/mps_command_buffer.h"
-#include "orteaf/internal/backend/mps/mps_event.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_device.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_command_queue.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_command_buffer.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_event.h"
 
 #include "tests/internal/testing/error_assert.h"
 

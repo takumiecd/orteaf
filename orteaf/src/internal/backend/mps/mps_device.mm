@@ -5,8 +5,8 @@
 #ifndef __OBJC__
 #error "mps_device.mm must be compiled with an Objective-C++ compiler (__OBJC__ not defined)"
 #endif
-#include "orteaf/internal/backend/mps/mps_device.h"
-#include "orteaf/internal/backend/mps/mps_objc_bridge.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_device.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_objc_bridge.h"
 
 #include <string>
 #include <string_view>

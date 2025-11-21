@@ -6,8 +6,8 @@
 
 #if ORTEAF_ENABLE_MPS
 
-#include "orteaf/internal/backend/mps/mps_device.h"
-#include "orteaf/internal/backend/mps/mps_compute_command_encorder.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_device.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_compute_command_encorder.h"
 
 namespace orteaf::internal::backend::mps {
 

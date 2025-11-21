@@ -8,7 +8,7 @@
 
 #include <string_view>
 
-#include "orteaf/internal/backend/mps/mps_library.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_library.h"
 
 namespace orteaf::internal::backend::mps {
 

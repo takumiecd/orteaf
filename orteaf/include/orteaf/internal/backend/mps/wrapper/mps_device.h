@@ -13,7 +13,7 @@
 
 #include <string>
 
-#include "orteaf/internal/backend/mps/mps_size.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_size.h"
 
 namespace orteaf::internal::backend::mps {
 

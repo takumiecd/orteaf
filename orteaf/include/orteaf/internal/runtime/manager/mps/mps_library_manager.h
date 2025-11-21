@@ -9,8 +9,8 @@
 #include <string_view>
 #include <unordered_map>
 
-#include "orteaf/internal/backend/mps/mps_device.h"
-#include "orteaf/internal/backend/mps/mps_library.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_device.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_library.h"
 #include "orteaf/internal/base/heap_vector.h"
 #include "orteaf/internal/base/strong_id.h"
 #include "orteaf/internal/diagnostics/error/error.h"

@@ -10,7 +10,7 @@
 
 #if ORTEAF_ENABLE_CUDA
 
-#include "orteaf/internal/backend/cuda/cuda_stream.h"
+#include "orteaf/internal/backend/cuda/wrapper/cuda_stream.h"
 
 namespace orteaf::internal::backend::cuda {
 

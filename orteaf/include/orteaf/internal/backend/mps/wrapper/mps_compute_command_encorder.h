@@ -6,10 +6,10 @@
 
 #if ORTEAF_ENABLE_MPS
 
-#include "orteaf/internal/backend/mps/mps_command_buffer.h"
-#include "orteaf/internal/backend/mps/mps_buffer.h"
-#include "orteaf/internal/backend/mps/mps_compute_pipeline_state.h"
-#include "orteaf/internal/backend/mps/mps_size.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_command_buffer.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_buffer.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_compute_pipeline_state.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_size.h"
 
 #include <cstddef>
 

@@ -7,16 +7,16 @@
 
 #include <orteaf/internal/backend/backend.h>
 #include <orteaf/internal/backend/cpu/cpu_buffer_handle.h>
-#include <orteaf/internal/backend/cuda/cuda_device.h>
+#include <orteaf/internal/backend/cuda/wrapper/cuda_device.h>
 #if ORTEAF_ENABLE_CUDA
-#include <orteaf/internal/backend/cuda/cuda_stream.h>
+#include <orteaf/internal/backend/cuda/wrapper/cuda_stream.h>
 #include <orteaf/internal/backend/cuda/cuda_buffer_handle.h>
 #endif
 
 #if ORTEAF_ENABLE_MPS
-#include <orteaf/internal/backend/mps/mps_buffer_handle.h>
-#include <orteaf/internal/backend/mps/mps_command_queue.h>
-#include <orteaf/internal/backend/mps/mps_device.h>
+#include <orteaf/internal/backend/mps/wrapper/mps_buffer_handle.h>
+#include <orteaf/internal/backend/mps/wrapper/mps_command_queue.h>
+#include <orteaf/internal/backend/mps/wrapper/mps_device.h>
 #endif
 
 namespace orteaf::internal::backend {

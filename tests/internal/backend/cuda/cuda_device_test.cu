@@ -3,8 +3,8 @@
  * @brief Tests for CUDA device discovery, selection, and capability queries.
  */
 
-#include "orteaf/internal/backend/cuda/cuda_device.h"
-#include "orteaf/internal/backend/cuda/cuda_init.h"
+#include "orteaf/internal/backend/cuda/wrapper/cuda_device.h"
+#include "orteaf/internal/backend/cuda/wrapper/cuda_init.h"
 #include "tests/internal/testing/error_assert.h"
 
 #include <gtest/gtest.h>

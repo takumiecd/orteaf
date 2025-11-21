@@ -6,14 +6,14 @@
 #error "mps_fence.mm must be compiled with an Objective-C++ compiler (__OBJC__ not defined)"
 #endif
 
-#include "orteaf/internal/backend/mps/mps_fence.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_fence.h"
 
 #import <Metal/Metal.h>
 
-#include "orteaf/internal/backend/mps/mps_autorelease_pool.h"
-#include "orteaf/internal/backend/mps/mps_objc_bridge.h"
-#include "orteaf/internal/backend/mps/mps_stats.h"
-#include "orteaf/internal/backend/mps/mps_compute_command_encorder.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_autorelease_pool.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_objc_bridge.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_stats.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_compute_command_encorder.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 
 namespace orteaf::internal::backend::mps {

@@ -6,9 +6,9 @@
 #import <Metal/Metal.h>
 #import <Foundation/Foundation.h>
 
-#include "orteaf/internal/backend/mps/mps_device.h"
-#include "orteaf/internal/backend/mps/mps_heap.h"
-#include "orteaf/internal/backend/mps/mps_texture.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_device.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_heap.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_texture.h"
 
 #include "tests/internal/testing/error_assert.h"
 

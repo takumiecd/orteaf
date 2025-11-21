@@ -9,10 +9,10 @@
 #ifndef __CUDACC__
 #error "cuda_device.cu must be compiled with a CUDA compiler (__CUDACC__ not defined)"
 #endif
-#include "orteaf/internal/backend/cuda/cuda_device.h"
-#include "orteaf/internal/backend/cuda/cuda_check.h"
-#include "orteaf/internal/backend/cuda/cuda_stats.h"
-#include "orteaf/internal/backend/cuda/cuda_objc_bridge.h"
+#include "orteaf/internal/backend/cuda/wrapper/cuda_device.h"
+#include "orteaf/internal/backend/cuda/wrapper/cuda_check.h"
+#include "orteaf/internal/backend/cuda/wrapper/cuda_stats.h"
+#include "orteaf/internal/backend/cuda/wrapper/cuda_objc_bridge.h"
 
 #include <string>
 #include "orteaf/internal/diagnostics/error/error.h"

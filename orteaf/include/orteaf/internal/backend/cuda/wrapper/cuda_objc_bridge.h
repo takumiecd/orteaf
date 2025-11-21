@@ -15,7 +15,7 @@
 #include <cstdint>
 #include <type_traits>
 
-#include "orteaf/internal/backend/cuda/cuda_device.h"
+#include "orteaf/internal/backend/cuda/wrapper/cuda_device.h"
 
 namespace orteaf::internal::backend::cuda {
 

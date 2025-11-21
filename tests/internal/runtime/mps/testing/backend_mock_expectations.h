@@ -10,14 +10,14 @@
 #include <gmock/gmock.h>
 
 #include "orteaf/internal/architecture/architecture.h"
-#include "orteaf/internal/backend/mps/mps_command_queue.h"
-#include "orteaf/internal/backend/mps/mps_compute_pipeline_state.h"
-#include "orteaf/internal/backend/mps/mps_device.h"
-#include "orteaf/internal/backend/mps/mps_event.h"
-#include "orteaf/internal/backend/mps/mps_fence.h"
-#include "orteaf/internal/backend/mps/mps_function.h"
-#include "orteaf/internal/backend/mps/mps_heap.h"
-#include "orteaf/internal/backend/mps/mps_library.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_command_queue.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_compute_pipeline_state.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_device.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_event.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_fence.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_function.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_heap.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_library.h"
 #include "orteaf/internal/base/strong_id.h"
 #include "tests/internal/runtime/mps/testing/backend_mock.h"
 

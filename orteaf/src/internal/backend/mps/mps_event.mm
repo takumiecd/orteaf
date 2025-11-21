@@ -5,15 +5,15 @@
 #ifndef __OBJC__
 #error "mps_event.mm must be compiled with an Objective-C++ compiler (__OBJC__ not defined)"
 #endif
-#include "orteaf/internal/backend/mps/mps_event.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_event.h"
 
 #import <Metal/Metal.h>
 #import <Foundation/Foundation.h>
 
-#include "orteaf/internal/backend/mps/mps_autorelease_pool.h"
-#include "orteaf/internal/backend/mps/mps_command_buffer.h"
-#include "orteaf/internal/backend/mps/mps_stats.h"
-#include "orteaf/internal/backend/mps/mps_objc_bridge.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_autorelease_pool.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_command_buffer.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_stats.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_objc_bridge.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 
 namespace orteaf::internal::backend::mps {

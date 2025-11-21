@@ -5,7 +5,7 @@
 #ifndef __CUDACC__
 #error "cuda_dim.cu must be compiled with a CUDA compiler (__CUDACC__ not defined)"
 #endif
-#include "orteaf/internal/backend/cuda/cuda_dim.h"
+#include "orteaf/internal/backend/cuda/wrapper/cuda_dim.h"
 
 namespace orteaf::internal::backend::cuda {
 

@@ -5,10 +5,10 @@
 #ifndef __CUDACC__
 #error "cuda_stream.cu must be compiled with a CUDA compiler (__CUDACC__ not defined)"
 #endif
-#include "orteaf/internal/backend/cuda/cuda_stream.h"
-#include "orteaf/internal/backend/cuda/cuda_check.h"
-#include "orteaf/internal/backend/cuda/cuda_stats.h"
-#include "orteaf/internal/backend/cuda/cuda_objc_bridge.h"
+#include "orteaf/internal/backend/cuda/wrapper/cuda_stream.h"
+#include "orteaf/internal/backend/cuda/wrapper/cuda_check.h"
+#include "orteaf/internal/backend/cuda/wrapper/cuda_stats.h"
+#include "orteaf/internal/backend/cuda/wrapper/cuda_objc_bridge.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include <cuda.h>
 

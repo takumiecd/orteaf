@@ -4,8 +4,8 @@
 #include <cstdint>
 #include <limits>
 
-#include "orteaf/internal/backend/mps/mps_command_queue.h"
-#include "orteaf/internal/backend/mps/mps_event.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_command_queue.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_event.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include "orteaf/internal/runtime/manager/mps/mps_command_queue_manager.h"
 #include "tests/internal/runtime/mps/testing/backend_ops_provider.h"

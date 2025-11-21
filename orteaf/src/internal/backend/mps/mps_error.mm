@@ -5,9 +5,9 @@
 #ifndef __OBJC__
 #error "mps_error.mm must be compiled with an Objective-C++ compiler (__OBJC__ not defined)"
 #endif
-#include "orteaf/internal/backend/mps/mps_error.h"
-#include "orteaf/internal/backend/mps/mps_string.h"
-#include "orteaf/internal/backend/mps/mps_objc_bridge.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_error.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_string.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_objc_bridge.h"
 
 #import <Foundation/Foundation.h>
 #include "orteaf/internal/diagnostics/error/error.h"

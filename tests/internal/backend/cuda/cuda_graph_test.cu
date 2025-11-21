@@ -3,11 +3,11 @@
  * @brief Tests for CUDA Graph creation, capture, instantiation, and launch.
  */
 
-#include "orteaf/internal/backend/cuda/cuda_graph.h"
-#include "orteaf/internal/backend/cuda/cuda_init.h"
-#include "orteaf/internal/backend/cuda/cuda_device.h"
-#include "orteaf/internal/backend/cuda/cuda_context.h"
-#include "orteaf/internal/backend/cuda/cuda_stream.h"
+#include "orteaf/internal/backend/cuda/wrapper/cuda_graph.h"
+#include "orteaf/internal/backend/cuda/wrapper/cuda_init.h"
+#include "orteaf/internal/backend/cuda/wrapper/cuda_device.h"
+#include "orteaf/internal/backend/cuda/wrapper/cuda_context.h"
+#include "orteaf/internal/backend/cuda/wrapper/cuda_stream.h"
 #include "tests/internal/testing/error_assert.h"
 
 #include <gtest/gtest.h>

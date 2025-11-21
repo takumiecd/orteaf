@@ -5,7 +5,7 @@
 #include <functional>
 
 #if ORTEAF_ENABLE_MPS
-#include <orteaf/internal/backend/mps/mps_buffer.h>
+#include <orteaf/internal/backend/mps/wrapper/mps_buffer.h>
 
 namespace orteaf::internal::backend::mps {
 

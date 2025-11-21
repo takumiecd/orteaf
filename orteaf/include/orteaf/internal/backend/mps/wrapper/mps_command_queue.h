@@ -10,7 +10,7 @@
 
 #if ORTEAF_ENABLE_MPS
 
-#include "orteaf/internal/backend/mps/mps_device.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_device.h"
 
 namespace orteaf::internal::backend::mps {
 

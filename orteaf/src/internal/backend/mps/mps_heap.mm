@@ -5,13 +5,13 @@
 #ifndef __OBJC__
 #error "mps_heap.mm must be compiled with an Objective-C++ compiler (__OBJC__ not defined)"
 #endif
-#include "orteaf/internal/backend/mps/mps_heap.h"
-#include "orteaf/internal/backend/mps/mps_stats.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_heap.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_stats.h"
 
 #import <Metal/Metal.h>
 #import <Foundation/Foundation.h>
 
-#include "orteaf/internal/backend/mps/mps_objc_bridge.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_objc_bridge.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 
 namespace orteaf::internal::backend::mps {

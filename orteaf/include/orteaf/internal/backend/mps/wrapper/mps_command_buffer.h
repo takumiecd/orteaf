@@ -6,8 +6,8 @@
 
 #if ORTEAF_ENABLE_MPS
 
-#include "orteaf/internal/backend/mps/mps_command_queue.h"
-#include "orteaf/internal/backend/mps/mps_event.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_command_queue.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_event.h"
 
 namespace orteaf::internal::backend::mps {
 

@@ -5,11 +5,11 @@
 #ifndef __CUDACC__
 #error "cuda_init.cu must be compiled with a CUDA compiler (__CUDACC__ not defined)"
 #endif
-#include "orteaf/internal/backend/cuda/cuda_init.h"
+#include "orteaf/internal/backend/cuda/wrapper/cuda_init.h"
 
 #include <mutex>
 #include <cuda.h>
-#include "orteaf/internal/backend/cuda/cuda_check.h"
+#include "orteaf/internal/backend/cuda/wrapper/cuda_check.h"
 
 namespace orteaf::internal::backend::cuda {
 

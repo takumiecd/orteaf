@@ -3,7 +3,7 @@
  * @brief Tests for CUDA error checking utilities and error code mapping.
  */
 
-#include "orteaf/internal/backend/cuda/cuda_check.h"
+#include "orteaf/internal/backend/cuda/wrapper/cuda_check.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include "tests/internal/testing/error_assert.h"
 #include "tests/internal/testing/error_assert.h"
