@@ -15,6 +15,8 @@
 #include <cstdint>
 #include <type_traits>
 
+#include "orteaf/internal/backend/cuda/cuda_device.h"
+
 namespace orteaf::internal::backend::cuda {
 
 /**
@@ -82,14 +84,14 @@ static inline CUdeviceptr cuDeviceptrFromOpaque(std::uint64_t p) noexcept {
 /**
  * @brief Convert our opaque CUdevice_t to CUDA Driver's CUdevice.
  */
-static inline CUdevice toDriverCuDevice(CUdevice_t p) noexcept {
+static inline CUdevice cuDeviceFromOpaque(CUdevice_t p) noexcept {
     return static_cast<CUdevice>(static_cast<int>(p));
 }
 
 /**
  * @brief Convert CUDA Driver's CUdevice to our opaque CUdevice_t.
  */
-static inline CUdevice_t fromDriverCuDevice(CUdevice p) noexcept {
+static inline CUdevice_t opaqueFromCuDevice(CUdevice p) noexcept {
     return static_cast<CUdevice_t>(p);
 }
 
