@@ -20,7 +20,6 @@ protected:
     // static_assert(::orteaf::internal::runtime::backend_ops::mps::MpsRuntimeBackendOps<BackendOps>);
 
     void SetUp() override {
-        manager_ = Manager{};
         adapter_.bind(manager_, context_);
         onPreManagerSetUp();
         Provider::setUp(context_);
