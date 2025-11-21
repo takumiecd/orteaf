@@ -1,4 +1,4 @@
-/*
+/** 
  * @file cuda_module_function_test.cpp
  * @brief Tests for CUDA module loading/unloading and function lookup.
  */

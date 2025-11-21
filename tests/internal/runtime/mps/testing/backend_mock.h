@@ -12,7 +12,7 @@
 #include "orteaf/internal/backend/mps/mps_heap.h"
 #include "orteaf/internal/backend/mps/mps_library.h"
 #include "orteaf/internal/base/strong_id.h"
-#include "orteaf/internal/runtime/backend_ops/mps/mps_slow_ops.h"
+#include "orteaf/internal/backend/mps/mps_slow_ops.h"
 #include "tests/internal/testing/static_mock.h"
 
 namespace orteaf::tests::runtime::mps {
