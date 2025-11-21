@@ -16,10 +16,19 @@
 
 namespace orteaf::internal::backend::cuda {
 
-using CUdevice_t = int;            // Keep ABI stable across TUs
+struct CUdevice_t {
+    int value{};  // opaque device identifier
+
+    constexpr CUdevice_t() = default;
+    constexpr explicit CUdevice_t(int v) : value(v) {}
+    constexpr operator int() const { return value; }
+    friend constexpr bool operator==(CUdevice_t lhs, CUdevice_t rhs) { return lhs.value == rhs.value; }
+    friend constexpr bool operator!=(CUdevice_t lhs, CUdevice_t rhs) { return !(lhs == rhs); }
+    friend constexpr bool operator<(CUdevice_t lhs, CUdevice_t rhs) { return lhs.value < rhs.value; }
+};
 
 // ABI guards (header-level, so every TU checks these)
-static_assert(sizeof(CUdevice_t) == sizeof(int), "CUdevice_t must be int-sized (Driver API handle).");
+static_assert(sizeof(CUdevice_t) == sizeof(int), "CUdevice_t must remain int-sized (Driver API handle).");
 
 /**
  * @brief Bitmask flags indicating optional CUDA capabilities.
