@@ -279,53 +279,53 @@ inline constexpr bool ioInfoEnabled()  { return ioLevelEnabled<LogLevel::Info>()
 // Preprocessor-friendly switches for category/level (useful for #if guards).
 // Prefer constexpr helpers for normal code; use these only for conditional compilation.
 #if !defined(ORTEAF_CORE_TRACE_ENABLED)
-#  define ORTEAF_CORE_TRACE_ENABLED ::orteaf::internal::diagnostics::log::coreTraceEnabled()
+#  define ORTEAF_CORE_TRACE_ENABLED (coreTraceEnabled() ? 1 : 0)
 #endif
 #if !defined(ORTEAF_CORE_DEBUG_ENABLED)
-#  define ORTEAF_CORE_DEBUG_ENABLED ::orteaf::internal::diagnostics::log::coreDebugEnabled()
+#  define ORTEAF_CORE_DEBUG_ENABLED (coreDebugEnabled() ? 1 : 0)
 #endif
 #if !defined(ORTEAF_CORE_INFO_ENABLED)
-#  define ORTEAF_CORE_INFO_ENABLED  ::orteaf::internal::diagnostics::log::coreInfoEnabled()
+#  define ORTEAF_CORE_INFO_ENABLED  (coreInfoEnabled() ? 1 : 0)
 #endif
 
 #if !defined(ORTEAF_TENSOR_TRACE_ENABLED)
-#  define ORTEAF_TENSOR_TRACE_ENABLED ::orteaf::internal::diagnostics::log::tensorTraceEnabled()
+#  define ORTEAF_TENSOR_TRACE_ENABLED (tensorTraceEnabled() ? 1 : 0)
 #endif
 #if !defined(ORTEAF_TENSOR_DEBUG_ENABLED)
-#  define ORTEAF_TENSOR_DEBUG_ENABLED ::orteaf::internal::diagnostics::log::tensorDebugEnabled()
+#  define ORTEAF_TENSOR_DEBUG_ENABLED (tensorDebugEnabled() ? 1 : 0)
 #endif
 #if !defined(ORTEAF_TENSOR_INFO_ENABLED)
-#  define ORTEAF_TENSOR_INFO_ENABLED  ::orteaf::internal::diagnostics::log::tensorInfoEnabled()
+#  define ORTEAF_TENSOR_INFO_ENABLED  (tensorInfoEnabled() ? 1 : 0)
 #endif
 
 #if !defined(ORTEAF_CUDA_TRACE_ENABLED)
-#  define ORTEAF_CUDA_TRACE_ENABLED ::orteaf::internal::diagnostics::log::cudaTraceEnabled()
+#  define ORTEAF_CUDA_TRACE_ENABLED (cudaTraceEnabled() ? 1 : 0)
 #endif
 #if !defined(ORTEAF_CUDA_DEBUG_ENABLED)
-#  define ORTEAF_CUDA_DEBUG_ENABLED ::orteaf::internal::diagnostics::log::cudaDebugEnabled()
+#  define ORTEAF_CUDA_DEBUG_ENABLED (cudaDebugEnabled() ? 1 : 0)
 #endif
 #if !defined(ORTEAF_CUDA_INFO_ENABLED)
-#  define ORTEAF_CUDA_INFO_ENABLED  ::orteaf::internal::diagnostics::log::cudaInfoEnabled()
+#  define ORTEAF_CUDA_INFO_ENABLED  (cudaInfoEnabled() ? 1 : 0)
 #endif
 
 #if !defined(ORTEAF_MPS_TRACE_ENABLED)
-#  define ORTEAF_MPS_TRACE_ENABLED ::orteaf::internal::diagnostics::log::mpsTraceEnabled()
+#  define ORTEAF_MPS_TRACE_ENABLED (mpsTraceEnabled() ? 1 : 0)
 #endif
 #if !defined(ORTEAF_MPS_DEBUG_ENABLED)
-#  define ORTEAF_MPS_DEBUG_ENABLED ::orteaf::internal::diagnostics::log::mpsDebugEnabled()
+#  define ORTEAF_MPS_DEBUG_ENABLED (mpsDebugEnabled() ? 1 : 0)
 #endif
 #if !defined(ORTEAF_MPS_INFO_ENABLED)
-#  define ORTEAF_MPS_INFO_ENABLED  ::orteaf::internal::diagnostics::log::mpsInfoEnabled()
+#  define ORTEAF_MPS_INFO_ENABLED  (mpsInfoEnabled() ? 1 : 0)
 #endif
 
 #if !defined(ORTEAF_IO_TRACE_ENABLED)
-#  define ORTEAF_IO_TRACE_ENABLED ::orteaf::internal::diagnostics::log::ioTraceEnabled()
+#  define ORTEAF_IO_TRACE_ENABLED (ioTraceEnabled() ? 1 : 0)
 #endif
 #if !defined(ORTEAF_IO_DEBUG_ENABLED)
-#  define ORTEAF_IO_DEBUG_ENABLED ::orteaf::internal::diagnostics::log::ioDebugEnabled()
+#  define ORTEAF_IO_DEBUG_ENABLED (ioDebugEnabled() ? 1 : 0)
 #endif
 #if !defined(ORTEAF_IO_INFO_ENABLED)
-#  define ORTEAF_IO_INFO_ENABLED  ::orteaf::internal::diagnostics::log::ioInfoEnabled()
+#  define ORTEAF_IO_INFO_ENABLED  (ioInfoEnabled() ? 1 : 0)
 #endif
 
 
