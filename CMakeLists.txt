@@ -285,6 +285,25 @@ orteaf_bool_to_int(ORTEAF_ENABLE_CUDA_INT ENABLE_CUDA)
 orteaf_bool_to_int(ORTEAF_ENABLE_MPS_INT ENABLE_MPS)
 orteaf_bool_to_int(ORTEAF_ENABLE_TEST_INT ENABLE_TEST)
 
+# Summarize the effective configuration so users can confirm feature toggles quickly.
+set(_orteaf_log_categories CORE TENSOR CUDA MPS IO)
+set(_orteaf_stats_categories CPU CUDA MPS CORE)
+
+message(STATUS "========== ORTEAF Configuration ==========")
+message(STATUS "Backends: CPU=${ENABLE_CPU}  CUDA=${ENABLE_CUDA}  MPS=${ENABLE_MPS}")
+message(STATUS "Instrumentation: ENABLE_TEST=${ENABLE_TEST}")
+message(STATUS "Statistics levels:")
+message(STATUS "  Global: ${ORTEAF_STATS_LEVEL} (numeric ${ORTEAF_STATS_LEVEL_GLOBAL_VALUE_NUMERIC})")
+foreach(_category ${_orteaf_stats_categories})
+    message(STATUS "  ${_category}: ${ORTEAF_STATS_LEVEL_${_category}} -> ${ORTEAF_STATS_LEVEL_${_category}_VALUE_NUMERIC}")
+endforeach()
+message(STATUS "Log levels:")
+message(STATUS "  Global: ${ORTEAF_LOG_LEVEL} (numeric ${ORTEAF_LOG_LEVEL_GLOBAL_VALUE_NUMERIC})")
+foreach(_category ${_orteaf_log_categories})
+    message(STATUS "  ${_category}: ${ORTEAF_LOG_LEVEL_${_category}} -> ${ORTEAF_LOG_LEVEL_${_category}_VALUE_NUMERIC}")
+endforeach()
+message(STATUS "==========================================")
+
 add_subdirectory(orteaf)
 add_dependencies(orteaf generate_backends generate_ops generate_dtypes generate_architectures generate_devices)
 
