@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.25)
 option(ENABLE_CPU "Enable CPU runtime" ON)
 option(ENABLE_CUDA "Enable CUDA runtime" OFF)
 option(ENABLE_MPS "Enable Metal (MPS) runtime" OFF)
-option(ORTEAF_ENABLE_TEST "Enable internal test instrumentation code" OFF)
+option(ENABLE_TEST "Enable internal test instrumentation code" OFF)
 
 # Set languages based on enabled backends
 set(LANGUAGES CXX)
@@ -219,7 +219,13 @@ foreach(_category CPU CUDA MPS CORE)
     orteaf_resolve_stats_level(ORTEAF_STATS_LEVEL_${_category}_VALUE_NUMERIC "${ORTEAF_STATS_LEVEL_${_category}}")
 endforeach()
 
-set(ORTEAF_LOG_LEVEL "INFO" CACHE STRING
+if(ENABLE_TEST)
+    set(_orteaf_default_log_level "TRACE")
+else()
+    set(_orteaf_default_log_level "INFO")
+endif()
+
+set(ORTEAF_LOG_LEVEL "${_orteaf_default_log_level}" CACHE STRING
     "Default log level (TRACE, DEBUG, INFO, WARN, ERROR, CRITICAL, OFF)")
 set_property(CACHE ORTEAF_LOG_LEVEL PROPERTY STRINGS TRACE DEBUG INFO WARN ERROR CRITICAL OFF)
 
@@ -277,7 +283,7 @@ endfunction()
 orteaf_bool_to_int(ORTEAF_ENABLE_CPU_INT ENABLE_CPU)
 orteaf_bool_to_int(ORTEAF_ENABLE_CUDA_INT ENABLE_CUDA)
 orteaf_bool_to_int(ORTEAF_ENABLE_MPS_INT ENABLE_MPS)
-orteaf_bool_to_int(ORTEAF_ENABLE_TEST_INT ORTEAF_ENABLE_TEST)
+orteaf_bool_to_int(ORTEAF_ENABLE_TEST_INT ENABLE_TEST)
 
 add_subdirectory(orteaf)
 add_dependencies(orteaf generate_backends generate_ops generate_dtypes generate_architectures generate_devices)
@@ -306,7 +312,7 @@ if(TARGET orteaf)
     endif()
 endif()
 
-if(ORTEAF_ENABLE_TEST)
+if(ENABLE_TEST)
     add_subdirectory(tests)
     if(TARGET orteaf_tests)
         add_dependencies(orteaf_tests generate_backends generate_ops generate_dtypes generate_architectures generate_devices)
