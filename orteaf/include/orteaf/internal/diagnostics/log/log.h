@@ -276,6 +276,59 @@ inline constexpr bool ioDebugEnabled() { return ioLevelEnabled<LogLevel::Debug>(
 /// @brief IO category: Info or lower enabled.
 inline constexpr bool ioInfoEnabled()  { return ioLevelEnabled<LogLevel::Info>(); }
 
+// Preprocessor-friendly switches for category/level (useful for #if guards).
+// Prefer constexpr helpers for normal code; use these only for conditional compilation.
+#if !defined(ORTEAF_CORE_TRACE_ENABLED)
+#  define ORTEAF_CORE_TRACE_ENABLED ::orteaf::internal::diagnostics::log::coreTraceEnabled()
+#endif
+#if !defined(ORTEAF_CORE_DEBUG_ENABLED)
+#  define ORTEAF_CORE_DEBUG_ENABLED ::orteaf::internal::diagnostics::log::coreDebugEnabled()
+#endif
+#if !defined(ORTEAF_CORE_INFO_ENABLED)
+#  define ORTEAF_CORE_INFO_ENABLED  ::orteaf::internal::diagnostics::log::coreInfoEnabled()
+#endif
+
+#if !defined(ORTEAF_TENSOR_TRACE_ENABLED)
+#  define ORTEAF_TENSOR_TRACE_ENABLED ::orteaf::internal::diagnostics::log::tensorTraceEnabled()
+#endif
+#if !defined(ORTEAF_TENSOR_DEBUG_ENABLED)
+#  define ORTEAF_TENSOR_DEBUG_ENABLED ::orteaf::internal::diagnostics::log::tensorDebugEnabled()
+#endif
+#if !defined(ORTEAF_TENSOR_INFO_ENABLED)
+#  define ORTEAF_TENSOR_INFO_ENABLED  ::orteaf::internal::diagnostics::log::tensorInfoEnabled()
+#endif
+
+#if !defined(ORTEAF_CUDA_TRACE_ENABLED)
+#  define ORTEAF_CUDA_TRACE_ENABLED ::orteaf::internal::diagnostics::log::cudaTraceEnabled()
+#endif
+#if !defined(ORTEAF_CUDA_DEBUG_ENABLED)
+#  define ORTEAF_CUDA_DEBUG_ENABLED ::orteaf::internal::diagnostics::log::cudaDebugEnabled()
+#endif
+#if !defined(ORTEAF_CUDA_INFO_ENABLED)
+#  define ORTEAF_CUDA_INFO_ENABLED  ::orteaf::internal::diagnostics::log::cudaInfoEnabled()
+#endif
+
+#if !defined(ORTEAF_MPS_TRACE_ENABLED)
+#  define ORTEAF_MPS_TRACE_ENABLED ::orteaf::internal::diagnostics::log::mpsTraceEnabled()
+#endif
+#if !defined(ORTEAF_MPS_DEBUG_ENABLED)
+#  define ORTEAF_MPS_DEBUG_ENABLED ::orteaf::internal::diagnostics::log::mpsDebugEnabled()
+#endif
+#if !defined(ORTEAF_MPS_INFO_ENABLED)
+#  define ORTEAF_MPS_INFO_ENABLED  ::orteaf::internal::diagnostics::log::mpsInfoEnabled()
+#endif
+
+#if !defined(ORTEAF_IO_TRACE_ENABLED)
+#  define ORTEAF_IO_TRACE_ENABLED ::orteaf::internal::diagnostics::log::ioTraceEnabled()
+#endif
+#if !defined(ORTEAF_IO_DEBUG_ENABLED)
+#  define ORTEAF_IO_DEBUG_ENABLED ::orteaf::internal::diagnostics::log::ioDebugEnabled()
+#endif
+#if !defined(ORTEAF_IO_INFO_ENABLED)
+#  define ORTEAF_IO_INFO_ENABLED  ::orteaf::internal::diagnostics::log::ioInfoEnabled()
+#endif
+
+
 /**
  * @brief Function pointer type for custom log sinks.
  *
