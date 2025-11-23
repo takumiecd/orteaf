@@ -5,8 +5,8 @@
 
 #include <gmock/gmock.h>
 
-#include "orteaf/internal/backend/mps/mps_slow_ops.h"
-#include "tests/internal/runtime/mps/testing/backend_mock.h"
+#include <orteaf/internal/backend/mps/mps_slow_ops.h>
+#include <tests/internal/runtime/manager/mps/testing/backend_mock.h>
 
 namespace orteaf::tests::runtime::mps::testing {
 

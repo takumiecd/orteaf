@@ -6,12 +6,12 @@
 #include <system_error>
 #include <vector>
 
-#include "orteaf/internal/architecture/architecture.h"
-#include "orteaf/internal/diagnostics/error/error.h"
-#include "orteaf/internal/runtime/manager/mps/mps_device_manager.h"
-#include "tests/internal/runtime/mps/testing/backend_ops_provider.h"
-#include "tests/internal/runtime/mps/testing/manager_test_fixture.h"
-#include "tests/internal/testing/error_assert.h"
+#include <orteaf/internal/architecture/architecture.h>
+#include <orteaf/internal/diagnostics/error/error.h>
+#include <orteaf/internal/runtime/manager/mps/mps_device_manager.h>
+#include <tests/internal/runtime/manager/mps/testing/backend_ops_provider.h>
+#include <tests/internal/runtime/manager/mps/testing/manager_test_fixture.h>
+#include <tests/internal/testing/error_assert.h>
 
 namespace architecture = orteaf::internal::architecture;
 namespace backend = orteaf::internal::backend;

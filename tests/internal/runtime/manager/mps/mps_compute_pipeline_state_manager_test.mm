@@ -7,11 +7,11 @@
 #include <string>
 #include <system_error>
 
-#include "orteaf/internal/diagnostics/error/error.h"
-#include "orteaf/internal/runtime/manager/mps/mps_compute_pipeline_state_manager.h"
-#include "tests/internal/runtime/mps/testing/backend_ops_provider.h"
-#include "tests/internal/runtime/mps/testing/manager_test_fixture.h"
-#include "tests/internal/testing/error_assert.h"
+#include <orteaf/internal/diagnostics/error/error.h>
+#include <orteaf/internal/runtime/manager/mps/mps_compute_pipeline_state_manager.h>
+#include <tests/internal/runtime/manager/mps/testing/backend_ops_provider.h>
+#include <tests/internal/runtime/manager/mps/testing/manager_test_fixture.h>
+#include <tests/internal/testing/error_assert.h>
 
 namespace backend = orteaf::internal::backend;
 namespace diag_error = orteaf::internal::diagnostics::error;

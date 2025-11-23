@@ -4,8 +4,8 @@
 
 #include <gtest/gtest.h>
 
-#include "tests/internal/runtime/mps/testing/backend_ops_provider.h"
-#include "tests/internal/runtime/mps/testing/manager_adapter.h"
+#include <tests/internal/runtime/manager/mps/testing/backend_ops_provider.h>
+#include <tests/internal/runtime/manager/mps/testing/manager_adapter.h>
 
 namespace orteaf::tests::runtime::mps::testing {
 

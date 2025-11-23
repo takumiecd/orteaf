@@ -4,11 +4,11 @@
 #include <cstdint>
 #include <utility>
 
-#include "orteaf/internal/diagnostics/error/error.h"
-#include "orteaf/internal/runtime/manager/mps/mps_event_pool.h"
-#include "tests/internal/runtime/mps/testing/backend_ops_provider.h"
-#include "tests/internal/runtime/mps/testing/manager_test_fixture.h"
-#include "tests/internal/testing/error_assert.h"
+#include <orteaf/internal/diagnostics/error/error.h>
+#include <orteaf/internal/runtime/manager/mps/mps_event_pool.h>
+#include <tests/internal/runtime/manager/mps/testing/backend_ops_provider.h>
+#include <tests/internal/runtime/manager/mps/testing/manager_test_fixture.h>
+#include <tests/internal/testing/error_assert.h>
 
 namespace backend = orteaf::internal::backend;
 namespace diag_error = orteaf::internal::diagnostics::error;

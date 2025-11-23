@@ -9,10 +9,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "orteaf/internal/backend/mps/wrapper/mps_device.h"
-#include "orteaf/internal/backend/mps/wrapper/mps_fence.h"
-#include "orteaf/internal/backend/mps/wrapper/mps_heap.h"
-#include "tests/internal/runtime/mps/testing/backend_mock_expectations.h"
+#include <orteaf/internal/backend/mps/wrapper/mps_device.h>
+#include <orteaf/internal/backend/mps/wrapper/mps_fence.h>
+#include <orteaf/internal/backend/mps/wrapper/mps_heap.h>
+#include <tests/internal/runtime/manager/mps/testing/backend_mock_expectations.h>
 
 namespace orteaf::tests::runtime::mps::testing {
 
