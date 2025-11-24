@@ -37,6 +37,10 @@ public:
         Stream stream{};
         // 大きい順で渡すことを想定する。例: {1_MB, 256_KB, 64_KB}
         std::vector<std::size_t> levels;
+        // ルート初期確保サイズ（0なら chunk_size 1個分）
+        std::size_t initial_bytes{0};
+        // 追加確保時の倍率（chunk_size * region_multiplier を一度に確保）
+        std::size_t region_multiplier{1};
     };
 
     void initialize(const Config& cfg, Resource* resource) {
@@ -52,18 +56,22 @@ public:
         for (auto sz : cfg.levels) {
             layers_.push_back(Layer{sz});
         }
+        // 初期確保（root のみ）
+        const std::size_t initial = cfg_.initial_bytes == 0 ? cfg_.levels.empty() ? 0 : cfg_.levels[0] : cfg_.initial_bytes;
+        if (initial > 0) {
+            addRegion(initial);
+        }
     }
 
     // 最小で足りるサイズクラスから MemoryBlock を返す。
-    MemoryBlock allocate(std::size_t size, std::size_t alignment = 0) {
+    MemoryBlock allocate(std::size_t size) {
         std::lock_guard<std::mutex> lock(mutex_);
         const auto target_layer = pickLayer(size);
         if (target_layer == kInvalidLayer || resource_ == nullptr) {
-            using namespace orteaf::internal::diagnostics::error;
             throwError(OrteafErrc::OutOfMemory, "No suitable layer or resource is null");
         }
 
-        ensureFreeSlot(target_layer, alignment);
+        ensureFreeSlot(target_layer);
 
         auto& L = layers_[target_layer];
         const auto slot = popFree(L.free_list);
@@ -76,7 +84,7 @@ public:
         return MemoryBlock{encode(target_layer, static_cast<uint32_t>(slot)), s.view};
     }
 
-    void deallocate(BufferId id, std::size_t size = 0, std::size_t alignment = 0) {
+    void deallocate(BufferId id, std::size_t size = 0) {
         std::lock_guard<std::mutex> lock(mutex_);
         auto [layer, slot] = decode(id);
         if (layer >= layers_.size()) return;
@@ -87,7 +95,7 @@ public:
         if (s.state != State::InUse) return;
 
         // map/unmap を分離。CPU では unmap が deallocate を兼ねる。
-        resource_->unmap(s.view, size ? size : L.chunk_size, alignment, cfg_.device, cfg_.context, cfg_.stream);
+        resource_->unmap(s.view, size ? size : L.chunk_size, 0, cfg_.device, cfg_.context, cfg_.stream);
         s.mapped = false;
         s.state = State::Free;
         L.free_list.pushBack(slot);
@@ -185,7 +193,7 @@ private:
     }
 
     // target_layer に free がなければ、上位を探して段階的に split する。
-    void ensureFreeSlot(uint32_t target_layer, std::size_t alignment) {
+    void ensureFreeSlot(uint32_t target_layer) {
         if (target_layer >= layers_.size()) {
             using namespace orteaf::internal::diagnostics::error;
             throwError(OrteafErrc::OutOfRange, "Layer index out of range");
@@ -200,7 +208,8 @@ private:
 
         // ルートにも無ければ新規リージョンを追加
         if (parent < 0) {
-            addRegion(layers_[0].chunk_size);
+            const std::size_t mult = cfg_.region_multiplier == 0 ? 1 : cfg_.region_multiplier;
+            addRegion(layers_[0].chunk_size * mult);
             parent = 0;
         }
 
@@ -209,7 +218,6 @@ private:
             const uint32_t child = layer + 1;
             if (!layers_[child].free_list.empty()) continue;
             if (layers_[layer].free_list.empty()) {
-            using namespace orteaf::internal::diagnostics::error;
                 throwError(OrteafErrc::OutOfMemory, "Failed to refill parent layer");
             }
             splitOne(layer, child);
