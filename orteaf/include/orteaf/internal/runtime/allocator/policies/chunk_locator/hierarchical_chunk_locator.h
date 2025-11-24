@@ -68,6 +68,7 @@ public:
         std::lock_guard<std::mutex> lock(mutex_);
         const auto target_layer = pickLayer(size);
         if (target_layer == kInvalidLayer || resource_ == nullptr) {
+            using namespace orteaf::internal::diagnostics::error;
             throwError(OrteafErrc::OutOfMemory, "No suitable layer or resource is null");
         }
 
@@ -95,7 +96,7 @@ public:
         if (s.state != State::InUse) return;
 
         // map/unmap を分離。CPU では unmap が deallocate を兼ねる。
-        resource_->unmap(s.view, size ? size : L.chunk_size, 0, cfg_.device, cfg_.context, cfg_.stream);
+        resource_->unmap(s.view, size ? size : L.chunk_size, cfg_.device, cfg_.context, cfg_.stream);
         s.mapped = false;
         s.state = State::Free;
         L.free_list.pushBack(slot);
@@ -179,7 +180,7 @@ private:
         const std::size_t chunk_size = root.chunk_size;
         std::size_t remaining = bytes == 0 ? chunk_size : bytes;
 
-        BufferView base = resource_->reserve(remaining, /*alignment=*/0, cfg_.device, cfg_.stream);
+        BufferView base = resource_->reserve(remaining, cfg_.device, cfg_.stream);
         std::size_t offset = 0;
         while (remaining > 0) {
             const std::size_t step = remaining >= chunk_size ? chunk_size : remaining;
@@ -218,6 +219,7 @@ private:
             const uint32_t child = layer + 1;
             if (!layers_[child].free_list.empty()) continue;
             if (layers_[layer].free_list.empty()) {
+                using namespace orteaf::internal::diagnostics::error;
                 throwError(OrteafErrc::OutOfMemory, "Failed to refill parent layer");
             }
             splitOne(layer, child);

@@ -41,25 +41,25 @@ TEST(HierarchicalChunkLocator, ReusesSpanWithoutExtraReserve) {
 
     // ルート拡張は最初の一回だけ
     void* base = reinterpret_cast<void*>(0x1000);
-    EXPECT_CALL(impl, reserve(256, _, device, stream))
+    EXPECT_CALL(impl, reserve(256, device, stream))
         .Times(2)
-        .WillOnce([&](std::size_t, std::size_t, Device, Stream) {
+        .WillOnce([&](std::size_t, Device, Stream) {
             return BufferView{base, 0, 256};
         });
 
     EXPECT_CALL(impl, map(_, device, context, stream)).Times(4).WillRepeatedly(ReturnArg<0>());
-    EXPECT_CALL(impl, unmap(_, _, _, device, context, stream)).Times(4);
+    EXPECT_CALL(impl, unmap(_, _, device, context, stream)).Times(4);
 
     auto b1 = policy.allocate(128);
     auto b2 = policy.allocate(128);
-    policy.deallocate(b1.id, 128, 0);
-    policy.deallocate(b2.id, 128, 0);
+    policy.deallocate(b1.id, 128);
+    policy.deallocate(b2.id, 128);
 
     // ここからは再利用で reserve が増えないことを確認
     auto b3 = policy.allocate(128);
     auto b4 = policy.allocate(128);
-    policy.deallocate(b3.id, 128, 0);
-    policy.deallocate(b4.id, 128, 0);
+    policy.deallocate(b3.id, 128);
+    policy.deallocate(b4.id, 128);
 
     MockCpuResource::reset();
 }
