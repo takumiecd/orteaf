@@ -19,7 +19,7 @@ struct CpuResource {
     using Stream = ::orteaf::internal::backend::BackendTraits<::orteaf::internal::backend::Backend::Cpu>::Stream;
 
     // VA 予約。mmap で PROT_NONE の領域を確保し、PA は map で張る。
-    static BufferView reserve(std::size_t size, std::size_t /*alignment*/, Device /*device*/, Stream /*stream*/) {
+    static BufferView reserve(std::size_t size, Device /*device*/, Stream /*stream*/) {
         if (size == 0) {
             return {};
         }
@@ -57,7 +57,7 @@ struct CpuResource {
         return view;
     }
 
-    static void unmap(BufferView view, std::size_t size, std::size_t /*alignment*/,
+    static void unmap(BufferView view, std::size_t size,
                       Device /*device*/, Context /*context*/, Stream /*stream*/) {
         if (!view) return;
         void* base = reinterpret_cast<char*>(view.data()) - view.offset();
