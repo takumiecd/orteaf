@@ -10,6 +10,8 @@
 #include "orteaf/internal/base/strong_id.h"
 #include "orteaf/internal/runtime/allocator/memory_block.h"
 #include "orteaf/internal/runtime/allocator/policies/chunk_locator/chunk_locator_config.h"
+#include "orteaf/internal/diagnostics/error/error.h"
+#include "orteaf/internal/diagnostics/error/error_macros.h"
 
 namespace orteaf::internal::runtime::allocator::policies {
 
@@ -52,6 +54,7 @@ public:
      * @param resource リソース管理オブジェクト（非所有）
      */
     void initialize(const Config& config, Resource* resource) {
+        ORTEAF_THROW_IF_NULL(resource, "DirectChunkLocatorPolicy requires non-null Resource*");
         config_ = config;
         resource_ = resource;
     }
@@ -64,9 +67,8 @@ public:
      */
     MemoryBlock addChunk(std::size_t size, std::size_t alignment) {
         std::lock_guard<std::mutex> lock(mutex_);
-        if (size == 0 || resource_ == nullptr) {
-            return {};
-        }
+        ORTEAF_THROW_IF(resource_ == nullptr, InvalidState, "DirectChunkLocatorPolicy is not initialized");
+        ORTEAF_THROW_IF(size == 0, InvalidParameter, "size must be non-zero");
 
         BufferView base = resource_->allocate(size, alignment, config_.device, config_.stream);
         if (!base) {
