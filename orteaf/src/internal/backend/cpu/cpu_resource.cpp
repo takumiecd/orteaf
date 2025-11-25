@@ -12,7 +12,7 @@ void CpuResource::initialize(const Config& /*config*/) noexcept {
     // CPU backend is stateless; nothing to do.
 }
 
-CpuResource::BufferView CpuResource::reserve(std::size_t size, Device /*device*/, Stream /*stream*/) {
+CpuResource::HeapRegion CpuResource::reserve(std::size_t size, Device /*device*/, Stream /*stream*/) {
     if (size == 0) {
         return {};
     }
@@ -20,7 +20,7 @@ CpuResource::BufferView CpuResource::reserve(std::size_t size, Device /*device*/
     if (base == MAP_FAILED) {
         diagnostics::error::throwError(diagnostics::error::OrteafErrc::OutOfMemory, "cpu reserve mmap failed");
     }
-    return BufferView{base, 0, size};
+    return HeapRegion{base, size};
 }
 
 CpuResource::BufferView CpuResource::allocate(std::size_t size, std::size_t alignment,
@@ -41,21 +41,21 @@ void CpuResource::deallocate(BufferView view, std::size_t size, std::size_t /*al
     cpu::dealloc(base, size);
 }
 
-CpuResource::BufferView CpuResource::map(BufferView view, Device /*device*/,
+CpuResource::BufferView CpuResource::map(HeapRegion region, Device /*device*/,
                                          Context /*context*/, Stream /*stream*/) {
-    if (!view) return view;
-    void* base = reinterpret_cast<char*>(view.data()) - view.offset();
-    if (mprotect(base, view.size(), PROT_READ | PROT_WRITE) != 0) {
+    if (!region) return {};
+    void* base = region.data();
+    if (mprotect(base, region.size(), PROT_READ | PROT_WRITE) != 0) {
         diagnostics::error::throwError(diagnostics::error::OrteafErrc::OperationFailed, "cpu map mprotect failed");
     }
-    return view;
+    return BufferView{base, 0, region.size()};
 }
 
-void CpuResource::unmap(BufferView view, std::size_t size,
+void CpuResource::unmap(HeapRegion region,
                         Device /*device*/, Context /*context*/, Stream /*stream*/) {
-    if (!view) return;
-    void* base = reinterpret_cast<char*>(view.data()) - view.offset();
-    if (munmap(base, size) != 0) {
+    if (!region) return;
+    void* base = region.data();
+    if (munmap(base, region.size()) != 0) {
         diagnostics::error::throwError(diagnostics::error::OrteafErrc::OperationFailed, "cpu unmap munmap failed");
     }
 }
