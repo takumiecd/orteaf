@@ -1,7 +1,5 @@
 #pragma once
 
-#include "orteaf/internal/diagnostics/error/error.h"
-
 /**
  * @file error_macros.h
  * @brief エラーハンドリング用のヘルパーマクロ。
@@ -9,9 +7,11 @@
  * throwError / fatalError の呼び出しを簡潔に記述するためのマクロを提供する。
  */
 
+#include "orteaf/internal/diagnostics/error/error.h"
+
 namespace orteaf::internal::diagnostics::error {
 
-// 内部ヘルパー: namespace 修飾を省略して throwError を呼び出す
+/// @brief 内部ヘルパー: namespace 修飾を省略して throwError を呼び出す
 template <typename... Args>
 [[noreturn]] inline void throwErrorHelper(OrteafErrc errc, Args&&... args) {
     throwError(errc, std::forward<Args>(args)...);
@@ -58,16 +58,3 @@ template <typename... Args>
 #define ORTEAF_THROW_IF_NULL(ptr, msg) \
     ORTEAF_THROW_IF((ptr) == nullptr, NullPointer, msg)
 
-#if ORTEAF_CORE_DEBUG_ENABLED
-/**
- * @brief デバッグビルドでのみ条件チェックを行い、失敗時に例外を送出する。
- * @param cond 評価する条件式
- * @param code OrteafErrc のメンバ名
- * @param msg エラーメッセージ
- */
-#define ORTEAF_DEBUG_THROW_IF(cond, code, msg) ORTEAF_THROW_IF(cond, code, msg)
-#define ORTEAF_DEBUG_THROW_UNLESS(cond, code, msg) ORTEAF_THROW_UNLESS(cond, code, msg)
-#else
-#define ORTEAF_DEBUG_THROW_IF(cond, code, msg) ((void)0)
-#define ORTEAF_DEBUG_THROW_UNLESS(cond, code, msg) ((void)0)
-#endif
