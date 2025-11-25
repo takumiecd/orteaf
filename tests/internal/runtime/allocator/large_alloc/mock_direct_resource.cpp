@@ -96,7 +96,7 @@ TEST(DirectResourceLargeAlloc, LogsDebugWhenMetadataMismatches) {
     ::testing::NiceMock<MockCpuResourceImpl> impl;
     MockCpuResource::set(&impl);
     ::orteaf::internal::backend::cpu::CpuBufferView view{reinterpret_cast<void*>(0x3), 0, 64};
-    EXPECT_CALL(impl, allocate(64, 16, device, stream)).WillOnce(Return(view));
+    EXPECT_CALL(impl, allocate(64, 16, stream)).WillOnce(Return(view));
     EXPECT_CALL(impl, deallocate(view, 32, 8, stream)).Times(1);
 
     auto block = policy.allocate(64, 16);

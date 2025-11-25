@@ -1086,7 +1086,7 @@ TEST_F(HierarchicalChunkLocatorTest, InitialBytesLargerThanChunkSize) {
     typename Policy::Config cfg{device_, context_, stream_, {256}, /*initial_bytes=*/1024, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0x11000);
-    EXPECT_CALL(impl_, reserve(1024, device_, stream_))
+    EXPECT_CALL(impl_, reserve(1024, stream_))
         .WillOnce(Return(HeapRegion{base, 1024}));
     EXPECT_CALL(impl_, map(_, stream_)).WillRepeatedly(::testing::Invoke(MapReturn));
 
