@@ -123,9 +123,116 @@ TEST(HierarchicalChunkLocator, InitializeFailsWithNullResource) {
     EXPECT_THROW(policy.initialize(cfg, nullptr), std::system_error);
 }
 
+TEST(HierarchicalChunkLocator, InitializeCanBeCalledTwice) {
+    Policy policy;
+    MockCpuResource resource;
+    Device device = 2;
+    Context context = 0;
+    Stream stream = nullptr;
+    typename Policy::Config cfg{device, context, stream, {256}, /*initial_bytes=*/256, /*region_multiplier=*/1};
+
+    NiceMock<MockCpuResourceImpl> impl;
+    MockCpuResource::set(&impl);
+
+    void* base1 = reinterpret_cast<void*>(0x1200);
+    void* base2 = reinterpret_cast<void*>(0x2200);
+    EXPECT_CALL(impl, reserve(256, device, stream))
+        .Times(2)
+        .WillOnce(Return(BufferView{base1, 0, 256}))
+        .WillOnce(Return(BufferView{base2, 0, 256}));
+
+    policy.initialize(cfg, &resource);
+    auto b1 = policy.addChunk(256, 1);
+    EXPECT_TRUE(policy.releaseChunk(b1.id));
+
+    // 2回目の initialize でも reserve が呼ばれ、再初期化できることを確認
+    EXPECT_NO_THROW(policy.initialize(cfg, &resource));
+    auto b2 = policy.addChunk(256, 1);
+    EXPECT_TRUE(policy.releaseChunk(b2.id));
+
+    MockCpuResource::reset();
+}
+
+TEST(HierarchicalChunkLocator, InitializeFailsWhenReserveThrows) {
+    Policy policy;
+    MockCpuResource resource;
+    Device device = 3;
+    Context context = 0;
+    Stream stream = nullptr;
+    typename Policy::Config cfg{device, context, stream, {256}, /*initial_bytes=*/256, /*region_multiplier=*/1};
+
+    NiceMock<MockCpuResourceImpl> impl;
+    MockCpuResource::set(&impl);
+
+    EXPECT_CALL(impl, reserve(256, device, stream))
+        .WillOnce([](std::size_t, Device, Stream) -> BufferView {
+            throw std::system_error(std::make_error_code(std::errc::invalid_argument));
+        });
+
+    EXPECT_THROW(policy.initialize(cfg, &resource), std::system_error);
+    MockCpuResource::reset();
+}
+
 TEST(HierarchicalChunkLocator, AllocateWithoutInitializeThrows) {
     Policy policy;
     EXPECT_THROW(policy.addChunk(64, 1), std::system_error);
+}
+
+TEST(HierarchicalChunkLocator, AddChunkFailsWhenMapThrows) {
+    Policy policy;
+    MockCpuResource resource;
+    Device device = 4;
+    Context context = 0;
+    Stream stream = nullptr;
+    typename Policy::Config cfg{device, context, stream, {256}, /*initial_bytes=*/256, /*region_multiplier=*/1};
+
+    NiceMock<MockCpuResourceImpl> impl;
+    MockCpuResource::set(&impl);
+
+    void* base = reinterpret_cast<void*>(0x1400);
+    EXPECT_CALL(impl, reserve(256, device, stream))
+        .WillOnce(Return(BufferView{base, 0, 256}));
+    EXPECT_CALL(impl, map(_, device, context, stream))
+        .WillOnce([](BufferView, Device, Context, Stream) -> BufferView {
+            throw std::system_error(std::make_error_code(std::errc::bad_message));
+        });
+
+    policy.initialize(cfg, &resource);
+    EXPECT_THROW(policy.addChunk(128, 1), std::system_error);
+
+    MockCpuResource::reset();
+}
+
+TEST(HierarchicalChunkLocator, LevelsMustBeNonIncreasing) {
+    Policy policy;
+    MockCpuResource resource;
+    typename Policy::Config cfg{/*device=*/1, /*context=*/0, /*stream=*/nullptr, {128, 256}, /*initial_bytes=*/256, /*region_multiplier=*/1};
+    EXPECT_THROW(policy.initialize(cfg, &resource), std::system_error);
+}
+
+TEST(HierarchicalChunkLocator, ThresholdValidationFailsForInvalidValues) {
+    Policy policy;
+    MockCpuResource resource;
+
+    // threshold がシステム最小より小さい
+    typename Policy::Config cfg_small{/*device=*/1, /*context=*/0, /*stream=*/nullptr, {128}, /*initial_bytes=*/128, /*region_multiplier=*/1, /*threshold=*/alignof(double) / 2};
+    EXPECT_THROW(policy.initialize(cfg_small, &resource), std::system_error);
+
+    // threshold が非2の冪乗
+    typename Policy::Config cfg_non_pow2{/*device=*/1, /*context=*/0, /*stream=*/nullptr, {128}, /*initial_bytes=*/128, /*region_multiplier=*/1, /*threshold=*/24};
+    EXPECT_THROW(policy.initialize(cfg_non_pow2, &resource), std::system_error);
+
+    // threshold 以下のレベルが 2 の冪乗でない
+    typename Policy::Config cfg_below{/*device=*/1, /*context=*/0, /*stream=*/nullptr, {96, 48, 24}, /*initial_bytes=*/96, /*region_multiplier=*/1, /*threshold=*/32};
+    EXPECT_THROW(policy.initialize(cfg_below, &resource), std::system_error);
+
+    // threshold より大きいレベルが threshold で割り切れない
+    typename Policy::Config cfg_above{/*device=*/1, /*context=*/0, /*stream=*/nullptr, {192, 96, 48}, /*initial_bytes=*/192, /*region_multiplier=*/1, /*threshold=*/64};
+    EXPECT_THROW(policy.initialize(cfg_above, &resource), std::system_error);
+
+    // 妥当な threshold 設定では初期化が成功する
+    typename Policy::Config cfg_ok{/*device=*/1, /*context=*/0, /*stream=*/nullptr, {256, 128, 64}, /*initial_bytes=*/256, /*region_multiplier=*/1, /*threshold=*/64};
+    EXPECT_NO_THROW(policy.initialize(cfg_ok, &resource));
 }
 
 TEST(HierarchicalChunkLocator, ReusesSpanWithoutExtraReserve) {
@@ -266,6 +373,27 @@ TEST_F(HierarchicalChunkLocatorTest, FindChunkSizeReturnsZeroForInvalidId) {
     // 存在しないID
     BufferId invalid{99999};
     EXPECT_EQ(policy_.findChunkSize(invalid), 0);
+}
+
+TEST_F(HierarchicalChunkLocatorTest, IsAliveReflectsSlotState) {
+    typename Policy::Config cfg{device_, context_, stream_, {256}, /*initial_bytes=*/256, /*region_multiplier=*/1};
+
+    void* base = reinterpret_cast<void*>(0x4A00);
+    EXPECT_CALL(impl_, reserve(256, device_, stream_))
+        .WillOnce(Return(BufferView{base, 0, 256}));
+    EXPECT_CALL(impl_, map(_, device_, context_, stream_)).Times(1).WillOnce(ReturnArg<0>());
+    EXPECT_CALL(impl_, unmap(_, _, device_, context_, stream_)).Times(1);
+
+    policy_.initialize(cfg, &resource_);
+    auto block = policy_.addChunk(256, 1);
+
+    EXPECT_TRUE(policy_.isAlive(block.id));
+
+    EXPECT_TRUE(policy_.releaseChunk(block.id));
+    EXPECT_FALSE(policy_.isAlive(block.id));
+
+    BufferId invalid{55555};
+    EXPECT_FALSE(policy_.isAlive(invalid));
 }
 
 // ============================================================================
