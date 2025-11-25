@@ -31,11 +31,21 @@ public:
         stream_ = stream;
     }
 
-    // チャンクを登録し、対応する MemoryBlock を返す（上位ビットは large 判定用に 0 のまま）。
-    MemoryBlock addChunk(BufferView base, std::size_t size, std::size_t block_size) {
+    // チャンクを Resource から確保して登録し、対応する MemoryBlock を返す。
+    // 上位ビットは large 判定用に 0 のまま。
+    MemoryBlock addChunk(std::size_t size, std::size_t block_size, std::size_t alignment) {
         std::lock_guard<std::mutex> lock(mutex_);
+        if (size == 0) {
+            return {};
+        }
+
+        BufferView base = Resource::allocate(size, alignment, device_, stream_);
+        if (!base) {
+            return {};
+        }
+
         const std::size_t slot = reserveSlot();
-        chunks_[slot] = ChunkInfo{base, size, block_size, 0u, 0u, true};
+        chunks_[slot] = ChunkInfo{base, size, block_size, alignment, 0u, 0u, true};
         return MemoryBlock{encodeId(slot), base};
     }
 
@@ -84,7 +94,7 @@ public:
     }
 
     // チャンク全体を解放する（used/pending が 0 のときのみ）。
-    bool releaseChunk(BufferId id, std::size_t alignment = 0) {
+    bool releaseChunk(BufferId id) {
         std::lock_guard<std::mutex> lock(mutex_);
         const std::size_t slot = indexFromId(id);
         if (slot >= chunks_.size()) {
@@ -95,7 +105,7 @@ public:
             return false;
         }
 
-        Resource::deallocate(chunk.base, chunk.size, alignment, device_, stream_);
+        Resource::deallocate(chunk.base, chunk.size, chunk.alignment, device_, stream_);
         chunk = ChunkInfo{};
         free_list_.pushBack(slot);
         return true;
@@ -119,6 +129,7 @@ private:
         BufferView base{};
         std::size_t size{};
         std::size_t block_size{};
+        std::size_t alignment{};
         uint32_t used{};
         uint32_t pending{};
         bool alive{false};

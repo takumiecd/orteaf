@@ -33,13 +33,15 @@ TEST(DirectChunkLocator, ReleaseChunkCallsResourceWhenFree) {
     Stream stream = reinterpret_cast<void*>(0x1234);
     policy.initialize(device, /*context=*/0, stream);
 
-    CpuView view{reinterpret_cast<void*>(0x10), 0, 256};
-    auto block = policy.addChunk(view, 256, 64);
-    BufferId id = block.id;
-
     NiceMock<MockCpuResourceImpl> impl;
     MockCpuResource::set(&impl);
+
+    CpuView view{reinterpret_cast<void*>(0x10), 0, 256};
+    EXPECT_CALL(impl, allocate(256, 0, device, stream)).WillOnce(Return(view));
     EXPECT_CALL(impl, deallocate(view, 256, 0, device, stream)).Times(1);
+
+    auto block = policy.addChunk(256, 64, 0);
+    BufferId id = block.id;
 
     EXPECT_TRUE(policy.releaseChunk(id));
     EXPECT_FALSE(policy.isAlive(id));
@@ -53,14 +55,16 @@ TEST(DirectChunkLocator, ReleaseChunkSkipsWhenInUse) {
     Stream stream = nullptr;
     policy.initialize(device, /*context=*/0, stream);
 
-    CpuView view{reinterpret_cast<void*>(0x20), 0, 128};
-    auto block = policy.addChunk(view, 128, 32);
-    BufferId id = block.id;
-    policy.incrementUsed(id);
-
     NiceMock<MockCpuResourceImpl> impl;
     MockCpuResource::set(&impl);
-    EXPECT_CALL(impl, deallocate(_, _, _, _, _)).Times(1);
+
+    CpuView view{reinterpret_cast<void*>(0x20), 0, 128};
+    EXPECT_CALL(impl, allocate(128, 0, device, stream)).WillOnce(Return(view));
+    EXPECT_CALL(impl, deallocate(view, 128, 0, device, stream)).Times(1);
+
+    auto block = policy.addChunk(128, 32, 0);
+    BufferId id = block.id;
+    policy.incrementUsed(id);
 
     EXPECT_FALSE(policy.releaseChunk(id));
 
@@ -74,14 +78,16 @@ TEST(DirectChunkLocator, PendingBlocksPreventRelease) {
     Policy policy;
     policy.initialize(/*device=*/2, /*context=*/0, /*stream=*/nullptr);
 
-    CpuView view{reinterpret_cast<void*>(0x30), 0, 64};
-    auto block = policy.addChunk(view, 64, 16);
-    BufferId id = block.id;
-    policy.incrementPending(id);
-
     NiceMock<MockCpuResourceImpl> impl;
     MockCpuResource::set(&impl);
-    EXPECT_CALL(impl, deallocate(_, _, _, _, _)).Times(1);
+
+    CpuView view{reinterpret_cast<void*>(0x30), 0, 64};
+    EXPECT_CALL(impl, allocate(64, 0, 2, nullptr)).WillOnce(Return(view));
+    EXPECT_CALL(impl, deallocate(view, 64, 0, 2, nullptr)).Times(1);
+
+    auto block = policy.addChunk(64, 16, 0);
+    BufferId id = block.id;
+    policy.incrementPending(id);
 
     EXPECT_FALSE(policy.releaseChunk(id));
 
@@ -95,10 +101,17 @@ TEST(DirectChunkLocator, FindBlockSizeReturnsRegisteredValue) {
     Policy policy;
     policy.initialize(/*device=*/3, /*context=*/0, /*stream=*/nullptr);
 
+    NiceMock<MockCpuResourceImpl> impl;
+    MockCpuResource::set(&impl);
+
     CpuView view{reinterpret_cast<void*>(0x40), 0, 512};
-    auto block = policy.addChunk(view, 512, 128);
+    EXPECT_CALL(impl, allocate(512, 0, 3, nullptr)).WillOnce(Return(view));
+
+    auto block = policy.addChunk(512, 128, 0);
 
     EXPECT_EQ(policy.findBlockSize(block.id), 128u);
+
+    MockCpuResource::reset();
 }
 
 }  // namespace
