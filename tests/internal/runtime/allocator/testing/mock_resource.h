@@ -23,7 +23,7 @@ public:
     MOCK_METHOD(void, deallocate,
                 (BufferView view, std::size_t size, std::size_t alignment, Stream stream));
     MOCK_METHOD(BufferView, map, (HeapRegion region, Stream stream));
-    MOCK_METHOD(void, unmap, (HeapRegion region, std::size_t size, Stream stream));
+    MOCK_METHOD(void, unmap, (BufferView view, std::size_t size, Stream stream));
 };
 
 // Static-API wrapper that forwards to a shared MockCpuResourceImpl instance.
@@ -49,8 +49,8 @@ struct MockCpuResource {
         return impl_ ? impl_->map(region, stream) : BufferView{};
     }
 
-    static void unmap(HeapRegion region, std::size_t size, Stream stream) {
-        if (impl_) impl_->unmap(region, size, stream);
+    static void unmap(BufferView view, std::size_t size, Stream stream) {
+        if (impl_) impl_->unmap(view, size, stream);
     }
 
 private:

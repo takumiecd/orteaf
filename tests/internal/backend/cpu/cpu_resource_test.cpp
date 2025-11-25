@@ -27,7 +27,7 @@ TEST(CpuResourceTest, ReserveMapUnmapRoundTrip) {
     EXPECT_EQ(mapped.size(), kSize);
 
     // Should not throw
-    CpuResource::unmap(region, kSize, {});
+    CpuResource::unmap(mapped, kSize, {});
 }
 
 TEST(CpuResourceTest, AllocateZeroReturnsEmpty) {
@@ -50,7 +50,7 @@ TEST(CpuResourceTest, AllocateAndDeallocateSucceeds) {
 
 TEST(CpuResourceTest, MapUnmapOnEmptyIsNoOp) {
     CpuResource::map({}, {});          // no-throw
-    CpuResource::unmap({}, 0, {});     // no-throw
+    CpuResource::unmap(CpuResource::BufferView{}, 0, {});     // no-throw
     SUCCEED();
 }
 
