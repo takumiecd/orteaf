@@ -12,22 +12,22 @@ TEST(CpuResourceTest, InitializeIsIdempotent) {
 }
 
 TEST(CpuResourceTest, ReserveZeroReturnsEmpty) {
-    auto view = CpuResource::reserve(0, {}, {});
-    EXPECT_FALSE(view);
+    auto region = CpuResource::reserve(0, {}, {});
+    EXPECT_FALSE(region);
 }
 
 TEST(CpuResourceTest, ReserveMapUnmapRoundTrip) {
     constexpr std::size_t kSize = 4096;
-    auto view = CpuResource::reserve(kSize, {}, {});
-    ASSERT_TRUE(view);
-    EXPECT_EQ(view.size(), kSize);
+    auto region = CpuResource::reserve(kSize, {}, {});
+    ASSERT_TRUE(region);
+    EXPECT_EQ(region.size(), kSize);
 
-    auto mapped = CpuResource::map(view, {}, {}, {});
+    auto mapped = CpuResource::map(region, {}, {}, {});
     EXPECT_TRUE(mapped);
     EXPECT_EQ(mapped.size(), kSize);
 
     // Should not throw
-    CpuResource::unmap(mapped, kSize, {}, {}, {});
+    CpuResource::unmap(region, {}, {}, {});
 }
 
 TEST(CpuResourceTest, AllocateZeroReturnsEmpty) {
@@ -50,7 +50,7 @@ TEST(CpuResourceTest, AllocateAndDeallocateSucceeds) {
 
 TEST(CpuResourceTest, MapUnmapOnEmptyIsNoOp) {
     CpuResource::map({}, {}, {}, {});          // no-throw
-    CpuResource::unmap({}, 0, {}, {}, {});     // no-throw
+    CpuResource::unmap({}, {}, {}, {});        // no-throw
     SUCCEED();
 }
 
