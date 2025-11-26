@@ -8,6 +8,7 @@
 #include "orteaf/internal/backend/backend.h"
 #include "orteaf/internal/backend/backend_traits.h"
 #include "orteaf/internal/base/heap_vector.h"
+#include "orteaf/internal/base/math_utils.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include "orteaf/internal/diagnostics/error/error_macros.h"
 
@@ -32,6 +33,7 @@ public:
         std::vector<std::size_t> levels;  // 大きい順: {1MB, 256KB, 64KB}
         std::size_t initial_bytes{0};
         std::size_t region_multiplier{1};
+        std::size_t threshold{0};  // 2の冪乗。threshold以下は2の冪乗で刻む
     };
 
     void initialize(const Config& config, HeapOps* heap_ops) {
@@ -40,6 +42,7 @@ public:
 
         ORTEAF_THROW_IF_NULL(heap_ops_, "HierarchicalSlotAllocator requires non-null HeapOps*");
         ORTEAF_THROW_IF(config.levels.empty(), InvalidParameter, "levels must not be empty");
+        validateLevels(config.levels, config.threshold);
         ORTEAF_THROW_IF(
             config.initial_bytes > 0 && (config.initial_bytes % config.levels[0]) != 0,
             InvalidParameter,
@@ -87,6 +90,7 @@ public:
 private:
     static constexpr uint32_t kNoParent = UINT32_MAX;
     static constexpr uint32_t kInvalidLayer = UINT32_MAX;
+    static constexpr std::size_t kSystemMinThreshold = alignof(double);
 
     struct Slot {
         HeapRegion region{};
@@ -116,6 +120,35 @@ private:
             }
         }
         return best;
+    }
+
+    static void validateLevels(const std::vector<std::size_t>& levels, std::size_t threshold) {
+        // threshold validation
+        if (threshold != 0) {
+            ORTEAF_THROW_IF(threshold < kSystemMinThreshold, InvalidParameter,
+                            "threshold must be >= system minimum");
+            ORTEAF_THROW_UNLESS(base::isPowerOfTwo(threshold), InvalidParameter,
+                                "threshold must be power of two");
+        }
+
+        for (std::size_t i = 0; i < levels.size(); ++i) {
+            ORTEAF_THROW_IF(levels[i] == 0, InvalidParameter, "levels must be non-zero");
+
+            if (i == 0) continue;
+
+            ORTEAF_THROW_IF(levels[i - 1] < levels[i], InvalidParameter, "levels must be non-increasing");
+            ORTEAF_THROW_IF(levels[i - 1] % levels[i] != 0, InvalidParameter, "adjacent levels must be divisible");
+
+            // threshold constraints
+            if (threshold != 0 && levels[i] < threshold) {
+                ORTEAF_THROW_UNLESS(base::isPowerOfTwo(levels[i]), InvalidParameter,
+                                    "levels below threshold must be power of two");
+            }
+            if (threshold != 0 && levels[i] > threshold) {
+                ORTEAF_THROW_IF(levels[i] % threshold != 0, InvalidParameter,
+                                "levels above threshold must be divisible by threshold");
+            }
+        }
     }
 
     static bool hasFreeSlot(const Layer& layer) noexcept {
