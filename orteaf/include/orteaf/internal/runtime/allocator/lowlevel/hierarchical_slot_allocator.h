@@ -39,6 +39,12 @@ public:
         heap_ops_ = heap_ops;
 
         ORTEAF_THROW_IF_NULL(heap_ops_, "HierarchicalSlotAllocator requires non-null HeapOps*");
+        ORTEAF_THROW_IF(config.levels.empty(), InvalidParameter, "levels must not be empty");
+        ORTEAF_THROW_IF(
+            config.initial_bytes > 0 && (config.initial_bytes % config.levels[0]) != 0,
+            InvalidParameter,
+            "initial_bytes must be a multiple of levels[0]"
+        );
 
         layers_.clear();
         for (auto size : config.levels) {
@@ -46,12 +52,10 @@ public:
         }
 
         std::size_t initial = config.initial_bytes;
-        if (initial == 0 && !config.levels.empty()) {
+        if (initial == 0) {
             initial = config.levels[0];
         }
-        if (initial > 0) {
-            addRegion(initial);
-        }
+        addRegion(initial);
     }
 
     BufferView allocate(std::size_t size) {
