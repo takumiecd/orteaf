@@ -1,4 +1,4 @@
-#include "orteaf/internal/runtime/allocator/lowlevel/hierarchical_chunk_locator.h"
+#include "orteaf/internal/runtime/allocator/lowlevel/hierarchical_slot_allocator.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -29,7 +29,7 @@ using ::orteaf::internal::runtime::allocator::testing::MockCpuHeapOpsImpl;
 
 namespace {
 
-using Policy = policies::HierarchicalChunkLocator<MockCpuHeapOps, Backend::Cpu>;
+using Policy = policies::HierarchicalSlotAllocator<MockCpuHeapOps, Backend::Cpu>;
 
 static BufferView MapReturn(HeapRegion region) {
     return BufferView{region.data(), 0, region.size()};
@@ -73,7 +73,7 @@ std::string DumpSnapshot(const Policy& policy, const char* title) {
 }
 
 // テスト用フィクスチャ
-class HierarchicalChunkLocatorTest : public ::testing::Test {
+class HierarchicalSlotAllocatorTest : public ::testing::Test {
 protected:
     void SetUp() override {
         MockCpuHeapOps::set(&impl_);
@@ -88,7 +88,7 @@ protected:
     Policy policy_;
 };
 
-TEST(HierarchicalChunkLocator, InitializeReservesRootAndReusesBlocks) {
+TEST(HierarchicalSlotAllocator, InitializeReservesRootAndReusesBlocks) {
     Policy policy;
     MockCpuHeapOps heap_ops;
     
@@ -118,7 +118,7 @@ TEST(HierarchicalChunkLocator, InitializeReservesRootAndReusesBlocks) {
     MockCpuHeapOps::reset();
 }
 
-TEST(HierarchicalChunkLocator, InitializeFailsWithNullResource) {
+TEST(HierarchicalSlotAllocator, InitializeFailsWithNullResource) {
     Policy policy;
     MockCpuHeapOps heap_ops;
     typename Policy::Config cfg{{128}, /*initial_bytes=*/128, /*region_multiplier=*/1};
@@ -126,7 +126,7 @@ TEST(HierarchicalChunkLocator, InitializeFailsWithNullResource) {
                                [&] { policy.initialize(cfg, nullptr); });
 }
 
-TEST(HierarchicalChunkLocator, InitializeCanBeCalledTwice) {
+TEST(HierarchicalSlotAllocator, InitializeCanBeCalledTwice) {
     Policy policy;
     MockCpuHeapOps heap_ops;
     
@@ -156,7 +156,7 @@ TEST(HierarchicalChunkLocator, InitializeCanBeCalledTwice) {
     MockCpuHeapOps::reset();
 }
 
-TEST(HierarchicalChunkLocator, InitializeFailsWhenReserveThrows) {
+TEST(HierarchicalSlotAllocator, InitializeFailsWhenReserveThrows) {
     Policy policy;
     MockCpuHeapOps heap_ops;
     
@@ -176,13 +176,13 @@ TEST(HierarchicalChunkLocator, InitializeFailsWhenReserveThrows) {
     MockCpuHeapOps::reset();
 }
 
-TEST(HierarchicalChunkLocator, AllocateWithoutInitializeThrows) {
+TEST(HierarchicalSlotAllocator, AllocateWithoutInitializeThrows) {
     Policy policy;
     orteaf::tests::ExpectError(::orteaf::internal::diagnostics::error::OrteafErrc::OutOfMemory,
                                [&] { policy.addChunk(64, 1); });
 }
 
-TEST(HierarchicalChunkLocator, AddChunkFailsWhenMapThrows) {
+TEST(HierarchicalSlotAllocator, AddChunkFailsWhenMapThrows) {
     Policy policy;
     MockCpuHeapOps heap_ops;
     
@@ -207,7 +207,7 @@ TEST(HierarchicalChunkLocator, AddChunkFailsWhenMapThrows) {
     MockCpuHeapOps::reset();
 }
 
-TEST(HierarchicalChunkLocator, LevelsMustBeNonIncreasing) {
+TEST(HierarchicalSlotAllocator, LevelsMustBeNonIncreasing) {
     Policy policy;
     MockCpuHeapOps heap_ops;
     typename Policy::Config cfg{{128, 256}, /*initial_bytes=*/256, /*region_multiplier=*/1};
@@ -215,7 +215,7 @@ TEST(HierarchicalChunkLocator, LevelsMustBeNonIncreasing) {
                                [&] { policy.initialize(cfg, &heap_ops); });
 }
 
-TEST(HierarchicalChunkLocator, ThresholdValidationFailsForInvalidValues) {
+TEST(HierarchicalSlotAllocator, ThresholdValidationFailsForInvalidValues) {
     Policy policy;
     MockCpuHeapOps heap_ops;
 
@@ -244,7 +244,7 @@ TEST(HierarchicalChunkLocator, ThresholdValidationFailsForInvalidValues) {
     EXPECT_NO_THROW(policy.initialize(cfg_ok, &heap_ops));
 }
 
-TEST(HierarchicalChunkLocator, ReusesSpanWithoutExtraReserve) {
+TEST(HierarchicalSlotAllocator, ReusesSpanWithoutExtraReserve) {
     Policy policy;
     MockCpuHeapOps heap_ops;
     
@@ -279,7 +279,7 @@ TEST(HierarchicalChunkLocator, ReusesSpanWithoutExtraReserve) {
     MockCpuHeapOps::reset();
 }
 
-TEST(HierarchicalChunkLocator, SplitMergeAndReuseAcrossLayers) {
+TEST(HierarchicalSlotAllocator, SplitMergeAndReuseAcrossLayers) {
     Policy policy;
     MockCpuHeapOps heap_ops;
     
@@ -323,7 +323,7 @@ TEST(HierarchicalChunkLocator, SplitMergeAndReuseAcrossLayers) {
 }
 
 #if ORTEAF_CORE_DEBUG_ENABLED
-TEST(HierarchicalChunkLocator, LargeIdThrowsInDebug) {
+TEST(HierarchicalSlotAllocator, LargeIdThrowsInDebug) {
     Policy policy;
     MockCpuHeapOps heap_ops;
     
@@ -348,7 +348,7 @@ TEST(HierarchicalChunkLocator, LargeIdThrowsInDebug) {
 // findChunkSize のテスト
 // ============================================================================
 
-TEST_F(HierarchicalChunkLocatorTest, FindChunkSizeReturnsCorrectSize) {
+TEST_F(HierarchicalSlotAllocatorTest, FindChunkSizeReturnsCorrectSize) {
     typename Policy::Config cfg{{512, 256, 128}, /*initial_bytes=*/512, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0x4000);
@@ -372,7 +372,7 @@ TEST_F(HierarchicalChunkLocatorTest, FindChunkSizeReturnsCorrectSize) {
     EXPECT_EQ(policy_.findChunkSize(b3.id), 512);
 }
 
-TEST_F(HierarchicalChunkLocatorTest, FindChunkSizeReturnsZeroForInvalidId) {
+TEST_F(HierarchicalSlotAllocatorTest, FindChunkSizeReturnsZeroForInvalidId) {
     typename Policy::Config cfg{{256}, /*initial_bytes=*/256, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0x4000);
@@ -386,7 +386,7 @@ TEST_F(HierarchicalChunkLocatorTest, FindChunkSizeReturnsZeroForInvalidId) {
     EXPECT_EQ(policy_.findChunkSize(invalid), 0);
 }
 
-TEST_F(HierarchicalChunkLocatorTest, IsAliveReflectsSlotState) {
+TEST_F(HierarchicalSlotAllocatorTest, IsAliveReflectsSlotState) {
     typename Policy::Config cfg{{256}, /*initial_bytes=*/256, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0x4A00);
@@ -415,7 +415,7 @@ TEST_F(HierarchicalChunkLocatorTest, IsAliveReflectsSlotState) {
 // incrementUsed / decrementUsed のテスト
 // ============================================================================
 
-TEST_F(HierarchicalChunkLocatorTest, IncrementAndDecrementUsed) {
+TEST_F(HierarchicalSlotAllocatorTest, IncrementAndDecrementUsed) {
     typename Policy::Config cfg{{256}, /*initial_bytes=*/256, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0x5000);
@@ -445,7 +445,7 @@ TEST_F(HierarchicalChunkLocatorTest, IncrementAndDecrementUsed) {
     EXPECT_TRUE(policy_.releaseChunk(b.id));
 }
 
-TEST_F(HierarchicalChunkLocatorTest, DecrementUsedDoesNotUnderflow) {
+TEST_F(HierarchicalSlotAllocatorTest, DecrementUsedDoesNotUnderflow) {
     typename Policy::Config cfg{{256}, /*initial_bytes=*/256, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0x5100);
@@ -469,7 +469,7 @@ TEST_F(HierarchicalChunkLocatorTest, DecrementUsedDoesNotUnderflow) {
 // incrementPending / decrementPending のテスト
 // ============================================================================
 
-TEST_F(HierarchicalChunkLocatorTest, IncrementAndDecrementPending) {
+TEST_F(HierarchicalSlotAllocatorTest, IncrementAndDecrementPending) {
     typename Policy::Config cfg{{256}, /*initial_bytes=*/256, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0x6000);
@@ -495,7 +495,7 @@ TEST_F(HierarchicalChunkLocatorTest, IncrementAndDecrementPending) {
     EXPECT_TRUE(policy_.releaseChunk(b.id));
 }
 
-TEST_F(HierarchicalChunkLocatorTest, DecrementPendingDoesNotUnderflow) {
+TEST_F(HierarchicalSlotAllocatorTest, DecrementPendingDoesNotUnderflow) {
     typename Policy::Config cfg{{256}, /*initial_bytes=*/256, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0x6100);
@@ -519,7 +519,7 @@ TEST_F(HierarchicalChunkLocatorTest, DecrementPendingDoesNotUnderflow) {
 // decrementPendingAndUsed のテスト
 // ============================================================================
 
-TEST_F(HierarchicalChunkLocatorTest, DecrementPendingAndUsed) {
+TEST_F(HierarchicalSlotAllocatorTest, DecrementPendingAndUsed) {
     typename Policy::Config cfg{{256}, /*initial_bytes=*/256, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0x7000);
@@ -544,7 +544,7 @@ TEST_F(HierarchicalChunkLocatorTest, DecrementPendingAndUsed) {
     EXPECT_TRUE(policy_.releaseChunk(b.id));
 }
 
-TEST_F(HierarchicalChunkLocatorTest, DecrementPendingAndUsedMultipleTimes) {
+TEST_F(HierarchicalSlotAllocatorTest, DecrementPendingAndUsedMultipleTimes) {
     typename Policy::Config cfg{{256}, /*initial_bytes=*/256, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0x7100);
@@ -572,7 +572,7 @@ TEST_F(HierarchicalChunkLocatorTest, DecrementPendingAndUsedMultipleTimes) {
 // releaseChunk の失敗ケース（used/pending残存）のテスト
 // ============================================================================
 
-TEST_F(HierarchicalChunkLocatorTest, ReleaseChunkFailsWhenUsedRemains) {
+TEST_F(HierarchicalSlotAllocatorTest, ReleaseChunkFailsWhenUsedRemains) {
     typename Policy::Config cfg{{256}, /*initial_bytes=*/256, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0x8000);
@@ -587,7 +587,7 @@ TEST_F(HierarchicalChunkLocatorTest, ReleaseChunkFailsWhenUsedRemains) {
     EXPECT_FALSE(policy_.releaseChunk(b.id));
 }
 
-TEST_F(HierarchicalChunkLocatorTest, ReleaseChunkFailsWhenPendingRemains) {
+TEST_F(HierarchicalSlotAllocatorTest, ReleaseChunkFailsWhenPendingRemains) {
     typename Policy::Config cfg{{256}, /*initial_bytes=*/256, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0x8100);
@@ -602,7 +602,7 @@ TEST_F(HierarchicalChunkLocatorTest, ReleaseChunkFailsWhenPendingRemains) {
     EXPECT_FALSE(policy_.releaseChunk(b.id));
 }
 
-TEST_F(HierarchicalChunkLocatorTest, ReleaseChunkFailsForInvalidState) {
+TEST_F(HierarchicalSlotAllocatorTest, ReleaseChunkFailsForInvalidState) {
     typename Policy::Config cfg{{256}, /*initial_bytes=*/256, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0x8200);
@@ -621,7 +621,7 @@ TEST_F(HierarchicalChunkLocatorTest, ReleaseChunkFailsForInvalidState) {
     EXPECT_FALSE(policy_.releaseChunk(b.id));
 }
 
-TEST_F(HierarchicalChunkLocatorTest, ReleaseChunkFailsForInvalidId) {
+TEST_F(HierarchicalSlotAllocatorTest, ReleaseChunkFailsForInvalidId) {
     typename Policy::Config cfg{{256}, /*initial_bytes=*/256, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0x8300);
@@ -639,7 +639,7 @@ TEST_F(HierarchicalChunkLocatorTest, ReleaseChunkFailsForInvalidId) {
 // pickLayer（サイズクラス選択）のテスト
 // ============================================================================
 
-TEST_F(HierarchicalChunkLocatorTest, PickLayerSelectsSmallestSufficientLayer) {
+TEST_F(HierarchicalSlotAllocatorTest, PickLayerSelectsSmallestSufficientLayer) {
     typename Policy::Config cfg{{1024, 512, 256, 128}, /*initial_bytes=*/1024, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0x9000);
@@ -670,7 +670,7 @@ TEST_F(HierarchicalChunkLocatorTest, PickLayerSelectsSmallestSufficientLayer) {
     EXPECT_EQ(policy_.findChunkSize(b5.id), 1024);
 }
 
-TEST_F(HierarchicalChunkLocatorTest, AddChunkFailsWhenRequestExceedsAllLayers) {
+TEST_F(HierarchicalSlotAllocatorTest, AddChunkFailsWhenRequestExceedsAllLayers) {
     typename Policy::Config cfg{{256, 128}, /*initial_bytes=*/256, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0x9100);
@@ -688,7 +688,7 @@ TEST_F(HierarchicalChunkLocatorTest, AddChunkFailsWhenRequestExceedsAllLayers) {
 // region_multiplier の動作テスト
 // ============================================================================
 
-TEST_F(HierarchicalChunkLocatorTest, RegionMultiplierAllocatesMultipleChunks) {
+TEST_F(HierarchicalSlotAllocatorTest, RegionMultiplierAllocatesMultipleChunks) {
     // initial_bytes=0 と region_multiplier=4 の場合:
     // initial_bytes=0 なら levels[0]=256 が initial になり、初期化時に 256 バイト確保。
     // その後 ensureFreeSlot で addRegion が呼ばれる際に region_multiplier が適用される。
@@ -715,7 +715,7 @@ TEST_F(HierarchicalChunkLocatorTest, RegionMultiplierAllocatesMultipleChunks) {
     EXPECT_NE(b4.view.data(), nullptr);
 }
 
-TEST_F(HierarchicalChunkLocatorTest, RegionMultiplierZeroDefaultsToOne) {
+TEST_F(HierarchicalSlotAllocatorTest, RegionMultiplierZeroDefaultsToOne) {
     typename Policy::Config cfg{{256}, /*initial_bytes=*/0, /*region_multiplier=*/0};
 
     void* base = reinterpret_cast<void*>(0xA100);
@@ -733,7 +733,7 @@ TEST_F(HierarchicalChunkLocatorTest, RegionMultiplierZeroDefaultsToOne) {
 // 無効なIDでの操作テスト
 // ============================================================================
 
-TEST_F(HierarchicalChunkLocatorTest, IncrementUsedOnInvalidIdDoesNothing) {
+TEST_F(HierarchicalSlotAllocatorTest, IncrementUsedOnInvalidIdDoesNothing) {
     typename Policy::Config cfg{{256}, /*initial_bytes=*/256, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0xB000);
@@ -751,7 +751,7 @@ TEST_F(HierarchicalChunkLocatorTest, IncrementUsedOnInvalidIdDoesNothing) {
     policy_.decrementPendingAndUsed(invalid);
 }
 
-TEST_F(HierarchicalChunkLocatorTest, OperationsOnFreedSlotDoNothing) {
+TEST_F(HierarchicalSlotAllocatorTest, OperationsOnFreedSlotDoNothing) {
     typename Policy::Config cfg{{256}, /*initial_bytes=*/256, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0xB100);
@@ -777,7 +777,7 @@ TEST_F(HierarchicalChunkLocatorTest, OperationsOnFreedSlotDoNothing) {
 // 空のレベル設定での動作テスト
 // ============================================================================
 
-TEST_F(HierarchicalChunkLocatorTest, EmptyLevelsWithZeroInitialBytes) {
+TEST_F(HierarchicalSlotAllocatorTest, EmptyLevelsWithZeroInitialBytes) {
     typename Policy::Config cfg{{}, /*initial_bytes=*/0, /*region_multiplier=*/1};
 
     // 空のlevelsでは初期確保は行われない
@@ -793,7 +793,7 @@ TEST_F(HierarchicalChunkLocatorTest, EmptyLevelsWithZeroInitialBytes) {
 // ============================================================================
 
 #if ORTEAF_CORE_DEBUG_ENABLED
-TEST_F(HierarchicalChunkLocatorTest, SnapshotReturnsCorrectState) {
+TEST_F(HierarchicalSlotAllocatorTest, SnapshotReturnsCorrectState) {
     typename Policy::Config cfg{{512, 256}, /*initial_bytes=*/512, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0xC000);
@@ -820,7 +820,7 @@ TEST_F(HierarchicalChunkLocatorTest, SnapshotReturnsCorrectState) {
     EXPECT_GT(snap2.layers[1].slots.size(), 0);
 }
 
-TEST_F(HierarchicalChunkLocatorTest, ValidatePassesOnValidState) {
+TEST_F(HierarchicalSlotAllocatorTest, ValidatePassesOnValidState) {
     typename Policy::Config cfg{{512, 256, 128}, /*initial_bytes=*/512, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0xC100);
@@ -850,7 +850,7 @@ TEST_F(HierarchicalChunkLocatorTest, ValidatePassesOnValidState) {
 // 複数リージョン追加のテスト
 // ============================================================================
 
-TEST_F(HierarchicalChunkLocatorTest, MultipleRegionsAreAddedWhenExhausted) {
+TEST_F(HierarchicalSlotAllocatorTest, MultipleRegionsAreAddedWhenExhausted) {
     typename Policy::Config cfg{{256}, /*initial_bytes=*/256, /*region_multiplier=*/1};
 
     void* base1 = reinterpret_cast<void*>(0xD000);
@@ -875,7 +875,7 @@ TEST_F(HierarchicalChunkLocatorTest, MultipleRegionsAreAddedWhenExhausted) {
 // エッジケース（境界値）のテスト
 // ============================================================================
 
-TEST_F(HierarchicalChunkLocatorTest, ZeroSizeAllocationUsesSmallestLayer) {
+TEST_F(HierarchicalSlotAllocatorTest, ZeroSizeAllocationUsesSmallestLayer) {
     typename Policy::Config cfg{{256, 128, 64}, /*initial_bytes=*/256, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0xE000);
@@ -890,7 +890,7 @@ TEST_F(HierarchicalChunkLocatorTest, ZeroSizeAllocationUsesSmallestLayer) {
     EXPECT_EQ(policy_.findChunkSize(b.id), 64);
 }
 
-TEST_F(HierarchicalChunkLocatorTest, ExactSizeMatchSelectsCorrectLayer) {
+TEST_F(HierarchicalSlotAllocatorTest, ExactSizeMatchSelectsCorrectLayer) {
     typename Policy::Config cfg{{256, 128}, /*initial_bytes=*/256, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0xE100);
@@ -909,7 +909,7 @@ TEST_F(HierarchicalChunkLocatorTest, ExactSizeMatchSelectsCorrectLayer) {
     EXPECT_EQ(policy_.findChunkSize(b2.id), 256);
 }
 
-TEST_F(HierarchicalChunkLocatorTest, SingleLayerConfiguration) {
+TEST_F(HierarchicalSlotAllocatorTest, SingleLayerConfiguration) {
     typename Policy::Config cfg{{1024}, /*initial_bytes=*/1024, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0xE200);
@@ -929,7 +929,7 @@ TEST_F(HierarchicalChunkLocatorTest, SingleLayerConfiguration) {
 // 複雑なSplit/Mergeシナリオのテスト
 // ============================================================================
 
-TEST_F(HierarchicalChunkLocatorTest, DeepSplitAcrossMultipleLayers) {
+TEST_F(HierarchicalSlotAllocatorTest, DeepSplitAcrossMultipleLayers) {
     typename Policy::Config cfg{{1024, 512, 256, 128}, /*initial_bytes=*/1024, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0xF000);
@@ -959,7 +959,7 @@ TEST_F(HierarchicalChunkLocatorTest, DeepSplitAcrossMultipleLayers) {
 #endif
 }
 
-TEST_F(HierarchicalChunkLocatorTest, PartialMergeDoesNotOccur) {
+TEST_F(HierarchicalSlotAllocatorTest, PartialMergeDoesNotOccur) {
     typename Policy::Config cfg{{512, 256}, /*initial_bytes=*/512, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0xF100);
@@ -995,7 +995,7 @@ TEST_F(HierarchicalChunkLocatorTest, PartialMergeDoesNotOccur) {
 #endif
 }
 
-TEST_F(HierarchicalChunkLocatorTest, AlternatingAllocFreePattern) {
+TEST_F(HierarchicalSlotAllocatorTest, AlternatingAllocFreePattern) {
     typename Policy::Config cfg{{256, 128}, /*initial_bytes=*/256, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0xF200);
@@ -1022,7 +1022,7 @@ TEST_F(HierarchicalChunkLocatorTest, AlternatingAllocFreePattern) {
 // 並行性のテスト（スレッドセーフ）
 // ============================================================================
 
-TEST_F(HierarchicalChunkLocatorTest, ConcurrentIncrementDecrement) {
+TEST_F(HierarchicalSlotAllocatorTest, ConcurrentIncrementDecrement) {
     typename Policy::Config cfg{{256}, /*initial_bytes=*/256, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0x10000);
@@ -1076,7 +1076,7 @@ TEST_F(HierarchicalChunkLocatorTest, ConcurrentIncrementDecrement) {
 // initial_bytes の動作テスト
 // ============================================================================
 
-TEST_F(HierarchicalChunkLocatorTest, InitialBytesLargerThanChunkSize) {
+TEST_F(HierarchicalSlotAllocatorTest, InitialBytesLargerThanChunkSize) {
     typename Policy::Config cfg{{256}, /*initial_bytes=*/1024, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0x11000);
@@ -1098,7 +1098,7 @@ TEST_F(HierarchicalChunkLocatorTest, InitialBytesLargerThanChunkSize) {
     EXPECT_NE(b4.view.data(), nullptr);
 }
 
-TEST_F(HierarchicalChunkLocatorTest, InitialBytesZeroUsesChunkSize) {
+TEST_F(HierarchicalSlotAllocatorTest, InitialBytesZeroUsesChunkSize) {
     typename Policy::Config cfg{{512}, /*initial_bytes=*/0, /*region_multiplier=*/1};
 
     void* base = reinterpret_cast<void*>(0x11100);

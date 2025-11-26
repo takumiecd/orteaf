@@ -122,7 +122,7 @@ struct SlotChildCountAccessor<true> {
 }  // namespace detail
 
 // ============================================================================
-// HierarchicalChunkLocator
+// HierarchicalSlotAllocator
 // ============================================================================
 
 /**
@@ -133,7 +133,7 @@ struct SlotChildCountAccessor<true> {
  * まずは複数サイズクラスを扱える骨格として提供する。
  */
 template <class HeapOps, ::orteaf::internal::backend::Backend B>
-class HierarchicalChunkLocator {
+class HierarchicalSlotAllocator {
 public:
     // ========================================================================
     // Type aliases
@@ -146,7 +146,7 @@ public:
     enum class State : uint8_t { Free, InUse, Split };
 
     /**
-     * @brief HierarchicalChunkLocator 固有の設定。
+     * @brief HierarchicalSlotAllocator 固有の設定。
      */
     struct Config {
         /// 大きい順で渡すことを想定する。例: {1_MB, 256_KB, 64_KB}
@@ -167,7 +167,7 @@ public:
         config_ = config;
         heap_ops_ = heap_ops;
 
-        ORTEAF_THROW_IF_NULL(heap_ops_, "HierarchicalChunkLocator requires non-null HeapOps*");
+        ORTEAF_THROW_IF_NULL(heap_ops_, "HierarchicalSlotAllocator requires non-null HeapOps*");
         validateLevels(config.levels, config.threshold);
 
         layers_.clear();
