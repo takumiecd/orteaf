@@ -32,8 +32,8 @@ public:
     struct Config {
         std::vector<std::size_t> levels;  // 大きい順: {1MB, 256KB, 64KB}
         std::size_t initial_bytes{0};
-        std::size_t region_multiplier{1};
-        std::size_t threshold{0};  // 2の冪乗。threshold以下は2の冪乗で刻む
+        std::size_t expand_bytes{0};  // 拡張時のバイト数（levels[0]の倍数）
+        std::size_t threshold{0};     // 2の冪乗。threshold以下は2の冪乗で刻む
     };
 
     void initialize(const Config& config, HeapOps* heap_ops) {
@@ -47,6 +47,11 @@ public:
             config.initial_bytes > 0 && (config.initial_bytes % config.levels[0]) != 0,
             InvalidParameter,
             "initial_bytes must be a multiple of levels[0]"
+        );
+        ORTEAF_THROW_IF(
+            config.expand_bytes > 0 && (config.expand_bytes % config.levels[0]) != 0,
+            InvalidParameter,
+            "expand_bytes must be a multiple of levels[0]"
         );
 
         layers_.clear();
@@ -218,8 +223,11 @@ private:
         int parent_layer = findParentWithFreeSlot(target_layer);
 
         if (parent_layer < 0) {
-            const std::size_t multiplier = (config_.region_multiplier == 0) ? 1 : config_.region_multiplier;
-            addRegion(layers_[0].slot_size * multiplier);
+            std::size_t expand = config_.expand_bytes;
+            if (expand == 0) {
+                expand = layers_[0].slot_size;
+            }
+            addRegion(expand);
             parent_layer = 0;
         }
 

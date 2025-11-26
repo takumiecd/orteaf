@@ -215,4 +215,51 @@ TEST_F(HierarchicalSlotAllocatorTest, InitializeAcceptsValidThreshold) {
     EXPECT_NO_THROW(allocator_.initialize(cfg, &heap_ops_));
 }
 
+// ============================================================================
+// expand_bytes validation tests
+// ============================================================================
+
+TEST_F(HierarchicalSlotAllocatorTest, InitializeThrowsOnInvalidExpandBytes) {
+    Allocator::Config cfg{};
+    cfg.levels = {256};
+    cfg.expand_bytes = 100;  // 256の倍数ではない
+    orteaf::tests::ExpectError(OrteafErrc::InvalidParameter, [&] {
+        allocator_.initialize(cfg, &heap_ops_);
+    });
+}
+
+TEST_F(HierarchicalSlotAllocatorTest, InitializeAcceptsValidExpandBytes) {
+    void* base = reinterpret_cast<void*>(0x7000);
+    EXPECT_CALL(impl_, reserve(256)).WillOnce(Return(HeapRegion{base, 256}));
+
+    Allocator::Config cfg{};
+    cfg.levels = {256};
+    cfg.expand_bytes = 512;  // 256の倍数
+    EXPECT_NO_THROW(allocator_.initialize(cfg, &heap_ops_));
+}
+
+TEST_F(HierarchicalSlotAllocatorTest, ExpandBytesUsedWhenAllocatingMoreSlots) {
+    void* base1 = reinterpret_cast<void*>(0x8000);
+    void* base2 = reinterpret_cast<void*>(0x9000);
+    
+    // 初回reserve + 拡張時のreserve
+    EXPECT_CALL(impl_, reserve(256)).WillOnce(Return(HeapRegion{base1, 256}));
+    EXPECT_CALL(impl_, reserve(512)).WillOnce(Return(HeapRegion{base2, 512}));
+    EXPECT_CALL(impl_, map(_)).WillRepeatedly(::testing::Invoke(MapReturn));
+
+    Allocator::Config cfg{};
+    cfg.levels = {256};
+    cfg.initial_bytes = 256;
+    cfg.expand_bytes = 512;
+    allocator_.initialize(cfg, &heap_ops_);
+
+    // 1つ目のスロットを使い切る
+    auto view1 = allocator_.allocate(256);
+    EXPECT_TRUE(view1);
+
+    // 2つ目を要求すると拡張が発生
+    auto view2 = allocator_.allocate(256);
+    EXPECT_TRUE(view2);
+}
+
 }  // namespace
