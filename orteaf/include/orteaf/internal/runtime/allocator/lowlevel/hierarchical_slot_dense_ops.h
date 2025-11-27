@@ -24,8 +24,8 @@ public:
 
     struct AllocationPlan {
         bool found{false};
-        uint32_t start_layer{Storage::kInvalidLayer};
-        uint32_t start_slot{0};
+        uint32_t end_layer{Storage::kInvalidLayer};
+        uint32_t end_slot{0};
     };
 
     explicit HierarchicalSlotDenseOps(Storage& storage, SingleOps& single_ops)
@@ -134,10 +134,16 @@ private:
             return false;
         }
 
-        auto finalize_at = [&](uint32_t layer_no, uint32_t slot_no) {
-            plan.start_layer = layer_no;
-            plan.start_slot = slot_no;
+        auto finalize_true = [&](uint32_t layer_no, uint32_t slot_no) {
+            plan.end_layer = layer_no;
+            plan.end_slot = slot_no;
             return true;
+        };
+
+        auto finalize_false = [&](uint32_t layer_no, uint32_t slot_no) {
+            plan.end_layer = layer_no;
+            plan.end_slot = slot_no;
+            return false;
         };
 
         const bool has_child_request = [&]() {
@@ -147,11 +153,11 @@ private:
             return false;
         }();
 
-        auto descend_to_child = [&](uint32_t slot_index) -> bool {
+        auto descend_to_child = [&](uint32_t slot_index, bool check_siblings) -> bool {
             Slot& split_slot = layer.slots[slot_index];
             if (layer_idx + 1 >= layers.size() || layer_idx + 1 >= rs.size()) return false;
             uint32_t sibling_count = static_cast<uint32_t>(layer.slot_size / layers[layer_idx + 1].slot_size);
-            if (sibling_count < rs[layer_idx + 1]) return false;
+            if (check_siblings && sibling_count < rs[layer_idx + 1]) return false;
             uint32_t child_begin = split_slot.child_begin;
             uint32_t child_upper = child_begin + sibling_count;
             return tryFindTrailRecursiveDir(
@@ -171,64 +177,89 @@ private:
 
         int32_t idx = static_cast<int32_t>(start_idx);
 
-        // まず最初のFreeまで進む（need==0でSplitなら子に潜る）
-        while (inBounds(idx, lower, upper, dir) &&
-               layer.slots[static_cast<size_t>(idx)].state != State::Free) {
-            const auto state = layer.slots[static_cast<size_t>(idx)].state;
-            if (need == 0 && state == State::Split) {
-                if (descend_to_child(static_cast<uint32_t>(idx))) return true;
-            }
-            idx += step(dir);
-        }
-
         if (!inBounds(idx, lower, upper, dir)) return false;
 
         // 連続Freeの長さを測る（start_idx を含む run のみ見る）
-        uint32_t free_count = 1;
+        uint32_t free_count = 0;
         int32_t run_start = idx;
         int32_t run_end = idx;
-        for (int32_t next = idx + step(dir);
-             inBounds(next, lower, upper, dir) &&
-             layer.slots[static_cast<size_t>(next)].state == State::Free;
-             next += step(dir)) {
+        for (run_end = idx;
+             inBounds(run_end, lower, upper, dir) &&
+             layer.slots[static_cast<size_t>(run_end)].state == State::Free;
+             run_end += step(dir)) {
+            printf("run_end = %d \n", run_end);
             ++free_count;
-            run_end = next;
         }
 
-        int32_t boundary = run_end + step(dir);
+        printf("layer=%d, start_idx=%d, run_start=%d, run_end=%d, free_count=%d, need=%d\n",
+               layer_idx, start_idx, run_start, run_end, free_count, need);
 
-        if (need == 0) {
-            if (has_child_request &&
-                inBounds(boundary, lower, upper, dir) &&
-                layer.slots[static_cast<size_t>(boundary)].state == State::Split &&
-                descend_to_child(static_cast<uint32_t>(boundary))) {
-                return true;
+        int32_t boundary = run_end;
+
+        const uint32_t end_slot = (dir == Direction::Forward)
+            ? static_cast<uint32_t>(run_end - 1)
+            : static_cast<uint32_t>(run_start);
+
+        printf("end_slot=%d, boundary=%d\n", end_slot, boundary);
+
+        if (free_count < need) return finalize_false(layer_idx, end_slot);
+
+        if (dir == Direction::Forward) {
+            if (free_count > need) {
+                if (inBounds(boundary, lower, upper, dir) &&
+                    layer.slots[static_cast<size_t>(boundary)].state == State::Split) {
+                    descend_to_child(static_cast<uint32_t>(boundary), false);
+                    printf("start0 layer=%d, slot=%d\n", plan.end_layer, plan.end_slot);
+                    return true;
+                } else {
+                    printf("start1 layer=%d, slot=%d\n", layer_idx, end_slot);
+                    return finalize_true(layer_idx, end_slot);
+                }
+            } else if(free_count == need) {
+                if (!has_child_request) {
+                    if (inBounds(boundary, lower, upper, dir) &&
+                        layer.slots[static_cast<size_t>(boundary)].state == State::Split) {
+                        descend_to_child(static_cast<uint32_t>(boundary), true);
+                        printf("start2 layer=%d, slot=%d\n", plan.end_layer, plan.end_slot);
+                        return true;
+                    } else {
+                        printf("start3 layer=%d, slot=%d\n", layer_idx, end_slot);
+                        return finalize_true(layer_idx, end_slot);
+                    }
+                } else if (inBounds(boundary, lower, upper, dir) &&
+                    layer.slots[static_cast<size_t>(boundary)].state == State::Split){
+                    bool a = descend_to_child(static_cast<uint32_t>(boundary), true);
+                    printf("start4 layer=%d, slot=%d\n", plan.end_layer, plan.end_slot);
+                    return a;
+                } else {
+                    printf("start5 layer=%d, slot=%d\n", layer_idx, end_slot);
+                    return finalize_false(layer_idx, end_slot);
+                }
+            } else {
+                printf("start6 layer=%d, slot=%d\n", layer_idx, end_slot);
+                return finalize_false(layer_idx, end_slot);
             }
-            return finalize_at(layer_idx, static_cast<uint32_t>(run_end));
-        }
-
-        if (free_count < need) return false;
-
-        const uint32_t start_slot = (dir == Direction::Forward)
-            ? static_cast<uint32_t>(run_end - static_cast<int32_t>(need) + 1)
-            : static_cast<uint32_t>(run_start - static_cast<int32_t>(need) + 1);
-
-        if (has_child_request) {
-            if (inBounds(boundary, lower, upper, dir) &&
-                layer.slots[static_cast<size_t>(boundary)].state == State::Split &&
-                descend_to_child(static_cast<uint32_t>(boundary))) {
-                return finalize_at(layer_idx, start_slot);
+        } else {
+            if (free_count > need) {
+                printf("start7 layer=%d, slot=%d\n", layer_idx, end_slot);
+                return finalize_true(layer_idx, end_slot);
+            } else if (free_count == need) {
+                if (!has_child_request) {
+                    printf("start8 layer=%d, slot=%d\n", layer_idx, end_slot);
+                    return finalize_true(layer_idx, end_slot);
+                } else if (inBounds(boundary, lower, upper, dir) &&
+                    layer.slots[static_cast<size_t>(boundary)].state == State::Split){
+                    printf("start9 layer=%d, slot=%d\n", plan.end_layer, plan.end_slot);
+                    return descend_to_child(static_cast<uint32_t>(boundary), true);
+                } else {
+                    return false;
+                }
+            } else {
+                return false;
             }
-            return false;  // 子が必要だが Split に降りられない
         }
 
-        if (inBounds(boundary, lower, upper, dir) &&
-            layer.slots[static_cast<size_t>(boundary)].state == State::Split &&
-            descend_to_child(static_cast<uint32_t>(boundary))) {
-            return true;
-        }
-
-        return finalize_at(layer_idx, start_slot);
+        return finalize_true(layer_idx, end_slot);
     }
 
     AllocationPlan tryFindTrailPlan(const std::vector<uint32_t>& rs) {
@@ -256,104 +287,6 @@ private:
         plan.found = result;
 
         return plan;
-    }
-
-    /**
-     * @brief 再帰的に末尾から探索
-     * @param rs 必要スロット数配列
-     * @param layer_idx 現在のレイヤー
-     * @param start_idx このレイヤーでの開始インデックス
-     * @param need このレイヤーで必要なスロット数
-     * @param is_found すでに見つかっているか（trueなら開始位置探索モード）
-     * @param plan 結果
-     * @return 成功したか
-     */
-    bool tryFindTrailRecursive(
-        const std::vector<uint32_t>& rs,
-        uint32_t layer_idx,
-        uint32_t start_idx,
-        uint32_t need,
-        bool is_found,
-        AllocationPlan& plan,
-        uint32_t upper_bound  // このレイヤで進んでよい上限スロット（子範囲の上限を越えないため、exclusive）
-    ) {
-        auto& layers = storage_.layers();
-        Layer& layer = layers[layer_idx];
-
-        if (start_idx >= layer.slots.size() || upper_bound > layer.slots.size()) {
-            return false;
-        }
-
-        if (is_found) {
-            // 開始位置探索モード：できるだけ進む（先頭側を優先）
-            uint32_t idx = start_idx;
-            while (idx + 1 < upper_bound && layer.slots[static_cast<size_t>(idx + 1)].state == State::Free) {
-                ++idx;
-            }
-
-            // 隣接するSplitがあれば子に潜る
-            if (idx + 1 < upper_bound && layer.slots[static_cast<size_t>(idx + 1)].state == State::Split) {
-                Slot& split_slot = layer.slots[static_cast<size_t>(idx + 1)];
-                if (layer_idx + 1 < layers.size()) {
-                    uint32_t sibling_count = static_cast<uint32_t>(layer.slot_size / layers[layer_idx + 1].slot_size);
-                    if (layer_idx + 1 >= rs.size()) return false;
-                    uint32_t child_begin = split_slot.child_begin;
-                    return tryFindTrailRecursive(rs, layer_idx + 1, child_begin, rs[layer_idx + 1], true, plan, child_begin + sibling_count);
-                }
-            } else if (idx + 1 < upper_bound) {
-                // ここが開始位置
-                plan.start_layer = layer_idx;
-                plan.start_slot = idx;
-                return true;
-            }
-
-        } else {
-            // 確認モード：needを満たせるか確認
-            uint32_t count = 0;
-            uint32_t idx = start_idx;
-
-            while (idx + 1 < upper_bound && layer.slots[static_cast<size_t>(idx + 1)].state == State::Free) {
-                ++count;
-                ++idx;
-            }
-
-            if (count == need) {
-                // 十分なFreeあり。隣接Splitがあれば子に潜る
-                if (idx + 1 < upper_bound && layer.slots[static_cast<size_t>(idx + 1)].state == State::Split) {
-                    if (layer_idx + 1 < layers.size()) {
-                        Slot& split_slot = layer.slots[static_cast<size_t>(idx + 1)];
-                        uint32_t sibling_count = static_cast<uint32_t>(layer.slot_size / layers[layer_idx + 1].slot_size);
-                        if (layer_idx + 1 >= rs.size()) return false;
-                        if (sibling_count < rs[layer_idx + 1]) return false;
-                        uint32_t child_begin = split_slot.child_begin;
-                        return tryFindTrailRecursive(rs, layer_idx + 1, child_begin, rs[layer_idx + 1], false, plan, child_begin + sibling_count);
-                    }
-                } else if (idx + 1 < upper_bound) {
-                    for (std::size_t req_idx = layer_idx; req_idx < rs.size(); ++req_idx) {
-                        if (rs[req_idx] != 0) {
-                            return false;
-                        }
-                    }
-                    return true;
-                }
-            } else if (count > need) {
-                if (idx + 1 < upper_bound && layer.slots[static_cast<size_t>(idx + 1)].state == State::Split) {
-                    if (layer_idx + 1 < layers.size()) {
-                        Slot& split_slot = layer.slots[static_cast<size_t>(idx + 1)];
-                        uint32_t sibling_count = static_cast<uint32_t>(layer.slot_size / layers[layer_idx + 1].slot_size);
-                        if (layer_idx + 1 >= rs.size()) return false;
-                        uint32_t child_begin = split_slot.child_begin;
-                        return tryFindTrailRecursive(rs, layer_idx + 1, child_begin, rs[layer_idx + 1], true, plan, child_begin + sibling_count);
-                    }
-                } else if (idx + 1 < upper_bound) {
-                    plan.start_layer = layer_idx;
-                    plan.start_slot = idx;
-                    return true;
-                }
-            }
-            // 足りない
-            return false;
-        }
     }
 
     // ========================================================================
@@ -384,8 +317,8 @@ private:
                 if (consecutive_count >= need) {
                     // 十分な連続領域発見
                     plan.found = true;
-                    plan.start_layer = 0;
-                    plan.start_slot = consecutive_start;
+                    plan.end_layer = 0;
+                    plan.end_slot = consecutive_start;
                     return plan;
                 }
             } else {
@@ -413,55 +346,6 @@ private:
     }
 
     BufferView executeAllocationPlan(const AllocationPlan& plan, const std::vector<uint32_t>& rs, std::size_t size) {
-        auto& layers = storage_.layers();
-        if (plan.start_layer >= layers.size()) {
-            ORTEAF_THROW(OutOfMemory, "Invalid allocation plan");
-        }
-
-        void* base_addr = nullptr;
-        std::size_t total_allocated = 0;
-
-        // start_layer から順に決定的に確保する
-        uint32_t layer_idx = plan.start_layer;
-        uint32_t slot_idx = plan.start_slot;
-
-        // start_layer の連続スロットを確保
-        for (uint32_t i = 0; i < rs[layer_idx]; ++i) {
-            if (slot_idx + i >= layers[layer_idx].slots.size()) {
-                ORTEAF_THROW(OutOfMemory, "Plan exceeds layer slots");
-            }
-            single_ops_.acquireSpecificSlot(layer_idx, slot_idx + i);
-            BufferView view = single_ops_.mapSlot(layer_idx, slot_idx + i);
-            if (base_addr == nullptr) {
-                base_addr = view.data();
-            }
-            total_allocated += layers[layer_idx].slot_size;
-        }
-
-        // 下位レイヤに降りる
-        for (uint32_t l = layer_idx + 1; l < rs.size(); ++l) {
-            if (rs[l] == 0) continue;
-            // 親は plan.start_slot から連続している前提で、その子ブロックを連続取得
-            Slot& parent = layers[l - 1].slots[slot_idx];
-            uint32_t children = static_cast<uint32_t>(layers[l - 1].slot_size / layers[l].slot_size);
-            uint32_t child_start = parent.child_begin;
-
-            if (child_start + rs[l] > child_start + children) {
-                ORTEAF_THROW(OutOfMemory, "Child plan exceeds layer slots");
-            }
-
-            for (uint32_t i = 0; i < rs[l]; ++i) {
-                uint32_t child_idx = child_start + i;
-                single_ops_.acquireSpecificSlot(l, child_idx);
-                BufferView view = single_ops_.mapSlot(l, child_idx);
-                if (base_addr == nullptr) {
-                    base_addr = view.data();
-                }
-                total_allocated += layers[l].slot_size;
-            }
-        }
-
-        return BufferView{base_addr, 0, size};
     }
 
     Storage& storage_;

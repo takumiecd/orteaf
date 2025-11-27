@@ -28,7 +28,7 @@ rs=[0,1,1] → 128 + 64 = 192
 1) rs = computeRequestSlots(size)
 2) Trail: 末尾から連続領域を探す（Splitに当たれば子へ潜る）
 3) 見つからなければ Middle: root から連続Freeを探す
-4) plan(start_layer/start_slot) 確定 → plan通りのスロットを InUse + map（再ピックしない）
+4) plan(end_layer/end_slot) 確定 → plan通りのスロットを InUse + map（再ピックしない）
 5) 連続が取れなければ VA 拡張 → 再試行 → 失敗
 ```
 
@@ -71,8 +71,8 @@ plan trailContiguousSearch(layer_idx, slot_idx, rs, count, is_found):
                 child_count = levels[layer_idx] / levels[layer_idx + 1]
                 return trailContiguousSearch(layer_idx + 1, slot.child + child_count, rs, child_count, true)
             else:
-                plan.start_layer = layer_idx
-                plan.start_slot = slot_idx - idx + 1
+                plan.end_layer = layer_idx
+                plan.end_slot = slot_idx - idx + 1
                 plan.found = true
                 return plan
         else if free_count == rs[layer_idx]:
@@ -94,8 +94,8 @@ plan trailContiguousSearch(layer_idx, slot_idx, rs, count, is_found):
                 return trailContiguousSearch(layer_idx + 1, slot.child + child_count, rs, child_count, true)
 
         else:
-            plan.start_layer = layer_idx
-            plan.start_slot = slot_idx - idx + 1
+            plan.end_layer = layer_idx
+            plan.end_slot = slot_idx - idx + 1
             plan.fount = true
             return plan
 

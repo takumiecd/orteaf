@@ -400,9 +400,9 @@ TEST_F(HierarchicalSlotAllocatorTest, TrailPlanPicksNextFreeChildInLifoOrder) {
     EXPECT_EQ(rs[1], 1u);
     auto plan = allocator_.debugTryFindTrailPlan(rs);
     ASSERT_TRUE(plan.found);
-    EXPECT_EQ(plan.start_layer, 1u);
-    printf("Trail Plan start_slot: %u\n", plan.start_slot);
-    EXPECT_EQ(plan.start_slot, 1u);  // 残りの LIFO 先頭は child 1
+    EXPECT_EQ(plan.end_layer, 1u);
+    printf("Trail Plan end_slot: %u\n", plan.end_slot);
+    EXPECT_EQ(plan.end_slot, 1u);  // 残りの LIFO 先頭は child 1
 }
 
 TEST_F(HierarchicalSlotAllocatorTest, TrailPlanFailsWhenChildNeededButParentNotSplit) {
@@ -444,8 +444,8 @@ TEST_F(HierarchicalSlotAllocatorTest, TrailPlanDepth3PicksRootWhenNoSplits) {
 
     auto plan = allocator_.debugTryFindTrailPlan(rs);
     ASSERT_TRUE(plan.found);
-    EXPECT_EQ(plan.start_layer, 0u);
-    EXPECT_EQ(plan.start_slot, 0u);
+    EXPECT_EQ(plan.end_layer, 0u);
+    EXPECT_EQ(plan.end_slot, 0u);
 }
 
 TEST_F(HierarchicalSlotAllocatorTest, TrailPlanDepth3PicksMiddleWhenNotSplit) {
@@ -467,8 +467,8 @@ TEST_F(HierarchicalSlotAllocatorTest, TrailPlanDepth3PicksMiddleWhenNotSplit) {
     auto rs = allocator_.computeRequestSlots(16);  // [0,0,1]
     auto plan = allocator_.debugTryFindTrailPlan(rs);
     ASSERT_TRUE(plan.found);
-    EXPECT_EQ(plan.start_layer, 1u);
-    EXPECT_EQ(plan.start_slot, 0u);
+    EXPECT_EQ(plan.end_layer, 1u);
+    EXPECT_EQ(plan.end_slot, 2u);
 }
 
 TEST_F(HierarchicalSlotAllocatorTest, TrailPlanDepth3PicksGrandchildInLifoOrder) {
@@ -490,8 +490,8 @@ TEST_F(HierarchicalSlotAllocatorTest, TrailPlanDepth3PicksGrandchildInLifoOrder)
     auto rs = allocator_.computeRequestSlots(16);  // [0,0,1]
     auto plan = allocator_.debugTryFindTrailPlan(rs);
     ASSERT_TRUE(plan.found);
-    EXPECT_EQ(plan.start_layer, 2u);
-    EXPECT_EQ(plan.start_slot, 1u);  // 末尾側から 2 つ消費済みなので、次は slot 1
+    EXPECT_EQ(plan.end_layer, 2u);
+    EXPECT_EQ(plan.end_slot, 1u);  // 末尾側から 2 つ消費済みなので、次は slot 1
 }
 
 TEST_F(HierarchicalSlotAllocatorTest, TrailPlanDepth3ContinuesInSameSplitBranch) {
@@ -511,8 +511,8 @@ TEST_F(HierarchicalSlotAllocatorTest, TrailPlanDepth3ContinuesInSameSplitBranch)
     auto rs = allocator_.computeRequestSlots(16);  // [0,0,1]
     auto plan = allocator_.debugTryFindTrailPlan(rs);
     ASSERT_TRUE(plan.found);
-    EXPECT_EQ(plan.start_layer, 2u);
-    EXPECT_EQ(plan.start_slot, 2u);  // 同じブランチの末尾側 Free を選ぶ
+    EXPECT_EQ(plan.end_layer, 2u);
+    EXPECT_EQ(plan.end_slot, 2u);  // 同じブランチの末尾側 Free を選ぶ
 }
 
 TEST_F(HierarchicalSlotAllocatorTest, TrailPlanDepth3PicksTailmostFreeAfterHole) {
@@ -537,8 +537,8 @@ TEST_F(HierarchicalSlotAllocatorTest, TrailPlanDepth3PicksTailmostFreeAfterHole)
     auto rs = allocator_.computeRequestSlots(16);  // [0,0,1]
     auto plan = allocator_.debugTryFindTrailPlan(rs);
     ASSERT_TRUE(plan.found);
-    EXPECT_EQ(plan.start_layer, 2u);
-    EXPECT_EQ(plan.start_slot, 2u);  // 末尾側で連続Freeの run(=1) を選ぶ
+    EXPECT_EQ(plan.end_layer, 2u);
+    EXPECT_EQ(plan.end_slot, 2u);  // 末尾側で連続Freeの run(=1) を選ぶ
 }
 
 // // ============================================================================
