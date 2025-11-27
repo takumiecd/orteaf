@@ -482,10 +482,35 @@ TEST_F(HierarchicalSlotAllocatorTest, TrailPlanPicksNextFreeChildInLifoOrder) {
     ASSERT_TRUE(first);
     ASSERT_TRUE(second);
 
+    // デバッグスナップショットで状態を確認
+    auto snap = allocator_.debugSnapshot();
+    ASSERT_EQ(snap.size(), 2u);
+    const auto& layer0 = snap[0];
+    const auto& layer1 = snap[1];
+    // parent0 が Split になっていること
+    ASSERT_FALSE(layer0.slots.empty());
+    EXPECT_EQ(layer0.slots[0].state, decltype(layer0.slots[0].state)::Split);
+    // child の状態: 3,2 が InUse, 1,0 が Free
+    ASSERT_GE(layer1.slots.size(), 4u);
+    EXPECT_EQ(layer1.slots[3].state, decltype(layer1.slots[3].state)::InUse);
+    EXPECT_EQ(layer1.slots[2].state, decltype(layer1.slots[2].state)::InUse);
+    EXPECT_EQ(layer1.slots[1].state, decltype(layer1.slots[1].state)::Free);
+    EXPECT_EQ(layer1.slots[0].state, decltype(layer1.slots[0].state)::Free);
+
+    for (const auto& layer : snap) {
+        for (const auto& slot : layer.slots) {
+            printf("Layer %zu Slot state: %d\n", &layer - &snap[0], static_cast<int>(slot.state));
+        }
+    }
+
     auto rs = allocator_.computeRequestSlots(64);  // [0,1]
+    EXPECT_EQ(rs.size(), 2u);
+    EXPECT_EQ(rs[0], 0u);
+    EXPECT_EQ(rs[1], 1u);
     auto plan = allocator_.debugTryFindTrailPlan(rs);
     ASSERT_TRUE(plan.found);
     EXPECT_EQ(plan.start_layer, 1u);
+    printf("Trail Plan start_slot: %u\n", plan.start_slot);
     EXPECT_EQ(plan.start_slot, 1u);  // 残りの LIFO 先頭は child 1
 }
 #endif
