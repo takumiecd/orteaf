@@ -425,6 +425,94 @@ TEST_F(HierarchicalSlotAllocatorTest, TrailPlanFailsWhenChildNeededButParentNotS
     EXPECT_FALSE(plan.found);  // 子が必要なのに親がSplitでないため失敗するのが期待挙動
 }
 
+TEST_F(HierarchicalSlotAllocatorTest, TrailPlanFindsContiguousRunAcrossMultipleSlots) {
+    // levels = {256} で 512 バイト要求 → rs = [2]
+    void* base = reinterpret_cast<void*>(0x1D000);
+    EXPECT_CALL(impl_, reserve(512)).WillOnce(Return(HeapRegion{base, 512}));
+    EXPECT_CALL(impl_, map(_)).WillRepeatedly(::testing::Invoke(MapReturn));
+
+    Allocator::Config cfg{};
+    cfg.levels = {256};
+    cfg.initial_bytes = 512;
+    allocator_.initialize(cfg, &heap_ops_);
+
+    auto rs = allocator_.computeRequestSlots(400);  // [2]
+    ASSERT_EQ(rs.size(), 1u);
+    EXPECT_EQ(rs[0], 2u);
+
+    auto plan = allocator_.debugTryFindTrailPlan(rs);
+    ASSERT_TRUE(plan.found);
+    EXPECT_EQ(plan.end_layer, 0u);
+    EXPECT_EQ(plan.end_slot, 1u);  // 2スロット連続で使用できる末尾側
+}
+
+TEST_F(HierarchicalSlotAllocatorTest, TrailPlanFailsWhenContiguousRunIsShorterThanNeeded) {
+    // 512 バイト確保済みスロットのうち片方を使用すると、512 バイト要求（rs=[2]）は失敗する
+    void* base = reinterpret_cast<void*>(0x1E000);
+    EXPECT_CALL(impl_, reserve(512)).WillOnce(Return(HeapRegion{base, 512}));
+    EXPECT_CALL(impl_, map(_)).WillRepeatedly(::testing::Invoke(MapReturn));
+
+    Allocator::Config cfg{};
+    cfg.levels = {256};
+    cfg.initial_bytes = 512;
+    allocator_.initialize(cfg, &heap_ops_);
+
+    auto first = allocator_.allocate(256);
+    ASSERT_TRUE(first);
+
+    auto rs = allocator_.computeRequestSlots(400);  // [2]
+    ASSERT_EQ(rs.size(), 1u);
+    EXPECT_EQ(rs[0], 2u);
+
+    auto plan = allocator_.debugTryFindTrailPlan(rs);
+    EXPECT_FALSE(plan.found);
+}
+
+TEST_F(HierarchicalSlotAllocatorTest, TrailPlanHandlesMultiLevelWithChildRun) {
+    // levels = {256, 64}, root の末尾スロットを Split した状態で子 2 連続を要求する
+    void* base = reinterpret_cast<void*>(0x1F000);
+    EXPECT_CALL(impl_, reserve(512)).WillOnce(Return(HeapRegion{base, 512}));
+    EXPECT_CALL(impl_, map(_)).WillRepeatedly(::testing::Invoke(MapReturn));
+
+    Allocator::Config cfg{};
+    cfg.levels = {256, 64};
+    cfg.initial_bytes = 512;  // root に 2 スロット
+    allocator_.initialize(cfg, &heap_ops_);
+
+    // 末尾側の root スロットを Split させるために 64 バイトを 1 度確保
+    auto first = allocator_.allocate(64);
+    ASSERT_TRUE(first);
+
+    // child 2 スロットを要求する想定の rs
+    std::vector<uint32_t> rs = {1, 2};
+    auto plan = allocator_.debugTryFindTrailPlan(rs);
+    ASSERT_TRUE(plan.found);
+    EXPECT_EQ(plan.end_layer, 1u);
+    EXPECT_EQ(plan.end_slot, 2u);  // split した root スロット配下の末尾 Free run
+}
+
+TEST_F(HierarchicalSlotAllocatorTest, TrailPlanFailsWhenChildRunTooShort) {
+    // 同じ構成で子 3 スロット連続が必要な場合は失敗する
+    void* base = reinterpret_cast<void*>(0x20000);
+    EXPECT_CALL(impl_, reserve(512)).WillOnce(Return(HeapRegion{base, 512}));
+    EXPECT_CALL(impl_, map(_)).WillRepeatedly(::testing::Invoke(MapReturn));
+
+    Allocator::Config cfg{};
+    cfg.levels = {256, 64};
+    cfg.initial_bytes = 512;
+    allocator_.initialize(cfg, &heap_ops_);
+
+    // 末尾 root を Split。child のうち 2 つが使用済みになる状態。
+    auto first = allocator_.allocate(64);
+    auto second = allocator_.allocate(64);
+    ASSERT_TRUE(first);
+    ASSERT_TRUE(second);
+
+    std::vector<uint32_t> rs = {1, 3};
+    auto plan = allocator_.debugTryFindTrailPlan(rs);
+    EXPECT_FALSE(plan.found);
+}
+
 TEST_F(HierarchicalSlotAllocatorTest, TrailPlanDepth3PicksRootWhenNoSplits) {
     // levels = {256, 64, 16}, size = 16 → rs = [0,0,1]
     // どのレイヤも Split されていないので末尾の親スロットを開始点にする
