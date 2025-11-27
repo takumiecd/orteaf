@@ -54,6 +54,16 @@ public:
     [[nodiscard]] Storage& storage() noexcept { return storage_; }
     [[nodiscard]] const Storage& storage() const noexcept { return storage_; }
 
+#if ORTEAF_ENABLE_TEST
+    // テスト専用アクセス
+    [[nodiscard]] typename DenseOps::AllocationPlan debugTryFindTrailPlan(const std::vector<uint32_t>& rs) {
+        return dense_ops_->debugTryFindTrailPlan(rs);
+    }
+    [[nodiscard]] typename DenseOps::AllocationPlan debugTryFindMiddlePlan(const std::vector<uint32_t>& rs) {
+        return dense_ops_->debugTryFindMiddlePlan(rs);
+    }
+#endif
+
 private:
     Storage storage_;
     std::unique_ptr<SingleOps> single_ops_;

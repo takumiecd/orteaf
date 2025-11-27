@@ -465,4 +465,29 @@ TEST_F(HierarchicalSlotAllocatorTest, ComputeRequestSlotsSmallestSlotOnly) {
 //     EXPECT_EQ(diff, 64);  // 子スロットが連続していることを確認
 // }
 
+#if ORTEAF_ENABLE_TEST
+TEST_F(HierarchicalSlotAllocatorTest, TrailPlanPicksNextFreeChildInLifoOrder) {
+    // levels = {256, 64} で child を LIFO で 3,2 と消費した後、trail が child 1 を指すことを確認
+    void* base = reinterpret_cast<void*>(0x16000);
+    EXPECT_CALL(impl_, reserve(256)).WillOnce(Return(HeapRegion{base, 256}));
+    EXPECT_CALL(impl_, map(_)).WillRepeatedly(::testing::Invoke(MapReturn));
+
+    Allocator::Config cfg{};
+    cfg.levels = {256, 64};
+    cfg.initial_bytes = 256;
+    allocator_.initialize(cfg, &heap_ops_);
+
+    auto first = allocator_.allocate(64);   // child 3
+    auto second = allocator_.allocate(64);  // child 2
+    ASSERT_TRUE(first);
+    ASSERT_TRUE(second);
+
+    auto rs = allocator_.computeRequestSlots(64);  // [0,1]
+    auto plan = allocator_.debugTryFindTrailPlan(rs);
+    ASSERT_TRUE(plan.found);
+    EXPECT_EQ(plan.start_layer, 1u);
+    EXPECT_EQ(plan.start_slot, 1u);  // 残りの LIFO 先頭は child 1
+}
+#endif
+
 }  // namespace
