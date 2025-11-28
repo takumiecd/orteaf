@@ -1,7 +1,5 @@
 #include "orteaf/internal/runtime/allocator/resource/mps/mps_resource.h"
 
-#if ORTEAF_ENABLE_MPS
-
 #include "orteaf/internal/diagnostics/error/error_macros.h"
 
 namespace orteaf::internal::backend::mps {
@@ -35,5 +33,3 @@ void MpsResource::deallocate(BufferView view, std::size_t /*size*/, std::size_t 
 }
 
 }  // namespace orteaf::internal::backend::mps
-
-#endif  // ORTEAF_ENABLE_MPS
