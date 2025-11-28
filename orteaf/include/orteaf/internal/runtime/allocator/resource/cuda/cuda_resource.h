@@ -1,0 +1,31 @@
+#pragma once
+
+#if ORTEAF_ENABLE_CUDA
+
+#include <cstddef>
+
+#include "orteaf/internal/backend/cuda/cuda_buffer_view.h"
+
+namespace orteaf::internal::backend::cuda {
+
+// Simple CUDA resource that directly allocates/free device buffers.
+class CudaResource {
+public:
+    using BufferView = ::orteaf::internal::backend::cuda::CudaBufferView;
+
+    struct Config {};
+
+    static void initialize(const Config& config = {}) noexcept;
+
+    static BufferView allocate(std::size_t size, std::size_t alignment);
+
+    static void deallocate(BufferView view, std::size_t size, std::size_t alignment) noexcept;
+
+private:
+    static inline Config config_{};
+    static inline bool initialized_{false};
+};
+
+}  // namespace orteaf::internal::backend::cuda
+
+#endif  // ORTEAF_ENABLE_CUDA
