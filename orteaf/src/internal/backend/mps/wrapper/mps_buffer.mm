@@ -37,7 +37,7 @@ MPSBuffer_t createBuffer(MPSHeap_t heap, size_t size, MPSBufferUsage_t usage) {
     return (MPSBuffer_t)opaqueFromObjcRetained(objc_buffer);
 }
 
-MPSBuffer_t createBuffer(MPSHeap_t heap, size_t size, size_t offset, MPSBufferUsage_t usage) {
+MPSBuffer_t createBufferWithOffset(MPSHeap_t heap, size_t size, size_t offset, MPSBufferUsage_t usage) {
     if (heap == nullptr) {
         using namespace orteaf::internal::diagnostics::error;
         throwError(OrteafErrc::NullPointer, "createBuffer: heap cannot be nullptr");

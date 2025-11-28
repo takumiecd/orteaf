@@ -35,7 +35,7 @@ MPSBuffer_t createBuffer(MPSHeap_t heap, size_t size, MPSBufferUsage_t usage = k
  * @param usage Resource options bitmask (defaults to 0)
  * @return Opaque buffer handle, or nullptr when unavailable/disabled.
  */
-MPSBuffer_t createBuffer(MPSHeap_t heap, size_t size, size_t offset, MPSBufferUsage_t usage = kMPSDefaultBufferUsage);
+MPSBuffer_t createBufferWithOffset(MPSHeap_t heap, size_t size, size_t offset, MPSBufferUsage_t usage = kMPSDefaultBufferUsage);
 
 /**
  * @brief Destroy a Metal buffer; ignores nullptr.
