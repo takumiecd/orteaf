@@ -8,7 +8,8 @@ namespace orteaf::internal::backend::cpu {
 
 // CPU backend resource for direct allocation.
 // For low-level heap operations (reserve/map/unmap), use CpuHeapOps.
-struct CpuResource {
+class CpuResource {
+public:
     using BufferView = ::orteaf::internal::backend::cpu::CpuBufferView;
 
     struct Config {};

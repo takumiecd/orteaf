@@ -2,8 +2,11 @@
 
 #include <gtest/gtest.h>
 
+#include "tests/internal/testing/error_assert.h"
+
 namespace orteaf::tests {
 using orteaf::internal::backend::cpu::CpuResource;
+namespace diag_error = ::orteaf::internal::diagnostics::error;
 
 TEST(CpuResourceTest, InitializeIsIdempotent) {
     CpuResource::Config cfg{};
@@ -12,8 +15,9 @@ TEST(CpuResourceTest, InitializeIsIdempotent) {
 }
 
 TEST(CpuResourceTest, AllocateZeroReturnsEmpty) {
-    auto view = CpuResource::allocate(0, 64);
-    EXPECT_FALSE(view);
+    ExpectErrorMessage(diag_error::OrteafErrc::InvalidParameter, {"size", "CpuResource"}, [] {
+        CpuResource::allocate(0, 64);
+    });
 }
 
 TEST(CpuResourceTest, AllocateAndDeallocateSucceeds) {

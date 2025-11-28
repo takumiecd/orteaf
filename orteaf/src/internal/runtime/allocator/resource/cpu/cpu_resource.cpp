@@ -1,17 +1,16 @@
 #include "orteaf/internal/runtime/allocator/resource/cpu/cpu_resource.h"
 
 #include "orteaf/internal/backend/cpu/wrapper/cpu_alloc.h"
+#include "orteaf/internal/diagnostics/error/error_macros.h"
 
 namespace orteaf::internal::backend::cpu {
 
 void CpuResource::initialize(const Config& /*config*/) noexcept {
-    // CPU backend is stateless; nothing to do.
+    // Stateless; nothing to do.
 }
 
 CpuResource::BufferView CpuResource::allocate(std::size_t size, std::size_t alignment) {
-    if (size == 0) {
-        return {};
-    }
+    ORTEAF_THROW_IF(size == 0, InvalidParameter, "CpuResource::allocate requires size > 0");
     void* base = cpu::allocAligned(size, alignment);
     return BufferView{base, 0, size};
 }
