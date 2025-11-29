@@ -124,8 +124,9 @@ TEST(DeferredReusePolicy, FlushPendingWaitsUntilComplete) {
 
     FakeResource resource;
     Policy policy;
-    Policy::Config cfg{std::chrono::milliseconds{5}};
+    Policy::Config cfg;
     cfg.resource = &resource;
+    cfg.timeout_ms = std::chrono::milliseconds{5};
     policy.initialize(cfg);
 
   CpuReuseToken token{};

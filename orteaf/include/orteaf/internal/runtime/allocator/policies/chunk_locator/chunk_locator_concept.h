@@ -41,7 +41,7 @@ concept ChunkLocator = requires(
 
     // 初期化
     { locator.initialize(config) } -> std::same_as<void>;
-    { config.resource } -> std::same_as<Resource*>;
+    { config.resource } -> std::convertible_to<Resource*>;
 
     // チャンク確保・解放
     { locator.addChunk(size, alignment) } -> std::same_as<typename T::MemoryBlock>;
