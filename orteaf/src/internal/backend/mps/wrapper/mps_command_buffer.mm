@@ -88,6 +88,18 @@ void commit(MPSCommandBuffer_t command_buffer) {
 }
 
 /**
+ * @copydoc orteaf::internal::backend::mps::isCompleted
+ */
+bool isCompleted(MPSCommandBuffer_t command_buffer) {
+    if (command_buffer == nullptr) {
+        using namespace orteaf::internal::diagnostics::error;
+        throwError(OrteafErrc::NullPointer, "isCompleted: command_buffer cannot be nullptr");
+    }
+    id<MTLCommandBuffer> objc_command_buffer = objcFromOpaqueNoown<id<MTLCommandBuffer>>(command_buffer);
+    return objc_command_buffer.status == MTLCommandBufferStatusCompleted;
+}
+
+/**
  * @copydoc orteaf::internal::backend::mps::waitUntilCompleted
  */
 void waitUntilCompleted(MPSCommandBuffer_t command_buffer) {
