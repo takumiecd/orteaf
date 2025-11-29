@@ -5,8 +5,10 @@
 #include <cstddef>
 
 #include "orteaf/internal/backend/mps/mps_buffer_view.h"
+#include "orteaf/internal/backend/mps/mps_reuse_token.h"
 #include "orteaf/internal/backend/mps/wrapper/mps_buffer.h"
 #include "orteaf/internal/backend/mps/wrapper/mps_heap.h"
+#include <orteaf/internal/backend/backend_traits.h>
 
 namespace orteaf::internal::backend::mps {
 
@@ -14,6 +16,8 @@ namespace orteaf::internal::backend::mps {
 class MpsResource {
 public:
     using BufferView = ::orteaf::internal::backend::mps::MpsBufferView;
+    using FenceToken = ::orteaf::internal::backend::mps::MpsFenceToken;
+    using ReuseToken = ::orteaf::internal::backend::mps::MpsReuseToken;
 
     struct Config {
         MPSDevice_t device{nullptr};
@@ -33,6 +37,9 @@ public:
 
     MPSDevice_t device() const noexcept { return device_; }
     MPSHeap_t heap() const noexcept { return heap_; }
+
+    bool isCompleted(FenceToken& token);
+    bool isCompleted(ReuseToken& token);
 
 private:
     MPSDevice_t device_{nullptr};

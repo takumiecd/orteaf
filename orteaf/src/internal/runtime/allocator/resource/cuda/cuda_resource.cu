@@ -27,4 +27,14 @@ void CudaResource::deallocate(BufferView view, std::size_t size, std::size_t /*a
     ::orteaf::internal::backend::cuda::free(base, size);
 }
 
+bool CudaResource::isCompleted(const FenceToken& token) {
+    (void)token;
+    return true;
+}
+
+bool CudaResource::isCompleted(const ReuseToken& token) {
+    (void)token;
+    return true;
+}
+
 }  // namespace orteaf::internal::backend::cuda

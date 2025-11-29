@@ -38,6 +38,11 @@ void encodeWait(MPSCommandBuffer_t command_buffer, MPSEvent_t event, uint32_t va
 void commit(MPSCommandBuffer_t command_buffer);
 
 /**
+ * @brief Check if the command buffer has completed execution.
+ */
+bool isCompleted(MPSCommandBuffer_t command_buffer);
+
+/**
  * @brief Block until the command buffer has completed execution.
  */
 void waitUntilCompleted(MPSCommandBuffer_t command_buffer);
