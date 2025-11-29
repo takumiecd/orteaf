@@ -36,12 +36,12 @@ public:
         stacks_.resize(size_class_count_);
     }
 
-    void push(std::size_t list_index, MemoryBlock block) {
+    void push(std::size_t list_index, const MemoryBlock& block) {
         ORTEAF_THROW_IF(resource_ == nullptr, InvalidState, "HostStackFreelistPolicy is not initialized");
         if (list_index >= stacks_.size()) {
             stacks_.resize(std::max(stacks_.size(), list_index + 1));
         }
-        stacks_[list_index].pushBack(std::move(block));
+        stacks_[list_index].pushBack(block);
     }
 
     MemoryBlock pop(std::size_t list_index) {
@@ -99,7 +99,7 @@ public:
             while (!stack.empty()) {
                 MemoryBlock top = std::move(stack.back());
                 stack.resize(stack.size() - 1);
-                if (!chunk.view.contains(top.view, chunk_size)) {
+                if (!chunk.view.contains(top.view, top.view.size())) {
                     kept.pushBack(std::move(top));
                 }
             }
