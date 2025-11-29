@@ -11,6 +11,7 @@ namespace orteaf::internal::backend::cpu {
 class CpuResource {
 public:
     using BufferView = ::orteaf::internal::backend::cpu::CpuBufferView;
+    using FenceToken = void*; // No-op for CPU
 
     struct Config {};
 
@@ -19,6 +20,8 @@ public:
     static BufferView allocate(std::size_t size, std::size_t alignment);
 
     static void deallocate(BufferView view, std::size_t size, std::size_t alignment);
+
+    static bool isCompleted(const FenceToken& token);
 };
 
 }  // namespace orteaf::internal::backend::cpu

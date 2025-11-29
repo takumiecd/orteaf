@@ -23,4 +23,9 @@ void CpuResource::deallocate(BufferView view, std::size_t size, std::size_t /*al
     cpu::dealloc(base, size);
 }
 
+bool CpuResource::isCompleted(const FenceToken& token) {
+    (void)token;
+    return true;
+}
+
 }  // namespace orteaf::internal::backend::cpu
