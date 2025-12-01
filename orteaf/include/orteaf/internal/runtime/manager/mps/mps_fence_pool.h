@@ -6,7 +6,7 @@
 
 #include "orteaf/internal/backend/mps/wrapper/mps_fence.h"
 #include "orteaf/internal/base/heap_vector.h"
-#include "orteaf/internal/base/handle_scope.h"
+#include "orteaf/internal/base/lease.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include "orteaf/internal/backend/mps/mps_slow_ops.h"
 
@@ -16,7 +16,7 @@ class MpsFencePool {
 public:
     using BackendOps = ::orteaf::internal::runtime::backend_ops::mps::MpsSlowOps;
     using Fence = ::orteaf::internal::backend::mps::MPSFence_t;
-    using Handle = ::orteaf::internal::base::HandleScope<void, Fence, MpsFencePool>;
+    using FenceLease = ::orteaf::internal::base::Lease<void, Fence, MpsFencePool>;
 
     MpsFencePool() = default;
     MpsFencePool(const MpsFencePool&) = delete;
@@ -42,7 +42,14 @@ public:
 
     void shutdown();
 
-    Handle acquireFence();
+    FenceLease acquireFence();
+
+    // Manual release helper for callers wanting explicit return.
+    void release(FenceLease& lease) noexcept {
+        if (lease) {
+            release(lease.get());
+        }
+    }
 
     std::size_t availableCount() const noexcept { return free_list_.size(); }
 

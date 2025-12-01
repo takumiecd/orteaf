@@ -6,7 +6,7 @@
 
 #include "orteaf/internal/backend/mps/wrapper/mps_event.h"
 #include "orteaf/internal/base/heap_vector.h"
-#include "orteaf/internal/base/handle_scope.h"
+#include "orteaf/internal/base/lease.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include "orteaf/internal/backend/mps/mps_slow_ops.h"
 
@@ -16,7 +16,7 @@ class MpsEventPool {
 public:
     using BackendOps = ::orteaf::internal::runtime::backend_ops::mps::MpsSlowOps;
     using Event = ::orteaf::internal::backend::mps::MPSEvent_t;
-    using Handle = ::orteaf::internal::base::HandleScope<void, Event, MpsEventPool>;
+    using EventLease = ::orteaf::internal::base::Lease<void, Event, MpsEventPool>;
 
     MpsEventPool() = default;
     MpsEventPool(const MpsEventPool&) = delete;
@@ -42,7 +42,14 @@ public:
 
     void shutdown();
 
-    Handle acquireEvent();
+    EventLease acquireEvent();
+
+    // Manual release helper for callers wanting explicit return.
+    void release(EventLease& lease) noexcept {
+        if (lease) {
+            release(lease.get());
+        }
+    }
 
     std::size_t availableCount() const noexcept { return free_list_.size(); }
 

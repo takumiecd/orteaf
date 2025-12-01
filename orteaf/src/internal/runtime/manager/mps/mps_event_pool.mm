@@ -63,7 +63,7 @@ void MpsEventPool::shutdown() {
   initialized_ = false;
 }
 
-MpsEventPool::Handle MpsEventPool::acquireEvent() {
+MpsEventPool::EventLease MpsEventPool::acquireEvent() {
   ensureInitialized();
   if (free_list_.empty()) {
     growFreeList(growth_chunk_size_);
@@ -71,10 +71,10 @@ MpsEventPool::Handle MpsEventPool::acquireEvent() {
   auto handle = free_list_.back();
   free_list_.resize(free_list_.size() - 1);
   ++active_count_;
-  return Handle{this, handle};
+  return EventLease{this, handle};
 }
 
-void MpsEventPool::release(EventHandle event) {
+void MpsEventPool::release(Event event) {
   if (event == nullptr) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
