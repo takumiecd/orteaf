@@ -6,6 +6,7 @@
 
 #include "orteaf/internal/backend/mps/wrapper/mps_fence.h"
 #include "orteaf/internal/base/heap_vector.h"
+#include "orteaf/internal/base/handle_scope.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include "orteaf/internal/backend/mps/mps_slow_ops.h"
 
@@ -14,7 +15,8 @@ namespace orteaf::internal::runtime::mps {
 class MpsFencePool {
 public:
     using BackendOps = ::orteaf::internal::runtime::backend_ops::mps::MpsSlowOps;
-    using FenceHandle = ::orteaf::internal::backend::mps::MPSFence_t;
+    using Fence = ::orteaf::internal::backend::mps::MPSFence_t;
+    using Handle = ::orteaf::internal::base::HandleScope<void, Fence, MpsFencePool>;
 
     MpsFencePool() = default;
     MpsFencePool(const MpsFencePool&) = delete;
@@ -22,63 +24,6 @@ public:
     MpsFencePool(MpsFencePool&&) = default;
     MpsFencePool& operator=(MpsFencePool&&) = default;
     ~MpsFencePool() = default;
-
-    class Handle {
-    public:
-        Handle() = delete;
-        Handle(const Handle&) = delete;
-        Handle& operator=(const Handle&) = delete;
-
-        Handle(Handle&& other) noexcept { moveFrom(other); }
-        Handle& operator=(Handle&& other) noexcept {
-            if (this != &other) {
-                release();
-                moveFrom(other);
-            }
-            return *this;
-        }
-
-        ~Handle() { release(); }
-
-        FenceHandle get() const {
-            if (!active_) {
-                ::orteaf::internal::diagnostics::error::throwError(
-                    ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-                    "Fence handle is not active");
-            }
-            return handle_;
-        }
-
-        explicit operator bool() const noexcept { return active_; }
-
-        void release() {
-            if (active_ && pool_ != nullptr) {
-                pool_->release(handle_);
-            }
-            pool_ = nullptr;
-            handle_ = nullptr;
-            active_ = false;
-        }
-
-    private:
-        friend class MpsFencePool;
-
-        Handle(MpsFencePool* pool, FenceHandle handle) noexcept
-            : pool_(pool), handle_(handle), active_(true) {}
-
-        void moveFrom(Handle& other) noexcept {
-            pool_ = other.pool_;
-            handle_ = other.handle_;
-            active_ = other.active_;
-            other.pool_ = nullptr;
-            other.handle_ = nullptr;
-            other.active_ = false;
-        }
-
-        MpsFencePool* pool_{nullptr};
-        FenceHandle handle_{nullptr};
-        bool active_{false};
-    };
 
     void setGrowthChunkSize(std::size_t chunk) {
         if (chunk == 0) {
@@ -126,12 +71,12 @@ private:
 
     void growFreeList(std::size_t count);
 
-    void release(FenceHandle handle);
+    void release(Fence handle);
 
     std::size_t growth_chunk_size_{1};
     bool initialized_{false};
     ::orteaf::internal::backend::mps::MPSDevice_t device_{nullptr};
-    base::HeapVector<FenceHandle> free_list_{};
+    base::HeapVector<Fence> free_list_{};
     std::size_t active_count_{0};
     BackendOps *ops_{nullptr};
 #if ORTEAF_ENABLE_TEST

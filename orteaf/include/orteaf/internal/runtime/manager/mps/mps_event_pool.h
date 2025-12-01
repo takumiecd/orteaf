@@ -6,6 +6,7 @@
 
 #include "orteaf/internal/backend/mps/wrapper/mps_event.h"
 #include "orteaf/internal/base/heap_vector.h"
+#include "orteaf/internal/base/handle_scope.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include "orteaf/internal/backend/mps/mps_slow_ops.h"
 
@@ -14,7 +15,8 @@ namespace orteaf::internal::runtime::mps {
 class MpsEventPool {
 public:
     using BackendOps = ::orteaf::internal::runtime::backend_ops::mps::MpsSlowOps;
-    using EventHandle = ::orteaf::internal::backend::mps::MPSEvent_t;
+    using Event = ::orteaf::internal::backend::mps::MPSEvent_t;
+    using Handle = ::orteaf::internal::base::HandleScope<void, Event, MpsEventPool>;
 
     MpsEventPool() = default;
     MpsEventPool(const MpsEventPool&) = delete;
@@ -22,63 +24,6 @@ public:
     MpsEventPool(MpsEventPool&&) = default;
     MpsEventPool& operator=(MpsEventPool&&) = default;
     ~MpsEventPool() = default;
-
-    class Handle {
-    public:
-        Handle() = delete;
-        Handle(const Handle&) = delete;
-        Handle& operator=(const Handle&) = delete;
-
-        Handle(Handle&& other) noexcept { moveFrom(other); }
-        Handle& operator=(Handle&& other) noexcept {
-            if (this != &other) {
-                release();
-                moveFrom(other);
-            }
-            return *this;
-        }
-
-        ~Handle() { release(); }
-
-        EventHandle get() const {
-            if (!active_) {
-                ::orteaf::internal::diagnostics::error::throwError(
-                    ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-                    "Event handle is not active");
-            }
-            return handle_;
-        }
-
-        explicit operator bool() const noexcept { return active_; }
-
-        void release() {
-            if (active_ && pool_ != nullptr) {
-                pool_->release(handle_);
-            }
-            pool_ = nullptr;
-            handle_ = nullptr;
-            active_ = false;
-        }
-
-    private:
-        friend class MpsEventPool;
-
-        Handle(MpsEventPool* pool, EventHandle handle) noexcept
-            : pool_(pool), handle_(handle), active_(true) {}
-
-        void moveFrom(Handle& other) noexcept {
-            pool_ = other.pool_;
-            handle_ = other.handle_;
-            active_ = other.active_;
-            other.pool_ = nullptr;
-            other.handle_ = nullptr;
-            other.active_ = false;
-        }
-
-        MpsEventPool* pool_{nullptr};
-        EventHandle handle_{nullptr};
-        bool active_{false};
-    };
 
     void setGrowthChunkSize(std::size_t chunk) {
         if (chunk == 0) {
@@ -126,12 +71,12 @@ private:
 
     void growFreeList(std::size_t count);
 
-    void release(EventHandle handle);
+    void release(Event handle);
 
     std::size_t growth_chunk_size_{1};
     bool initialized_{false};
     ::orteaf::internal::backend::mps::MPSDevice_t device_{nullptr};
-    base::HeapVector<EventHandle> free_list_{};
+    base::HeapVector<Event> free_list_{};
     std::size_t active_count_{0};
     BackendOps *ops_{nullptr};
 #if ORTEAF_ENABLE_TEST
