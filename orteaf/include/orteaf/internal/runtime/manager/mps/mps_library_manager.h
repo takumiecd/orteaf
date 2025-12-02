@@ -95,8 +95,6 @@ public:
   struct DebugState {
     bool alive{false};
     bool handle_allocated{false};
-    std::uint32_t generation{0};
-    std::uint32_t use_count{0};
     LibraryKeyKind kind{LibraryKeyKind::kNamed};
     std::string identifier{};
     std::size_t growth_chunk_size{0};
@@ -109,17 +107,8 @@ private:
   struct State {
     LibraryKey key{};
     ::orteaf::internal::backend::mps::MPSLibrary_t handle{nullptr};
-    std::uint32_t generation{0};
-    std::uint32_t use_count{0};
     bool alive{false};
     PipelineManager pipeline_manager{};
-
-    void reset() {
-      key = LibraryKey{};
-      handle = nullptr;
-      use_count = 0;
-      alive = false;
-    }
   };
 
   void ensureInitialized() const;
@@ -136,7 +125,7 @@ private:
 
   void growStatePool(std::size_t additional);
 
-  base::LibraryHandle encodeHandle(std::size_t index, std::uint32_t generation) const;
+  base::LibraryHandle encodeHandle(std::size_t index) const;
 
   void releaseHandle(base::LibraryHandle handle) noexcept;
 
