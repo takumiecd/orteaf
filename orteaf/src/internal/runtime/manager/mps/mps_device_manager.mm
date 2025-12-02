@@ -66,75 +66,69 @@ void MpsDeviceManager::shutdown() {
   initialized_ = false;
 }
 
-::orteaf::internal::backend::mps::MPSDevice_t
-MpsDeviceManager::getDevice(::orteaf::internal::base::DeviceHandle id) const {
-  return ensureValid(id).device;
-}
-
 MpsDeviceManager::DeviceLease
 MpsDeviceManager::acquire(::orteaf::internal::base::DeviceHandle id) {
   const State& state = ensureValid(id);
-  return DeviceLease{this, id, state.device};
+  return DeviceLease{this, state.device};
 }
 
 void MpsDeviceManager::release(DeviceLease&) noexcept {
   // Devices are owned for the lifetime of the manager; nothing to do.
 }
 
+MpsDeviceManager::CommandQueueManagerLease
+MpsDeviceManager::acquireCommandQueueManager(::orteaf::internal::base::DeviceHandle id) {
+  State& state = ensureValidState(id);
+  return CommandQueueManagerLease{this, &state.command_queue_manager};
+}
+
+void MpsDeviceManager::release(CommandQueueManagerLease&) noexcept {
+  // Managers live for the device lifetime; nothing to do.
+}
+
+MpsDeviceManager::HeapManagerLease
+MpsDeviceManager::acquireHeapManager(::orteaf::internal::base::DeviceHandle id) {
+  State& state = ensureValidState(id);
+  return HeapManagerLease{this, &state.heap_manager};
+}
+
+void MpsDeviceManager::release(HeapManagerLease&) noexcept {
+  // Managers live for the device lifetime; nothing to do.
+}
+
+MpsDeviceManager::LibraryManagerLease
+MpsDeviceManager::acquireLibraryManager(::orteaf::internal::base::DeviceHandle id) {
+  State& state = ensureValidState(id);
+  return LibraryManagerLease{this, &state.library_manager};
+}
+
+void MpsDeviceManager::release(LibraryManagerLease&) noexcept {
+  // Managers live for the device lifetime; nothing to do.
+}
+
+MpsDeviceManager::EventPoolLease
+MpsDeviceManager::acquireEventPool(::orteaf::internal::base::DeviceHandle id) {
+  State& state = ensureValidState(id);
+  return EventPoolLease{this, &state.event_pool};
+}
+
+void MpsDeviceManager::release(EventPoolLease&) noexcept {
+  // Pools live for the device lifetime; nothing to do.
+}
+
+MpsDeviceManager::FencePoolLease
+MpsDeviceManager::acquireFencePool(::orteaf::internal::base::DeviceHandle id) {
+  State& state = ensureValidState(id);
+  return FencePoolLease{this, &state.fence_pool};
+}
+
+void MpsDeviceManager::release(FencePoolLease&) noexcept {
+  // Pools live for the device lifetime; nothing to do.
+}
+
 ::orteaf::internal::architecture::Architecture
 MpsDeviceManager::getArch(::orteaf::internal::base::DeviceHandle id) const {
   return ensureValid(id).arch;
-}
-
-::orteaf::internal::runtime::mps::MpsCommandQueueManager &
-MpsDeviceManager::commandQueueManager(::orteaf::internal::base::DeviceHandle id) {
-  return ensureValidState(id).command_queue_manager;
-}
-
-const ::orteaf::internal::runtime::mps::MpsCommandQueueManager &
-MpsDeviceManager::commandQueueManager(
-    ::orteaf::internal::base::DeviceHandle id) const {
-  return ensureValid(id).command_queue_manager;
-}
-
-::orteaf::internal::runtime::mps::MpsHeapManager &
-MpsDeviceManager::heapManager(::orteaf::internal::base::DeviceHandle id) {
-  return ensureValidState(id).heap_manager;
-}
-
-const ::orteaf::internal::runtime::mps::MpsHeapManager &
-MpsDeviceManager::heapManager(::orteaf::internal::base::DeviceHandle id) const {
-  return ensureValid(id).heap_manager;
-}
-
-::orteaf::internal::runtime::mps::MpsLibraryManager &
-MpsDeviceManager::libraryManager(::orteaf::internal::base::DeviceHandle id) {
-  return ensureValidState(id).library_manager;
-}
-
-const ::orteaf::internal::runtime::mps::MpsLibraryManager &
-MpsDeviceManager::libraryManager(::orteaf::internal::base::DeviceHandle id) const {
-  return ensureValid(id).library_manager;
-}
-
-::orteaf::internal::runtime::mps::MpsEventPool &
-MpsDeviceManager::eventPool(::orteaf::internal::base::DeviceHandle id) {
-  return ensureValidState(id).event_pool;
-}
-
-const ::orteaf::internal::runtime::mps::MpsEventPool &
-MpsDeviceManager::eventPool(::orteaf::internal::base::DeviceHandle id) const {
-  return ensureValid(id).event_pool;
-}
-
-::orteaf::internal::runtime::mps::MpsFencePool &
-MpsDeviceManager::fencePool(::orteaf::internal::base::DeviceHandle id) {
-  return ensureValidState(id).fence_pool;
-}
-
-const ::orteaf::internal::runtime::mps::MpsFencePool &
-MpsDeviceManager::fencePool(::orteaf::internal::base::DeviceHandle id) const {
-  return ensureValid(id).fence_pool;
 }
 
 bool MpsDeviceManager::isAlive(::orteaf::internal::base::DeviceHandle id) const {

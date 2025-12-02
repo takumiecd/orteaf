@@ -25,8 +25,28 @@ class MpsDeviceManager {
 public:
     using BackendOps = ::orteaf::internal::runtime::backend_ops::mps::MpsSlowOps;
     using DeviceLease = ::orteaf::internal::base::Lease<
-        ::orteaf::internal::base::DeviceHandle,
+        void,
         ::orteaf::internal::backend::mps::MPSDevice_t,
+        MpsDeviceManager>;
+    using CommandQueueManagerLease = ::orteaf::internal::base::Lease<
+        void,
+        ::orteaf::internal::runtime::mps::MpsCommandQueueManager*,
+        MpsDeviceManager>;
+    using HeapManagerLease = ::orteaf::internal::base::Lease<
+        void,
+        ::orteaf::internal::runtime::mps::MpsHeapManager*,
+        MpsDeviceManager>;
+    using LibraryManagerLease = ::orteaf::internal::base::Lease<
+        void,
+        ::orteaf::internal::runtime::mps::MpsLibraryManager*,
+        MpsDeviceManager>;
+    using EventPoolLease = ::orteaf::internal::base::Lease<
+        void,
+        ::orteaf::internal::runtime::mps::MpsEventPool*,
+        MpsDeviceManager>;
+    using FencePoolLease = ::orteaf::internal::base::Lease<
+        void,
+        ::orteaf::internal::runtime::mps::MpsFencePool*,
         MpsDeviceManager>;
 
     MpsDeviceManager() = default;
@@ -71,27 +91,22 @@ public:
     DeviceLease acquire(::orteaf::internal::base::DeviceHandle id);
     void release(DeviceLease& lease) noexcept;
 
-    ::orteaf::internal::backend::mps::MPSDevice_t getDevice(::orteaf::internal::base::DeviceHandle id) const;
+    CommandQueueManagerLease acquireCommandQueueManager(::orteaf::internal::base::DeviceHandle id);
+    void release(CommandQueueManagerLease& lease) noexcept;
+
+    HeapManagerLease acquireHeapManager(::orteaf::internal::base::DeviceHandle id);
+    void release(HeapManagerLease& lease) noexcept;
+
+    LibraryManagerLease acquireLibraryManager(::orteaf::internal::base::DeviceHandle id);
+    void release(LibraryManagerLease& lease) noexcept;
+
+    EventPoolLease acquireEventPool(::orteaf::internal::base::DeviceHandle id);
+    void release(EventPoolLease& lease) noexcept;
+
+    FencePoolLease acquireFencePool(::orteaf::internal::base::DeviceHandle id);
+    void release(FencePoolLease& lease) noexcept;
 
     ::orteaf::internal::architecture::Architecture getArch(::orteaf::internal::base::DeviceHandle id) const;
-
-    ::orteaf::internal::runtime::mps::MpsCommandQueueManager& commandQueueManager(
-        ::orteaf::internal::base::DeviceHandle id);
-
-    const ::orteaf::internal::runtime::mps::MpsCommandQueueManager& commandQueueManager(
-        ::orteaf::internal::base::DeviceHandle id) const;
-
-    ::orteaf::internal::runtime::mps::MpsHeapManager& heapManager(
-        ::orteaf::internal::base::DeviceHandle id);
-
-    const ::orteaf::internal::runtime::mps::MpsHeapManager& heapManager(
-        ::orteaf::internal::base::DeviceHandle id) const;
-
-    ::orteaf::internal::runtime::mps::MpsLibraryManager& libraryManager(
-        ::orteaf::internal::base::DeviceHandle id);
-
-    const ::orteaf::internal::runtime::mps::MpsLibraryManager& libraryManager(
-        ::orteaf::internal::base::DeviceHandle id) const;
 
     ::orteaf::internal::runtime::mps::MpsEventPool& eventPool(
         ::orteaf::internal::base::DeviceHandle id);
