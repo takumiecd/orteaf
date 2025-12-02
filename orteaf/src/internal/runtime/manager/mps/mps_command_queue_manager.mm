@@ -258,7 +258,6 @@ void MpsCommandQueueManager::State::destroy(BackendOps *ops) noexcept {
 #endif
   resetHazards();
   in_use = false;
-  on_free_list = false;
 }
 
 void MpsCommandQueueManager::ensureInitialized() const {

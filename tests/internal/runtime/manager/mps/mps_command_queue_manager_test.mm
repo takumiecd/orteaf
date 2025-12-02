@@ -276,7 +276,7 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, AcquireFailsWhenGrowthWouldExceedLim
     this->adapter().expectCreateEvents({makeEvent(0x6000)});
 #endif
     manager.initialize(device, this->getOps(), 1);
-    (void)manager.acquire();
+    auto lease = manager.acquire();  // Keep lease to prevent it from returning to free list
     ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] { (void)manager.acquire(); });
 }
 
