@@ -194,7 +194,7 @@ TYPED_TEST(MpsLibraryManagerTypedTest, GetOrCreateAllocatesAndCachesLibrary) {
     lease0.release();
 }
 
-TYPED_TEST(MpsLibraryManagerTypedTest, ReleaseDestroysHandleAndAllowsRecreation) {
+TYPED_TEST(MpsLibraryManagerTypedTest, ReleasedLeaseDoesNotAffectLibrary) {
     auto& manager = this->manager();
     this->initializeManager();
     const auto maybe_name = this->libraryNameFromEnv();
@@ -204,27 +204,26 @@ TYPED_TEST(MpsLibraryManagerTypedTest, ReleaseDestroysHandleAndAllowsRecreation)
     }
     const auto key = mps_rt::LibraryKey::Named(*maybe_name);
 
-    backend::mps::MPSLibrary_t first_handle = nullptr;
-    backend::mps::MPSLibrary_t second_handle = nullptr;
+    backend::mps::MPSLibrary_t handle = nullptr;
     if constexpr (TypeParam::is_mock) {
-        first_handle = makeLibrary(0x600);
-        second_handle = makeLibrary(0x601);
-        this->adapter().expectCreateLibraries({{*maybe_name, first_handle}, {*maybe_name, second_handle}});
-        this->adapter().expectDestroyLibraries({first_handle});
-        this->adapter().expectDestroyLibraries({second_handle});
+        handle = makeLibrary(0x600);
+        this->adapter().expectCreateLibraries({{*maybe_name, handle}});
+        this->adapter().expectDestroyLibraries({handle});
     }
 
     auto lease = manager.acquire(key);
-    const auto released_handle = lease.handle();
+    const auto handle_id = lease.handle();
     lease.release();
-    const auto released_snapshot = manager.debugState(released_handle);
-    EXPECT_FALSE(released_snapshot.alive);
-    EXPECT_FALSE(released_snapshot.handle_allocated);
+    // Library is not released until shutdown
+    const auto snapshot = manager.debugState(handle_id);
+    EXPECT_TRUE(snapshot.alive);
+    EXPECT_TRUE(snapshot.handle_allocated);
 
+    // Reacquire returns the same library
     auto reacquired = manager.acquire(key);
-    EXPECT_NE(reacquired.handle(), base::LibraryHandle{});
+    EXPECT_EQ(reacquired.handle(), handle_id);
     if constexpr (TypeParam::is_mock) {
-        EXPECT_EQ(reacquired.get(), second_handle);
+        EXPECT_EQ(reacquired.get(), handle);
     } else {
         EXPECT_NE(reacquired.get(), nullptr);
     }
@@ -239,7 +238,7 @@ TYPED_TEST(MpsLibraryManagerTypedTest, EmptyIdentifierIsRejected) {
     });
 }
 
-TYPED_TEST(MpsLibraryManagerTypedTest, ReleaseRejectsStaleId) {
+TYPED_TEST(MpsLibraryManagerTypedTest, ReleaseIsIdempotent) {
     auto& manager = this->manager();
     this->initializeManager();
     const auto maybe_name = this->libraryNameFromEnv();
@@ -259,9 +258,9 @@ TYPED_TEST(MpsLibraryManagerTypedTest, ReleaseRejectsStaleId) {
     auto lease = manager.acquire(key);
     const auto handle_id = lease.handle();
     lease.release();
-    lease.release();  // idempotent
+    lease.release();  // idempotent - no crash or error
     const auto snapshot = manager.debugState(handle_id);
-    EXPECT_FALSE(snapshot.alive);
+    EXPECT_TRUE(snapshot.alive);  // Library is still alive
 }
 
 TYPED_TEST(MpsLibraryManagerTypedTest, PipelineManagerProvidesNestedFunctionManager) {
@@ -328,10 +327,10 @@ TYPED_TEST(MpsLibraryManagerTypedTest, PipelineManagerCanBeAcquiredByKey) {
     EXPECT_NE(pipeline_lease.get(), nullptr);
     const auto snapshot = manager.debugState(pipeline_lease.handle());
     EXPECT_TRUE(snapshot.alive);
-    EXPECT_EQ(snapshot.use_count, 1u);
     pipeline_lease.release();
+    // Library is still alive after release
     const auto released_snapshot = manager.debugState(pipeline_lease.handle());
-    EXPECT_FALSE(released_snapshot.alive);
+    EXPECT_TRUE(released_snapshot.alive);
 }
 
 TYPED_TEST(MpsLibraryManagerTypedTest, LibraryCanBeReacquiredFromPipelineLease) {
@@ -346,23 +345,24 @@ TYPED_TEST(MpsLibraryManagerTypedTest, LibraryCanBeReacquiredFromPipelineLease) 
     this->adapter().expectCreateLibraries({{"FromPipeline", lib_handle}});
     this->adapter().expectDestroyLibraries({lib_handle});
 
-    auto library_lease = manager.acquire(key);              // use_count = 1
-    auto pipeline_lease = manager.acquirePipelineManager(library_lease); // use_count = 2
-    auto extra_library_lease = manager.acquire(pipeline_lease);          // use_count = 3
+    auto library_lease = manager.acquire(key);
+    auto pipeline_lease = manager.acquirePipelineManager(library_lease);
+    auto extra_library_lease = manager.acquire(pipeline_lease);
 
-    EXPECT_EQ(manager.debugState(library_lease.handle()).use_count, 3u);
+    // All leases point to the same library
+    EXPECT_EQ(library_lease.handle(), pipeline_lease.handle());
+    EXPECT_EQ(pipeline_lease.handle(), extra_library_lease.handle());
 
-    library_lease.release();           // use_count = 2
-    EXPECT_EQ(manager.debugState(pipeline_lease.handle()).use_count, 2u);
-    pipeline_lease.release();          // use_count = 1
-    EXPECT_EQ(manager.debugState(extra_library_lease.handle()).use_count, 1u);
-    extra_library_lease.release();     // use_count = 0, destroys
+    library_lease.release();
+    pipeline_lease.release();
+    extra_library_lease.release();
 
-    const auto released_snapshot = manager.debugState(extra_library_lease.handle());
-    EXPECT_FALSE(released_snapshot.alive);
+    // Library is still alive after all releases
+    const auto snapshot = manager.debugState(extra_library_lease.handle());
+    EXPECT_TRUE(snapshot.alive);
 }
 
-TYPED_TEST(MpsLibraryManagerTypedTest, PipelineLeaseKeepsLibraryAliveUntilReleased) {
+TYPED_TEST(MpsLibraryManagerTypedTest, LibraryPersistsAfterLeaseRelease) {
     auto& manager = this->manager();
     this->initializeManager();
     if constexpr (!TypeParam::is_mock) {
@@ -374,17 +374,17 @@ TYPED_TEST(MpsLibraryManagerTypedTest, PipelineLeaseKeepsLibraryAliveUntilReleas
     this->adapter().expectCreateLibraries({{"KeepAlive", lib_handle}});
     this->adapter().expectDestroyLibraries({lib_handle});
 
-    auto library_lease = manager.acquire(key);                    // use_count = 1
-    auto pipeline_lease = manager.acquirePipelineManager(library_lease); // use_count = 2
+    auto library_lease = manager.acquire(key);
+    auto pipeline_lease = manager.acquirePipelineManager(library_lease);
 
-    library_lease.release(); // drop original; pipeline should keep it alive
+    library_lease.release();
     const auto snapshot_mid = manager.debugState(pipeline_lease.handle());
     EXPECT_TRUE(snapshot_mid.alive);
-    EXPECT_EQ(snapshot_mid.use_count, 1u);
 
-    pipeline_lease.release(); // now should destroy
+    pipeline_lease.release();
+    // Library is still alive - only destroyed on shutdown
     const auto snapshot_released = manager.debugState(pipeline_lease.handle());
-    EXPECT_FALSE(snapshot_released.alive);
+    EXPECT_TRUE(snapshot_released.alive);
 }
 
 TYPED_TEST(MpsLibraryManagerTypedTest, PipelineManagerAcquireByKeyReusesExistingLibrary) {
@@ -399,16 +399,19 @@ TYPED_TEST(MpsLibraryManagerTypedTest, PipelineManagerAcquireByKeyReusesExisting
     this->adapter().expectCreateLibraries({{"ReuseByKey", lib_handle}});
     this->adapter().expectDestroyLibraries({lib_handle});
 
-    auto library_lease = manager.acquire(key); // creates library, use_count=1
-    auto pm_lease_first = manager.acquirePipelineManager(key); // use_count=2
-    auto pm_lease_second = manager.acquirePipelineManager(key); // use_count=3
+    auto library_lease = manager.acquire(key);
+    auto pm_lease_first = manager.acquirePipelineManager(key);
+    auto pm_lease_second = manager.acquirePipelineManager(key);
 
-    EXPECT_EQ(manager.debugState(library_lease.handle()).use_count, 3u);
+    // All leases point to the same library
+    EXPECT_EQ(library_lease.handle(), pm_lease_first.handle());
+    EXPECT_EQ(pm_lease_first.handle(), pm_lease_second.handle());
 
-    pm_lease_second.release(); // use_count=2
-    pm_lease_first.release();  // use_count=1
-    library_lease.release();   // use_count=0 destroys
+    pm_lease_second.release();
+    pm_lease_first.release();
+    library_lease.release();
 
-    const auto snapshot_released = manager.debugState(library_lease.handle());
-    EXPECT_FALSE(snapshot_released.alive);
+    // Library is still alive after all releases
+    const auto snapshot = manager.debugState(library_lease.handle());
+    EXPECT_TRUE(snapshot.alive);
 }
