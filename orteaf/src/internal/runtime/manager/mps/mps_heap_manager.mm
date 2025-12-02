@@ -84,7 +84,7 @@ MpsHeapManager::HeapLease MpsHeapManager::acquire(const HeapDescriptorKey &key) 
 }
 
 void MpsHeapManager::release(HeapLease &lease) noexcept {
-  if (!initialized_ || device_ == nullptr || ops_ == nullptr) {
+  if (!initialized_ || device_ == nullptr || ops_ == nullptr || !lease) {
     return;
   }
   const auto id = lease.handle();
@@ -101,6 +101,7 @@ void MpsHeapManager::release(HeapLease &lease) noexcept {
   }
   state.in_use = false;
   ++state.generation;
+  lease.invalidate();
 }
 
 #if ORTEAF_ENABLE_TEST

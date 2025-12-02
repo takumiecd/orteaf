@@ -61,6 +61,12 @@ private:
         }
     }
 
+    void invalidate() noexcept {
+        manager_ = nullptr;
+        handle_ = HandleT{};
+        resource_ = ResourceT{};
+    }
+
     ManagerT* manager_{nullptr};
     HandleT handle_{};
     ResourceT resource_{};
@@ -114,6 +120,11 @@ private:
             manager_->release(*this);
             manager_ = nullptr;
         }
+    }
+
+    void invalidate() noexcept {
+        manager_ = nullptr;
+        resource_ = ResourceT{};
     }
 
     ManagerT* manager_{nullptr};

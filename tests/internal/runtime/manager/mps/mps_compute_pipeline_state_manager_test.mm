@@ -351,6 +351,39 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest, ReleaseDestroysHandlesAndAll
     }
 }
 
+TYPED_TEST(MpsComputePipelineStateManagerTypedTest, ManualReleaseInvalidatesLease) {
+    auto& manager = this->manager();
+    if (!this->initializeManager()) {
+        return;
+    }
+    if constexpr (!TypeParam::is_mock) {
+        GTEST_SKIP() << "Mock-only test";
+        return;
+    }
+    const auto maybe_name = this->functionNameFromEnv();
+    if (!maybe_name.has_value()) {
+        GTEST_SKIP() << "Set " ORTEAF_MPS_ENV_FUNCTION_NAME " to a valid function name to run";
+        return;
+    }
+
+    const auto function_handle = makeFunction(0x8b0);
+    const auto pipeline_handle = makePipeline(0x9b0);
+    this->adapter().expectCreateFunctions({{*maybe_name, function_handle}});
+    this->adapter().expectCreateComputePipelineStates({{function_handle, pipeline_handle}});
+    this->adapter().expectDestroyComputePipelineStates({pipeline_handle});
+    this->adapter().expectDestroyFunctions({function_handle});
+
+    auto lease = manager.acquire(mps_rt::FunctionKey::Named(*maybe_name));
+    const auto original_handle = lease.handle();
+
+    manager.release(lease);
+    EXPECT_FALSE(static_cast<bool>(lease));
+
+    const auto snapshot = manager.debugState(original_handle);
+    EXPECT_FALSE(snapshot.alive);
+    EXPECT_GT(snapshot.generation, 0u);
+}
+
 TYPED_TEST(MpsComputePipelineStateManagerTypedTest, EmptyIdentifierIsRejected) {
     auto& manager = this->manager();
     if (!this->initializeManager()) {

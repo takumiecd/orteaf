@@ -72,8 +72,9 @@ MpsDeviceManager::acquire(::orteaf::internal::base::DeviceHandle handle) {
   return DeviceLease{this, state.device};
 }
 
-void MpsDeviceManager::release(DeviceLease&) noexcept {
-  // Devices are owned for the lifetime of the manager; nothing to do.
+void MpsDeviceManager::release(DeviceLease& lease) noexcept {
+  // Devices are owned for the lifetime of the manager; invalidate compatibility lease.
+  lease.invalidate();
 }
 
 MpsDeviceManager::CommandQueueManagerLease
@@ -82,8 +83,9 @@ MpsDeviceManager::acquireCommandQueueManager(::orteaf::internal::base::DeviceHan
   return CommandQueueManagerLease{this, &state.command_queue_manager};
 }
 
-void MpsDeviceManager::release(CommandQueueManagerLease&) noexcept {
-  // Managers live for the device lifetime; nothing to do.
+void MpsDeviceManager::release(CommandQueueManagerLease& lease) noexcept {
+  // Managers live for the device lifetime; invalidate compatibility lease.
+  lease.invalidate();
 }
 
 MpsDeviceManager::HeapManagerLease
@@ -92,8 +94,9 @@ MpsDeviceManager::acquireHeapManager(::orteaf::internal::base::DeviceHandle hand
   return HeapManagerLease{this, &state.heap_manager};
 }
 
-void MpsDeviceManager::release(HeapManagerLease&) noexcept {
-  // Managers live for the device lifetime; nothing to do.
+void MpsDeviceManager::release(HeapManagerLease& lease) noexcept {
+  // Managers live for the device lifetime; invalidate compatibility lease.
+  lease.invalidate();
 }
 
 MpsDeviceManager::LibraryManagerLease
@@ -102,8 +105,9 @@ MpsDeviceManager::acquireLibraryManager(::orteaf::internal::base::DeviceHandle h
   return LibraryManagerLease{this, &state.library_manager};
 }
 
-void MpsDeviceManager::release(LibraryManagerLease&) noexcept {
-  // Managers live for the device lifetime; nothing to do.
+void MpsDeviceManager::release(LibraryManagerLease& lease) noexcept {
+  // Managers live for the device lifetime; invalidate compatibility lease.
+  lease.invalidate();
 }
 
 MpsDeviceManager::EventPoolLease
@@ -112,8 +116,9 @@ MpsDeviceManager::acquireEventPool(::orteaf::internal::base::DeviceHandle handle
   return EventPoolLease{this, &state.event_pool};
 }
 
-void MpsDeviceManager::release(EventPoolLease&) noexcept {
-  // Pools live for the device lifetime; nothing to do.
+void MpsDeviceManager::release(EventPoolLease& lease) noexcept {
+  // Pools live for the device lifetime; invalidate compatibility lease.
+  lease.invalidate();
 }
 
 MpsDeviceManager::FencePoolLease
@@ -122,8 +127,9 @@ MpsDeviceManager::acquireFencePool(::orteaf::internal::base::DeviceHandle handle
   return FencePoolLease{this, &state.fence_pool};
 }
 
-void MpsDeviceManager::release(FencePoolLease&) noexcept {
-  // Pools live for the device lifetime; nothing to do.
+void MpsDeviceManager::release(FencePoolLease& lease) noexcept {
+  // Pools live for the device lifetime; invalidate compatibility lease.
+  lease.invalidate();
 }
 
 ::orteaf::internal::architecture::Architecture

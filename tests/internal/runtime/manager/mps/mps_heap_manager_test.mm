@@ -237,6 +237,28 @@ TYPED_TEST(MpsHeapManagerTypedTest, ReleaseAllowsReuseWithoutRecreation) {
     manager.shutdown();
 }
 
+TYPED_TEST(MpsHeapManagerTypedTest, ManualReleaseInvalidatesLease) {
+    auto& manager = this->manager();
+    const auto device = this->adapter().device();
+    manager.initialize(device, this->getOps(), 1);
+    const auto key = this->defaultKey();
+    if constexpr (TypeParam::is_mock) {
+        const auto descriptor = makeHeapDescriptor(0x1D00);
+        this->expectDescriptorConfiguration(key, descriptor);
+        this->adapter().expectCreateHeapsInOrder({{descriptor, makeHeap(0xD00)}});
+        this->adapter().expectDestroyHeaps({makeHeap(0xD00)});
+    }
+
+    auto lease = manager.acquire(key);
+    const auto handle = lease.handle();
+
+    manager.release(lease);
+    EXPECT_FALSE(static_cast<bool>(lease));
+    EXPECT_GT(manager.debugState(handle).generation, 0u);
+
+    manager.shutdown();
+}
+
 TYPED_TEST(MpsHeapManagerTypedTest, DescriptorSizeMustBePositive) {
     auto& manager = this->manager();
     const auto device = this->adapter().device();

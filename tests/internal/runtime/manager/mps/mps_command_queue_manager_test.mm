@@ -210,6 +210,37 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, ReleaseUnusedQueuesFreesResourcesAnd
     EXPECT_EQ(manager.capacity(), 0u);
 }
 
+TYPED_TEST(MpsCommandQueueManagerTypedTest, ManualReleaseInvalidatesLease) {
+    auto& manager = this->manager();
+    const auto device = this->adapter().device();
+    this->adapter().expectCreateCommandQueues({makeQueue(0x455)});
+#if ORTEAF_MPS_DEBUG_ENABLED
+    this->adapter().expectCreateEvents({makeEvent(0x555)});
+#endif
+    manager.initialize(device, this->getOps(), 1);
+
+    auto lease = manager.acquire();
+    const auto original_handle = lease.handle();
+    ASSERT_TRUE(static_cast<bool>(lease));
+
+    manager.release(lease); // manual release wrapper
+    EXPECT_FALSE(static_cast<bool>(lease)); // lease should be invalidated
+
+    const auto snapshot = manager.debugState(original_handle);
+    EXPECT_FALSE(snapshot.in_use);
+    EXPECT_GT(snapshot.generation, 0u);
+
+    auto reacquired = manager.acquire();
+    EXPECT_NE(reacquired.handle(), original_handle); // generation bumped
+    reacquired.release();
+
+#if ORTEAF_MPS_DEBUG_ENABLED
+    this->adapter().expectDestroyEvents({makeEvent(0x555)});
+#endif
+    this->adapter().expectDestroyCommandQueues({makeQueue(0x455)});
+    manager.shutdown();
+}
+
 TYPED_TEST(MpsCommandQueueManagerTypedTest, ReleaseUnusedQueuesFailsIfQueuesAreInUse) {
     auto& manager = this->manager();
     const auto device = this->adapter().device();
@@ -409,4 +440,3 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, DebugStateReflectsSetterUpdates) {
     EXPECT_FALSE(after_release.in_use);
 }
 #endif
-

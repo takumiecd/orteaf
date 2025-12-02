@@ -91,7 +91,11 @@ MpsComputePipelineStateManager::acquire(const FunctionKey &key) {
 }
 
 void MpsComputePipelineStateManager::release(PipelineLease &lease) noexcept {
+  if (!lease) {
+    return;
+  }
   releaseHandle(lease.handle());
+  lease.invalidate();
 }
 
 #if ORTEAF_ENABLE_TEST

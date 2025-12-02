@@ -114,11 +114,19 @@ MpsLibraryManager::LibraryLease MpsLibraryManager::acquireLibraryFromHandle(base
 }
 
 void MpsLibraryManager::release(LibraryLease &lease) noexcept {
+  if (!lease) {
+    return;
+  }
   releaseHandle(lease.handle());
+  lease.invalidate();
 }
 
 void MpsLibraryManager::release(PipelineManagerLease &lease) noexcept {
+  if (!lease) {
+    return;
+  }
   releaseHandle(lease.handle());
+  lease.invalidate();
 }
 
 void MpsLibraryManager::releaseHandle(base::LibraryHandle handle) noexcept {

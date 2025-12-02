@@ -74,7 +74,7 @@ MpsCommandQueueManager::CommandQueueLease MpsCommandQueueManager::acquire() {
 }
 
 void MpsCommandQueueManager::release(CommandQueueLease& lease) noexcept {
-  if (!initialized_ || ops_ == nullptr) {
+  if (!initialized_ || ops_ == nullptr || !lease) {
     return;
   }
   const auto handle = lease.handle();
@@ -98,6 +98,7 @@ void MpsCommandQueueManager::release(CommandQueueLease& lease) noexcept {
     state.on_free_list = true;
     free_list_.pushBack(index);
   }
+  lease.invalidate();
 }
 
 #if ORTEAF_MPS_DEBUG_ENABLED
@@ -108,7 +109,7 @@ MpsCommandQueueManager::EventLease MpsCommandQueueManager::acquireEvent(base::Co
 }
 
 void MpsCommandQueueManager::release(EventLease& lease) noexcept {
-  if (!initialized_ || ops_ == nullptr) {
+  if (!initialized_ || ops_ == nullptr || !lease) {
     return;
   }
   const auto handle = lease.handle();
@@ -133,6 +134,7 @@ void MpsCommandQueueManager::release(EventLease& lease) noexcept {
     state.on_free_list = true;
     free_list_.pushBack(index);
   }
+  lease.invalidate();
 }
 
 MpsCommandQueueManager::SerialLease MpsCommandQueueManager::acquireSerial(base::CommandQueueHandle handle) {
@@ -142,7 +144,7 @@ MpsCommandQueueManager::SerialLease MpsCommandQueueManager::acquireSerial(base::
 }
 
 void MpsCommandQueueManager::release(SerialLease& lease) noexcept {
-  if (!initialized_ || ops_ == nullptr) {
+  if (!initialized_ || ops_ == nullptr || !lease) {
     return;
   }
   const auto handle = lease.handle();
@@ -167,6 +169,7 @@ void MpsCommandQueueManager::release(SerialLease& lease) noexcept {
     state.on_free_list = true;
     free_list_.pushBack(index);
   }
+  lease.invalidate();
 }
 #endif
 
