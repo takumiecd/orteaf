@@ -10,10 +10,13 @@
 #include "orteaf/internal/backend/mps/wrapper/mps_device.h"
 #include "orteaf/internal/base/heap_vector.h"
 #include "orteaf/internal/base/handle.h"
+#include "orteaf/internal/base/lease.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include "orteaf/internal/backend/mps/mps_slow_ops.h"
 #include "orteaf/internal/runtime/manager/mps/mps_command_queue_manager.h"
+#include "orteaf/internal/runtime/manager/mps/mps_event_pool.h"
 #include "orteaf/internal/runtime/manager/mps/mps_heap_manager.h"
+#include "orteaf/internal/runtime/manager/mps/mps_fence_pool.h"
 #include "orteaf/internal/runtime/manager/mps/mps_library_manager.h"
 
 namespace orteaf::internal::runtime::mps {
@@ -21,6 +24,10 @@ namespace orteaf::internal::runtime::mps {
 class MpsDeviceManager {
 public:
     using BackendOps = ::orteaf::internal::runtime::backend_ops::mps::MpsSlowOps;
+    using DeviceLease = ::orteaf::internal::base::Lease<
+        ::orteaf::internal::base::DeviceHandle,
+        ::orteaf::internal::backend::mps::MPSDevice_t,
+        MpsDeviceManager>;
 
     MpsDeviceManager() = default;
     MpsDeviceManager(const MpsDeviceManager&) = delete;
@@ -61,6 +68,9 @@ public:
         return states_.size();
     }
 
+    DeviceLease acquire(::orteaf::internal::base::DeviceHandle id);
+    void release(DeviceLease& lease) noexcept;
+
     ::orteaf::internal::backend::mps::MPSDevice_t getDevice(::orteaf::internal::base::DeviceHandle id) const;
 
     ::orteaf::internal::architecture::Architecture getArch(::orteaf::internal::base::DeviceHandle id) const;
@@ -81,6 +91,18 @@ public:
         ::orteaf::internal::base::DeviceHandle id);
 
     const ::orteaf::internal::runtime::mps::MpsLibraryManager& libraryManager(
+        ::orteaf::internal::base::DeviceHandle id) const;
+
+    ::orteaf::internal::runtime::mps::MpsEventPool& eventPool(
+        ::orteaf::internal::base::DeviceHandle id);
+
+    const ::orteaf::internal::runtime::mps::MpsEventPool& eventPool(
+        ::orteaf::internal::base::DeviceHandle id) const;
+
+    ::orteaf::internal::runtime::mps::MpsFencePool& fencePool(
+        ::orteaf::internal::base::DeviceHandle id);
+
+    const ::orteaf::internal::runtime::mps::MpsFencePool& fencePool(
         ::orteaf::internal::base::DeviceHandle id) const;
 
     bool isAlive(::orteaf::internal::base::DeviceHandle id) const;
@@ -115,6 +137,8 @@ private:
         ::orteaf::internal::runtime::mps::MpsCommandQueueManager command_queue_manager{};
         ::orteaf::internal::runtime::mps::MpsHeapManager heap_manager{};
         ::orteaf::internal::runtime::mps::MpsLibraryManager library_manager{};
+        ::orteaf::internal::runtime::mps::MpsEventPool event_pool{};
+        ::orteaf::internal::runtime::mps::MpsFencePool fence_pool{};
 
         State() = default;
         State(const State&) = delete;
