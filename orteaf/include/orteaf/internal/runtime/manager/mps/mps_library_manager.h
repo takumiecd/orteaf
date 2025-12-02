@@ -136,7 +136,7 @@ private:
 
   void growStatePool(std::size_t additional);
 
-  base::LibraryHandle encodeId(std::size_t index, std::uint32_t generation) const;
+  base::LibraryHandle encodeHandle(std::size_t index, std::uint32_t generation) const;
 
   void releaseHandle(base::LibraryHandle id) noexcept;
 

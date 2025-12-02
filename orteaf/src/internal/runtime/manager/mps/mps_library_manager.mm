@@ -61,7 +61,7 @@ MpsLibraryManager::LibraryLease MpsLibraryManager::acquire(const LibraryKey &key
   ensureInitialized();
   validateKey(key);
   if (auto it = key_to_index_.find(key); it != key_to_index_.end()) {
-    return acquireLibraryFromHandle(encodeId(it->second, states_[it->second].generation));
+    return acquireLibraryFromHandle(encodeHandle(it->second, states_[it->second].generation));
   }
   const std::size_t index = allocateSlot();
   State &state = states_[index];
@@ -70,7 +70,7 @@ MpsLibraryManager::LibraryLease MpsLibraryManager::acquire(const LibraryKey &key
   state.pipeline_manager.initialize(device_, state.handle, ops_, 0);
   state.alive = true;
   state.use_count = 1;
-  const auto id = encodeId(index, state.generation);
+  const auto id = encodeHandle(index, state.generation);
   key_to_index_.emplace(state.key, index);
   return LibraryLease{this, id, state.handle};
 }
@@ -229,7 +229,7 @@ void MpsLibraryManager::growStatePool(std::size_t additional) {
   }
 }
 
-base::LibraryHandle MpsLibraryManager::encodeId(std::size_t index,
+base::LibraryHandle MpsLibraryManager::encodeHandle(std::size_t index,
                                             std::uint32_t generation) const {
   return base::LibraryHandle{static_cast<std::uint32_t>(index), static_cast<std::uint8_t>(generation)};
 }
