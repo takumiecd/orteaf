@@ -297,15 +297,17 @@ TYPED_TEST(MpsLibraryManagerTypedTest, PipelineManagerProvidesNestedFunctionMana
     auto library_lease = manager.acquire(mps_rt::LibraryKey::Named(*maybe_library));
     auto pipeline_manager_lease = manager.acquirePipelineManager(library_lease);
     auto* pipeline_manager = pipeline_manager_lease.get();
-    const auto pipeline_id = pipeline_manager->getOrCreate(mps_rt::FunctionKey::Named(*maybe_function));
+    auto pipeline_lease = pipeline_manager->acquire(mps_rt::FunctionKey::Named(*maybe_function));
     if constexpr (TypeParam::is_mock) {
-        EXPECT_EQ(pipeline_manager->getPipelineState(pipeline_id), pipeline_handle);
+        EXPECT_EQ(pipeline_lease.get(), pipeline_handle);
     } else {
-        EXPECT_NE(pipeline_manager->getPipelineState(pipeline_id), nullptr);
+        EXPECT_NE(pipeline_lease.get(), nullptr);
     }
-    const auto snapshot = pipeline_manager->debugState(pipeline_id);
+    const auto snapshot = pipeline_manager->debugState(pipeline_lease.handle());
     EXPECT_TRUE(snapshot.alive);
+    EXPECT_EQ(snapshot.use_count, 1u);
     EXPECT_EQ(snapshot.identifier, *maybe_function);
+    pipeline_lease.release();
     pipeline_manager_lease.release();
     library_lease.release();
 }

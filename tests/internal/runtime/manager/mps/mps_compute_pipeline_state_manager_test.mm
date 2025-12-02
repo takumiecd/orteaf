@@ -47,6 +47,8 @@ protected:
         return Base::manager();
     }
 
+    using PipelineLease = typename mps_rt::MpsComputePipelineStateManager::PipelineLease;
+
     auto& adapter() { return Base::adapter(); }
 
     void TearDown() override {
@@ -160,23 +162,21 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest, GrowthChunkSizeControlsPoolE
     this->adapter().expectCreateFunctions({{"ChunkedFunction", function_handle}});
     this->adapter().expectCreateComputePipelineStates({{function_handle, pipeline_handle}});
 
-    const auto id = manager.getOrCreate(key);
+    auto lease = manager.acquire(key);
     EXPECT_EQ(manager.capacity(), 2u);
-    const auto snapshot = manager.debugState(id);
+    const auto snapshot = manager.debugState(lease.handle());
     EXPECT_EQ(snapshot.growth_chunk_size, 2u);
 
     this->adapter().expectDestroyComputePipelineStates({pipeline_handle});
     this->adapter().expectDestroyFunctions({function_handle});
-    manager.release(id);
+    lease.release();
     manager.shutdown();
 }
 
 TYPED_TEST(MpsComputePipelineStateManagerTypedTest, AccessBeforeInitializationThrows) {
     auto& manager = this->manager();
     const auto key = mps_rt::FunctionKey::Named("Unused");
-    ExpectError(diag_error::OrteafErrc::InvalidState, [&] { (void)manager.getOrCreate(key); });
-    ExpectError(diag_error::OrteafErrc::InvalidState, [&] { manager.release(base::FunctionHandle{0}); });
-    ExpectError(diag_error::OrteafErrc::InvalidState, [&] { (void)manager.getPipelineState(base::FunctionHandle{0}); });
+    ExpectError(diag_error::OrteafErrc::InvalidState, [&] { (void)manager.acquire(key); });
 }
 
 TYPED_TEST(MpsComputePipelineStateManagerTypedTest, InitializeRejectsNullDevice) {
@@ -222,7 +222,7 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest, InitializeSetsCapacity) {
     EXPECT_EQ(manager.capacity(), 2u);
 }
 
-TYPED_TEST(MpsComputePipelineStateManagerTypedTest, GetOrCreateCreatesAndCachesPipeline) {
+TYPED_TEST(MpsComputePipelineStateManagerTypedTest, AcquireCreatesAndCachesPipeline) {
     auto& manager = this->manager();
     if (!this->initializeManager()) {
         return;
@@ -243,20 +243,24 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest, GetOrCreateCreatesAndCachesP
     }
 
     const auto key = mps_rt::FunctionKey::Named(*maybe_name);
-    const auto id0 = manager.getOrCreate(key);
-    const auto id1 = manager.getOrCreate(key);
-    EXPECT_EQ(id0, id1);
+    auto lease0 = manager.acquire(key);
+    auto lease1 = manager.acquire(key);
+    EXPECT_EQ(lease0.handle(), lease1.handle());
     if constexpr (TypeParam::is_mock) {
-        EXPECT_EQ(manager.getPipelineState(id0), pipeline_handle);
+        EXPECT_EQ(lease0.get(), pipeline_handle);
     } else {
-        EXPECT_NE(manager.getPipelineState(id0), nullptr);
+        EXPECT_NE(lease0.get(), nullptr);
     }
 
-    const auto snapshot = manager.debugState(id0);
+    const auto snapshot = manager.debugState(lease0.handle());
     EXPECT_TRUE(snapshot.alive);
     EXPECT_TRUE(snapshot.pipeline_allocated);
     EXPECT_TRUE(snapshot.function_allocated);
+    EXPECT_EQ(snapshot.use_count, 2u);
     EXPECT_EQ(snapshot.identifier, *maybe_name);
+
+    this->adapter().expectDestroyComputePipelineStates({pipeline_handle});
+    this->adapter().expectDestroyFunctions({function_handle});
 }
 
 TYPED_TEST(MpsComputePipelineStateManagerTypedTest, FunctionCreationFailureIsReported) {
@@ -275,7 +279,7 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest, FunctionCreationFailureIsRep
     }
     this->adapter().expectCreateFunctions({{*maybe_name, nullptr}});
     ExpectError(diag_error::OrteafErrc::InvalidState, [&] {
-        (void)manager.getOrCreate(mps_rt::FunctionKey::Named(*maybe_name));
+        (void)manager.acquire(mps_rt::FunctionKey::Named(*maybe_name));
     });
 }
 
@@ -298,7 +302,7 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest, PipelineCreationFailureDestr
     this->adapter().expectCreateComputePipelineStates({{function_handle, nullptr}});
     this->adapter().expectDestroyFunctions({function_handle});
     ExpectError(diag_error::OrteafErrc::InvalidState, [&] {
-        (void)manager.getOrCreate(mps_rt::FunctionKey::Named(*maybe_name));
+        (void)manager.acquire(mps_rt::FunctionKey::Named(*maybe_name));
     });
 }
 
@@ -332,18 +336,18 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest, ReleaseDestroysHandlesAndAll
     }
 
     const auto key = mps_rt::FunctionKey::Named(*maybe_name);
-    const auto id = manager.getOrCreate(key);
-    manager.release(id);
-    ExpectError(diag_error::OrteafErrc::InvalidState, [&] { (void)manager.getPipelineState(id); });
-    const auto released_snapshot = manager.debugState(id);
+    auto lease = manager.acquire(key);
+    const auto handle = lease.handle();
+    lease.release();
+    const auto released_snapshot = manager.debugState(handle);
     EXPECT_FALSE(released_snapshot.alive);
 
-    const auto reacquired = manager.getOrCreate(key);
-    EXPECT_NE(reacquired, base::FunctionHandle{});
+    auto reacquired = manager.acquire(key);
+    EXPECT_NE(reacquired.handle(), base::FunctionHandle{});
     if constexpr (TypeParam::is_mock) {
-        EXPECT_EQ(manager.getPipelineState(reacquired), second_pipeline);
+        EXPECT_EQ(reacquired.get(), second_pipeline);
     } else {
-        EXPECT_NE(manager.getPipelineState(reacquired), nullptr);
+        EXPECT_NE(reacquired.get(), nullptr);
     }
 }
 
@@ -353,11 +357,11 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest, EmptyIdentifierIsRejected) {
         return;
     }
     ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
-        (void)manager.getOrCreate(mps_rt::FunctionKey::Named(""));
+        (void)manager.acquire(mps_rt::FunctionKey::Named(""));
     });
 }
 
-TYPED_TEST(MpsComputePipelineStateManagerTypedTest, ReleaseRejectsStaleId) {
+TYPED_TEST(MpsComputePipelineStateManagerTypedTest, ReleaseIgnoresStaleHandle) {
     auto& manager = this->manager();
     if (!this->initializeManager()) {
         return;
@@ -380,19 +384,10 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest, ReleaseRejectsStaleId) {
     }
 
     const auto key = mps_rt::FunctionKey::Named(*maybe_name);
-    const auto id = manager.getOrCreate(key);
-    manager.release(id);
-    ExpectError(diag_error::OrteafErrc::InvalidState, [&] { manager.release(id); });
-}
-
-TYPED_TEST(MpsComputePipelineStateManagerTypedTest, GetPipelineStateRejectsInvalidId) {
-    auto& manager = this->manager();
-    if (!this->initializeManager()) {
-        return;
-    }
-    ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
-        (void)manager.getPipelineState(base::FunctionHandle{std::numeric_limits<std::uint32_t>::max()});
-    });
+    auto lease = manager.acquire(key);
+    lease.release();
+    // Second release should be silently ignored.
+    lease.release();
 }
 
 TYPED_TEST(MpsComputePipelineStateManagerTypedTest, ShutdownDestroysAllHandles) {
@@ -416,7 +411,8 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest, ShutdownDestroysAllHandles) 
         this->adapter().expectDestroyFunctions({function_handle});
     }
     const auto key = mps_rt::FunctionKey::Named(*maybe_name);
-    (void)manager.getOrCreate(key);
+    auto lease = manager.acquire(key);
+    (void)lease;
     manager.shutdown();
-    ExpectError(diag_error::OrteafErrc::InvalidState, [&] { (void)manager.getOrCreate(key); });
+    ExpectError(diag_error::OrteafErrc::InvalidState, [&] { (void)manager.acquire(key); });
 }
