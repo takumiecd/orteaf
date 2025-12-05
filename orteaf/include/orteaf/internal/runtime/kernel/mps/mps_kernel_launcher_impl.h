@@ -36,12 +36,6 @@ public:
     MpsKernelLauncherImpl& operator=(MpsKernelLauncherImpl&&) = default;
     ~MpsKernelLauncherImpl() = default;
 
-    // Append a key constructed from raw identifiers. Marks the launcher as not initialized.
-    void addKey(std::string library_identifier, std::string function_identifier) {
-        addKeyInternal(FunctionKey::Named(std::move(function_identifier)),
-                       LibraryKey::Named(std::move(library_identifier)));
-    }
-
     bool initialized() const noexcept { return initialized_; }
 
 #if ORTEAF_ENABLE_TEST
@@ -50,6 +44,12 @@ public:
 #endif
 
 private:
+    // Append a key constructed from raw identifiers. Marks the launcher as not initialized.
+    void addKey(std::string library_identifier, std::string function_identifier) {
+        addKeyInternal(FunctionKey::Named(std::move(function_identifier)),
+                       LibraryKey::Named(std::move(library_identifier)));
+    }
+
     void addKeyInternal(const FunctionKey& func, const LibraryKey& lib) {
         if (isDuplicate(func, lib) || size_ >= N) {
             return;
