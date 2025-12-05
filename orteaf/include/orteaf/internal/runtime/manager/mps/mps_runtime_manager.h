@@ -21,9 +21,11 @@ public:
     MpsDeviceManager& deviceManager() noexcept { return device_manager_; }
     const MpsDeviceManager& deviceManager() const noexcept { return device_manager_; }
 
-    void initialize() {
-        if (!slow_ops_) {
-            slow_ops_ = std::make_unique<SlowOps>();
+    void initialize(std::unique_ptr<SlowOps> slow_ops = nullptr) {
+        if (slow_ops) {
+            slow_ops_ = std::move(slow_ops);
+        } else if (!slow_ops_) {
+            slow_ops_ = std::make_unique<SlowOpsImpl>();
         }
         device_manager_.initialize(slow_ops_.get());
     }
@@ -35,6 +37,7 @@ public:
 
 private:
     using SlowOps = ::orteaf::internal::runtime::backend_ops::mps::MpsSlowOps;
+    using SlowOpsImpl = ::orteaf::internal::runtime::backend_ops::mps::MpsSlowOpsImpl;
 
     MpsDeviceManager device_manager_{};
     std::unique_ptr<SlowOps> slow_ops_{};
