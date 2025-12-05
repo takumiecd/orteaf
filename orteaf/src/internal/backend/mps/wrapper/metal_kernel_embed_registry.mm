@@ -54,32 +54,6 @@ MPSLibrary_t createEmbeddedLibrary(MPSDevice_t device,
 #endif
 }
 
-MPSFunction_t createEmbeddedFunction(MPSDevice_t device,
-                                     std::string_view library_name,
-                                     std::string_view function_name,
-                                     MPSError_t* error) {
-#if defined(MPS_AVAILABLE) && defined(__OBJC__)
-    MPSError_t local_error = nullptr;
-    MPSLibrary_t library = createEmbeddedLibrary(device, library_name, &local_error);
-    if (library == nil) {
-        if (error) { *error = local_error; } else if (local_error) { destroyError(local_error); }
-        return nil;
-    }
-    MPSFunction_t function = createFunction(library, function_name);
-    if (function == nil) {
-        destroyLibrary(library);
-        if (error) { *error = createError("orteaf.mps.kernel", "Failed to create MTLFunction"); }
-        return nil;
-    }
-    destroyLibrary(library);
-    if (error) { *error = nullptr; }
-    return function;
-#else
-    (void)device; (void)library_name; (void)function_name; (void)error;
-    return nullptr;
-#endif
-}
-
 } // namespace orteaf::internal::backend::mps::metal_kernel_embed
 
 #endif  // ORTEAF_ENABLE_MPS
