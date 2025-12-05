@@ -17,11 +17,11 @@ TEST(MpsKernelLauncherImplTest, StoresUniqueKeysInOrder) {
     const auto& keys = impl.keysForTest();
     ASSERT_EQ(impl.sizeForTest(), 2u);
 
-    EXPECT_EQ(keys[0].first.identifier, "funcX");
-    EXPECT_EQ(keys[0].second.identifier, "libA");
+    EXPECT_EQ(keys[0].first.identifier, "libA");
+    EXPECT_EQ(keys[0].second.identifier, "funcX");
 
-    EXPECT_EQ(keys[1].first.identifier, "funcY");
-    EXPECT_EQ(keys[1].second.identifier, "libB");
+    EXPECT_EQ(keys[1].first.identifier, "libB");
+    EXPECT_EQ(keys[1].second.identifier, "funcY");
 }
 
 namespace {
