@@ -19,7 +19,7 @@ template <std::size_t N>
 class MpsKernelLauncherImpl {
 public:
     using PipelineLease = MpsComputePipelineStateManager::PipelineLease;
-    using Key = std::pair<FunctionKey, LibraryKey>;
+    using Key = std::pair<LibraryKey, FunctionKey>;
     struct KeyLiteral {
         const char* library;
         const char* function;
@@ -47,7 +47,7 @@ public:
         pipelines_.reserve(size_);
         for (std::size_t i = 0; i < size_; ++i) {
             const auto& key = keys_[i];
-            pipelines_.pushBack(PrivateOps::acquirePipeline(device, key.second, key.first));
+            pipelines_.pushBack(PrivateOps::acquirePipeline(device, key.first, key.second));
         }
         initialized_ = true;
     }
@@ -60,22 +60,22 @@ public:
 private:
     // Append a key constructed from raw identifiers. Marks the launcher as not initialized.
     void addKey(std::string library_identifier, std::string function_identifier) {
-        addKeyInternal(FunctionKey::Named(std::move(function_identifier)),
-                       LibraryKey::Named(std::move(library_identifier)));
+        addKeyInternal(LibraryKey::Named(std::move(library_identifier)),
+                       FunctionKey::Named(std::move(function_identifier)));
     }
 
-    void addKeyInternal(const FunctionKey& func, const LibraryKey& lib) {
-        if (isDuplicate(func, lib) || size_ >= N) {
+    void addKeyInternal(const LibraryKey& lib, const FunctionKey& func) {
+        if (isDuplicate(lib, func) || size_ >= N) {
             return;
         }
-        keys_[size_++] = Key{func, lib};
+        keys_[size_++] = Key{lib, func};
         initialized_ = false;
     }
 
-    bool isDuplicate(const FunctionKey& func, const LibraryKey& lib) const {
+    bool isDuplicate(const LibraryKey& lib, const FunctionKey& func) const {
         for (std::size_t i = 0; i < size_; ++i) {
             const auto& key = keys_[i];
-            if (key.first == func && key.second == lib) {
+            if (key.first == lib && key.second == func) {
                 return true;
             }
         }
