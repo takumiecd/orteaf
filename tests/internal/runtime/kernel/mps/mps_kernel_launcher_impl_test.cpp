@@ -352,3 +352,60 @@ TEST(MpsKernelLauncherImplTest, DispatchEndCommitForwarded) {
     EXPECT_EQ(MockComputeFastOps::last_threads_per_threadgroup.depth, tptg.depth);
     EXPECT_EQ(MockComputeFastOps::last_committed_buffer, command_buffer);
 }
+
+TEST(MpsKernelLauncherImplTest, DispatchOneShotByIndex) {
+    mps_rt::MpsKernelLauncherImpl<1> impl({
+        {"lib", "fn"},
+    });
+
+    const base::DeviceHandle device{0};
+    impl.initialize<DummyPrivateOps>(device);
+
+    ::orteaf::internal::backend::mps::MPSCommandQueue_t queue =
+        reinterpret_cast<::orteaf::internal::backend::mps::MPSCommandQueue_t>(0x40);
+    ::orteaf::internal::backend::mps::MPSSize_t tg{7, 8, 9};
+    ::orteaf::internal::backend::mps::MPSSize_t tptg{1, 2, 3};
+
+    MockComputeFastOps::last_queue = nullptr;
+    MockComputeFastOps::last_command_buffer = nullptr;
+    MockComputeFastOps::last_encoder = nullptr;
+    MockComputeFastOps::last_pipeline = nullptr;
+    MockComputeFastOps::last_threadgroups = {};
+    MockComputeFastOps::last_threads_per_threadgroup = {};
+    MockComputeFastOps::last_committed_buffer = nullptr;
+
+    bool binder_called = false;
+    auto binder = [&](auto* encoder) {
+        binder_called = true;
+        EXPECT_EQ(encoder, MockComputeFastOps::fake_encoder);
+    };
+
+    auto* command_buffer = impl.dispatchOneShot<MockComputeFastOps>(queue, 0, tg, tptg, binder);
+
+    EXPECT_TRUE(binder_called);
+    EXPECT_EQ(command_buffer, MockComputeFastOps::fake_buffer);
+    EXPECT_EQ(MockComputeFastOps::last_queue, queue);
+    EXPECT_EQ(MockComputeFastOps::last_command_buffer, MockComputeFastOps::fake_buffer);
+    EXPECT_EQ(MockComputeFastOps::last_encoder, MockComputeFastOps::fake_encoder);
+    EXPECT_EQ(MockComputeFastOps::last_pipeline, nullptr);  // DummyPrivateOps yields null pipeline
+    EXPECT_EQ(MockComputeFastOps::last_threadgroups.width, tg.width);
+    EXPECT_EQ(MockComputeFastOps::last_threads_per_threadgroup.width, tptg.width);
+    EXPECT_EQ(MockComputeFastOps::last_committed_buffer, MockComputeFastOps::fake_buffer);
+}
+
+TEST(MpsKernelLauncherImplTest, DispatchOneShotByNameMissingReturnsNullptr) {
+    mps_rt::MpsKernelLauncherImpl<1> impl({
+        {"lib", "fn"},
+    });
+    const base::DeviceHandle device{0};
+    impl.initialize<DummyPrivateOps>(device);
+
+    ::orteaf::internal::backend::mps::MPSCommandQueue_t queue =
+        reinterpret_cast<::orteaf::internal::backend::mps::MPSCommandQueue_t>(0x40);
+    ::orteaf::internal::backend::mps::MPSSize_t tg{1, 1, 1};
+    ::orteaf::internal::backend::mps::MPSSize_t tptg{1, 1, 1};
+
+    auto* command_buffer = impl.dispatchOneShot<MockComputeFastOps>(queue, "missing", "missing", tg, tptg,
+                                                                    [](auto*) {});
+    EXPECT_EQ(command_buffer, nullptr);
+}

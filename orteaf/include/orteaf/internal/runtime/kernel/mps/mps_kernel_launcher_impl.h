@@ -133,6 +133,44 @@ public:
         FastOps::commit(command_buffer);
     }
 
+    // One-shot dispatch helper: create command buffer/encoder, bind pipeline, invoke a binder
+    // functor to set resources, dispatch, end encoding, and commit. Returns the command buffer.
+    template <typename FastOps = ::orteaf::internal::runtime::backend_ops::mps::MpsFastOps, typename Binder>
+    ::orteaf::internal::backend::mps::MPSCommandBuffer_t dispatchOneShot(
+        ::orteaf::internal::backend::mps::MPSCommandQueue_t command_queue,
+        std::size_t pipeline_index,
+        ::orteaf::internal::backend::mps::MPSSize_t threadgroups,
+        ::orteaf::internal::backend::mps::MPSSize_t threads_per_threadgroup,
+        Binder&& binder) const {
+        if (!initialized_ || pipeline_index >= pipelines_.size()) {
+            return nullptr;
+        }
+        auto* command_buffer = FastOps::createCommandBuffer(command_queue);
+        auto* encoder = FastOps::createComputeCommandEncoder(command_buffer);
+        FastOps::setPipelineState(encoder, pipelines_[pipeline_index].pointer());
+        static_cast<Binder&&>(binder)(encoder);
+        FastOps::setThreadgroups(encoder, threadgroups, threads_per_threadgroup);
+        FastOps::endEncoding(encoder);
+        FastOps::commit(command_buffer);
+        return command_buffer;
+    }
+
+    template <typename FastOps = ::orteaf::internal::runtime::backend_ops::mps::MpsFastOps, typename Binder>
+    ::orteaf::internal::backend::mps::MPSCommandBuffer_t dispatchOneShot(
+        ::orteaf::internal::backend::mps::MPSCommandQueue_t command_queue,
+        std::string_view library,
+        std::string_view function,
+        ::orteaf::internal::backend::mps::MPSSize_t threadgroups,
+        ::orteaf::internal::backend::mps::MPSSize_t threads_per_threadgroup,
+        Binder&& binder) const {
+        const std::size_t idx = findKeyIndex(library, function);
+        if (!initialized_ || idx >= pipelines_.size()) {
+            return nullptr;
+        }
+        return dispatchOneShot<FastOps>(command_queue, idx, threadgroups, threads_per_threadgroup,
+                                        static_cast<Binder&&>(binder));
+    }
+
 private:
     // Append a key constructed from raw identifiers. Marks the launcher as not initialized.
     void addKey(std::string library_identifier, std::string function_identifier) {
