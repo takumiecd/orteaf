@@ -37,6 +37,20 @@ struct MpsFastOps {
                               std::size_t index) {
     ::orteaf::internal::backend::mps::setBytes(encoder, bytes, length, index);
   }
+
+  static inline void setThreadgroups(::orteaf::internal::backend::mps::MPSComputeCommandEncoder_t encoder,
+                                     ::orteaf::internal::backend::mps::MPSSize_t threadgroups,
+                                     ::orteaf::internal::backend::mps::MPSSize_t threads_per_threadgroup) {
+    ::orteaf::internal::backend::mps::setThreadgroups(encoder, threadgroups, threads_per_threadgroup);
+  }
+
+  static inline void endEncoding(::orteaf::internal::backend::mps::MPSComputeCommandEncoder_t encoder) {
+    ::orteaf::internal::backend::mps::endEncoding(encoder);
+  }
+
+  static inline void commit(::orteaf::internal::backend::mps::MPSCommandBuffer_t command_buffer) {
+    ::orteaf::internal::backend::mps::commit(command_buffer);
+  }
 };
 
 } // namespace orteaf::internal::runtime::backend_ops::mps

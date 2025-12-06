@@ -115,6 +115,24 @@ public:
         FastOps::setBytes(encoder, bytes, length, index);
     }
 
+    // Convenience: dispatch threadgroups and finalize/commit.
+    template <typename FastOps = ::orteaf::internal::runtime::backend_ops::mps::MpsFastOps>
+    void dispatchThreadgroups(::orteaf::internal::backend::mps::MPSComputeCommandEncoder_t encoder,
+                              ::orteaf::internal::backend::mps::MPSSize_t threadgroups,
+                              ::orteaf::internal::backend::mps::MPSSize_t threads_per_threadgroup) const {
+        FastOps::setThreadgroups(encoder, threadgroups, threads_per_threadgroup);
+    }
+
+    template <typename FastOps = ::orteaf::internal::runtime::backend_ops::mps::MpsFastOps>
+    void endEncoding(::orteaf::internal::backend::mps::MPSComputeCommandEncoder_t encoder) const {
+        FastOps::endEncoding(encoder);
+    }
+
+    template <typename FastOps = ::orteaf::internal::runtime::backend_ops::mps::MpsFastOps>
+    void commit(::orteaf::internal::backend::mps::MPSCommandBuffer_t command_buffer) const {
+        FastOps::commit(command_buffer);
+    }
+
 private:
     // Append a key constructed from raw identifiers. Marks the launcher as not initialized.
     void addKey(std::string library_identifier, std::string function_identifier) {

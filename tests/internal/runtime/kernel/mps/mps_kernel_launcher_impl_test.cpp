@@ -158,6 +158,22 @@ struct MockComputeFastOps {
         last_bytes_index = index;
     }
 
+    static void setThreadgroups(::orteaf::internal::backend::mps::MPSComputeCommandEncoder_t encoder,
+                                ::orteaf::internal::backend::mps::MPSSize_t threadgroups,
+                                ::orteaf::internal::backend::mps::MPSSize_t threads_per_threadgroup) {
+        last_encoder = encoder;
+        last_threadgroups = threadgroups;
+        last_threads_per_threadgroup = threads_per_threadgroup;
+    }
+
+    static void endEncoding(::orteaf::internal::backend::mps::MPSComputeCommandEncoder_t encoder) {
+        last_encoder = encoder;
+    }
+
+    static void commit(::orteaf::internal::backend::mps::MPSCommandBuffer_t command_buffer) {
+        last_committed_buffer = command_buffer;
+    }
+
     static inline ::orteaf::internal::backend::mps::MPSCommandQueue_t last_queue{nullptr};
     static inline ::orteaf::internal::backend::mps::MPSCommandBuffer_t fake_buffer{
         reinterpret_cast<::orteaf::internal::backend::mps::MPSCommandBuffer_t>(0x10)};
@@ -174,6 +190,9 @@ struct MockComputeFastOps {
     static inline const void* last_bytes{nullptr};
     static inline std::size_t last_bytes_length{0};
     static inline std::size_t last_bytes_index{0};
+    static inline ::orteaf::internal::backend::mps::MPSSize_t last_threadgroups{};
+    static inline ::orteaf::internal::backend::mps::MPSSize_t last_threads_per_threadgroup{};
+    static inline ::orteaf::internal::backend::mps::MPSCommandBuffer_t last_committed_buffer{nullptr};
 };
 
 }  // namespace
@@ -299,4 +318,37 @@ TEST(MpsKernelLauncherImplTest, EncoderSetBufferAndBytesForwarded) {
     EXPECT_EQ(MockComputeFastOps::last_bytes, &payload);
     EXPECT_EQ(MockComputeFastOps::last_bytes_length, sizeof(payload));
     EXPECT_EQ(MockComputeFastOps::last_bytes_index, kBytesIndex);
+}
+
+TEST(MpsKernelLauncherImplTest, DispatchEndCommitForwarded) {
+    mps_rt::MpsKernelLauncherImpl<1> impl({
+        {"lib", "fn"},
+    });
+
+    const base::DeviceHandle device{0};
+    impl.initialize<DummyPrivateOps>(device);
+
+    MockComputeFastOps::last_encoder = nullptr;
+    MockComputeFastOps::last_threadgroups = {};
+    MockComputeFastOps::last_threads_per_threadgroup = {};
+    MockComputeFastOps::last_committed_buffer = nullptr;
+
+    ::orteaf::internal::backend::mps::MPSSize_t tg{1, 2, 3};
+    ::orteaf::internal::backend::mps::MPSSize_t tptg{4, 5, 6};
+
+    auto* encoder = MockComputeFastOps::fake_encoder;
+    auto* command_buffer = MockComputeFastOps::fake_buffer;
+
+    impl.dispatchThreadgroups<MockComputeFastOps>(encoder, tg, tptg);
+    impl.endEncoding<MockComputeFastOps>(encoder);
+    impl.commit<MockComputeFastOps>(command_buffer);
+
+    EXPECT_EQ(MockComputeFastOps::last_encoder, encoder);
+    EXPECT_EQ(MockComputeFastOps::last_threadgroups.width, tg.width);
+    EXPECT_EQ(MockComputeFastOps::last_threadgroups.height, tg.height);
+    EXPECT_EQ(MockComputeFastOps::last_threadgroups.depth, tg.depth);
+    EXPECT_EQ(MockComputeFastOps::last_threads_per_threadgroup.width, tptg.width);
+    EXPECT_EQ(MockComputeFastOps::last_threads_per_threadgroup.height, tptg.height);
+    EXPECT_EQ(MockComputeFastOps::last_threads_per_threadgroup.depth, tptg.depth);
+    EXPECT_EQ(MockComputeFastOps::last_committed_buffer, command_buffer);
 }
