@@ -4,6 +4,7 @@
 #include "orteaf/internal/runtime/ops/mps/public/mps_public_ops.h"
 #include "orteaf/internal/backend/mps/wrapper/mps_device.h"
 #include "orteaf/internal/backend/mps/mps_fast_ops.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_compute_command_encorder.h"
 #include "orteaf/internal/runtime/ops/mps/private/mps_private_ops.h"
 
 namespace base = orteaf::internal::base;
@@ -118,6 +119,35 @@ struct MockFastOps {
         reinterpret_cast<::orteaf::internal::backend::mps::MPSCommandBuffer_t>(0x1)};
 };
 
+struct MockComputeFastOps {
+    static ::orteaf::internal::backend::mps::MPSCommandBuffer_t createCommandBuffer(
+        ::orteaf::internal::backend::mps::MPSCommandQueue_t command_queue) {
+        last_queue = command_queue;
+        return fake_buffer;
+    }
+
+    static ::orteaf::internal::backend::mps::MPSComputeCommandEncoder_t createComputeCommandEncoder(
+        ::orteaf::internal::backend::mps::MPSCommandBuffer_t command_buffer) {
+        last_command_buffer = command_buffer;
+        return fake_encoder;
+    }
+
+    static void setPipelineState(::orteaf::internal::backend::mps::MPSComputeCommandEncoder_t encoder,
+                                 ::orteaf::internal::backend::mps::MPSComputePipelineState_t pipeline) {
+        last_encoder = encoder;
+        last_pipeline = pipeline;
+    }
+
+    static inline ::orteaf::internal::backend::mps::MPSCommandQueue_t last_queue{nullptr};
+    static inline ::orteaf::internal::backend::mps::MPSCommandBuffer_t fake_buffer{
+        reinterpret_cast<::orteaf::internal::backend::mps::MPSCommandBuffer_t>(0x10)};
+    static inline ::orteaf::internal::backend::mps::MPSCommandBuffer_t last_command_buffer{nullptr};
+    static inline ::orteaf::internal::backend::mps::MPSComputeCommandEncoder_t fake_encoder{
+        reinterpret_cast<::orteaf::internal::backend::mps::MPSComputeCommandEncoder_t>(0x20)};
+    static inline ::orteaf::internal::backend::mps::MPSComputeCommandEncoder_t last_encoder{nullptr};
+    static inline ::orteaf::internal::backend::mps::MPSComputePipelineState_t last_pipeline{nullptr};
+};
+
 }  // namespace
 
 TEST(MpsKernelLauncherImplTest, CreateCommandBufferUsesFastOps) {
@@ -133,4 +163,24 @@ TEST(MpsKernelLauncherImplTest, CreateCommandBufferUsesFastOps) {
 
     EXPECT_EQ(MockFastOps::last_queue, dummy_queue);
     EXPECT_EQ(buffer, MockFastOps::fake_buffer);
+}
+
+TEST(MpsKernelLauncherImplTest, CreateComputeEncoderBindsPipeline) {
+    mps_rt::MpsKernelLauncherImpl<1> impl({
+        {"lib", "fn"},
+    });
+
+    // pipeline lease defaults to nullptr resource; sufficient to verify passthrough.
+    mps_rt::MpsKernelLauncherImpl<1>::PipelineLease pipeline{};
+
+    MockComputeFastOps::last_command_buffer = nullptr;
+    MockComputeFastOps::last_encoder = nullptr;
+    MockComputeFastOps::last_pipeline = nullptr;
+
+    auto* encoder = impl.createComputeEncoder<MockComputeFastOps>(MockComputeFastOps::fake_buffer, pipeline);
+
+    EXPECT_EQ(MockComputeFastOps::last_command_buffer, MockComputeFastOps::fake_buffer);
+    EXPECT_EQ(MockComputeFastOps::last_encoder, MockComputeFastOps::fake_encoder);
+    EXPECT_EQ(MockComputeFastOps::last_pipeline, pipeline.pointer());  // should forward raw pipeline pointer
+    EXPECT_EQ(encoder, MockComputeFastOps::fake_encoder);
 }

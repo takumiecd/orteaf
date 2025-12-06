@@ -9,6 +9,7 @@
 #include "orteaf/internal/base/handle.h"
 #include "orteaf/internal/base/heap_vector.h"
 #include "orteaf/internal/backend/mps/mps_fast_ops.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_compute_command_encorder.h"
 #include "orteaf/internal/runtime/ops/mps/common/mps_common_ops.h"
 
 #include "orteaf/internal/runtime/manager/mps/mps_compute_pipeline_state_manager.h"
@@ -65,6 +66,15 @@ public:
     ::orteaf::internal::backend::mps::MPSCommandBuffer_t createCommandBuffer(
         ::orteaf::internal::backend::mps::MPSCommandQueue_t command_queue) const {
         return FastOps::createCommandBuffer(command_queue);
+    }
+
+    // Convenience: create a compute encoder and bind the pipeline in one step.
+    template <typename FastOps = ::orteaf::internal::runtime::backend_ops::mps::MpsFastOps>
+    ::orteaf::internal::backend::mps::MPSComputeCommandEncoder_t createComputeEncoder(
+        ::orteaf::internal::backend::mps::MPSCommandBuffer_t command_buffer, PipelineLease& pipeline) const {
+        auto* encoder = FastOps::createComputeCommandEncoder(command_buffer);
+        FastOps::setPipelineState(encoder, pipeline.pointer());
+        return encoder;
     }
 
 private:
