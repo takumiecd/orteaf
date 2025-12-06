@@ -80,7 +80,10 @@ TEST(MpsKernelLauncherImplDeviceTest, DispatchOneShotExecutesEmbeddedIdentity) {
     ::orteaf::internal::backend::mps::MPSSize_t tg{kCount, 1, 1};
     ::orteaf::internal::backend::mps::MPSSize_t tptg{1, 1, 1};
 
-    auto* command_buffer = impl.dispatchOneShot<>(queue, device, 0, tg, tptg, [&](auto* encoder) {
+    auto queue_lease = ::orteaf::internal::runtime::mps::MpsCommandQueueManager::CommandQueueLease::
+        makeForTest(base::CommandQueueHandle{0}, queue);
+
+    auto* command_buffer = impl.dispatchOneShot<>(queue_lease, device, 0, tg, tptg, [&](auto* encoder) {
         impl.setBuffer<>(encoder, buffer, 0, 0);
         impl.setBytes<>(encoder, &length, sizeof(length), 1);
     });

@@ -187,12 +187,12 @@ public:
               typename PrivateOps = ::orteaf::internal::runtime::ops::mps::MpsPrivateOps>
     ::orteaf::internal::backend::mps::MpsFenceTicket updateFence(
         ::orteaf::internal::base::DeviceHandle device,
-        ::orteaf::internal::base::CommandQueueHandle queue_handle,
+        const ::orteaf::internal::runtime::mps::MpsCommandQueueManager::CommandQueueLease& queue_lease,
         ::orteaf::internal::backend::mps::MPSComputeCommandEncoder_t encoder,
         ::orteaf::internal::backend::mps::MPSCommandBuffer_t command_buffer) const {
         auto fence_lease = PrivateOps::acquireFence(device);
         FastOps::updateFence(encoder, fence_lease.pointer());
-        return ::orteaf::internal::backend::mps::MpsFenceTicket(queue_handle, command_buffer,
+        return ::orteaf::internal::backend::mps::MpsFenceTicket(queue_lease.handle(), command_buffer,
                                                                 std::move(fence_lease));
     }
 
@@ -200,11 +200,11 @@ public:
               typename PrivateOps = ::orteaf::internal::runtime::ops::mps::MpsPrivateOps>
     void updateFenceAndTrack(
         ::orteaf::internal::base::DeviceHandle device,
-        ::orteaf::internal::base::CommandQueueHandle queue_handle,
+        const ::orteaf::internal::runtime::mps::MpsCommandQueueManager::CommandQueueLease& queue_lease,
         ::orteaf::internal::backend::mps::MPSComputeCommandEncoder_t encoder,
         ::orteaf::internal::backend::mps::MPSCommandBuffer_t command_buffer,
         ::orteaf::internal::backend::mps::MpsFenceToken& token) const {
-        auto ticket = updateFence<FastOps, PrivateOps>(device, queue_handle, encoder, command_buffer);
+        auto ticket = updateFence<FastOps, PrivateOps>(device, queue_lease, encoder, command_buffer);
         token.addOrReplaceTicket(std::move(ticket));
     }
 
@@ -212,21 +212,25 @@ public:
     // functor to set resources, dispatch, end encoding, and commit. Returns the command buffer.
     template <typename FastOps = ::orteaf::internal::runtime::backend_ops::mps::MpsFastOps, typename Binder>
     ::orteaf::internal::backend::mps::MPSCommandBuffer_t dispatchOneShot(
-        ::orteaf::internal::backend::mps::MPSCommandQueue_t command_queue,
+        const ::orteaf::internal::runtime::mps::MpsCommandQueueManager::CommandQueueLease& queue_lease,
         ::orteaf::internal::base::DeviceHandle device,
         std::size_t pipeline_index,
         ::orteaf::internal::backend::mps::MPSSize_t threadgroups,
         ::orteaf::internal::backend::mps::MPSSize_t threads_per_threadgroup,
-        Binder&& binder) const {
+        Binder&& binder,
+        ::orteaf::internal::backend::mps::MpsFenceToken* fence_token = nullptr) const {
         const auto entry_idx = findEntryIndex(device);
         if (entry_idx == kInvalidIndex) return nullptr;
         const auto& entry = device_pipelines_[entry_idx];
         if (!entry.initialized || pipeline_index >= entry.pipelines.size()) return nullptr;
-        auto* command_buffer = FastOps::createCommandBuffer(command_queue);
+        auto* command_buffer = FastOps::createCommandBuffer(queue_lease.pointer());
         auto* encoder = FastOps::createComputeCommandEncoder(command_buffer);
         FastOps::setPipelineState(encoder, entry.pipelines[pipeline_index].pointer());
         static_cast<Binder&&>(binder)(encoder);
         FastOps::setThreadgroups(encoder, threadgroups, threads_per_threadgroup);
+        if (fence_token && queue_lease.handle().isValid()) {
+            updateFenceAndTrack<FastOps>(device, queue_lease, encoder, command_buffer, *fence_token);
+        }
         FastOps::endEncoding(encoder);
         FastOps::commit(command_buffer);
         return command_buffer;
@@ -234,13 +238,14 @@ public:
 
     template <typename FastOps = ::orteaf::internal::runtime::backend_ops::mps::MpsFastOps, typename Binder>
     ::orteaf::internal::backend::mps::MPSCommandBuffer_t dispatchOneShot(
-        ::orteaf::internal::backend::mps::MPSCommandQueue_t command_queue,
+        const ::orteaf::internal::runtime::mps::MpsCommandQueueManager::CommandQueueLease& queue_lease,
         ::orteaf::internal::base::DeviceHandle device,
         std::string_view library,
         std::string_view function,
         ::orteaf::internal::backend::mps::MPSSize_t threadgroups,
         ::orteaf::internal::backend::mps::MPSSize_t threads_per_threadgroup,
-        Binder&& binder) const {
+        Binder&& binder,
+        ::orteaf::internal::backend::mps::MpsFenceToken* fence_token = nullptr) const {
         const std::size_t idx = findKeyIndex(library, function);
         const auto entry_idx = findEntryIndex(device);
         if (entry_idx == kInvalidIndex) return nullptr;
@@ -248,8 +253,8 @@ public:
         if (!entry.initialized || idx >= entry.pipelines.size()) {
             return nullptr;
         }
-        return dispatchOneShot<FastOps>(command_queue, device, idx, threadgroups, threads_per_threadgroup,
-                                        static_cast<Binder&&>(binder));
+        return dispatchOneShot<FastOps>(queue_lease, device, idx, threadgroups, threads_per_threadgroup,
+                                        static_cast<Binder&&>(binder), fence_token);
     }
 
 private:

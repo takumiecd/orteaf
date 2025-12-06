@@ -350,6 +350,8 @@ TEST(MpsKernelLauncherImplTest, DispatchOneShotByIndex) {
 
     ::orteaf::internal::backend::mps::MPSCommandQueue_t queue =
         reinterpret_cast<::orteaf::internal::backend::mps::MPSCommandQueue_t>(0x40);
+    auto queue_lease = ::orteaf::internal::runtime::mps::MpsCommandQueueManager::CommandQueueLease::
+        makeForTest(base::CommandQueueHandle{123}, queue);
     ::orteaf::internal::backend::mps::MPSSize_t tg{7, 8, 9};
     ::orteaf::internal::backend::mps::MPSSize_t tptg{1, 2, 3};
 
@@ -368,7 +370,7 @@ TEST(MpsKernelLauncherImplTest, DispatchOneShotByIndex) {
     };
 
     auto* command_buffer =
-        impl.dispatchOneShot<MockComputeFastOps>(queue, device, 0, tg, tptg, binder);
+        impl.dispatchOneShot<MockComputeFastOps>(queue_lease, device, 0, tg, tptg, binder);
 
     EXPECT_TRUE(binder_called);
     EXPECT_EQ(command_buffer, MockComputeFastOps::fake_buffer);
@@ -390,11 +392,13 @@ TEST(MpsKernelLauncherImplTest, DispatchOneShotByNameMissingReturnsNullptr) {
 
     ::orteaf::internal::backend::mps::MPSCommandQueue_t queue =
         reinterpret_cast<::orteaf::internal::backend::mps::MPSCommandQueue_t>(0x40);
+    auto queue_lease = ::orteaf::internal::runtime::mps::MpsCommandQueueManager::CommandQueueLease::
+        makeForTest(base::CommandQueueHandle{123}, queue);
     ::orteaf::internal::backend::mps::MPSSize_t tg{1, 1, 1};
     ::orteaf::internal::backend::mps::MPSSize_t tptg{1, 1, 1};
 
-    auto* command_buffer = impl.dispatchOneShot<MockComputeFastOps>(queue, device, "missing", "missing",
-                                                                    tg, tptg, [](auto*) {});
+    auto* command_buffer = impl.dispatchOneShot<MockComputeFastOps>(queue_lease, device, "missing",
+                                                                    "missing", tg, tptg, [](auto*) {});
     EXPECT_EQ(command_buffer, nullptr);
 }
 
@@ -405,7 +409,9 @@ TEST(MpsKernelLauncherImplTest, UpdateFenceReplacesTicketForSameQueue) {
     const base::DeviceHandle device{0};
     impl.initialize<DummyPrivateOps>(device);
 
-    base::CommandQueueHandle queue_handle{42};
+    auto queue_lease = ::orteaf::internal::runtime::mps::MpsCommandQueueManager::CommandQueueLease::
+        makeForTest(base::CommandQueueHandle{42},
+                    reinterpret_cast<::orteaf::internal::backend::mps::MPSCommandQueue_t>(0x41));
     ::orteaf::internal::backend::mps::MpsFenceToken token{};
 
     auto* encoder = MockComputeFastOps::fake_encoder;
@@ -413,16 +419,47 @@ TEST(MpsKernelLauncherImplTest, UpdateFenceReplacesTicketForSameQueue) {
     auto* cb2 = reinterpret_cast<::orteaf::internal::backend::mps::MPSCommandBuffer_t>(0xBB);
 
     // First ticket
-    impl.updateFenceAndTrack<MockComputeFastOps, DummyPrivateOps>(device, queue_handle, encoder, cb1,
+    impl.updateFenceAndTrack<MockComputeFastOps, DummyPrivateOps>(device, queue_lease, encoder, cb1,
                                                                   token);
     ASSERT_EQ(token.size(), 1u);
     EXPECT_EQ(token[0].commandBuffer(), cb1);
 
     // Second call with same queue_handle should replace
-    impl.updateFenceAndTrack<MockComputeFastOps, DummyPrivateOps>(device, queue_handle, encoder, cb2,
+    impl.updateFenceAndTrack<MockComputeFastOps, DummyPrivateOps>(device, queue_lease, encoder, cb2,
                                                                   token);
     EXPECT_EQ(token.size(), 1u);
     EXPECT_EQ(token[0].commandBuffer(), cb2);
+}
+
+TEST(MpsKernelLauncherImplTest, DispatchOneShotAddsFenceTicketWhenProvided) {
+    mps_rt::MpsKernelLauncherImpl<1> impl({
+        {"lib", "fn"},
+    });
+    const base::DeviceHandle device{0};
+    impl.initialize<DummyPrivateOps>(device);
+
+    ::orteaf::internal::backend::mps::MPSCommandQueue_t queue =
+        reinterpret_cast<::orteaf::internal::backend::mps::MPSCommandQueue_t>(0x40);
+    ::orteaf::internal::backend::mps::MPSSize_t tg{1, 1, 1};
+    ::orteaf::internal::backend::mps::MPSSize_t tptg{1, 1, 1};
+
+    auto queue_lease = ::orteaf::internal::runtime::mps::MpsCommandQueueManager::CommandQueueLease::
+        makeForTest(base::CommandQueueHandle{99},
+                    reinterpret_cast<::orteaf::internal::backend::mps::MPSCommandQueue_t>(0x40));
+    ::orteaf::internal::backend::mps::MpsFenceToken token{};
+
+    MockComputeFastOps::last_encoder_for_fence_update = nullptr;
+    MockComputeFastOps::last_fence_updated = reinterpret_cast<::orteaf::internal::backend::mps::MPSFence_t>(0xdead);
+
+    auto* command_buffer = impl.dispatchOneShot<MockComputeFastOps>(queue_lease, device, 0, tg, tptg,
+                                                                    [](auto*) {}, &token);
+
+    EXPECT_EQ(command_buffer, MockComputeFastOps::fake_buffer);
+    ASSERT_EQ(token.size(), 1u);
+    EXPECT_EQ(token[0].commandQueueId(), queue_lease.handle());
+    EXPECT_EQ(token[0].commandBuffer(), MockComputeFastOps::fake_buffer);
+    EXPECT_TRUE(token[0].hasFence());
+    EXPECT_EQ(MockComputeFastOps::last_encoder_for_fence_update, MockComputeFastOps::fake_encoder);
 }
 
 TEST(MpsKernelLauncherImplTest, UpdateFenceReturnsTicketAndEncodesUpdate) {
@@ -439,8 +476,11 @@ TEST(MpsKernelLauncherImplTest, UpdateFenceReturnsTicketAndEncodesUpdate) {
     MockComputeFastOps::last_encoder_for_fence_update = nullptr;
     MockComputeFastOps::last_fence_updated = reinterpret_cast<::orteaf::internal::backend::mps::MPSFence_t>(0xdead);
 
-    auto ticket = impl.updateFence<MockComputeFastOps, DummyPrivateOps>(device, queue_handle, encoder,
-                                                                        command_buffer);
+    auto ticket = impl.updateFence<MockComputeFastOps, DummyPrivateOps>(
+        device,
+        ::orteaf::internal::runtime::mps::MpsCommandQueueManager::CommandQueueLease::makeForTest(
+            queue_handle, reinterpret_cast<::orteaf::internal::backend::mps::MPSCommandQueue_t>(0x50)),
+        encoder, command_buffer);
 
     EXPECT_EQ(MockComputeFastOps::last_encoder_for_fence_update, encoder);
     EXPECT_EQ(MockComputeFastOps::last_fence_updated, nullptr);  // DummyPrivateOps returns null fence

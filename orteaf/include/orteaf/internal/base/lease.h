@@ -101,6 +101,13 @@ public:
     // Explicitly release early; safe to call multiple times. Never throws.
     void release() noexcept { doRelease(); }
 
+#if ORTEAF_ENABLE_TEST
+    // Test helper to fabricate a lease without a manager (no-op release).
+    static Lease makeForTest(HandleT handle, ResourceT resource) noexcept {
+        return Lease{nullptr, std::move(handle), std::move(resource)};
+    }
+#endif
+
 private:
     Lease(ManagerT* mgr, HandleT handle, ResourceT resource) noexcept
         : manager_(mgr), handle_(std::move(handle)), resource_(std::move(resource)) {}
@@ -216,6 +223,13 @@ public:
 
     // Explicitly release early; safe to call multiple times. Never throws.
     void release() noexcept { doRelease(); }
+
+#if ORTEAF_ENABLE_TEST
+    // Test helper to fabricate a lease without a manager (no-op release).
+    static Lease makeForTest(ResourceT resource) noexcept {
+        return Lease{nullptr, std::move(resource)};
+    }
+#endif
 
 private:
     Lease(ManagerT* mgr, ResourceT resource) noexcept
