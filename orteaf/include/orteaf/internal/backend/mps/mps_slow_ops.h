@@ -151,7 +151,8 @@ struct MpsSlowOps {
       ::orteaf::internal::backend::mps::MPSGraphTensorData_t* out_tensor_data,
       std::size_t out_capacity) = 0;
 
-  virtual void destroyGraphExecutable(::orteaf::internal::backend::mps::MPSGraphExecutable_t executable) = 0;
+  virtual void destroyGraphExecutable(
+      ::orteaf::internal::backend::mps::MPSGraphExecutable_t executable) = 0;
 };
 
 struct MpsSlowOpsImpl final : public MpsSlowOps {
