@@ -236,7 +236,9 @@ public:
      * @brief One-shot execute by pipeline index: create CB/encoder, bind pipeline, call Binder
      * to bind args, dispatch, optional fence update, end and commit. Returns the command buffer or nullptr.
      */
-    template <typename FastOps = ::orteaf::internal::runtime::backend_ops::mps::MpsFastOps, typename Binder>
+    template <typename FastOps = ::orteaf::internal::runtime::backend_ops::mps::MpsFastOps,
+              typename PrivateOps = ::orteaf::internal::runtime::ops::mps::MpsPrivateOps,
+              typename Binder>
     ::orteaf::internal::backend::mps::MPSCommandBuffer_t dispatchOneShot(
         const ::orteaf::internal::runtime::mps::MpsCommandQueueManager::CommandQueueLease& queue_lease,
         ::orteaf::internal::base::DeviceHandle device,
@@ -255,7 +257,7 @@ public:
         static_cast<Binder&&>(binder)(encoder);
         FastOps::setThreadgroups(encoder, threadgroups, threads_per_threadgroup);
         if (fence_token && queue_lease.handle().isValid()) {
-            updateFenceAndTrack<FastOps>(device, queue_lease, encoder, command_buffer, *fence_token);
+            updateFenceAndTrack<FastOps, PrivateOps>(device, queue_lease, encoder, command_buffer, *fence_token);
         }
         FastOps::endEncoding(encoder);
         FastOps::commit(command_buffer);
@@ -266,7 +268,9 @@ public:
      * @brief One-shot execute by pipeline name: create CB/encoder, bind pipeline, call Binder
      * to bind args, dispatch, optional fence update, end and commit. Returns the command buffer or nullptr.
      */
-    template <typename FastOps = ::orteaf::internal::runtime::backend_ops::mps::MpsFastOps, typename Binder>
+    template <typename FastOps = ::orteaf::internal::runtime::backend_ops::mps::MpsFastOps,
+              typename PrivateOps = ::orteaf::internal::runtime::ops::mps::MpsPrivateOps,
+              typename Binder>
     ::orteaf::internal::backend::mps::MPSCommandBuffer_t dispatchOneShot(
         const ::orteaf::internal::runtime::mps::MpsCommandQueueManager::CommandQueueLease& queue_lease,
         ::orteaf::internal::base::DeviceHandle device,
@@ -283,7 +287,7 @@ public:
         if (!entry.initialized || idx >= entry.pipelines.size()) {
             return nullptr;
         }
-        return dispatchOneShot<FastOps>(queue_lease, device, idx, threadgroups, threads_per_threadgroup,
+        return dispatchOneShot<FastOps, PrivateOps>(queue_lease, device, idx, threadgroups, threads_per_threadgroup,
                                         static_cast<Binder&&>(binder), fence_token);
     }
 
