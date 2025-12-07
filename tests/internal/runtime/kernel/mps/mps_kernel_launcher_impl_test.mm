@@ -451,7 +451,7 @@ TEST(MpsKernelLauncherImplTest, DispatchOneShotAddsFenceTicketWhenProvided) {
     MockComputeFastOps::last_encoder_for_fence_update = nullptr;
     MockComputeFastOps::last_fence_updated = reinterpret_cast<::orteaf::internal::backend::mps::MPSFence_t>(0xdead);
 
-    auto* command_buffer = impl.dispatchOneShot<MockComputeFastOps>(queue_lease, device, 0, tg, tptg,
+    auto* command_buffer = impl.dispatchOneShot<MockComputeFastOps, DummyPrivateOps>(queue_lease, device, 0, tg, tptg,
                                                                     [](auto*) {}, &token);
 
     EXPECT_EQ(command_buffer, MockComputeFastOps::fake_buffer);

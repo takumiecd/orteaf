@@ -126,8 +126,8 @@ private:
     }
 
     mutable std::mutex mutex_;
-    base::HeapVector<Entry> entries_;
-    base::HeapVector<std::size_t> free_list_;
+    ::orteaf::internal::base::HeapVector<Entry> entries_;
+    ::orteaf::internal::base::HeapVector<std::size_t> free_list_;
 };
 
 }  // namespace orteaf::internal::runtime::allocator::policies

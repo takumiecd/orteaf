@@ -13,6 +13,7 @@
 #include "orteaf/internal/base/lease.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include "orteaf/internal/backend/mps/mps_slow_ops.h"
+#include "orteaf/internal/runtime/base/base_manager.h"
 
 namespace orteaf::internal::runtime::mps {
 
@@ -56,7 +57,30 @@ struct HeapDescriptorKeyHasher {
   }
 };
 
-class MpsHeapManager {
+struct MpsHeapManagerState {
+  HeapDescriptorKey key{};
+  ::orteaf::internal::backend::mps::MPSHeap_t heap{nullptr};
+  std::uint32_t generation{0};
+  bool alive{false};
+  bool in_use{false};
+
+  void reset() {
+    key = HeapDescriptorKey{};
+    heap = nullptr;
+    alive = false;
+    in_use = false;
+  }
+};
+
+struct MpsHeapManagerTraits {
+  using DeviceType = ::orteaf::internal::backend::mps::MPSDevice_t;
+  using OpsType = ::orteaf::internal::runtime::backend_ops::mps::MpsSlowOps;
+  using StateType = MpsHeapManagerState;
+  static constexpr const char *Name = "MPS heap manager";
+};
+
+class MpsHeapManager
+    : public base::BaseManager<MpsHeapManager, MpsHeapManagerTraits> {
 public:
   using SlowOps = ::orteaf::internal::runtime::backend_ops::mps::MpsSlowOps;
   using HeapLease = ::orteaf::internal::base::Lease<::orteaf::internal::base::HeapHandle,
@@ -70,23 +94,10 @@ public:
   MpsHeapManager& operator=(MpsHeapManager&&) = default;
   ~MpsHeapManager() = default;
 
-  void setGrowthChunkSize(std::size_t chunk) {
-    if (chunk == 0) {
-      ::orteaf::internal::diagnostics::error::throwError(
-          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-          "Growth chunk size must be > 0");
-    }
-    growth_chunk_size_ = chunk;
-  }
-
-  std::size_t growthChunkSize() const noexcept { return growth_chunk_size_; }
-
   void initialize(::orteaf::internal::backend::mps::MPSDevice_t device,
                   SlowOps *slow_ops, std::size_t capacity);
 
   void shutdown();
-
-  std::size_t capacity() const noexcept { return states_.size(); }
 
   HeapLease acquire(const HeapDescriptorKey &key);
 
@@ -112,50 +123,23 @@ public:
     std::size_t growth_chunk_size{0};
   };
 
-  DebugState debugState(base::HeapHandle id) const;
+  DebugState debugState(::orteaf::internal::base::HeapHandle handle) const;
 #endif
 
 private:
-  struct State {
-    HeapDescriptorKey key{};
-    ::orteaf::internal::backend::mps::MPSHeap_t heap{nullptr};
-    std::uint32_t generation{0};
-    bool alive{false};
-    bool in_use{false};
-
-    void reset() {
-      key = HeapDescriptorKey{};
-      heap = nullptr;
-      alive = false;
-      in_use = false;
-    }
-  };
-
-  void ensureInitialized() const;
-
   void validateKey(const HeapDescriptorKey &key) const;
 
-  State &ensureAliveState(::orteaf::internal::base::HeapHandle id);
+  State &ensureAliveState(::orteaf::internal::base::HeapHandle handle);
 
-  const State &ensureAliveState(base::HeapHandle id) const {
-    return const_cast<MpsHeapManager *>(this)->ensureAliveState(id);
+  const State &ensureAliveState(::orteaf::internal::base::HeapHandle handle) const {
+    return const_cast<MpsHeapManager *>(this)->ensureAliveState(handle);
   }
-
-  std::size_t allocateSlot();
-
-  void growStatePool(std::size_t additional);
 
   ::orteaf::internal::backend::mps::MPSHeap_t
   createHeap(const HeapDescriptorKey &key);
 
-  ::orteaf::internal::base::HeapVector<State> states_{};
-  ::orteaf::internal::base::HeapVector<std::size_t> free_list_{};
   std::unordered_map<HeapDescriptorKey, std::size_t, HeapDescriptorKeyHasher>
       key_to_index_{};
-  std::size_t growth_chunk_size_{1};
-  bool initialized_{false};
-  ::orteaf::internal::backend::mps::MPSDevice_t device_{nullptr};
-  SlowOps *slow_ops_{nullptr};
 };
 
 } // namespace orteaf::internal::runtime::mps
