@@ -51,7 +51,7 @@ struct FunctionKeyHasher {
 
 class MpsComputePipelineStateManager {
 public:
-    using BackendOps = ::orteaf::internal::runtime::backend_ops::mps::MpsSlowOps;
+    using SlowOps = ::orteaf::internal::runtime::backend_ops::mps::MpsSlowOps;
     using PipelineLease = ::orteaf::internal::base::Lease<
         ::orteaf::internal::base::FunctionHandle,
         ::orteaf::internal::backend::mps::MPSComputePipelineState_t,
@@ -77,7 +77,7 @@ public:
 
     void initialize(::orteaf::internal::backend::mps::MPSDevice_t device,
                     ::orteaf::internal::backend::mps::MPSLibrary_t library,
-                    BackendOps *ops,
+                    SlowOps *slow_ops,
                     std::size_t capacity);
 
     void shutdown();
@@ -138,7 +138,7 @@ private:
     bool initialized_{false};
     ::orteaf::internal::backend::mps::MPSDevice_t device_{nullptr};
     ::orteaf::internal::backend::mps::MPSLibrary_t library_{nullptr};
-    BackendOps *ops_{nullptr};
+    SlowOps *slow_ops_{nullptr};
 };
 
 }  // namespace orteaf::internal::runtime::mps

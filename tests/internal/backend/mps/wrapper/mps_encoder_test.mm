@@ -11,7 +11,7 @@
 #include "orteaf/internal/backend/mps/wrapper/mps_command_buffer.h"
 #include "orteaf/internal/backend/mps/wrapper/mps_buffer.h"
 #include "orteaf/internal/backend/mps/wrapper/mps_heap.h"
-#include "orteaf/internal/backend/mps/wrapper/mps_compute_command_encorder.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_compute_command_encoder.h"
 #include "orteaf/internal/backend/mps/wrapper/mps_size.h"
 #include "orteaf/internal/backend/mps/wrapper/mps_library.h"
 #include "orteaf/internal/backend/mps/wrapper/mps_function.h"

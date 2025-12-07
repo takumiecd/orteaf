@@ -13,7 +13,7 @@
 #include "orteaf/internal/backend/mps/wrapper/mps_autorelease_pool.h"
 #include "orteaf/internal/backend/mps/wrapper/mps_objc_bridge.h"
 #include "orteaf/internal/backend/mps/wrapper/mps_stats.h"
-#include "orteaf/internal/backend/mps/wrapper/mps_compute_command_encorder.h"
+#include "orteaf/internal/backend/mps/wrapper/mps_compute_command_encoder.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 
 namespace orteaf::internal::backend::mps {

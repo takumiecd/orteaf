@@ -11,7 +11,7 @@
 namespace orteaf::tests::runtime::mps::testing {
 
 template <class BackendOpsT, bool IsMockV> struct BackendOpsProvider {
-  using BackendOps = BackendOpsT;
+    using SlowOps = BackendOpsT;
   static constexpr bool is_mock = IsMockV;
 
   struct Context {
@@ -24,34 +24,34 @@ template <class BackendOpsT, bool IsMockV> struct BackendOpsProvider {
 
 // Real provider uses MpsSlowOpsImpl
 struct RealBackendOpsProvider {
-  using BackendOps =
-      ::orteaf::internal::runtime::backend_ops::mps::MpsSlowOpsImpl;
+  using SlowOps =
+    ::orteaf::internal::runtime::backend_ops::mps::MpsSlowOpsImpl;
   static constexpr bool is_mock = false;
 
   struct Context {
-    BackendOps ops;
+    SlowOps ops;
   };
 
   static void setUp(Context &) {}
   static void tearDown(Context &) {}
 
-  static BackendOps *getOps(Context &ctx) { return &ctx.ops; }
+  static SlowOps *getOps(Context &ctx) { return &ctx.ops; }
 };
 
 // Mock provider uses MpsBackendOpsMock
 struct MockBackendOpsProvider {
-  using BackendOps = ::orteaf::tests::runtime::mps::MpsBackendOpsMock;
+  using SlowOps = ::orteaf::tests::runtime::mps::MpsBackendOpsMock;
   static constexpr bool is_mock = true;
 
   struct Context {
-    ::testing::NiceMock<BackendOps> mock;
+    ::testing::NiceMock<SlowOps> mock;
   };
 
   static void setUp(Context &) {}
   static void tearDown(Context &) {}
 
-  static BackendOps *getOps(Context &ctx) { return &ctx.mock; }
-  static BackendOps &mock(Context &ctx) { return ctx.mock; }
+  static SlowOps *getOps(Context &ctx) { return &ctx.mock; }
+  static SlowOps &mock(Context &ctx) { return ctx.mock; }
 };
 
 } // namespace orteaf::tests::runtime::mps::testing

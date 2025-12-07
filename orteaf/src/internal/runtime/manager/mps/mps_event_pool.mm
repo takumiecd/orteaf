@@ -5,14 +5,14 @@
 namespace orteaf::internal::runtime::mps {
 
 void MpsEventPool::initialize(
-    ::orteaf::internal::backend::mps::MPSDevice_t device, BackendOps *ops,
+  ::orteaf::internal::backend::mps::MPSDevice_t device, SlowOps *slow_ops,
     std::size_t initial_capacity) {
   if (device == nullptr) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
         "MPS event pool requires a valid device");
   }
-  if (ops == nullptr) {
+  if (slow_ops == nullptr) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
         "MPS event pool requires valid ops");
@@ -21,7 +21,7 @@ void MpsEventPool::initialize(
     shutdown();
   }
   device_ = device;
-  ops_ = ops;
+  slow_ops_ = slow_ops;
   initialized_ = true;
 #if ORTEAF_ENABLE_TEST
   total_created_ = 0;
@@ -39,7 +39,7 @@ void MpsEventPool::shutdown() {
     free_list_.clear();
     active_count_ = 0;
     device_ = nullptr;
-    ops_ = nullptr;
+    slow_ops_ = nullptr;
 #if ORTEAF_ENABLE_TEST
     total_created_ = 0;
 #endif
@@ -51,12 +51,12 @@ void MpsEventPool::shutdown() {
         "Cannot shutdown MPS event pool while events are in use");
   }
   for (std::size_t i = 0; i < free_list_.size(); ++i) {
-    ops_->destroyEvent(free_list_[i]);
+    slow_ops_->destroyEvent(free_list_[i]);
   }
   free_list_.clear();
   active_count_ = 0;
   device_ = nullptr;
-  ops_ = nullptr;
+  slow_ops_ = nullptr;
 #if ORTEAF_ENABLE_TEST
   total_created_ = 0;
 #endif
@@ -95,7 +95,7 @@ void MpsEventPool::ensureInitialized() const {
 
 void MpsEventPool::growFreeList(std::size_t count) {
   for (std::size_t i = 0; i < count; ++i) {
-    auto handle = ops_->createEvent(device_);
+    auto handle = slow_ops_->createEvent(device_);
     if (handle == nullptr) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::OperationFailed,

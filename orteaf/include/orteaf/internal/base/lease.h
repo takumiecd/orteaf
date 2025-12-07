@@ -17,6 +17,7 @@ class Lease {
     friend ManagerT;
 
 public:
+    Lease() noexcept = default;
     Lease(const Lease&) = delete;
     Lease& operator=(const Lease&) = delete;
 
@@ -39,16 +40,73 @@ public:
 
     const HandleT& handle() const noexcept { return handle_; }
 
-    ResourceT& get() noexcept { return resource_; }
-    const ResourceT& get() const noexcept { return resource_; }
+    auto operator->() noexcept {
+        if constexpr (std::is_pointer_v<ResourceT>) {
+            return resource_;  // allow single arrow when resource_ is already a pointer
+        } else {
+            return std::addressof(resource_);
+        }
+    }
+    auto operator->() const noexcept {
+        if constexpr (std::is_pointer_v<ResourceT>) {
+            return resource_;
+        } else {
+            return std::addressof(resource_);
+        }
+    }
 
-    ResourceT* operator->() noexcept { return std::addressof(resource_); }
-    const ResourceT* operator->() const noexcept { return std::addressof(resource_); }
+    decltype(auto) operator*() noexcept {
+        if constexpr (std::is_pointer_v<ResourceT>) {
+            return *resource_;
+        } else {
+            return (resource_);
+        }
+    }
+    decltype(auto) operator*() const noexcept {
+        if constexpr (std::is_pointer_v<ResourceT>) {
+            return *resource_;
+        } else {
+            return (resource_);
+        }
+    }
+
+    // Pointer access helper (returns raw pointer regardless of ResourceT being pointer or object).
+    auto pointer() noexcept {
+        if constexpr (std::is_pointer_v<ResourceT>) {
+            return resource_;
+        } else {
+            return std::addressof(resource_);
+        }
+    }
+    auto pointer() const noexcept {
+        if constexpr (std::is_pointer_v<ResourceT>) {
+            return resource_;
+        } else {
+            return std::addressof(resource_);
+        }
+    }
+
+    template <class F>
+    decltype(auto) with_resource(F&& f) {
+        return static_cast<F&&>(f)(resource_);
+    }
+
+    template <class F>
+    decltype(auto) with_resource(F&& f) const {
+        return static_cast<F&&>(f)(resource_);
+    }
 
     explicit operator bool() const noexcept { return manager_ != nullptr; }
 
     // Explicitly release early; safe to call multiple times. Never throws.
     void release() noexcept { doRelease(); }
+
+#if ORTEAF_ENABLE_TEST
+    // Test helper to fabricate a lease without a manager (no-op release).
+    static Lease makeForTest(HandleT handle, ResourceT resource) noexcept {
+        return Lease{nullptr, std::move(handle), std::move(resource)};
+    }
+#endif
 
 private:
     Lease(ManagerT* mgr, HandleT handle, ResourceT resource) noexcept
@@ -67,6 +125,10 @@ private:
         resource_ = ResourceT{};
     }
 
+    // Manager-only access to underlying resource.
+    ResourceT& getForManager() noexcept { return resource_; }
+    const ResourceT& getForManager() const noexcept { return resource_; }
+
     ManagerT* manager_{nullptr};
     HandleT handle_{};
     ResourceT resource_{};
@@ -82,6 +144,7 @@ class Lease<void, ResourceT, ManagerT> {
     friend ManagerT;
 
 public:
+    Lease() noexcept = default;
     Lease(const Lease&) = delete;
     Lease& operator=(const Lease&) = delete;
 
@@ -100,16 +163,73 @@ public:
 
     ~Lease() noexcept { release(); }
 
-    ResourceT& get() noexcept { return resource_; }
-    const ResourceT& get() const noexcept { return resource_; }
+    auto operator->() noexcept {
+        if constexpr (std::is_pointer_v<ResourceT>) {
+            return resource_;
+        } else {
+            return std::addressof(resource_);
+        }
+    }
+    auto operator->() const noexcept {
+        if constexpr (std::is_pointer_v<ResourceT>) {
+            return resource_;
+        } else {
+            return std::addressof(resource_);
+        }
+    }
 
-    ResourceT* operator->() noexcept { return std::addressof(resource_); }
-    const ResourceT* operator->() const noexcept { return std::addressof(resource_); }
+    decltype(auto) operator*() noexcept {
+        if constexpr (std::is_pointer_v<ResourceT>) {
+            return *resource_;
+        } else {
+            return (resource_);
+        }
+    }
+    decltype(auto) operator*() const noexcept {
+        if constexpr (std::is_pointer_v<ResourceT>) {
+            return *resource_;
+        } else {
+            return (resource_);
+        }
+    }
+
+    // Pointer access helper (returns raw pointer regardless of ResourceT being pointer or object).
+    auto pointer() noexcept {
+        if constexpr (std::is_pointer_v<ResourceT>) {
+            return resource_;
+        } else {
+            return std::addressof(resource_);
+        }
+    }
+    auto pointer() const noexcept {
+        if constexpr (std::is_pointer_v<ResourceT>) {
+            return resource_;
+        } else {
+            return std::addressof(resource_);
+        }
+    }
+
+    template <class F>
+    decltype(auto) with_resource(F&& f) {
+        return static_cast<F&&>(f)(resource_);
+    }
+
+    template <class F>
+    decltype(auto) with_resource(F&& f) const {
+        return static_cast<F&&>(f)(resource_);
+    }
 
     explicit operator bool() const noexcept { return manager_ != nullptr; }
 
     // Explicitly release early; safe to call multiple times. Never throws.
     void release() noexcept { doRelease(); }
+
+#if ORTEAF_ENABLE_TEST
+    // Test helper to fabricate a lease without a manager (no-op release).
+    static Lease makeForTest(ResourceT resource) noexcept {
+        return Lease{nullptr, std::move(resource)};
+    }
+#endif
 
 private:
     Lease(ManagerT* mgr, ResourceT resource) noexcept
@@ -126,6 +246,10 @@ private:
         manager_ = nullptr;
         resource_ = ResourceT{};
     }
+
+    // Manager-only access to underlying resource.
+    ResourceT& getForManager() noexcept { return resource_; }
+    const ResourceT& getForManager() const noexcept { return resource_; }
 
     ManagerT* manager_{nullptr};
     ResourceT resource_{};

@@ -111,7 +111,7 @@ function(orteaf_add_metal_kernel_binaries)
 
     string(REPLACE ";" "|" KERNEL_RECORDS_SERIALIZED "${KERNEL_RECORDS}")
     get_filename_component(GENERATED_SOURCE_CANONICAL
-        "${BACKEND_KERNEL_GEN_DIR}/mps/metal_kernel_registry.mm"
+        "${BACKEND_KERNEL_GEN_DIR}/mps/metal_kernel_registry_entries.h"
         ABSOLUTE
     )
     add_custom_command(
@@ -134,7 +134,8 @@ function(orteaf_add_metal_kernel_binaries)
             "${GENERATED_SOURCE_CANONICAL}"
     )
 
-    set(ORTEAF_METAL_EMBED_SOURCE "${GENERATED_SOURCE_CANONICAL}" PARENT_SCOPE)
+    set(ORTEAF_METAL_EMBED_SOURCE "${CMAKE_SOURCE_DIR}/orteaf/src/internal/backend/mps/wrapper/metal_kernel_embed_registry.mm" PARENT_SCOPE)
+    set(ORTEAF_METAL_EMBED_HEADER "${GENERATED_SOURCE_CANONICAL}" PARENT_SCOPE)
     set(ORTEAF_METAL_EMBED_OBJECTS "${EMBEDDED_OBJECTS}" PARENT_SCOPE)
     set(ORTEAF_METAL_GENERATED_LIBS "${ALL_METALLIBS}" PARENT_SCOPE)
 endfunction()

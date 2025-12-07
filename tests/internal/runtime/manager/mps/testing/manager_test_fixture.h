@@ -12,12 +12,12 @@ namespace orteaf::tests::runtime::mps::testing {
 template <class Provider, class ManagerType>
 class RuntimeManagerFixture : public ::testing::Test {
 protected:
-    using BackendOps = typename Provider::BackendOps;
+    using SlowOps = typename Provider::SlowOps;
     using Manager = ManagerType;
     using Adapter = ManagerAdapter<Manager, Provider>;
     using Context = typename Provider::Context;
 
-    // static_assert(::orteaf::internal::runtime::backend_ops::mps::MpsRuntimeBackendOps<BackendOps>);
+    // static_assert(::orteaf::internal::runtime::backend_ops::mps::MpsRuntimeBackendOps<SlowOps>);
 
     void SetUp() override {
         adapter_.bind(manager_, context_);

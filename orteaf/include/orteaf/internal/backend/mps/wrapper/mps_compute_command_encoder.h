@@ -1,5 +1,5 @@
 /**
- * @file mps_compute_command_encorder.h
+ * @file mps_compute_command_encoder.h
  * @brief MPS/Metal compute command encoder helpers.
  */
 #pragma once

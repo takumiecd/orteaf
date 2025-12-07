@@ -5,7 +5,7 @@
 namespace orteaf::internal::runtime::mps {
 
 void MpsHeapManager::initialize(
-    ::orteaf::internal::backend::mps::MPSDevice_t device, BackendOps *ops,
+  ::orteaf::internal::backend::mps::MPSDevice_t device, SlowOps *slow_ops,
     std::size_t capacity) {
   shutdown();
   if (device == nullptr) {
@@ -13,7 +13,7 @@ void MpsHeapManager::initialize(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
         "MPS heap manager requires a valid device");
   }
-  if (ops == nullptr) {
+  if (slow_ops == nullptr) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
         "MPS heap manager requires valid ops");
@@ -24,7 +24,7 @@ void MpsHeapManager::initialize(
         "Requested MPS heap capacity exceeds supported limit");
   }
   device_ = device;
-  ops_ = ops;
+  slow_ops_ = slow_ops;
   states_.clear();
   free_list_.clear();
   key_to_index_.clear();
@@ -44,7 +44,7 @@ void MpsHeapManager::shutdown() {
   for (std::size_t i = 0; i < states_.size(); ++i) {
     State &state = states_[i];
     if (state.alive) {
-      ops_->destroyHeap(state.heap);
+      slow_ops_->destroyHeap(state.heap);
       state.reset();
     }
   }
@@ -52,7 +52,7 @@ void MpsHeapManager::shutdown() {
   free_list_.clear();
   key_to_index_.clear();
   device_ = nullptr;
-  ops_ = nullptr;
+  slow_ops_ = nullptr;
   initialized_ = false;
 }
 
@@ -84,7 +84,7 @@ MpsHeapManager::HeapLease MpsHeapManager::acquire(const HeapDescriptorKey &key) 
 }
 
 void MpsHeapManager::release(HeapLease &lease) noexcept {
-  if (!initialized_ || device_ == nullptr || ops_ == nullptr || !lease) {
+  if (!initialized_ || device_ == nullptr || slow_ops_ == nullptr || !lease) {
     return;
   }
   const auto id = lease.handle();
@@ -199,7 +199,7 @@ void MpsHeapManager::growStatePool(std::size_t additional) {
 
 ::orteaf::internal::backend::mps::MPSHeap_t
 MpsHeapManager::createHeap(const HeapDescriptorKey &key) {
-  auto descriptor = ops_->createHeapDescriptor();
+  auto descriptor = slow_ops_->createHeapDescriptor();
   if (descriptor == nullptr) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
@@ -207,23 +207,23 @@ MpsHeapManager::createHeap(const HeapDescriptorKey &key) {
   }
   struct DescriptorGuard {
     ::orteaf::internal::backend::mps::MPSHeapDescriptor_t handle{nullptr};
-    BackendOps *ops{nullptr};
+    SlowOps *slow_ops{nullptr};
     ~DescriptorGuard() {
-      if (handle != nullptr && ops != nullptr) {
-        ops->destroyHeapDescriptor(handle);
+      if (handle != nullptr && slow_ops != nullptr) {
+        slow_ops->destroyHeapDescriptor(handle);
       }
     }
   };
-  DescriptorGuard guard{descriptor, ops_};
-  ops_->setHeapDescriptorSize(descriptor, key.size_bytes);
-  ops_->setHeapDescriptorResourceOptions(descriptor, key.resource_options);
-  ops_->setHeapDescriptorStorageMode(descriptor, key.storage_mode);
-  ops_->setHeapDescriptorCPUCacheMode(descriptor, key.cpu_cache_mode);
-  ops_->setHeapDescriptorHazardTrackingMode(descriptor,
+  DescriptorGuard guard{descriptor, slow_ops_};
+  slow_ops_->setHeapDescriptorSize(descriptor, key.size_bytes);
+  slow_ops_->setHeapDescriptorResourceOptions(descriptor, key.resource_options);
+  slow_ops_->setHeapDescriptorStorageMode(descriptor, key.storage_mode);
+  slow_ops_->setHeapDescriptorCPUCacheMode(descriptor, key.cpu_cache_mode);
+  slow_ops_->setHeapDescriptorHazardTrackingMode(descriptor,
                                             key.hazard_tracking_mode);
-  ops_->setHeapDescriptorType(descriptor, key.heap_type);
-  auto heap = ops_->createHeap(device_, descriptor);
-  ops_->destroyHeapDescriptor(descriptor);
+  slow_ops_->setHeapDescriptorType(descriptor, key.heap_type);
+  auto heap = slow_ops_->createHeap(device_, descriptor);
+  slow_ops_->destroyHeapDescriptor(descriptor);
   guard.handle = nullptr;
   if (heap == nullptr) {
     ::orteaf::internal::diagnostics::error::throwError(

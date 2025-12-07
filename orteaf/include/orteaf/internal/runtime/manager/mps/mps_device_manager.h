@@ -23,7 +23,7 @@ namespace orteaf::internal::runtime::mps {
 
 class MpsDeviceManager {
 public:
-    using BackendOps = ::orteaf::internal::runtime::backend_ops::mps::MpsSlowOps;
+    using SlowOps = ::orteaf::internal::runtime::backend_ops::mps::MpsSlowOps;
     using DeviceLease = ::orteaf::internal::base::Lease<
         void,
         ::orteaf::internal::backend::mps::MPSDevice_t,
@@ -80,7 +80,7 @@ public:
         return library_initial_capacity_;
     }
 
-    void initialize(BackendOps *ops);
+    void initialize(SlowOps *slow_ops);
 
     void shutdown();
 
@@ -163,7 +163,7 @@ private:
             reset(nullptr);
         }
 
-        void reset(BackendOps *ops) noexcept;
+        void reset(SlowOps *slow_ops) noexcept;
 
     private:
         void moveFrom(State&& other) noexcept;
@@ -180,13 +180,8 @@ private:
     std::size_t command_queue_initial_capacity_{0};
     std::size_t heap_initial_capacity_{0};
     std::size_t library_initial_capacity_{0};
-    BackendOps *ops_{nullptr};
+    SlowOps *slow_ops_{nullptr};
 };
-
-inline MpsDeviceManager& GetMpsDeviceManager() {
-    static MpsDeviceManager instance{};
-    return instance;
-}
 
 } // namespace orteaf::internal::runtime::mps
 

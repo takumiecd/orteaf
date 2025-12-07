@@ -14,7 +14,7 @@ namespace orteaf::internal::runtime::mps {
 
 class MpsEventPool {
 public:
-    using BackendOps = ::orteaf::internal::runtime::backend_ops::mps::MpsSlowOps;
+    using SlowOps = ::orteaf::internal::runtime::backend_ops::mps::MpsSlowOps;
     using Event = ::orteaf::internal::backend::mps::MPSEvent_t;
     using EventLease = ::orteaf::internal::base::Lease<void, Event, MpsEventPool>;
 
@@ -37,7 +37,7 @@ public:
     std::size_t growthChunkSize() const noexcept { return growth_chunk_size_; }
 
     void initialize(::orteaf::internal::backend::mps::MPSDevice_t device,
-                    BackendOps *ops,
+                    SlowOps *slow_ops,
                     std::size_t initial_capacity = 0);
 
     void shutdown();
@@ -47,7 +47,8 @@ public:
     // Manual release helper for callers wanting explicit return.
     void release(EventLease& lease) noexcept {
         if (lease) {
-            release(lease.get());
+            release(lease.getForManager());
+            lease.invalidate();
         }
     }
 
@@ -85,7 +86,7 @@ private:
     ::orteaf::internal::backend::mps::MPSDevice_t device_{nullptr};
     base::HeapVector<Event> free_list_{};
     std::size_t active_count_{0};
-    BackendOps *ops_{nullptr};
+    SlowOps *slow_ops_{nullptr};
 #if ORTEAF_ENABLE_TEST
     std::size_t total_created_{0};
 #endif

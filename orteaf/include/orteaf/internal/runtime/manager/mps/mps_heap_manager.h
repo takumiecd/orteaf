@@ -58,7 +58,7 @@ struct HeapDescriptorKeyHasher {
 
 class MpsHeapManager {
 public:
-  using BackendOps = ::orteaf::internal::runtime::backend_ops::mps::MpsSlowOps;
+  using SlowOps = ::orteaf::internal::runtime::backend_ops::mps::MpsSlowOps;
   using HeapLease = ::orteaf::internal::base::Lease<::orteaf::internal::base::HeapHandle,
                                                     ::orteaf::internal::backend::mps::MPSHeap_t,
                                                     MpsHeapManager>;
@@ -82,7 +82,7 @@ public:
   std::size_t growthChunkSize() const noexcept { return growth_chunk_size_; }
 
   void initialize(::orteaf::internal::backend::mps::MPSDevice_t device,
-                  BackendOps *ops, std::size_t capacity);
+                  SlowOps *slow_ops, std::size_t capacity);
 
   void shutdown();
 
@@ -155,7 +155,7 @@ private:
   std::size_t growth_chunk_size_{1};
   bool initialized_{false};
   ::orteaf::internal::backend::mps::MPSDevice_t device_{nullptr};
-  BackendOps *ops_{nullptr};
+  SlowOps *slow_ops_{nullptr};
 };
 
 } // namespace orteaf::internal::runtime::mps

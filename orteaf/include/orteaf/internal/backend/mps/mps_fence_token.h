@@ -27,6 +27,19 @@ public:
 
     void addTicket(Ticket&& ticket) { tickets_.pushBack(std::move(ticket)); }
 
+    // Add a ticket, replacing any existing entry with the same command queue id.
+    Ticket& addOrReplaceTicket(Ticket&& ticket) {
+        const auto queue_id = ticket.commandQueueId();
+        for (std::size_t i = 0; i < tickets_.size(); ++i) {
+            if (tickets_[i].commandQueueId() == queue_id) {
+                tickets_[i] = std::move(ticket);
+                return tickets_[i];
+            }
+        }
+        tickets_.pushBack(std::move(ticket));
+        return tickets_.back();
+    }
+
     void clear() noexcept { tickets_.clear(); }
 
     const Ticket& operator[](std::size_t index) const noexcept { return tickets_[index]; }

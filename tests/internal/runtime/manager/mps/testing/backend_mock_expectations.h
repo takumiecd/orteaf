@@ -24,9 +24,9 @@
 namespace orteaf::tests::runtime::mps {
 
 /**
- * Helpers for expressing BackendOps expectations in tests.
+ * Helpers for expressing SlowOps expectations in tests.
  *
- * Each helper mirrors a BackendOps entry point so tests stay concise
+ * Each helper mirrors a SlowOps entry point so tests stay concise
  * while remaining explicit about expected call counts and return values.
  */
 struct BackendMockExpectations {

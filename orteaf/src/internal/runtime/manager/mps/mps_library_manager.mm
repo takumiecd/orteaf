@@ -5,7 +5,7 @@
 namespace orteaf::internal::runtime::mps {
 
 void MpsLibraryManager::initialize(
-    ::orteaf::internal::backend::mps::MPSDevice_t device, BackendOps *ops,
+  ::orteaf::internal::backend::mps::MPSDevice_t device, SlowOps *slow_ops,
     std::size_t capacity) {
   shutdown();
   if (device == nullptr) {
@@ -13,13 +13,13 @@ void MpsLibraryManager::initialize(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
         "MPS library manager requires a valid device");
   }
-  if (ops == nullptr) {
+  if (slow_ops == nullptr) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
         "MPS library manager requires valid ops");
   }
   device_ = device;
-  ops_ = ops;
+  slow_ops_ = slow_ops;
   if (capacity > base::LibraryHandle::invalid_index()) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
@@ -45,14 +45,14 @@ void MpsLibraryManager::shutdown() {
     State &state = states_[i];
     if (state.alive) {
       state.pipeline_manager.shutdown();
-      ops_->destroyLibrary(state.handle);
+      slow_ops_->destroyLibrary(state.handle);
     }
   }
   states_.clear();
   free_list_.clear();
   key_to_index_.clear();
   device_ = nullptr;
-  ops_ = nullptr;
+  slow_ops_ = nullptr;
   initialized_ = false;
 }
 
@@ -66,7 +66,7 @@ MpsLibraryManager::LibraryLease MpsLibraryManager::acquire(const LibraryKey &key
   State &state = states_[index];
   state.handle = createLibrary(key);
   state.key = key;
-  state.pipeline_manager.initialize(device_, state.handle, ops_, 0);
+  state.pipeline_manager.initialize(device_, state.handle, slow_ops_, 0);
   state.alive = true;
   const auto handle = encodeHandle(index);
   key_to_index_.emplace(state.key, index);
@@ -99,7 +99,7 @@ MpsLibraryManager::acquirePipelineManager(const LibraryKey &key) {
     state = &states_[index];
     state->handle = createLibrary(key);
     state->key = key;
-    state->pipeline_manager.initialize(device_, state->handle, ops_, 0);
+    state->pipeline_manager.initialize(device_, state->handle, slow_ops_, 0);
     state->alive = true;
     key_to_index_.emplace(state->key, index);
   }
@@ -224,7 +224,7 @@ base::LibraryHandle MpsLibraryManager::encodeHandle(std::size_t index) const {
 MpsLibraryManager::createLibrary(const LibraryKey &key) {
   switch (key.kind) {
   case LibraryKeyKind::kNamed:
-    return ops_->createLibraryWithName(device_, key.identifier);
+    return slow_ops_->createLibraryWithName(device_, key.identifier);
   }
   ::orteaf::internal::diagnostics::error::throwError(
       ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,

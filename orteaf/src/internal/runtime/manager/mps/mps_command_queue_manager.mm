@@ -5,16 +5,16 @@
 namespace orteaf::internal::runtime::mps {
 
 void MpsCommandQueueManager::initialize(
-    ::orteaf::internal::backend::mps::MPSDevice_t device, BackendOps *ops,
+    ::orteaf::internal::backend::mps::MPSDevice_t device, SlowOps *slow_ops,
     std::size_t capacity) {
   shutdown();
-  if (ops == nullptr) {
+  if (slow_ops == nullptr) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
         "MPS command queue manager requires valid ops");
   }
   device_ = device;
-  ops_ = ops;
+  slow_ops_ = slow_ops;
 
   if (capacity > base::CommandQueueHandle::invalid_index()) {
     ::orteaf::internal::diagnostics::error::throwError(
@@ -29,9 +29,9 @@ void MpsCommandQueueManager::initialize(
 
   for (std::size_t index = 0; index < capacity; ++index) {
     State state{};
-    state.command_queue = ops_->createCommandQueue(device_);
+    state.command_queue = slow_ops_->createCommandQueue(device_);
 #if ORTEAF_MPS_DEBUG_ENABLED
-    state.event = ops_->createEvent(device_);
+    state.event = slow_ops_->createEvent(device_);
 #endif
     state.resetHazards();
     state.generation = 0;
@@ -46,12 +46,12 @@ void MpsCommandQueueManager::initialize(
 
 void MpsCommandQueueManager::shutdown() {
   for (std::size_t i = 0; i < states_.size(); ++i) {
-    states_[i].destroy(ops_);
+    states_[i].destroy(slow_ops_);
   }
   states_.clear();
   free_list_.clear();
   device_ = nullptr;
-  ops_ = nullptr;
+  slow_ops_ = nullptr;
   initialized_ = false;
 }
 
@@ -74,7 +74,7 @@ MpsCommandQueueManager::CommandQueueLease MpsCommandQueueManager::acquire() {
 }
 
 void MpsCommandQueueManager::release(CommandQueueLease& lease) noexcept {
-  if (!initialized_ || ops_ == nullptr || !lease) {
+  if (!initialized_ || slow_ops_ == nullptr || !lease) {
     return;
   }
   const auto handle = lease.handle();
@@ -109,7 +109,7 @@ MpsCommandQueueManager::EventLease MpsCommandQueueManager::acquireEvent(base::Co
 }
 
 void MpsCommandQueueManager::release(EventLease& lease) noexcept {
-  if (!initialized_ || ops_ == nullptr || !lease) {
+  if (!initialized_ || slow_ops_ == nullptr || !lease) {
     return;
   }
   const auto handle = lease.handle();
@@ -144,7 +144,7 @@ MpsCommandQueueManager::SerialLease MpsCommandQueueManager::acquireSerial(base::
 }
 
 void MpsCommandQueueManager::release(SerialLease& lease) noexcept {
-  if (!initialized_ || ops_ == nullptr || !lease) {
+  if (!initialized_ || slow_ops_ == nullptr || !lease) {
     return;
   }
   const auto handle = lease.handle();
@@ -197,7 +197,7 @@ void MpsCommandQueueManager::releaseUnusedQueues() {
   // Destroy only free-list entries.
   for (std::size_t idx : free_list_) {
     if (idx < states_.size()) {
-      states_[idx].destroy(ops_);
+      states_[idx].destroy(slow_ops_);
     }
   }
   // Compact away destroyed entries (safe because any non-free entries must be inactive).
@@ -245,14 +245,14 @@ void MpsCommandQueueManager::State::resetHazards() noexcept {
 #endif
 }
 
-void MpsCommandQueueManager::State::destroy(BackendOps *ops) noexcept {
+void MpsCommandQueueManager::State::destroy(SlowOps *slow_ops) noexcept {
   if (command_queue != nullptr) {
-    ops->destroyCommandQueue(command_queue);
+    slow_ops->destroyCommandQueue(command_queue);
     command_queue = nullptr;
   }
 #if ORTEAF_MPS_DEBUG_ENABLED
   if (event != nullptr) {
-    ops->destroyEvent(event);
+    slow_ops->destroyEvent(event);
     event = nullptr;
   }
   serial = SerialState{};
@@ -302,9 +302,9 @@ void MpsCommandQueueManager::growStatePool(std::size_t additional_count) {
 
   for (std::size_t i = 0; i < additional_count; ++i) {
     State state{};
-    state.command_queue = ops_->createCommandQueue(device_);
+    state.command_queue = slow_ops_->createCommandQueue(device_);
 #if ORTEAF_MPS_DEBUG_ENABLED
-    state.event = ops_->createEvent(device_);
+    state.event = slow_ops_->createEvent(device_);
 #endif
     state.resetHazards();
     state.generation = 0;

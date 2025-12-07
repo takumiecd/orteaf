@@ -4,17 +4,17 @@
 
 namespace orteaf::internal::runtime::mps {
 
-void MpsDeviceManager::initialize(BackendOps *ops) {
+void MpsDeviceManager::initialize(SlowOps *slow_ops) {
   shutdown();
 
-  if (ops == nullptr) {
+  if (slow_ops == nullptr) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
         "MPS device manager requires valid ops");
   }
-  ops_ = ops;
+  slow_ops_ = slow_ops;
 
-  const int device_count = ops_->getDeviceCount();
+  const int device_count = slow_ops_->getDeviceCount();
   if (device_count <= 0) {
     initialized_ = true;
     return;
@@ -24,9 +24,9 @@ void MpsDeviceManager::initialize(BackendOps *ops) {
 
   for (int i = 0; i < device_count; ++i) {
     auto &state = states_[i];
-    state.reset(ops_);
+    state.reset(slow_ops_);
 
-    const auto device = ops_->getDevice(
+    const auto device = slow_ops_->getDevice(
         static_cast<::orteaf::internal::backend::mps::MPSInt_t>(i));
     state.device = device;
     state.is_alive = device != nullptr;
@@ -34,15 +34,15 @@ void MpsDeviceManager::initialize(BackendOps *ops) {
     const ::orteaf::internal::base::DeviceHandle device_id{
         static_cast<std::uint32_t>(i)};
     state.arch = state.is_alive
-                     ? ops_->detectArchitecture(device_id)
+                     ? slow_ops_->detectArchitecture(device_id)
                      : ::orteaf::internal::architecture::Architecture::MpsGeneric;
     if (state.is_alive) {
-      state.command_queue_manager.initialize(device, ops_,
+      state.command_queue_manager.initialize(device, slow_ops_,
                                              command_queue_initial_capacity_);
-      state.heap_manager.initialize(device, ops_, heap_initial_capacity_);
-      state.library_manager.initialize(device, ops_, library_initial_capacity_);
-      state.event_pool.initialize(device, ops_, 0);
-      state.fence_pool.initialize(device, ops_, 0);
+      state.heap_manager.initialize(device, slow_ops_, heap_initial_capacity_);
+      state.library_manager.initialize(device, slow_ops_, library_initial_capacity_);
+      state.event_pool.initialize(device, slow_ops_, 0);
+      state.fence_pool.initialize(device, slow_ops_, 0);
     } else {
       state.command_queue_manager.shutdown();
       state.heap_manager.shutdown();
@@ -59,10 +59,10 @@ void MpsDeviceManager::shutdown() {
     return;
   }
   for (std::size_t i = 0; i < states_.size(); ++i) {
-    states_[i].reset(ops_);
+    states_[i].reset(slow_ops_);
   }
   states_.clear();
-  ops_ = nullptr;
+  slow_ops_ = nullptr;
   initialized_ = false;
 }
 
@@ -166,14 +166,14 @@ MpsDeviceManager::debugState(::orteaf::internal::base::DeviceHandle handle) cons
 }
 #endif
 
-void MpsDeviceManager::State::reset(BackendOps *ops) noexcept {
+void MpsDeviceManager::State::reset(SlowOps *slow_ops) noexcept {
   command_queue_manager.shutdown();
   heap_manager.shutdown();
   library_manager.shutdown();
   event_pool.shutdown();
   fence_pool.shutdown();
-  if (device != nullptr && ops != nullptr) {
-    ops->releaseDevice(device);
+  if (device != nullptr && slow_ops != nullptr) {
+    slow_ops->releaseDevice(device);
   }
   device = nullptr;
   arch = ::orteaf::internal::architecture::Architecture::MpsGeneric;

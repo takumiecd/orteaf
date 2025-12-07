@@ -23,12 +23,12 @@ namespace orteaf::internal::runtime::mps {
  * @brief Stub implementation of an MPS command queue manager.
  *
  * The real implementation will manage a freelist of queues backed by
- * BackendOps. For now we only provide the API surface required by the unit
+ * SlowOps. For now we only provide the API surface required by the unit
  * tests so the project builds; behaviour is intentionally minimal.
  */
 class MpsCommandQueueManager {
 public:
-  using BackendOps = ::orteaf::internal::runtime::backend_ops::mps::MpsSlowOps;
+  using SlowOps = ::orteaf::internal::runtime::backend_ops::mps::MpsSlowOps;
   using CommandQueueLease = ::orteaf::internal::base::Lease<::orteaf::internal::base::CommandQueueHandle,
                                                             ::orteaf::internal::backend::mps::MPSCommandQueue_t,
                                                             MpsCommandQueueManager>;
@@ -64,7 +64,7 @@ public:
   std::size_t growthChunkSize() const noexcept { return growth_chunk_size_; }
 
   void initialize(::orteaf::internal::backend::mps::MPSDevice_t device,
-                  BackendOps *ops, std::size_t capacity);
+                  SlowOps *slow_ops, std::size_t capacity);
 
   void shutdown();
 
@@ -117,7 +117,7 @@ private:
 
     void resetHazards() noexcept;
 
-    void destroy(BackendOps *ops) noexcept;
+    void destroy(SlowOps *slow_ops) noexcept;
   };
 
   void ensureInitialized() const;
@@ -137,7 +137,7 @@ private:
   std::size_t growth_chunk_size_{1};
   bool initialized_{false};
   ::orteaf::internal::backend::mps::MPSDevice_t device_{nullptr};
-  BackendOps *ops_{nullptr};
+  SlowOps *slow_ops_{nullptr};
 };
 
 } // namespace orteaf::internal::runtime::mps

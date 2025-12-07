@@ -8,6 +8,7 @@
 #include "orteaf/internal/backend/mps/wrapper/mps_library.h"
 
 #include <cstddef>
+#include <span>
 #include <string_view>
 
 namespace orteaf::internal::backend::mps::metal_kernel_embed {
@@ -28,14 +29,8 @@ namespace orteaf::internal::backend::mps::metal_kernel_embed {
  *
  * MPSDevice_t device = acquire_default_device();  // user-defined helper
  * MPSError_t error = nullptr;
- * MPSFunction_t fn = loadEmbeddedFunction(device,
- *                                           "embed_test_library",
- *                                           "my_kernel",
- *                                           &error);
- * if (fn == nil) {
- *     // 'error' carries an autoreleased NSError-style object.
- *     handle_mps_error(error);
- * }
+ * MPSLibrary_t lib = createEmbeddedLibrary(device, "embed_test_library", &error);
+ * MPSFunction_t fn = createFunction(lib, "my_kernel");
  * // Continue with pipeline creation, command encoder setup, etc.
  * @endcode
  */
@@ -45,14 +40,21 @@ struct MetallibBlob {
     std::size_t size;
 };
 
+struct MetallibEntry {
+    const char* name;
+    const unsigned char* begin;
+    const unsigned char* end;
+};
+
+std::span<const MetallibEntry> libraries();
+
 MetallibBlob findLibraryData(std::string_view library_name);
 
 bool available(std::string_view library_name);
 
-MPSFunction_t loadEmbeddedFunction(MPSDevice_t device,
-                                     std::string_view library_name,
-                                     std::string_view function_name,
-                                     MPSError_t* error = nullptr);
+MPSLibrary_t createEmbeddedLibrary(MPSDevice_t device,
+                                   std::string_view library_name,
+                                   MPSError_t* error = nullptr);
 
 } // namespace orteaf::internal::backend::mps::metal_kernel_embed
 
