@@ -99,7 +99,7 @@ public:
         std::size_t growth_chunk_size{0};
     };
 
-    DebugState debugState(base::FunctionHandle handle) const;
+    DebugState debugState(::orteaf::internal::base::FunctionHandle handle) const;
 #endif
 
 private:
@@ -118,9 +118,9 @@ private:
 
     void destroyState(State& state);
 
-    State& ensureAliveState(base::FunctionHandle handle);
+    State& ensureAliveState(::orteaf::internal::base::FunctionHandle handle);
 
-    const State& ensureAliveState(base::FunctionHandle handle) const {
+    const State& ensureAliveState(::orteaf::internal::base::FunctionHandle handle) const {
         return const_cast<MpsComputePipelineStateManager*>(this)->ensureAliveState(handle);
     }
 
@@ -128,8 +128,8 @@ private:
 
     void growStatePool(std::size_t additional);
 
-    base::FunctionHandle encodeHandle(std::size_t index, std::uint32_t generation) const;
-    void releaseHandle(base::FunctionHandle handle) noexcept;
+    ::orteaf::internal::base::FunctionHandle encodeHandle(std::size_t index, std::uint32_t generation) const;
+    void releaseHandle(::orteaf::internal::base::FunctionHandle handle) noexcept;
 
     ::orteaf::internal::base::HeapVector<State> states_{};
     ::orteaf::internal::base::HeapVector<std::size_t> free_list_{};

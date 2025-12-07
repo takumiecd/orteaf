@@ -99,7 +99,7 @@ public:
 #endif
   };
 
-  DebugState debugState(base::CommandQueueHandle handle) const;
+  DebugState debugState(::orteaf::internal::base::CommandQueueHandle handle) const;
 #endif
 
 private:
@@ -126,9 +126,9 @@ private:
 
   void growStatePool(std::size_t additional_count);
 
-  State &ensureActiveState(base::CommandQueueHandle handle);
+  State &ensureActiveState(::orteaf::internal::base::CommandQueueHandle handle);
 
-  const State &ensureActiveState(base::CommandQueueHandle handle) const {
+  const State &ensureActiveState(::orteaf::internal::base::CommandQueueHandle handle) const {
     return const_cast<MpsCommandQueueManager *>(this)->ensureActiveState(handle);
   }
 

@@ -112,7 +112,7 @@ public:
     std::size_t growth_chunk_size{0};
   };
 
-  DebugState debugState(base::HeapHandle id) const;
+  DebugState debugState(::orteaf::internal::base::HeapHandle id) const;
 #endif
 
 private:
@@ -137,7 +137,7 @@ private:
 
   State &ensureAliveState(::orteaf::internal::base::HeapHandle id);
 
-  const State &ensureAliveState(base::HeapHandle id) const {
+  const State &ensureAliveState(::orteaf::internal::base::HeapHandle id) const {
     return const_cast<MpsHeapManager *>(this)->ensureAliveState(id);
   }
 

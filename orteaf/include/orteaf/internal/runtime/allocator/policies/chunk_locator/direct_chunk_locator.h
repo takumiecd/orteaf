@@ -233,8 +233,8 @@ private:
     Config config_{};
     Resource* resource_{nullptr};
     mutable std::mutex mutex_;
-    base::HeapVector<ChunkInfo> chunks_;
-    base::HeapVector<std::size_t> free_list_;
+    ::orteaf::internal::base::HeapVector<ChunkInfo> chunks_;
+    ::orteaf::internal::base::HeapVector<std::size_t> free_list_;
 };
 
 }  // namespace orteaf::internal::runtime::allocator::policies

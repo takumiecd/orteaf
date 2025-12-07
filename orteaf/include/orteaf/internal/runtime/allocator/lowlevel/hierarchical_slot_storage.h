@@ -39,9 +39,9 @@ public:
     struct Layer {
         explicit Layer(std::size_t size) : slot_size(size) {}
         std::size_t slot_size{0};
-        base::HeapVector<Slot> slots;
-        base::HeapVector<uint32_t> free_list;
-        base::HeapVector<uint32_t> span_free_list;  // split時のbegin再利用用
+        ::orteaf::internal::base::HeapVector<Slot> slots;
+        ::orteaf::internal::base::HeapVector<uint32_t> free_list;
+        ::orteaf::internal::base::HeapVector<uint32_t> span_free_list;  // split時のbegin再利用用
     };
 
     struct Config {
@@ -155,7 +155,7 @@ public:
         if (threshold != 0) {
             ORTEAF_THROW_IF(threshold < kSystemMinThreshold, InvalidParameter,
                             "threshold must be >= system minimum");
-            ORTEAF_THROW_UNLESS(base::isPowerOfTwo(threshold), InvalidParameter,
+            ORTEAF_THROW_UNLESS(::orteaf::internal::base::isPowerOfTwo(threshold), InvalidParameter,
                                 "threshold must be power of two");
         }
 
@@ -168,7 +168,7 @@ public:
             ORTEAF_THROW_IF(levels[i - 1] % levels[i] != 0, InvalidParameter, "adjacent levels must be divisible");
 
             if (threshold != 0 && levels[i] < threshold) {
-                ORTEAF_THROW_UNLESS(base::isPowerOfTwo(levels[i]), InvalidParameter,
+                ORTEAF_THROW_UNLESS(::orteaf::internal::base::isPowerOfTwo(levels[i]), InvalidParameter,
                                     "levels below threshold must be power of two");
             }
             if (threshold != 0 && levels[i] > threshold) {

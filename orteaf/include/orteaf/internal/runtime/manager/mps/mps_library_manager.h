@@ -100,7 +100,7 @@ public:
     std::size_t growth_chunk_size{0};
   };
 
-  DebugState debugState(base::LibraryHandle handle) const;
+  DebugState debugState(::orteaf::internal::base::LibraryHandle handle) const;
 #endif
 
 private:
@@ -115,9 +115,9 @@ private:
 
   void validateKey(const LibraryKey &key) const;
 
-  State &ensureAliveState(base::LibraryHandle handle);
+  State &ensureAliveState(::orteaf::internal::base::LibraryHandle handle);
 
-  const State &ensureAliveState(base::LibraryHandle handle) const {
+  const State &ensureAliveState(::orteaf::internal::base::LibraryHandle handle) const {
     return const_cast<MpsLibraryManager *>(this)->ensureAliveState(handle);
   }
 
@@ -125,11 +125,11 @@ private:
 
   void growStatePool(std::size_t additional);
 
-  base::LibraryHandle encodeHandle(std::size_t index) const;
+  ::orteaf::internal::base::LibraryHandle encodeHandle(std::size_t index) const;
 
-  void releaseHandle(base::LibraryHandle handle) noexcept;
+  void releaseHandle(::orteaf::internal::base::LibraryHandle handle) noexcept;
 
-  LibraryLease acquireLibraryFromHandle(base::LibraryHandle handle);
+  LibraryLease acquireLibraryFromHandle(::orteaf::internal::base::LibraryHandle handle);
 
   ::orteaf::internal::backend::mps::MPSLibrary_t
   createLibrary(const LibraryKey &key);

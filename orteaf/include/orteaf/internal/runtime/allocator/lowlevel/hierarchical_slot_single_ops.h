@@ -142,7 +142,7 @@ public:
         if (!Storage::allSiblingsFree(child_layer, parent.child_begin, count)) return;
 
         // 子をfree_listから除去
-        base::HeapVector<uint32_t> new_free_list;
+        ::orteaf::internal::base::HeapVector<uint32_t> new_free_list;
         for (std::size_t i = 0; i < child_layer.free_list.size(); ++i) {
             const auto idx = child_layer.free_list[i];
             if (idx < parent.child_begin || idx >= parent.child_begin + count) {
