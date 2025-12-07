@@ -165,4 +165,66 @@ void MpsSlowOpsImpl::destroyHeap(
   ::orteaf::internal::backend::mps::destroyHeap(heap);
 }
 
+::orteaf::internal::backend::mps::MPSGraph_t MpsSlowOpsImpl::createGraph() {
+  return ::orteaf::internal::backend::mps::createGraph();
+}
+
+void MpsSlowOpsImpl::destroyGraph(
+    ::orteaf::internal::backend::mps::MPSGraph_t graph) {
+  ::orteaf::internal::backend::mps::destroyGraph(graph);
+}
+
+::orteaf::internal::backend::mps::MPSGraphTensorData_t
+MpsSlowOpsImpl::createGraphTensorData(
+    ::orteaf::internal::backend::mps::MPSBuffer_t buffer,
+    const std::int64_t* shape, std::size_t shape_rank,
+    ::orteaf::internal::backend::mps::MpsGraphDataType data_type) {
+  return ::orteaf::internal::backend::mps::createGraphTensorDataFromBuffer(
+      buffer, shape, shape_rank, data_type);
+}
+
+void MpsSlowOpsImpl::destroyGraphTensorData(
+    ::orteaf::internal::backend::mps::MPSGraphTensorData_t tensor_data) {
+  ::orteaf::internal::backend::mps::destroyGraphTensorData(tensor_data);
+}
+
+::orteaf::internal::backend::mps::MPSGraphExecutable_t
+MpsSlowOpsImpl::compileGraph(
+    ::orteaf::internal::backend::mps::MPSGraph_t graph,
+    ::orteaf::internal::backend::mps::MPSDevice_t device,
+    const ::orteaf::internal::backend::mps::MpsGraphFeed* feeds,
+    std::size_t feed_count,
+    const ::orteaf::internal::backend::mps::MPSGraphTensor_t* target_tensors,
+    std::size_t target_tensor_count,
+    const ::orteaf::internal::backend::mps::MPSGraphOperation_t*
+        target_operations,
+    std::size_t target_operation_count) {
+  return ::orteaf::internal::backend::mps::compileGraph(
+      graph, device, feeds, feed_count, target_tensors, target_tensor_count,
+      target_operations, target_operation_count);
+}
+
+std::size_t MpsSlowOpsImpl::runGraphExecutable(
+    ::orteaf::internal::backend::mps::MPSGraphExecutable_t executable,
+    ::orteaf::internal::backend::mps::MPSCommandQueue_t command_queue,
+    const ::orteaf::internal::backend::mps::MpsGraphFeed* feeds,
+    std::size_t feed_count,
+    const ::orteaf::internal::backend::mps::MPSGraphTensor_t* target_tensors,
+    std::size_t target_tensor_count,
+    const ::orteaf::internal::backend::mps::MPSGraphOperation_t*
+        target_operations,
+    std::size_t target_operation_count,
+    ::orteaf::internal::backend::mps::MPSGraphTensorData_t* out_tensor_data,
+    std::size_t out_capacity) {
+  return ::orteaf::internal::backend::mps::runGraphExecutable(
+      executable, command_queue, feeds, feed_count, target_tensors,
+      target_tensor_count, target_operations, target_operation_count,
+      out_tensor_data, out_capacity);
+}
+
+void MpsSlowOpsImpl::destroyGraphExecutable(
+    ::orteaf::internal::backend::mps::MPSGraphExecutable_t executable) {
+  ::orteaf::internal::backend::mps::destroyGraphExecutable(executable);
+}
+
 } // namespace orteaf::internal::runtime::backend_ops::mps

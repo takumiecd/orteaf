@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
 #include <string_view>
 
 #include <gmock/gmock.h>
@@ -95,6 +97,44 @@ struct MpsBackendOpsMock
                ::orteaf::internal::backend::mps::MPSHeapDescriptor_t),
               (override));
   MOCK_METHOD(void, destroyHeap, (::orteaf::internal::backend::mps::MPSHeap_t),
+              (override));
+  MOCK_METHOD(::orteaf::internal::backend::mps::MPSGraph_t, createGraph, (),
+              (override));
+  MOCK_METHOD(void, destroyGraph,
+              (::orteaf::internal::backend::mps::MPSGraph_t), (override));
+  MOCK_METHOD(::orteaf::internal::backend::mps::MPSGraphTensorData_t,
+              createGraphTensorData,
+              (::orteaf::internal::backend::mps::MPSBuffer_t, const std::int64_t*,
+               std::size_t,
+               ::orteaf::internal::backend::mps::MpsGraphDataType),
+              (override));
+  MOCK_METHOD(void, destroyGraphTensorData,
+              (::orteaf::internal::backend::mps::MPSGraphTensorData_t),
+              (override));
+  MOCK_METHOD(::orteaf::internal::backend::mps::MPSGraphExecutable_t,
+              compileGraph,
+              (::orteaf::internal::backend::mps::MPSGraph_t,
+               ::orteaf::internal::backend::mps::MPSDevice_t,
+               const ::orteaf::internal::backend::mps::MpsGraphFeed*,
+               std::size_t,
+               const ::orteaf::internal::backend::mps::MPSGraphTensor_t*,
+               std::size_t,
+               const ::orteaf::internal::backend::mps::MPSGraphOperation_t*,
+               std::size_t),
+              (override));
+  MOCK_METHOD(std::size_t, runGraphExecutable,
+              (::orteaf::internal::backend::mps::MPSGraphExecutable_t,
+               ::orteaf::internal::backend::mps::MPSCommandQueue_t,
+               const ::orteaf::internal::backend::mps::MpsGraphFeed*, std::size_t,
+               const ::orteaf::internal::backend::mps::MPSGraphTensor_t*,
+               std::size_t,
+               const ::orteaf::internal::backend::mps::MPSGraphOperation_t*,
+               std::size_t,
+               ::orteaf::internal::backend::mps::MPSGraphTensorData_t*,
+               std::size_t),
+              (override));
+  MOCK_METHOD(void, destroyGraphExecutable,
+              (::orteaf::internal::backend::mps::MPSGraphExecutable_t),
               (override));
 };
 
