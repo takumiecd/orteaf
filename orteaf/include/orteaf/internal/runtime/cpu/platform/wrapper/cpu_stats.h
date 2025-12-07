@@ -5,7 +5,7 @@
 #include <sstream>
 #include <iostream>
 
-namespace orteaf::internal::runtime::cpu::platform {
+namespace orteaf::internal::runtime::cpu::platform::wrapper {
 
 /**
  * @brief Statistics tracking for CPU memory allocations.
@@ -254,4 +254,4 @@ inline void updateDealloc(size_t size) {
     statsInstance().updateDealloc(size);
 }
 
-} // namespace orteaf::internal::runtime::cpu::platform
+} // namespace orteaf::internal::runtime::cpu::platform::wrapper

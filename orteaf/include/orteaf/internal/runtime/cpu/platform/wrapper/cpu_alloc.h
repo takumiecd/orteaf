@@ -18,7 +18,7 @@
 #include <cstdint>
 #include <cstddef>
 
-namespace orteaf::internal::runtime::cpu::platform {
+namespace orteaf::internal::runtime::cpu::platform::wrapper {
 
 /**
  * @brief Default alignment value for CPU memory allocation.
@@ -112,4 +112,4 @@ inline void dealloc(void* ptr, std::size_t size) noexcept {
 #endif
 }
 
-} // namespace orteaf::internal::runtime::cpu::platform
+} // namespace orteaf::internal::runtime::cpu::platform::wrapper
