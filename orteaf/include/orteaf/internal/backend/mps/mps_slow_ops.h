@@ -286,7 +286,10 @@ struct MpsSlowOpsImpl final : public MpsSlowOps {
       ::orteaf::internal::backend::mps::MPSGraphTensorData_t* out_tensor_data,
       std::size_t out_capacity) override;
 
-  void destroyGraphExecutable(::orteaf::internal::backend::mps::MPSGraphExecutable_t executable) override;
+  void
+  destroyGraphExecutable(
+      ::orteaf::internal::backend::mps::MPSGraphExecutable_t executable)
+      override;
 };
 
 } // namespace orteaf::internal::runtime::backend_ops::mps
