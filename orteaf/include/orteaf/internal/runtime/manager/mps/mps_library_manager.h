@@ -15,6 +15,7 @@
 #include "orteaf/internal/base/handle.h"
 #include "orteaf/internal/base/lease.h"
 #include "orteaf/internal/diagnostics/error/error.h"
+#include "orteaf/internal/runtime/base/base_manager.h"
 #include "orteaf/internal/runtime/manager/mps/mps_compute_pipeline_state_manager.h"
 
 namespace orteaf::internal::runtime::mps {
@@ -48,7 +49,23 @@ struct LibraryKeyHasher {
   }
 };
 
-class MpsLibraryManager {
+struct MpsLibraryManagerState {
+  using PipelineManager = MpsComputePipelineStateManager;
+  LibraryKey key{};
+  ::orteaf::internal::backend::mps::MPSLibrary_t handle{nullptr};
+  bool alive{false};
+  PipelineManager pipeline_manager{};
+};
+
+struct MpsLibraryManagerTraits {
+  using DeviceType = ::orteaf::internal::backend::mps::MPSDevice_t;
+  using OpsType = ::orteaf::internal::runtime::backend_ops::mps::MpsSlowOps;
+  using StateType = MpsLibraryManagerState;
+  static constexpr const char *Name = "MPS library manager";
+};
+
+class MpsLibraryManager
+    : public base::BaseManager<MpsLibraryManager, MpsLibraryManagerTraits> {
 public:
   using SlowOps = ::orteaf::internal::runtime::backend_ops::mps::MpsSlowOps;
   using PipelineManager = MpsComputePipelineStateManager;
@@ -56,32 +73,20 @@ public:
       ::orteaf::internal::base::LibraryHandle,
       ::orteaf::internal::backend::mps::MPSLibrary_t, MpsLibraryManager>;
   using PipelineManagerLease = ::orteaf::internal::base::Lease<
-      ::orteaf::internal::base::LibraryHandle, PipelineManager *, MpsLibraryManager>;
+      ::orteaf::internal::base::LibraryHandle, PipelineManager *,
+      MpsLibraryManager>;
 
   MpsLibraryManager() = default;
-  MpsLibraryManager(const MpsLibraryManager&) = delete;
-  MpsLibraryManager& operator=(const MpsLibraryManager&) = delete;
-  MpsLibraryManager(MpsLibraryManager&&) = default;
-  MpsLibraryManager& operator=(MpsLibraryManager&&) = default;
+  MpsLibraryManager(const MpsLibraryManager &) = delete;
+  MpsLibraryManager &operator=(const MpsLibraryManager &) = delete;
+  MpsLibraryManager(MpsLibraryManager &&) = default;
+  MpsLibraryManager &operator=(MpsLibraryManager &&) = default;
   ~MpsLibraryManager() = default;
-
-  void setGrowthChunkSize(std::size_t chunk) {
-    if (chunk == 0) {
-      ::orteaf::internal::diagnostics::error::throwError(
-          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-          "Growth chunk size must be > 0");
-    }
-    growth_chunk_size_ = chunk;
-  }
-
-  std::size_t growthChunkSize() const noexcept { return growth_chunk_size_; }
 
   void initialize(::orteaf::internal::backend::mps::MPSDevice_t device,
                   SlowOps *slow_ops, std::size_t capacity);
 
   void shutdown();
-
-  std::size_t capacity() const noexcept { return states_.size(); }
 
   LibraryLease acquire(const LibraryKey &key);
   LibraryLease acquire(const PipelineManagerLease &pipeline_lease);
@@ -104,43 +109,26 @@ public:
 #endif
 
 private:
-  struct State {
-    LibraryKey key{};
-    ::orteaf::internal::backend::mps::MPSLibrary_t handle{nullptr};
-    bool alive{false};
-    PipelineManager pipeline_manager{};
-  };
-
-  void ensureInitialized() const;
-
   void validateKey(const LibraryKey &key) const;
 
   State &ensureAliveState(::orteaf::internal::base::LibraryHandle handle);
 
-  const State &ensureAliveState(::orteaf::internal::base::LibraryHandle handle) const {
+  const State &
+  ensureAliveState(::orteaf::internal::base::LibraryHandle handle) const {
     return const_cast<MpsLibraryManager *>(this)->ensureAliveState(handle);
   }
-
-  std::size_t allocateSlot();
-
-  void growStatePool(std::size_t additional);
 
   ::orteaf::internal::base::LibraryHandle encodeHandle(std::size_t index) const;
 
   void releaseHandle(::orteaf::internal::base::LibraryHandle handle) noexcept;
 
-  LibraryLease acquireLibraryFromHandle(::orteaf::internal::base::LibraryHandle handle);
+  LibraryLease
+  acquireLibraryFromHandle(::orteaf::internal::base::LibraryHandle handle);
 
   ::orteaf::internal::backend::mps::MPSLibrary_t
   createLibrary(const LibraryKey &key);
 
-  ::orteaf::internal::base::HeapVector<State> states_{};
-  ::orteaf::internal::base::HeapVector<std::size_t> free_list_{};
   std::unordered_map<LibraryKey, std::size_t, LibraryKeyHasher> key_to_index_{};
-  std::size_t growth_chunk_size_{1};
-  bool initialized_{false};
-  ::orteaf::internal::backend::mps::MPSDevice_t device_{nullptr};
-  SlowOps *slow_ops_{nullptr};
 };
 
 } // namespace orteaf::internal::runtime::mps
