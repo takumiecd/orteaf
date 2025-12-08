@@ -17,7 +17,7 @@
 #include <vector>
 #include <system_error>
 
-namespace mps = orteaf::internal::backend::mps;
+namespace mps = orteaf::internal::runtime::mps::platform::wrapper;
 
 class MpsTextureTest : public ::testing::Test {
 protected:

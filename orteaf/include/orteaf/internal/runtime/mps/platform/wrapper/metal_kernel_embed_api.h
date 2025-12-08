@@ -52,9 +52,10 @@ MetallibBlob findLibraryData(std::string_view library_name);
 
 bool available(std::string_view library_name);
 
-MPSLibrary_t createEmbeddedLibrary(MPSDevice_t device,
-                                   std::string_view library_name,
-                                   MPSError_t* error = nullptr);
+ ::orteaf::internal::runtime::mps::platform::wrapper::MPSLibrary_t createEmbeddedLibrary(
+     ::orteaf::internal::runtime::mps::platform::wrapper::MPSDevice_t device,
+     std::string_view library_name,
+     ::orteaf::internal::runtime::mps::platform::wrapper::MPSError_t* error = nullptr);
 
 } // namespace orteaf::internal::runtime::mps::platform::metal_kernel_embed
 

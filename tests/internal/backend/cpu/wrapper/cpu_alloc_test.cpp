@@ -3,15 +3,13 @@
  * @brief Tests for CPU memory allocation functions.
  */
 
-#include "orteaf/internal/backend/cpu/wrapper/cpu_alloc.h"
+#include "orteaf/internal/runtime/cpu/platform/wrapper/cpu_alloc.h"
 
 #include "tests/internal/testing/error_assert.h"
 
-#include <gtest/gtest.h>
+namespace cpu = orteaf::internal::runtime::cpu::platform::wrapper;
 #include <cstring>
 #include <vector>
-
-namespace cpu = orteaf::internal::backend::cpu;
 
 /**
  * @brief Test that alloc returns valid pointer.

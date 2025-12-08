@@ -6,9 +6,9 @@
 #include <utility>
 
 #include <orteaf/internal/backend/backend.h>
-#include <orteaf/internal/backend/cpu/cpu_buffer_view.h>
-#include <orteaf/internal/backend/cpu/cpu_heap_region.h>
-#include <orteaf/internal/backend/cpu/cpu_tokens.h>
+#include <orteaf/internal/runtime/cpu/resource/cpu_buffer_view.h>
+#include <orteaf/internal/runtime/cpu/resource/cpu_heap_region.h>
+#include <orteaf/internal/runtime/cpu/resource/cpu_tokens.h>
 #if ORTEAF_ENABLE_CUDA
 #include <orteaf/internal/backend/cuda/wrapper/cuda_device.h>
 #include <orteaf/internal/backend/cuda/wrapper/cuda_stream.h>
@@ -32,13 +32,13 @@ struct BackendTraits;
 // CPU
 template <>
 struct BackendTraits<Backend::Cpu> {
-    using BufferView = cpu::CpuBufferView;
-    using HeapRegion = cpu::CpuHeapRegion;
+    using BufferView = ::orteaf::internal::runtime::cpu::resource::CpuBufferView;
+    using HeapRegion = ::orteaf::internal::runtime::cpu::resource::CpuHeapRegion;
     using Stream = void*;      // placeholder; adjust when stream type is defined
     using Device = int;        // placeholder; adjust when device abstraction is defined
     using Context = int;       // placeholder; adjust when context abstraction is defined
-    using FenceToken = cpu::FenceToken;
-    using ReuseToken = cpu::ReuseToken;
+    using FenceToken = ::orteaf::internal::runtime::cpu::resource::FenceToken;
+    using ReuseToken = ::orteaf::internal::runtime::cpu::resource::ReuseToken;
 };
 
 // CUDA

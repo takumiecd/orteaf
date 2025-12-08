@@ -7,7 +7,7 @@
 #include "tests/internal/runtime/allocator/testing/mock_resource.h"
 
 using ::orteaf::internal::backend::Backend;
-using ::orteaf::internal::backend::cpu::CpuBufferView;
+using ::orteaf::internal::runtime::cpu::resource::CpuBufferView;
 using ::orteaf::internal::base::BufferHandle;
 using ::orteaf::internal::runtime::allocator::testing::MockCpuResource;
 using ::orteaf::internal::runtime::allocator::testing::MockCpuResourceImpl;

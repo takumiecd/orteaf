@@ -26,26 +26,28 @@ bool available(std::string_view library_name) {
     return blob.data != nullptr && blob.size > 0;
 }
 
-MPSLibrary_t createEmbeddedLibrary(MPSDevice_t device,
-                                   std::string_view library_name,
-                                   MPSError_t* error) {
+::orteaf::internal::runtime::mps::platform::wrapper::MPSLibrary_t createEmbeddedLibrary(
+    ::orteaf::internal::runtime::mps::platform::wrapper::MPSDevice_t device,
+    std::string_view library_name,
+    ::orteaf::internal::runtime::mps::platform::wrapper::MPSError_t* error) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
     if (!device) {
-        if (error) { *error = createError("orteaf.mps.kernel", "Invalid MPS device"); }
+        if (error) { *error = ::orteaf::internal::runtime::mps::platform::wrapper::createError("orteaf.mps.kernel", "Invalid MPS device"); }
         return nil;
     }
     MetallibBlob blob = findLibraryData(library_name);
     if (blob.data == nullptr || blob.size == 0) {
-        if (error) { *error = createError("orteaf.mps.kernel", "Embedded metallib not found"); }
+        if (error) { *error = ::orteaf::internal::runtime::mps::platform::wrapper::createError("orteaf.mps.kernel", "Embedded metallib not found"); }
         return nil;
     }
-    MPSError_t local_error = nullptr;
-    MPSLibrary_t library = createLibraryWithData(device, blob.data, blob.size, &local_error);
+    ::orteaf::internal::runtime::mps::platform::wrapper::MPSError_t local_error = nullptr;
+    ::orteaf::internal::runtime::mps::platform::wrapper::MPSLibrary_t library =
+        ::orteaf::internal::runtime::mps::platform::wrapper::createLibraryWithData(device, blob.data, blob.size, &local_error);
     if (library == nil) {
-        if (error) { *error = local_error; } else if (local_error) { destroyError(local_error); }
+        if (error) { *error = local_error; } else if (local_error) { ::orteaf::internal::runtime::mps::platform::wrapper::destroyError(local_error); }
         return nil;
     }
-    if (local_error) { destroyError(local_error); }
+    if (local_error) { ::orteaf::internal::runtime::mps::platform::wrapper::destroyError(local_error); }
     if (error) { *error = nullptr; }
     return library;
 #else

@@ -11,7 +11,7 @@
 namespace orteaf::tests {
 using orteaf::internal::backend::mps::MpsResource;
 namespace diag_error = ::orteaf::internal::diagnostics::error;
-namespace mps = ::orteaf::internal::backend::mps;
+namespace mps = ::orteaf::internal::runtime::mps::platform::wrapper;
 
 TEST(MpsResourceTest, InitializeNullDeviceThrows) {
     MpsResource::Config cfg{};

@@ -22,7 +22,7 @@ namespace orteaf::internal::runtime::mps::platform::wrapper {
  * @copydoc orteaf::internal::backend::mps::createEvent
  */
 MPSEvent_t createEvent(MPSDevice_t device) {
-    orteaf::internal::runtime::mps::platform::AutoreleasePool pool{};
+    ::orteaf::internal::runtime::mps::platform::wrapper::AutoreleasePool pool{};
     id<MTLDevice> objc_device = objcFromOpaqueNoown<id<MTLDevice>>(device);
     id<MTLSharedEvent> objc_event = [objc_device newSharedEvent];
     if (objc_event == nil) {
@@ -39,7 +39,7 @@ MPSEvent_t createEvent(MPSDevice_t device) {
  */
 void destroyEvent(MPSEvent_t event) {
     if (event == nullptr) return;
-    orteaf::internal::runtime::mps::platform::AutoreleasePool pool{};
+    ::orteaf::internal::runtime::mps::platform::wrapper::AutoreleasePool pool{};
     opaqueReleaseRetained(event);
     updateDestroyEvent();
 }

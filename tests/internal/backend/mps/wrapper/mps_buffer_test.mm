@@ -15,7 +15,7 @@
 #include <gtest/gtest.h>
 #include <exception>
 
-namespace mps = orteaf::internal::backend::mps;
+namespace mps = orteaf::internal::runtime::mps::platform::wrapper;
 
 /**
  * @brief Test fixture for MPS buffer tests.

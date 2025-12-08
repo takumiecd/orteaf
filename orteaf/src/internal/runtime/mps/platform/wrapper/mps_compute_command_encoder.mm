@@ -107,8 +107,8 @@ void setThreadgroups(MPSComputeCommandEncoder_t compute_command_encoder,
         throwError(OrteafErrc::NullPointer, "setThreadgroups: compute_command_encoder cannot be nullptr");
     }
     id<MTLComputeCommandEncoder> objc_encoder = objcFromOpaqueNoown<id<MTLComputeCommandEncoder>>(compute_command_encoder);
-    const MTLSize objc_threadgroups = orteaf::internal::runtime::mps::platform::toMtlSize(threadgroups);
-    const MTLSize objc_threads_per_threadgroup = orteaf::internal::runtime::mps::platform::toMtlSize(threads_per_threadgroup);
+    const MTLSize objc_threadgroups = orteaf::internal::runtime::mps::platform::wrapper::toMtlSize(threadgroups);
+    const MTLSize objc_threads_per_threadgroup = orteaf::internal::runtime::mps::platform::wrapper::toMtlSize(threads_per_threadgroup);
     [objc_encoder dispatchThreadgroups:objc_threadgroups
                    threadsPerThreadgroup:objc_threads_per_threadgroup];
 }

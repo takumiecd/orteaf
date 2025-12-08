@@ -56,7 +56,7 @@ TEST(DirectResourceLargeAlloc, AllocateReturnsMemoryBlockWithId) {
     ::testing::NiceMock<MockCpuResourceImpl> impl;
     MockCpuResource::set(&impl);
     EXPECT_CALL(impl, allocate(128, 64))
-        .WillOnce(Return(::orteaf::internal::backend::cpu::CpuBufferView{reinterpret_cast<void*>(0x1), 0, 128}));
+        .WillOnce(Return(::orteaf::internal::runtime::cpu::resource::CpuBufferView{reinterpret_cast<void*>(0x1), 0, 128}));
 
     auto block = policy.allocate(128, 64);
     EXPECT_TRUE(block.valid());
@@ -68,7 +68,7 @@ TEST(DirectResourceLargeAlloc, DeallocateCallsResource) {
     policies::DirectResourceLargeAllocPolicy<MockCpuResource, Backend::Cpu> policy;
     policy.initialize();
 
-    ::orteaf::internal::backend::cpu::CpuBufferView view{reinterpret_cast<void*>(0x2), 0, 256};
+    ::orteaf::internal::runtime::cpu::resource::CpuBufferView view{reinterpret_cast<void*>(0x2), 0, 256};
     ::testing::NiceMock<MockCpuResourceImpl> impl;
     MockCpuResource::set(&impl);
     EXPECT_CALL(impl, allocate(256, 16)).WillOnce(Return(view));
@@ -86,7 +86,7 @@ TEST(DirectResourceLargeAlloc, LogsDebugWhenMetadataMismatches) {
 
     ::testing::NiceMock<MockCpuResourceImpl> impl;
     MockCpuResource::set(&impl);
-    ::orteaf::internal::backend::cpu::CpuBufferView view{reinterpret_cast<void*>(0x3), 0, 64};
+    ::orteaf::internal::runtime::cpu::resource::CpuBufferView view{reinterpret_cast<void*>(0x3), 0, 64};
     EXPECT_CALL(impl, allocate(64, 16)).WillOnce(Return(view));
     EXPECT_CALL(impl, deallocate(view, 32, 8)).Times(1);
 

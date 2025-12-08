@@ -1,4 +1,4 @@
-#include "orteaf/internal/backend/mps/mps_slow_ops.h"
+#include "orteaf/internal/runtime/mps/platform/mps_slow_ops.h"
 #include "orteaf/internal/runtime/mps/platform/wrapper/metal_kernel_embed_api.h"
 #include "orteaf/internal/runtime/mps/platform/wrapper/mps_objc_bridge.h"
 

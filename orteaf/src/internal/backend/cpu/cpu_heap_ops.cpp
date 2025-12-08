@@ -1,10 +1,10 @@
-#include "orteaf/internal/backend/cpu/cpu_heap_ops.h"
+#include "orteaf/internal/runtime/cpu/resource/cpu_heap_ops.h"
 
 #include <sys/mman.h>
 
 #include "orteaf/internal/diagnostics/error/error.h"
 
-namespace orteaf::internal::backend::cpu {
+namespace orteaf::internal::runtime::cpu::resource {
 
 CpuHeapOps::HeapRegion CpuHeapOps::reserve(std::size_t size) {
     if (size == 0) {
@@ -34,4 +34,4 @@ void CpuHeapOps::unmap(HeapRegion region, std::size_t size) {
     }
 }
 
-}  // namespace orteaf::internal::backend::cpu
+}  // namespace orteaf::internal::runtime::cpu::resource

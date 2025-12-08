@@ -15,7 +15,7 @@ public:
     using MpsFenceLease = ::orteaf::internal::runtime::mps::MpsFencePool::FenceLease;
 
     MpsFenceTicket() noexcept = default;
-    MpsFenceTicket(base::CommandQueueHandle id,
+    MpsFenceTicket(::orteaf::internal::base::CommandQueueHandle id,
                    ::orteaf::internal::runtime::mps::platform::wrapper::MPSCommandBuffer_t command_buffer,
                    MpsFenceLease&& fence_handle) noexcept
         : command_queue_id_(id),
@@ -36,14 +36,14 @@ public:
 
     bool valid() const noexcept { return command_buffer_ != nullptr; }
 
-    base::CommandQueueHandle commandQueueId() const noexcept { return command_queue_id_; }
+    ::orteaf::internal::base::CommandQueueHandle commandQueueId() const noexcept { return command_queue_id_; }
     ::orteaf::internal::runtime::mps::platform::wrapper::MPSCommandBuffer_t commandBuffer() const noexcept {
         return command_buffer_;
     }
     bool hasFence() const noexcept { return fence_handle_.has_value(); }
     const MpsFenceLease& fenceHandle() const noexcept { return fence_handle_.value(); }
 
-    MpsFenceTicket& setCommandQueueId(base::CommandQueueHandle id) noexcept {
+    MpsFenceTicket& setCommandQueueId(::orteaf::internal::base::CommandQueueHandle id) noexcept {
         command_queue_id_ = id;
         return *this;
     }
@@ -78,7 +78,7 @@ private:
         other.fence_handle_.reset();
     }
 
-    base::CommandQueueHandle command_queue_id_{};
+    ::orteaf::internal::base::CommandQueueHandle command_queue_id_{};
     ::orteaf::internal::runtime::mps::platform::wrapper::MPSCommandBuffer_t command_buffer_{nullptr};
     std::optional<MpsFenceLease> fence_handle_{};
 };

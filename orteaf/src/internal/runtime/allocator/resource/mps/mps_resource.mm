@@ -1,6 +1,6 @@
-#include "orteaf/internal/runtime/allocator/resource/mps/mps_resource.h"
-#include "orteaf/internal/runtime/mps/platform/wrapper/mps_buffer.h"
-#include "orteaf/internal/runtime/mps/platform/wrapper/mps_command_buffer.h"
+#include <orteaf/internal/runtime/allocator/resource/mps/mps_resource.h>
+#include <orteaf/internal/runtime/mps/platform/wrapper/mps_buffer.h>
+#include <orteaf/internal/runtime/mps/platform/wrapper/mps_command_buffer.h>
 
 #include "orteaf/internal/diagnostics/error/error_macros.h"
 
@@ -19,7 +19,7 @@ MpsResource::BufferView MpsResource::allocate(std::size_t size, std::size_t /*al
     ORTEAF_THROW_IF(!initialized_, InvalidState, "MpsResource::allocate called before initialize");
     ORTEAF_THROW_IF(size == 0, InvalidParameter, "MpsResource::allocate requires size > 0");
 
-    MPSBuffer_t buffer = ::orteaf::internal::runtime::mps::platform::wrapper::createBuffer(heap_, size, usage_);
+    ::orteaf::internal::runtime::mps::platform::wrapper::MPSBuffer_t buffer = ::orteaf::internal::runtime::mps::platform::wrapper::createBuffer(heap_, size, usage_);
     if (!buffer) {
         return {};
     }

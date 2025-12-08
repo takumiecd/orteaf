@@ -12,7 +12,7 @@ namespace orteaf::internal::runtime::mps::resource {
 class MpsReuseTicket {
 public:
     MpsReuseTicket() noexcept = default;
-    MpsReuseTicket(base::CommandQueueHandle id,
+    MpsReuseTicket(::orteaf::internal::base::CommandQueueHandle id,
                    ::orteaf::internal::runtime::mps::platform::wrapper::MPSCommandBuffer_t command_buffer) noexcept
         : command_queue_id_(id), command_buffer_(command_buffer) {}
 
@@ -30,12 +30,12 @@ public:
 
     bool valid() const noexcept { return command_buffer_ != nullptr; }
 
-    base::CommandQueueHandle commandQueueId() const noexcept { return command_queue_id_; }
+    ::orteaf::internal::base::CommandQueueHandle commandQueueId() const noexcept { return command_queue_id_; }
     ::orteaf::internal::runtime::mps::platform::wrapper::MPSCommandBuffer_t commandBuffer() const noexcept {
         return command_buffer_;
     }
 
-    MpsReuseTicket& setCommandQueueId(base::CommandQueueHandle id) noexcept {
+    MpsReuseTicket& setCommandQueueId(::orteaf::internal::base::CommandQueueHandle id) noexcept {
         command_queue_id_ = id;
         return *this;
     }
@@ -59,7 +59,7 @@ private:
         other.command_buffer_ = nullptr;
     }
 
-    base::CommandQueueHandle command_queue_id_{};
+    ::orteaf::internal::base::CommandQueueHandle command_queue_id_{};
     ::orteaf::internal::runtime::mps::platform::wrapper::MPSCommandBuffer_t command_buffer_{nullptr};
 };
 

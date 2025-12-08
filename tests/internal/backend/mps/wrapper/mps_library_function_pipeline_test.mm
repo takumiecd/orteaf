@@ -19,7 +19,7 @@
 #include <gtest/gtest.h>
 #include <string>
 
-namespace mps = orteaf::internal::backend::mps;
+namespace mps = orteaf::internal::runtime::mps::platform::wrapper;
 
 /**
  * @brief Test fixture for MPS library/function/pipeline tests.

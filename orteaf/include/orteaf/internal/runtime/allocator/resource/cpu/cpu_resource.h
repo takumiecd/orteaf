@@ -2,8 +2,8 @@
 
 #include <cstddef>
 
-#include "orteaf/internal/backend/cpu/cpu_buffer_view.h"
-#include "orteaf/internal/backend/cpu/cpu_tokens.h"
+#include "orteaf/internal/runtime/cpu/resource/cpu_buffer_view.h"
+#include "orteaf/internal/runtime/cpu/resource/cpu_tokens.h"
 
 namespace orteaf::internal::backend::cpu {
 
@@ -11,9 +11,9 @@ namespace orteaf::internal::backend::cpu {
 // For low-level heap operations (reserve/map/unmap), use CpuHeapOps.
 class CpuResource {
 public:
-    using BufferView = ::orteaf::internal::backend::cpu::CpuBufferView;
-    using FenceToken = ::orteaf::internal::backend::cpu::FenceToken;
-    using ReuseToken = ::orteaf::internal::backend::cpu::ReuseToken;
+    using BufferView = ::orteaf::internal::runtime::cpu::resource::CpuBufferView;
+    using FenceToken = ::orteaf::internal::runtime::cpu::resource::FenceToken;
+    using ReuseToken = ::orteaf::internal::runtime::cpu::resource::ReuseToken;
 
     struct Config {};
 

@@ -21,9 +21,9 @@ public:
     using ReuseToken = ::orteaf::internal::runtime::mps::resource::MpsReuseToken;
 
     struct Config {
-        MPSDevice_t device{nullptr};
-        MPSHeap_t heap{nullptr};
-        MPSBufferUsage_t usage{kMPSDefaultBufferUsage};
+        ::orteaf::internal::runtime::mps::platform::wrapper::MPSDevice_t device{nullptr};
+        ::orteaf::internal::runtime::mps::platform::wrapper::MPSHeap_t heap{nullptr};
+        ::orteaf::internal::runtime::mps::platform::wrapper::MPSBufferUsage_t usage{::orteaf::internal::runtime::mps::platform::wrapper::kMPSDefaultBufferUsage};
     };
 
     MpsResource() = default;
@@ -36,8 +36,8 @@ public:
 
     void deallocate(BufferView view, std::size_t size, std::size_t alignment) noexcept;
 
-    MPSDevice_t device() const noexcept { return device_; }
-    MPSHeap_t heap() const noexcept { return heap_; }
+    ::orteaf::internal::runtime::mps::platform::wrapper::MPSDevice_t device() const noexcept { return device_; }
+    ::orteaf::internal::runtime::mps::platform::wrapper::MPSHeap_t heap() const noexcept { return heap_; }
 
     bool isCompleted(FenceToken& token);
     bool isCompleted(ReuseToken& token);
@@ -45,9 +45,9 @@ public:
     static BufferView makeView(BufferView base, std::size_t offset, std::size_t size);
 
 private:
-    MPSDevice_t device_{nullptr};
-    MPSHeap_t heap_{nullptr};
-    MPSBufferUsage_t usage_{kMPSDefaultBufferUsage};
+    ::orteaf::internal::runtime::mps::platform::wrapper::MPSDevice_t device_{nullptr};
+    ::orteaf::internal::runtime::mps::platform::wrapper::MPSHeap_t heap_{nullptr};
+    ::orteaf::internal::runtime::mps::platform::wrapper::MPSBufferUsage_t usage_{::orteaf::internal::runtime::mps::platform::wrapper::kMPSDefaultBufferUsage};
     bool initialized_{false};
 };
 

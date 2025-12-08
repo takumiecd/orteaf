@@ -15,7 +15,7 @@
 #include <thread>
 #include <vector>
 
-namespace mps = orteaf::internal::backend::mps;
+namespace mps = orteaf::internal::runtime::mps::platform::wrapper;
 
 #if defined(ORTEAF_STATS_LEVEL_MPS_VALUE)
 

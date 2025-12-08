@@ -15,7 +15,7 @@
 
 #include "tests/internal/testing/error_assert.h"
 
-namespace mps = orteaf::internal::backend::mps;
+namespace mps = orteaf::internal::runtime::mps::platform::wrapper;
 
 class MpsFenceTest : public ::testing::Test {
 protected:

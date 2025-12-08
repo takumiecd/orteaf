@@ -3,14 +3,14 @@
  * @brief Tests for CPU statistics tracking.
  */
 
-#include "orteaf/internal/backend/cpu/wrapper/cpu_stats.h"
-#include "orteaf/internal/backend/cpu/wrapper/cpu_alloc.h"
+#include "orteaf/internal/runtime/cpu/platform/wrapper/cpu_stats.h"
+#include "orteaf/internal/runtime/cpu/platform/wrapper/cpu_alloc.h"
 
 #include <gtest/gtest.h>
 #include <thread>
 #include <vector>
 
-namespace cpu = orteaf::internal::backend::cpu;
+namespace cpu = orteaf::internal::runtime::cpu::platform::wrapper;
 
 #if defined(ORTEAF_ENABLE_CPU) && defined(ORTEAF_STATS_LEVEL_CPU_VALUE)
 

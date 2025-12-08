@@ -44,6 +44,7 @@ struct BackendMockExpectations {
     for (const auto &[index, device] : expectations) {
       EXPECT_CALL(mock, getDevice(index)).WillOnce(::testing::Return(device));
     }
+
   }
 
     static void expectReleaseDevices(
@@ -419,16 +420,17 @@ struct BackendMockExpectations {
           expectations,
       ::testing::Matcher<::orteaf::internal::runtime::mps::platform::wrapper::MPSDevice_t>
           device_matcher = ::testing::_) {
-      ::testing::Matcher<::orteaf::internal::runtime::mps::platform::wrapper::MPSHeapDescriptor_t>
-      EXPECT_CALL(mock, createHeap(device_matcher, ::testing::_)).Times(0);
-      return;
+      if (expectations.size() == 0) {
+        EXPECT_CALL(mock, createHeap(device_matcher, ::testing::_)).Times(0);
+        return;
+      }
+      ::testing::InSequence seq;
+      for (const auto &[descriptor, handle] : expectations) {
+        EXPECT_CALL(mock, createHeap(device_matcher, descriptor))
+            .WillOnce(::testing::Return(handle));
+      }
     }
-    ::testing::InSequence seq;
-    for (const auto &[descriptor, handle] : expectations) {
-      EXPECT_CALL(mock, createHeap(device_matcher, descriptor))
-          .WillOnce(::testing::Return(handle));
-    }
-  }
+
 
     static void expectDestroyHeaps(
       MpsBackendOpsMock &mock,

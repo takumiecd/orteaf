@@ -16,7 +16,7 @@
 
 namespace orteaf::internal::runtime::mps::platform::wrapper {
 
-using orteaf::internal::runtime::mps::platform::AutoreleasePool;
+using orteaf::internal::runtime::mps::platform::wrapper::AutoreleasePool;
 
 /**
  * @copydoc orteaf::internal::backend::mps::createCommandBuffer

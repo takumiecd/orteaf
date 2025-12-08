@@ -15,7 +15,7 @@
 #include <exception>
 #include <cstddef>
 
-namespace mps = orteaf::internal::backend::mps;
+namespace mps = orteaf::internal::runtime::mps::platform::wrapper;
 
 class MpsHeapTest : public ::testing::Test {
 protected:

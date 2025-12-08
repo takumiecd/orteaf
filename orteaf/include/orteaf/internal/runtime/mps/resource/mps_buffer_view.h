@@ -8,6 +8,7 @@
 #include <orteaf/internal/runtime/mps/platform/wrapper/mps_buffer.h>
 
 namespace orteaf::internal::runtime::mps::resource {
+using MPSBuffer_t = ::orteaf::internal::runtime::mps::platform::wrapper::MPSBuffer_t;
 
 // Lightweight, non-owning MPS buffer view (MTLBuffer + offset/size).
 class MpsBufferView {

@@ -1,9 +1,9 @@
-#include "orteaf/internal/backend/cpu/cpu_heap_ops.h"
+#include "orteaf/internal/runtime/cpu/resource/cpu_heap_ops.h"
 
 #include <gtest/gtest.h>
 
 namespace orteaf::tests {
-using orteaf::internal::backend::cpu::CpuHeapOps;
+using orteaf::internal::runtime::cpu::resource::CpuHeapOps;
 
 TEST(CpuHeapOpsTest, ReserveZeroReturnsEmpty) {
     auto region = CpuHeapOps::reserve(0);

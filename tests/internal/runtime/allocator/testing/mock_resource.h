@@ -3,8 +3,8 @@
 #include <cstddef>
 
 #include <gmock/gmock.h>
-#include "orteaf/internal/backend/cpu/cpu_buffer_view.h"
-#include "orteaf/internal/backend/cpu/cpu_heap_region.h"
+#include "orteaf/internal/runtime/cpu/resource/cpu_buffer_view.h"
+#include "orteaf/internal/runtime/cpu/resource/cpu_heap_region.h"
 
 namespace orteaf::internal::runtime::allocator::testing {
 
@@ -13,8 +13,8 @@ namespace orteaf::internal::runtime::allocator::testing {
 // ============================================================================
 class MockCpuHeapOpsImpl {
 public:
-    using BufferView = ::orteaf::internal::backend::cpu::CpuBufferView;
-    using HeapRegion = ::orteaf::internal::backend::cpu::CpuHeapRegion;
+    using BufferView = ::orteaf::internal::runtime::cpu::resource::CpuBufferView;
+    using HeapRegion = ::orteaf::internal::runtime::cpu::resource::CpuHeapRegion;
 
     MOCK_METHOD(HeapRegion, reserve, (std::size_t size));
     MOCK_METHOD(BufferView, map, (HeapRegion region));
@@ -23,8 +23,8 @@ public:
 
 // Static-API wrapper that forwards to a shared MockCpuHeapOpsImpl instance.
 struct MockCpuHeapOps {
-    using BufferView = ::orteaf::internal::backend::cpu::CpuBufferView;
-    using HeapRegion = ::orteaf::internal::backend::cpu::CpuHeapRegion;
+    using BufferView = ::orteaf::internal::runtime::cpu::resource::CpuBufferView;
+    using HeapRegion = ::orteaf::internal::runtime::cpu::resource::CpuHeapRegion;
 
     static void set(MockCpuHeapOpsImpl* impl) { impl_ = impl; }
     static void reset() { impl_ = nullptr; }
@@ -48,7 +48,7 @@ private:
 // ============================================================================
 class MockCpuResourceImpl {
 public:
-    using BufferView = ::orteaf::internal::backend::cpu::CpuBufferView;
+    using BufferView = ::orteaf::internal::runtime::cpu::resource::CpuBufferView;
 
     MOCK_METHOD(BufferView, allocate, (std::size_t size, std::size_t alignment));
     MOCK_METHOD(void, deallocate, (BufferView view, std::size_t size, std::size_t alignment));
@@ -57,7 +57,7 @@ public:
 
 // Static-API wrapper that forwards to a shared MockCpuResourceImpl instance.
 struct MockCpuResource {
-    using BufferView = ::orteaf::internal::backend::cpu::CpuBufferView;
+    using BufferView = ::orteaf::internal::runtime::cpu::resource::CpuBufferView;
 
     static void set(MockCpuResourceImpl* impl) { impl_ = impl; }
     static void reset() { impl_ = nullptr; }
