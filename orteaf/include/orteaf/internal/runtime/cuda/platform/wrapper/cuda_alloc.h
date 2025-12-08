@@ -3,9 +3,9 @@
 #if ORTEAF_ENABLE_CUDA
 
 #include <cstddef>
-#include "orteaf/internal/backend/cuda/wrapper/cuda_stream.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_stream.h"
 
-namespace orteaf::internal::backend::cuda {
+namespace orteaf::internal::runtime::cuda::platform::wrapper {
 
 /**
  * @brief Allocate device memory on CUDA device.
@@ -111,6 +111,6 @@ void copyToDevice(void* host_ptr, CUdeviceptr_t ptr, size_t size);
  */
 void freeHost(void* ptr, size_t size);
 
-} // namespace orteaf::internal::backend::cuda
+} // namespace orteaf::internal::runtime::cuda::platform::wrapper
 
 #endif  // ORTEAF_ENABLE_CUDA

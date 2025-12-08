@@ -1,15 +1,15 @@
 #ifndef __CUDACC__
 #error "cuda_alloc.cu must be compiled with a CUDA compiler (__CUDACC__ not defined)"
 #endif
-#include "orteaf/internal/backend/cuda/wrapper/cuda_alloc.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_check.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_stats.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_objc_bridge.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_alloc.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_check.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_stats.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_objc_bridge.h"
 
 #include "orteaf/internal/diagnostics/error/error.h"
 #include <cuda.h>
 
-namespace orteaf::internal::backend::cuda {
+namespace orteaf::internal::runtime::cuda::platform::wrapper {
 
 /**
  * @brief Allocate device memory on CUDA device.
@@ -187,4 +187,4 @@ void freeHost(void* ptr, size_t size) {
     updateDealloc(size);
 }
 
-} // namespace orteaf::internal::backend::cuda
+} // namespace orteaf::internal::runtime::cuda::platform::wrapper

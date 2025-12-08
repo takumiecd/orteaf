@@ -5,14 +5,14 @@
 #ifndef __CUDACC__
 #error "cuda_stream.cu must be compiled with a CUDA compiler (__CUDACC__ not defined)"
 #endif
-#include "orteaf/internal/backend/cuda/wrapper/cuda_stream.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_check.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_stats.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_objc_bridge.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_stream.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_check.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_stats.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_objc_bridge.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include <cuda.h>
 
-namespace orteaf::internal::backend::cuda {
+namespace orteaf::internal::runtime::cuda::platform::wrapper {
 
 /**
  * @copydoc orteaf::internal::backend::cuda::getStream
@@ -80,4 +80,4 @@ void writeStream(CUstream_t stream, CUdeviceptr_t addr, uint32_t value) {
     CU_CHECK(cuStreamWriteValue32(objc_stream, objc_addr, value, CU_STREAM_WRITE_VALUE_DEFAULT));
 }
 
-} // namespace orteaf::internal::backend::cuda
+} // namespace orteaf::internal::runtime::cuda::platform::wrapper

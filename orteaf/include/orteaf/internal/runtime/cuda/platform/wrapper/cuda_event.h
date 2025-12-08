@@ -10,9 +10,9 @@
 
 #if ORTEAF_ENABLE_CUDA
 
-#include "orteaf/internal/backend/cuda/wrapper/cuda_stream.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_stream.h"
 
-namespace orteaf::internal::backend::cuda {
+namespace orteaf::internal::runtime::cuda::platform::wrapper {
 
 struct CUevent_st;
 using CUevent_t = CUevent_st*;
@@ -61,6 +61,6 @@ bool queryEvent(CUevent_t event);
  */
 void waitEvent(CUstream_t stream, CUevent_t event);
 
-} // namespace orteaf::internal::backend::cuda
+} // namespace orteaf::internal::runtime::cuda::platform::wrapper
 
 #endif  // ORTEAF_ENABLE_CUDA

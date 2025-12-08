@@ -9,7 +9,7 @@
 
 #if ORTEAF_ENABLE_CUDA
 
-namespace orteaf::internal::backend::cuda {
+namespace orteaf::internal::runtime::cuda::platform::wrapper {
 
 /**
  * @brief Initialize the CUDA driver (idempotent and thread-safe).
@@ -19,6 +19,6 @@ namespace orteaf::internal::backend::cuda {
  */
 void cudaInit();
 
-} // namespace orteaf::internal::backend::cuda
+} // namespace orteaf::internal::runtime::cuda::platform::wrapper
 
 #endif  // ORTEAF_ENABLE_CUDA

@@ -15,9 +15,9 @@
 #include <cstdint>
 #include <type_traits>
 
-#include "orteaf/internal/backend/cuda/wrapper/cuda_device.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_device.h"
 
-namespace orteaf::internal::backend::cuda {
+namespace orteaf::internal::runtime::cuda::platform::wrapper {
 
 /**
  * @brief Convert a typed pointer to an opaque void* (no ownership transfer).
@@ -95,6 +95,6 @@ static inline CUdevice_t opaqueFromCuDevice(CUdevice p) noexcept {
     return static_cast<CUdevice_t>(p);
 }
 
-} // namespace orteaf::internal::backend::cuda
+} // namespace orteaf::internal::runtime::cuda::platform::wrapper
 
 #endif  // ORTEAF_ENABLE_CUDA

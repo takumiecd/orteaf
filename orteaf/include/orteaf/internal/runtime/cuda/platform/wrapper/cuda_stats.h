@@ -7,7 +7,7 @@
 #include <sstream>
 #include <iostream>
 
-namespace orteaf::internal::backend::cuda {
+namespace orteaf::internal::runtime::cuda::platform::wrapper {
 
 /**
  * @brief Statistics tracking for CUDA memory allocations and operations.
@@ -442,6 +442,6 @@ inline void updateActiveEvent() {
     statsInstance().updateActiveEvent();
 }
 
-} // namespace orteaf::internal::backend::cuda
+} // namespace orteaf::internal::runtime::cuda::platform::wrapper
 
 #endif  // ORTEAF_ENABLE_CUDA

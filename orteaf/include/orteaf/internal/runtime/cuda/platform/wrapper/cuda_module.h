@@ -10,7 +10,7 @@
 
 #if ORTEAF_ENABLE_CUDA
 
-namespace orteaf::internal::backend::cuda {
+namespace orteaf::internal::runtime::cuda::platform::wrapper {
 
 struct CUmodule_st;
 using CUmodule_t = CUmodule_st*;
@@ -53,6 +53,6 @@ CUfunction_t getFunction(CUmodule_t module, const char* kernel_name);
  */
 void unloadModule(CUmodule_t module);
 
-} // namespace orteaf::internal::backend::cuda
+} // namespace orteaf::internal::runtime::cuda::platform::wrapper
 
 #endif  // ORTEAF_ENABLE_CUDA

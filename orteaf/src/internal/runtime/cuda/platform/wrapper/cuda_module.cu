@@ -5,13 +5,13 @@
 #ifndef __CUDACC__
 #error "cuda_module.cu must be compiled with a CUDA compiler (__CUDACC__ not defined)"
 #endif
-#include "orteaf/internal/backend/cuda/wrapper/cuda_module.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_objc_bridge.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_module.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_objc_bridge.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include <cuda.h>
-#include "orteaf/internal/backend/cuda/wrapper/cuda_check.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_check.h"
 
-namespace orteaf::internal::backend::cuda {
+namespace orteaf::internal::runtime::cuda::platform::wrapper {
 
 /**
  * @copydoc orteaf::internal::backend::cuda::loadModuleFromFile
@@ -74,4 +74,4 @@ void unloadModule(CUmodule_t module) {
     CU_CHECK(cuModuleUnload(objc_module));
 }
 
-} // namespace orteaf::internal::backend::cuda
+} // namespace orteaf::internal::runtime::cuda::platform::wrapper

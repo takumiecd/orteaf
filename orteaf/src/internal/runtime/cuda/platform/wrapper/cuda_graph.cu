@@ -5,13 +5,13 @@
 #ifndef __CUDACC__
 #error "cuda_graph.cu must be compiled with a CUDA compiler (__CUDACC__ not defined)"
 #endif
-#include "orteaf/internal/backend/cuda/wrapper/cuda_graph.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_check.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_objc_bridge.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_graph.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_check.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_objc_bridge.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include <cuda.h>
 
-namespace orteaf::internal::backend::cuda {
+namespace orteaf::internal::runtime::cuda::platform::wrapper {
 
 /**
  * @copydoc orteaf::internal::backend::cuda::createGraph
@@ -125,4 +125,4 @@ void graphLaunch(CUgraphExec_t graph_exec, CUstream_t stream) {
     CU_CHECK(cuGraphLaunch(objc_graph_exec, objc_stream));
 }
 
-} // namespace orteaf::internal::backend::cuda
+} // namespace orteaf::internal::runtime::cuda::platform::wrapper

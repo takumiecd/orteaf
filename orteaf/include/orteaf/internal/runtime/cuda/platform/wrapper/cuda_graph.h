@@ -10,9 +10,9 @@
 
 #if ORTEAF_ENABLE_CUDA
 
-#include "orteaf/internal/backend/cuda/wrapper/cuda_stream.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_stream.h"
 
-namespace orteaf::internal::backend::cuda {
+namespace orteaf::internal::runtime::cuda::platform::wrapper {
 
 struct CUgraph_st;
 using CUgraph_t = CUgraph_st*;
@@ -80,6 +80,6 @@ void instantiateGraph(CUgraph_t graph, CUgraphExec_t* graph_exec);
  */
 void graphLaunch(CUgraphExec_t graph_exec, CUstream_t stream);
 
-} // namespace orteaf::internal::backend::cuda
+} // namespace orteaf::internal::runtime::cuda::platform::wrapper
 
 #endif  // ORTEAF_ENABLE_CUDA

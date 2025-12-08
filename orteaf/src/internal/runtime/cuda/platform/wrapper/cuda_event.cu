@@ -5,15 +5,15 @@
 #ifndef __CUDACC__
 #error "cuda_event.cu must be compiled with a CUDA compiler (__CUDACC__ not defined)"
 #endif
-#include "orteaf/internal/backend/cuda/wrapper/cuda_event.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_stats.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_check.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_objc_bridge.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_event.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_stats.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_check.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_objc_bridge.h"
 
 #include "orteaf/internal/diagnostics/error/error.h"
 #include <cuda.h>
 
-namespace orteaf::internal::backend::cuda {
+namespace orteaf::internal::runtime::cuda::platform::wrapper {
 
 /**
  * @copydoc orteaf::internal::backend::cuda::createEvent
@@ -82,4 +82,4 @@ void waitEvent(CUstream_t stream, CUevent_t event) {
     CU_CHECK(cuStreamWaitEvent(objc_stream, objc_event, 0));
 }
 
-} // namespace orteaf::internal::backend::cuda
+} // namespace orteaf::internal::runtime::cuda::platform::wrapper

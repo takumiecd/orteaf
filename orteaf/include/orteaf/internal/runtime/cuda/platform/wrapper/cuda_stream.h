@@ -10,9 +10,9 @@
 #if ORTEAF_ENABLE_CUDA
 
 #include <cstdint>
-#include "orteaf/internal/backend/cuda/wrapper/cuda_device.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_device.h"
 
-namespace orteaf::internal::backend::cuda {
+namespace orteaf::internal::runtime::cuda::platform::wrapper {
 
 struct CUstream_st;
 using CUstream_t = CUstream_st*;
@@ -66,6 +66,6 @@ void waitStream(CUstream_t stream, CUdeviceptr_t addr, uint32_t value);
  */
 void writeStream(CUstream_t stream, CUdeviceptr_t addr, uint32_t value);
 
-} // namespace orteaf::internal::backend::cuda
+} // namespace orteaf::internal::runtime::cuda::platform::wrapper
 
 #endif  // ORTEAF_ENABLE_CUDA

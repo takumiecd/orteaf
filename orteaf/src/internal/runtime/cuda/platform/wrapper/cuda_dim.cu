@@ -5,9 +5,9 @@
 #ifndef __CUDACC__
 #error "cuda_dim.cu must be compiled with a CUDA compiler (__CUDACC__ not defined)"
 #endif
-#include "orteaf/internal/backend/cuda/wrapper/cuda_dim.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_dim.h"
 
-namespace orteaf::internal::backend::cuda {
+namespace orteaf::internal::runtime::cuda::platform::wrapper {
 
 /**
  * @copydoc orteaf::internal::backend::cuda::makeDim3
@@ -51,4 +51,4 @@ CudaUInt3_t fromCudaUInt3(uint3 value) noexcept {
     return CudaUInt3_t{value.x, value.y, value.z};
 }
 
-} // namespace orteaf::internal::backend::cuda
+} // namespace orteaf::internal::runtime::cuda::platform::wrapper

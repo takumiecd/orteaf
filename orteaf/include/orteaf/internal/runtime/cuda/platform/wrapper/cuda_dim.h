@@ -14,7 +14,7 @@
 #if ORTEAF_ENABLE_CUDA
 #include <vector_types.h>
 
-namespace orteaf::internal::backend::cuda {
+namespace orteaf::internal::runtime::cuda::platform::wrapper {
 
 /**
  * @brief 3D grid/block shape (unsigned 32-bit components).
@@ -64,6 +64,6 @@ uint3 toCudaUInt3(CudaUInt3_t value) noexcept;
 /** Convert CUDA `uint3` to `CudaUInt3_t`. */
 CudaUInt3_t fromCudaUInt3(uint3 value) noexcept;
 #endif  // defined(__CUDACC__)
-} // namespace orteaf::internal::backend::cuda
+} // namespace orteaf::internal::runtime::cuda::platform::wrapper
 
 #endif  // ORTEAF_ENABLE_CUDA

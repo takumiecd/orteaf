@@ -5,13 +5,13 @@
 #ifndef __CUDACC__
 #error "cuda_init.cu must be compiled with a CUDA compiler (__CUDACC__ not defined)"
 #endif
-#include "orteaf/internal/backend/cuda/wrapper/cuda_init.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_init.h"
 
 #include <mutex>
 #include <cuda.h>
-#include "orteaf/internal/backend/cuda/wrapper/cuda_check.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_check.h"
 
-namespace orteaf::internal::backend::cuda {
+namespace orteaf::internal::runtime::cuda::platform::wrapper {
 
 namespace {
 std::once_flag g_cuda_driver_init_flag;
@@ -26,4 +26,4 @@ void cudaInit() {
     });
 }
 
-} // namespace orteaf::internal::backend::cuda
+} // namespace orteaf::internal::runtime::cuda::platform::wrapper

@@ -10,9 +10,9 @@
 
 #if ORTEAF_ENABLE_CUDA
 
-#include "orteaf/internal/backend/cuda/wrapper/cuda_device.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_device.h"
 
-namespace orteaf::internal::backend::cuda {
+namespace orteaf::internal::runtime::cuda::platform::wrapper {
 
 struct CUcontext_st;
 using CUcontext_t = CUcontext_st*;
@@ -56,6 +56,6 @@ void releasePrimaryContext(CUdevice_t device);
  */
 void releaseContext(CUcontext_t context);
 
-} // namespace orteaf::internal::backend::cuda
+} // namespace orteaf::internal::runtime::cuda::platform::wrapper
 
 #endif  // ORTEAF_ENABLE_CUDA

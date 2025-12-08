@@ -25,7 +25,7 @@
 #include <cuda_runtime.h>
 #include <cuda.h>
 
-namespace orteaf::internal::backend::cuda {
+namespace orteaf::internal::runtime::cuda::platform::wrapper {
 
 /**
  * @brief Map a CUDA Runtime error to `OrteafErrc`.
@@ -404,27 +404,27 @@ bool tryDriverCall(Fn&& fn) {
     }
 }
 
-} // namespace orteaf::internal::backend::cuda
+} // namespace orteaf::internal::runtime::cuda::platform::wrapper
 
 /**
  * @def CUDA_CHECK(expr)
  * @brief Validate a CUDA Runtime API result and throw on failure.
  */
-#define CUDA_CHECK(expr)       ::orteaf::internal::backend::cuda::cudaCheck((expr), #expr, __FILE__, __LINE__)
+#define CUDA_CHECK(expr)       ::orteaf::internal::runtime::cuda::platform::wrapper::cudaCheck((expr), #expr, __FILE__, __LINE__)
 /**
  * @def CUDA_CHECK_LAST()
  * @brief Validate the most recent CUDA Runtime error state.
  */
-#define CUDA_CHECK_LAST()      ::orteaf::internal::backend::cuda::cudaCheckLast(__FILE__, __LINE__)
+#define CUDA_CHECK_LAST()      ::orteaf::internal::runtime::cuda::platform::wrapper::cudaCheckLast(__FILE__, __LINE__)
 /**
  * @def CUDA_CHECK_SYNC(s)
  * @brief Synchronize a stream and validate only when `ORTEAF_DEBUG_CUDA_SYNC` is defined.
  */
-#define CUDA_CHECK_SYNC(s)     ::orteaf::internal::backend::cuda::cudaCheckSync((s), __FILE__, __LINE__)
+#define CUDA_CHECK_SYNC(s)     ::orteaf::internal::runtime::cuda::platform::wrapper::cudaCheckSync((s), __FILE__, __LINE__)
 /**
  * @def CU_CHECK(expr)
  * @brief Validate a CUDA Driver API result and throw on failure.
  */
-#define CU_CHECK(expr)         ::orteaf::internal::backend::cuda::cuDriverCheck((expr), #expr, __FILE__, __LINE__)
+#define CU_CHECK(expr)         ::orteaf::internal::runtime::cuda::platform::wrapper::cuDriverCheck((expr), #expr, __FILE__, __LINE__)
 
 #endif  // ORTEAF_ENABLE_CUDA

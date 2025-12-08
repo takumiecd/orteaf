@@ -14,7 +14,7 @@
 #include <cstdint>
 #include <string>
 
-namespace orteaf::internal::backend::cuda {
+namespace orteaf::internal::runtime::cuda::platform::wrapper {
 
 struct CUdevice_t {
     int value{};  // opaque device identifier
@@ -95,6 +95,6 @@ std::string getDeviceName(CUdevice_t device);
  */
 std::string getDeviceVendor(CUdevice_t device);
 
-} // namespace orteaf::internal::backend::cuda
+} // namespace orteaf::internal::runtime::cuda::platform::wrapper
 
 #endif  // ORTEAF_ENABLE_CUDA
