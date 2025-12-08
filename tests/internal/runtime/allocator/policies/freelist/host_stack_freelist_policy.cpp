@@ -141,7 +141,7 @@ TEST(HostStackFreelistPolicy, RemoveBlocksInChunkRemovesContainedBlocks) {
   policy.push(0, other);
   EXPECT_EQ(policy.get_total_free_blocks(), 5u);
 
-  policy.removeBlocksInChunk(chunk, 128);
+  policy.removeBlocksInChunk(chunk.handle);
   EXPECT_EQ(policy.get_total_free_blocks(), 1u);
 
   auto remaining = policy.pop(0);
