@@ -9,7 +9,9 @@
 #include "orteaf/internal/base/heap_vector.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include "orteaf/internal/diagnostics/error/error_macros.h"
+#include "orteaf/internal/runtime/allocator/memory_block.h"
 #include "orteaf/internal/runtime/allocator/policies/policy_config.h"
+#include "orteaf/internal/runtime/base/backend_traits.h"
 
 namespace orteaf::internal::runtime::allocator::policies {
 
@@ -34,10 +36,10 @@ public:
       typename ::orteaf::internal::runtime::base::BackendTraits<B>::BufferView;
   using MemoryBlock = ::orteaf::internal::runtime::allocator::MemoryBlock<B>;
 
-    /**
-     * @brief DirectChunkLocatorPolicy 固有の設定。
-     */
-    struct Config : PolicyConfig<Resource> {};
+  /**
+   * @brief DirectChunkLocatorPolicy 固有の設定。
+   */
+  struct Config : PolicyConfig<Resource> {};
 
   // ========================================================================
   // Public API
@@ -47,10 +49,12 @@ public:
    * @brief ポリシーを初期化する。
    * @param config 設定
    */
-  void initialize(const Config& config) {
-      ORTEAF_THROW_IF_NULL(config.resource, "DirectChunkLocatorPolicy requires non-null Resource*");
-      config_ = config;
-      resource_ = config.resource;
+  void initialize(const Config &config) {
+    ORTEAF_THROW_IF_NULL(
+        config.resource,
+        "DirectChunkLocatorPolicy requires non-null Resource*");
+    config_ = config;
+    resource_ = config.resource;
   }
 
   /**
@@ -74,7 +78,7 @@ public:
     chunks_[slot] = ChunkInfo{base, size, alignment, 0u, 0u, true};
     return MemoryBlock{encodeId(slot), base};
   }
-  
+
   /**
    * @brief チャンク全体を解放する（used/pending が 0 のときのみ）。
    * @param id 解放するチャンクの BufferHandle

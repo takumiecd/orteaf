@@ -6,14 +6,14 @@
 
 #include <orteaf/internal/base/handle.h>
 #include <orteaf/internal/base/heap_vector.h>
-#include <unordered_map>
-#include <orteaf/internal/runtime/mps/resource/mps_buffer_view.h>
-#include <orteaf/internal/runtime/mps/resource/mps_reuse_token.h>
+#include <orteaf/internal/runtime/base/backend_traits.h>
+#include <orteaf/internal/runtime/mps/manager/mps_library_manager.h>
 #include <orteaf/internal/runtime/mps/platform/wrapper/mps_buffer.h>
 #include <orteaf/internal/runtime/mps/platform/wrapper/mps_heap.h>
-#include <orteaf/internal/runtime/base/backend_traits.h>
-#include <orteaf/internal/runtime/kernel/mps/mps_kernel_launcher.h>
-#include <orteaf/internal/runtime/manager/mps/mps_library_manager.h>
+#include <orteaf/internal/runtime/mps/resource/mps_buffer_view.h>
+#include <orteaf/internal/runtime/mps/resource/mps_kernel_launcher.h>
+#include <orteaf/internal/runtime/mps/resource/mps_reuse_token.h>
+#include <unordered_map>
 
 namespace orteaf::internal::backend::mps {
 
@@ -25,16 +25,24 @@ public:
   using FenceToken = ::orteaf::internal::runtime::mps::resource::MpsFenceToken;
   using ReuseToken = ::orteaf::internal::runtime::mps::resource::MpsReuseToken;
 
-    struct Config {
-        ::orteaf::internal::base::DeviceHandle device_handle{};
-        MPSDevice_t device{nullptr};
-        MPSHeap_t heap{nullptr};
-        MPSHeap_t staging_heap{nullptr};                // optional host-visible heap for readback
-        MPSBufferUsage_t usage{kMPSDefaultBufferUsage};
-        MPSBufferUsage_t staging_usage{kMPSDefaultBufferUsage};
-        ::orteaf::internal::runtime::mps::MpsLibraryManager* library_manager{nullptr};
-        std::size_t chunk_table_capacity{16};
-    };
+  struct Config {
+    ::orteaf::internal::base::DeviceHandle device_handle{};
+    ::orteaf::internal::runtime::mps::platform::wrapper::MPSDevice_t device{
+        nullptr};
+    ::orteaf::internal::runtime::mps::platform::wrapper::MPSHeap_t heap{
+        nullptr};
+    ::orteaf::internal::runtime::mps::platform::wrapper::MPSHeap_t staging_heap{
+        nullptr}; // optional host-visible heap for readback
+    ::orteaf::internal::runtime::mps::platform::wrapper::MPSBufferUsage_t usage{
+        ::orteaf::internal::runtime::mps::platform::wrapper::
+            kMPSDefaultBufferUsage};
+    ::orteaf::internal::runtime::mps::platform::wrapper::MPSBufferUsage_t
+        staging_usage{::orteaf::internal::runtime::mps::platform::wrapper::
+                          kMPSDefaultBufferUsage};
+    ::orteaf::internal::runtime::mps::manager::MpsLibraryManager
+        *library_manager{nullptr};
+    std::size_t chunk_table_capacity{16};
+  };
 
   MpsResource() = default;
 
@@ -62,35 +70,46 @@ public:
   static BufferView makeView(BufferView base, std::size_t offset,
                              std::size_t size);
 
-    void initializeChunkAsFreelist(BufferView chunk, std::size_t chunk_size, std::size_t block_size);
-    BufferView popFreelistNode();
-    void pushFreelistNode(BufferView view);
+  void initializeChunkAsFreelist(BufferView chunk, std::size_t chunk_size,
+                                 std::size_t block_size);
+  BufferView popFreelistNode();
+  void pushFreelistNode(BufferView view);
 
 private:
-    void destroyFreelist();
+  void destroyFreelist();
 
-    MPSDevice_t device_{nullptr};
-    ::orteaf::internal::base::DeviceHandle device_handle_{};
-    MPSHeap_t heap_{nullptr};
-    MPSBufferUsage_t usage_{kMPSDefaultBufferUsage};
-    bool initialized_{false};
+  ::orteaf::internal::runtime::mps::platform::wrapper::MPSDevice_t device_{
+      nullptr};
+  ::orteaf::internal::base::DeviceHandle device_handle_{};
+  ::orteaf::internal::runtime::mps::platform::wrapper::MPSHeap_t heap_{nullptr};
+  ::orteaf::internal::runtime::mps::platform::wrapper::MPSBufferUsage_t usage_{
+      ::orteaf::internal::runtime::mps::platform::wrapper::
+          kMPSDefaultBufferUsage};
+  bool initialized_{false};
 
-    BufferView freelist_chunk_{};
-    uint32_t freelist_chunk_id_{0};
-    ::orteaf::internal::base::HeapVector<BufferView> chunks_{};
-    std::unordered_map<void*, uint32_t> chunk_lookup_{};
-    std::size_t freelist_block_size_{0};
-    std::size_t freelist_block_count_{0};
-    MPSBuffer_t freelist_head_{nullptr};
-    MPSBuffer_t freelist_out_{nullptr};
-    MPSHeap_t staging_heap_{nullptr};
-    MPSBufferUsage_t staging_usage_{kMPSDefaultBufferUsage};
+  BufferView freelist_chunk_{};
+  uint32_t freelist_chunk_id_{0};
+  ::orteaf::internal::base::HeapVector<BufferView> chunks_{};
+  std::unordered_map<void *, uint32_t> chunk_lookup_{};
+  std::size_t freelist_block_size_{0};
+  std::size_t freelist_block_count_{0};
+  ::orteaf::internal::runtime::mps::platform::wrapper::MPSBuffer_t
+      freelist_head_{nullptr};
+  ::orteaf::internal::runtime::mps::platform::wrapper::MPSBuffer_t
+      freelist_out_{nullptr};
+  ::orteaf::internal::runtime::mps::platform::wrapper::MPSHeap_t staging_heap_{
+      nullptr};
+  ::orteaf::internal::runtime::mps::platform::wrapper::MPSBufferUsage_t
+      staging_usage_{::orteaf::internal::runtime::mps::platform::wrapper::
+                         kMPSDefaultBufferUsage};
 
-    ::orteaf::internal::runtime::mps::MpsKernelLauncher<3> freelist_launcher_{
-        {{"freelist_block_embedded", "orteaf_freelist_init_block_embedded"},
-         {"freelist_block_embedded", "orteaf_freelist_pop_block_embedded"},
-         {"freelist_block_embedded", "orteaf_freelist_push_block_embedded"}}};
-    ::orteaf::internal::runtime::mps::MpsLibraryManager* library_manager_{nullptr};
+  ::orteaf::internal::runtime::mps::resource::MpsKernelLauncher<3>
+      freelist_launcher_{
+          {{"freelist_block_embedded", "orteaf_freelist_init_block_embedded"},
+           {"freelist_block_embedded", "orteaf_freelist_pop_block_embedded"},
+           {"freelist_block_embedded", "orteaf_freelist_push_block_embedded"}}};
+  ::orteaf::internal::runtime::mps::manager::MpsLibraryManager
+      *library_manager_{nullptr};
 };
 
 } // namespace orteaf::internal::backend::mps

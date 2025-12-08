@@ -1,7 +1,7 @@
 #pragma once
 
 #include <orteaf/internal/backend/backend.h>
-#include <orteaf/internal/backend/backend_traits.h>
+#include <orteaf/internal/runtime/base/backend_traits.h>
 #include <orteaf/internal/runtime/allocator/memory_block.h>
 
 namespace orteaf::internal::runtime::allocator::pool {
