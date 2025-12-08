@@ -4,31 +4,34 @@
 
 #include <cstddef>
 
-#include "orteaf/internal/backend/cuda/cuda_buffer_view.h"
+#include "orteaf/internal/runtime/cuda/resource/cuda_buffer_view.h"
+#include "orteaf/internal/runtime/cuda/resource/cuda_tokens.h"
 
-namespace orteaf::internal::backend::cuda {
+namespace orteaf::internal::runtime::cuda::resource {
 
 // Simple CUDA resource that directly allocates/free device buffers.
 class CudaResource {
 public:
-    using BufferView = ::orteaf::internal::backend::cuda::CudaBufferView;
-    using FenceToken = void*;
-    using ReuseToken = void*;
+  using BufferView = ::orteaf::internal::runtime::cuda::resource::CudaBufferView;
+  using FenceToken = ::orteaf::internal::runtime::cuda::resource::FenceToken;
+  using ReuseToken = ::orteaf::internal::runtime::cuda::resource::ReuseToken;
 
-    struct Config {};
+  struct Config {};
 
-    static void initialize(const Config& config = {}) noexcept;
+  static void initialize(const Config &config = {}) noexcept;
 
-    static BufferView allocate(std::size_t size, std::size_t alignment);
+  static BufferView allocate(std::size_t size, std::size_t alignment);
 
-    static void deallocate(BufferView view, std::size_t size, std::size_t alignment);
+  static void deallocate(BufferView view, std::size_t size,
+                         std::size_t alignment);
 
-    static bool isCompleted(const FenceToken& token);
-    static bool isCompleted(const ReuseToken& token);
+  static bool isCompleted(const FenceToken &token);
+  static bool isCompleted(const ReuseToken &token);
 
-    static BufferView makeView(BufferView base, std::size_t offset, std::size_t size);
+  static BufferView makeView(BufferView base, std::size_t offset,
+                             std::size_t size);
 };
 
-}  // namespace orteaf::internal::backend::cuda
+} // namespace orteaf::internal::runtime::cuda::resource
 
-#endif  // ORTEAF_ENABLE_CUDA
+#endif // ORTEAF_ENABLE_CUDA

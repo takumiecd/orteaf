@@ -1,6 +1,6 @@
-#include "orteaf/internal/runtime/allocator/resource/mps/mps_resource.h"
-#include "orteaf/internal/backend/mps/wrapper/mps_buffer.h"
-#include "orteaf/internal/backend/mps/wrapper/mps_command_buffer.h"
+#include <orteaf/internal/runtime/allocator/resource/mps/mps_resource.h>
+#include <orteaf/internal/runtime/mps/platform/wrapper/mps_buffer.h>
+#include <orteaf/internal/runtime/mps/platform/wrapper/mps_command_buffer.h>
 
 #include "orteaf/internal/diagnostics/error/error_macros.h"
 
@@ -19,7 +19,7 @@ MpsResource::BufferView MpsResource::allocate(std::size_t size, std::size_t /*al
     ORTEAF_THROW_IF(!initialized_, InvalidState, "MpsResource::allocate called before initialize");
     ORTEAF_THROW_IF(size == 0, InvalidParameter, "MpsResource::allocate requires size > 0");
 
-    MPSBuffer_t buffer = createBuffer(heap_, size, usage_);
+    ::orteaf::internal::runtime::mps::platform::wrapper::MPSBuffer_t buffer = ::orteaf::internal::runtime::mps::platform::wrapper::createBuffer(heap_, size, usage_);
     if (!buffer) {
         return {};
     }
@@ -31,7 +31,7 @@ void MpsResource::deallocate(BufferView view, std::size_t /*size*/, std::size_t 
     if (!initialized_ || !view) {
         return;
     }
-    destroyBuffer(view.raw());
+    ::orteaf::internal::runtime::mps::platform::wrapper::destroyBuffer(view.raw());
 }
 
 bool MpsResource::isCompleted(FenceToken& token) {
@@ -41,7 +41,7 @@ bool MpsResource::isCompleted(FenceToken& token) {
         if (!ticket.valid()) {
             continue;
         }
-        if (::orteaf::internal::backend::mps::isCompleted(ticket.commandBuffer())) {
+        if (::orteaf::internal::runtime::mps::platform::wrapper::isCompleted(ticket.commandBuffer())) {
             ticket.reset();  // mark as invalid so subsequent calls skip it
             continue;
         } else {
@@ -60,7 +60,7 @@ bool MpsResource::isCompleted(ReuseToken& token) {
         if (!ticket.valid()) {
             continue;
         }
-        if (::orteaf::internal::backend::mps::isCompleted(ticket.commandBuffer())) {
+        if (::orteaf::internal::runtime::mps::platform::wrapper::isCompleted(ticket.commandBuffer())) {
             ticket.reset();
             continue;
         } else {

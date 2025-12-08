@@ -7,7 +7,7 @@
 #include "tests/internal/testing/error_assert.h"
 
 namespace orteaf::tests {
-using orteaf::internal::backend::cuda::CudaResource;
+using orteaf::internal::runtime::cuda::resource::CudaResource;
 namespace diag_error = ::orteaf::internal::diagnostics::error;
 
 TEST(CudaResourceTest, AllocateZeroThrows) {

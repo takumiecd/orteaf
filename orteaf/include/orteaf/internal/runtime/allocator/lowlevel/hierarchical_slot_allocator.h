@@ -2,6 +2,7 @@
 
 #include "orteaf/internal/runtime/allocator/lowlevel/hierarchical_slot_dense_ops.h"
 #include "orteaf/internal/runtime/allocator/lowlevel/hierarchical_slot_single_ops.h"
+#include <memory>
 #include "orteaf/internal/runtime/allocator/lowlevel/hierarchical_slot_storage.h"
 
 namespace orteaf::internal::runtime::allocator::policies {

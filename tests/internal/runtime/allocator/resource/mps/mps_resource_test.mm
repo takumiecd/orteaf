@@ -4,14 +4,14 @@
 
 #include <gtest/gtest.h>
 
-#include "orteaf/internal/backend/mps/wrapper/mps_device.h"
-#include "orteaf/internal/backend/mps/wrapper/mps_heap.h"
+#include "orteaf/internal/runtime/mps/platform/wrapper/mps_device.h"
+#include "orteaf/internal/runtime/mps/platform/wrapper/mps_heap.h"
 #include "tests/internal/testing/error_assert.h"
 
 namespace orteaf::tests {
 using orteaf::internal::backend::mps::MpsResource;
 namespace diag_error = ::orteaf::internal::diagnostics::error;
-namespace mps = ::orteaf::internal::backend::mps;
+namespace mps = ::orteaf::internal::runtime::mps::platform::wrapper;
 
 TEST(MpsResourceTest, InitializeNullDeviceThrows) {
     MpsResource::Config cfg{};

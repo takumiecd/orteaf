@@ -4,7 +4,7 @@
 #include "orteaf/internal/diagnostics/error/error.h"
 
 #if ORTEAF_ENABLE_MPS
-#include "orteaf/internal/backend/mps/wrapper/mps_device.h"
+#include "orteaf/internal/runtime/mps/platform/wrapper/mps_device.h"
 #endif
 
 #include <algorithm>
@@ -42,19 +42,19 @@ bool matchesVendor(std::string_view required, std::string_view hint_lower) {
 #if ORTEAF_ENABLE_MPS
 class ScopedDevice {
 public:
-    explicit ScopedDevice(backend::mps::MPSDevice_t device) : device_(device) {}
+    explicit ScopedDevice(::orteaf::internal::runtime::mps::platform::wrapper::MPSDevice_t device) : device_(device) {}
     ScopedDevice(const ScopedDevice&) = delete;
     ScopedDevice& operator=(const ScopedDevice&) = delete;
     ~ScopedDevice() {
         if (device_ != nullptr) {
-            backend::mps::deviceRelease(device_);
+            ::orteaf::internal::runtime::mps::platform::wrapper::deviceRelease(device_);
         }
     }
 
-    backend::mps::MPSDevice_t get() const { return device_; }
+    ::orteaf::internal::runtime::mps::platform::wrapper::MPSDevice_t get() const { return device_; }
 
 private:
-    backend::mps::MPSDevice_t device_;
+    ::orteaf::internal::runtime::mps::platform::wrapper::MPSDevice_t device_;
 };
 #endif // ORTEAF_ENABLE_MPS
 
@@ -104,20 +104,20 @@ Architecture detectMpsArchitectureForDeviceId(::orteaf::internal::base::DeviceHa
         diagnostics::error::OrteafErrc::BackendUnavailable);
 
     try {
-        int count = backend::mps::getDeviceCount();
+        int count = ::orteaf::internal::runtime::mps::platform::wrapper::getDeviceCount();
         if (count <= 0 || device_index >= static_cast<std::uint32_t>(count)) {
             return Architecture::MpsGeneric;
         }
 
-        backend::mps::MPSDevice_t device =
-            backend::mps::getDevice(static_cast<backend::mps::MPSInt_t>(device_index));
+        ::orteaf::internal::runtime::mps::platform::wrapper::MPSDevice_t device =
+            ::orteaf::internal::runtime::mps::platform::wrapper::getDevice(static_cast<::orteaf::internal::runtime::mps::platform::wrapper::MPSInt_t>(device_index));
         if (device == nullptr) {
             return Architecture::MpsGeneric;
         }
 
         ScopedDevice guard(device);
-        std::string metal_family = backend::mps::getDeviceMetalFamily(device);
-        std::string vendor = backend::mps::getDeviceVendor(device);
+        std::string metal_family = ::orteaf::internal::runtime::mps::platform::wrapper::getDeviceMetalFamily(device);
+        std::string vendor = ::orteaf::internal::runtime::mps::platform::wrapper::getDeviceVendor(device);
         if (vendor.empty()) {
             vendor = "apple";
         }

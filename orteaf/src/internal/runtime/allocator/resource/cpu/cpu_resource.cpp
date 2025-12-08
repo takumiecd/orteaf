@@ -1,9 +1,10 @@
 #include "orteaf/internal/runtime/allocator/resource/cpu/cpu_resource.h"
 
-#include "orteaf/internal/backend/cpu/wrapper/cpu_alloc.h"
+#include "orteaf/internal/runtime/cpu/platform/wrapper/cpu_alloc.h"
 #include "orteaf/internal/diagnostics/error/error_macros.h"
 
 namespace orteaf::internal::backend::cpu {
+namespace cpu = ::orteaf::internal::runtime::cpu::platform::wrapper;
 
 void CpuResource::initialize(const Config& /*config*/) noexcept {
     // Stateless; nothing to do.
