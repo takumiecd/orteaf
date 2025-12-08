@@ -24,6 +24,11 @@ public:
   using BufferView = ::orteaf::internal::runtime::mps::resource::MpsBufferView;
   using FenceToken = ::orteaf::internal::runtime::mps::resource::MpsFenceToken;
   using ReuseToken = ::orteaf::internal::runtime::mps::resource::MpsReuseToken;
+  using MPSBuffer_t =
+      ::orteaf::internal::runtime::mps::platform::wrapper::MPSBuffer_t;
+  using LaunchParams =
+      ::orteaf::internal::runtime::base::BackendTraits<
+          ::orteaf::internal::backend::Backend::Mps>::KernelLaunchParams;
 
   struct Config {
     ::orteaf::internal::base::DeviceHandle device_handle{};
@@ -70,13 +75,18 @@ public:
   static BufferView makeView(BufferView base, std::size_t offset,
                              std::size_t size);
 
-  void initializeChunkAsFreelist(BufferView chunk, std::size_t chunk_size,
-                                 std::size_t block_size);
-  BufferView popFreelistNode();
-  void pushFreelistNode(BufferView view);
+  void initializeChunkAsFreelist(std::size_t list_index, BufferView chunk,
+                                 std::size_t chunk_size,
+                                 std::size_t block_size,
+                                 const LaunchParams &launch_params = {});
+  BufferView popFreelistNode(std::size_t list_index,
+                             const LaunchParams &launch_params = {});
+  void pushFreelistNode(std::size_t list_index, BufferView view,
+                        const LaunchParams &launch_params = {});
 
 private:
   void destroyFreelist();
+  void ensureList(std::size_t list_index);
 
   ::orteaf::internal::runtime::mps::platform::wrapper::MPSDevice_t device_{
       nullptr};
@@ -87,16 +97,19 @@ private:
           kMPSDefaultBufferUsage};
   bool initialized_{false};
 
-  BufferView freelist_chunk_{};
-  uint32_t freelist_chunk_id_{0};
+  struct FreelistState {
+    MPSBuffer_t head{nullptr}; // offset + chunk_id (uint32 each)
+    MPSBuffer_t out{nullptr};  // returned offset + chunk_id
+    std::size_t block_size{0};
+    std::size_t block_count{0};
+  };
+
+  ::orteaf::internal::base::HeapVector<FreelistState> freelists_{};
   ::orteaf::internal::base::HeapVector<BufferView> chunks_{};
+  ::orteaf::internal::base::HeapVector<std::size_t> chunk_sizes_{};
+  ::orteaf::internal::base::HeapVector<std::size_t> chunk_list_index_{};
   std::unordered_map<void *, uint32_t> chunk_lookup_{};
-  std::size_t freelist_block_size_{0};
-  std::size_t freelist_block_count_{0};
-  ::orteaf::internal::runtime::mps::platform::wrapper::MPSBuffer_t
-      freelist_head_{nullptr};
-  ::orteaf::internal::runtime::mps::platform::wrapper::MPSBuffer_t
-      freelist_out_{nullptr};
+
   ::orteaf::internal::runtime::mps::platform::wrapper::MPSHeap_t staging_heap_{
       nullptr};
   ::orteaf::internal::runtime::mps::platform::wrapper::MPSBufferUsage_t
