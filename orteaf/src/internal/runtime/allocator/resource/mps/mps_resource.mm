@@ -303,10 +303,6 @@ MpsResource::popFreelistNode(std::size_t list_index,
       command_buffer);
   ::orteaf::internal::runtime::mps::platform::wrapper::destroyCommandBuffer(
       command_buffer);
-  if (created_queue) {
-    ::orteaf::internal::runtime::mps::platform::wrapper::destroyCommandQueue(
-        command_queue);
-  }
 
   auto *out_ptr = static_cast<uint32_t *>(
       ::orteaf::internal::runtime::mps::platform::wrapper::getBufferContents(
