@@ -1,10 +1,12 @@
 #pragma once
 
 #include <algorithm>
+#include <atomic>
 #include <bit>
 #include <limits>
 #include <orteaf/internal/backend/backend.h>
 #include <orteaf/internal/runtime/allocator/memory_block.h>
+#include <orteaf/internal/runtime/allocator/pool/segregate_pool_stats.h>
 #include <orteaf/internal/runtime/base/backend_traits.h>
 
 namespace orteaf::internal::runtime::allocator::pool {
@@ -59,6 +61,8 @@ public:
   ReuseLocatorPolicy &reuse_policy() { return reuse_policy_; }
   FreeListPolicy &free_list_policy() { return free_list_policy_; }
 
+  const SegregatePoolStats<BackendType> &stats() const { return stats_; }
+
   MemoryBlock allocate(std::size_t size, std::size_t alignment,
                        LaunchParams &launch_params) {
     if (size == 0)
@@ -67,6 +71,7 @@ public:
     std::lock_guard<ThreadingPolicy> lock(threading_policy_);
 
     if (size > max_block_size_) {
+      stats_.updateAlloc(size, true);
       return large_alloc_policy_.allocate(size, alignment);
     }
 
@@ -90,6 +95,7 @@ public:
 
     chunk_locator_policy_.incrementUsed(block.handle);
 
+    stats_.updateAlloc(size, false);
     return block;
   }
 
@@ -102,6 +108,7 @@ public:
 
     if (size > max_block_size_) {
       large_alloc_policy_.deallocate(block.handle, size, alignment);
+      stats_.updateDealloc(size);
       return;
     }
 
@@ -113,6 +120,7 @@ public:
 
     chunk_locator_policy_.incrementPending(block.handle);
     reuse_policy_.scheduleForReuse(block, list_idx, {});
+    stats_.updateDealloc(size);
   }
 
   void processPendingReuses(LaunchParams &launch_params) {
@@ -158,6 +166,7 @@ private:
 
     free_list_policy_.expand(list_idx, chunk, actual_chunk_size, block_size,
                              launch_params);
+    stats_.updateExpansion();
   }
 
   std::size_t min_block_size_{64};
@@ -173,6 +182,7 @@ private:
   ReuseLocatorPolicy reuse_policy_;
   FreeListPolicy free_list_policy_;
   ::orteaf::internal::backend::Backend backend_type_{BackendType};
+  SegregatePoolStats<BackendType> stats_;
 };
 
 } // namespace orteaf::internal::runtime::allocator::pool
