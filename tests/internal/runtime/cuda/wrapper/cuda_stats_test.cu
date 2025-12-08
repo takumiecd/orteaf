@@ -3,18 +3,18 @@
  * @brief Tests for CUDA statistics tracking.
  */
 
-#include "orteaf/internal/backend/cuda/wrapper/cuda_stats.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_init.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_device.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_context.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_stream.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_event.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_stats.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_init.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_device.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_context.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_stream.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_event.h"
 
 #include <gtest/gtest.h>
 #include <thread>
 #include <vector>
 
-namespace cuda = orteaf::internal::backend::cuda;
+namespace cuda = orteaf::internal::runtime::cuda::platform::wrapper;
 
 #if defined(ORTEAF_STATS_LEVEL_CUDA_VALUE)
 

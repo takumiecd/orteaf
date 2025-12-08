@@ -3,17 +3,17 @@
  * @brief Tests for CUDA module loading/unloading and function lookup.
  */
 
-#include "orteaf/internal/backend/cuda/wrapper/cuda_module.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_init.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_device.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_context.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_module.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_init.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_device.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_context.h"
 #include "tests/internal/testing/error_assert.h"
 
 #include <gtest/gtest.h>
 #include <vector>
 #include <cstring>
 
-namespace cuda = orteaf::internal::backend::cuda;
+namespace cuda = orteaf::internal::runtime::cuda::platform::wrapper;
 
 /**
  * @brief Test fixture that initializes CUDA and sets up a device and context.

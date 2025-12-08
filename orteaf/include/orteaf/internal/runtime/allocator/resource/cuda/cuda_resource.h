@@ -5,16 +5,16 @@
 #include <cstddef>
 
 #include "orteaf/internal/runtime/cuda/resource/cuda_buffer_view.h"
+#include "orteaf/internal/runtime/cuda/resource/cuda_tokens.h"
 
 namespace orteaf::internal::runtime::cuda::resource {
 
 // Simple CUDA resource that directly allocates/free device buffers.
 class CudaResource {
 public:
-  using BufferView =
-      ::orteaf::internal::runtime::cuda::resource::CudaBufferView;
-  struct FenceToken { void* value; };
-  struct ReuseToken { void* value; };
+  using BufferView = ::orteaf::internal::runtime::cuda::resource::CudaBufferView;
+  using FenceToken = ::orteaf::internal::runtime::cuda::resource::FenceToken;
+  using ReuseToken = ::orteaf::internal::runtime::cuda::resource::ReuseToken;
 
   struct Config {};
 

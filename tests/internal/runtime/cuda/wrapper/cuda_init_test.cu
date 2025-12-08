@@ -3,13 +3,13 @@
  * @brief Tests for CUDA Driver API initialization.
  */
 
-#include "orteaf/internal/backend/cuda/wrapper/cuda_init.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_init.h"
 
 #include <gtest/gtest.h>
 #include <thread>
 #include <vector>
 
-namespace cuda = orteaf::internal::backend::cuda;
+namespace cuda = orteaf::internal::runtime::cuda::platform::wrapper;
 
 /**
  * @brief Test that CUDA initialization succeeds.

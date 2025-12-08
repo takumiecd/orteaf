@@ -10,9 +10,10 @@
 #include <orteaf/internal/runtime/cpu/resource/cpu_heap_region.h>
 #include <orteaf/internal/runtime/cpu/resource/cpu_tokens.h>
 #if ORTEAF_ENABLE_CUDA
-#include <orteaf/internal/backend/cuda/wrapper/cuda_device.h>
-#include <orteaf/internal/backend/cuda/wrapper/cuda_stream.h>
-#include <orteaf/internal/backend/cuda/cuda_buffer_view.h>
+#include <orteaf/internal/runtime/cuda/platform/wrapper/cuda_device.h>
+#include <orteaf/internal/runtime/cuda/platform/wrapper/cuda_stream.h>
+#include <orteaf/internal/runtime/cuda/resource/cuda_buffer_view.h>
+#include <orteaf/internal/runtime/cuda/resource/cuda_tokens.h>
 #endif
 
 #if ORTEAF_ENABLE_MPS
@@ -45,13 +46,13 @@ struct BackendTraits<Backend::Cpu> {
 #if ORTEAF_ENABLE_CUDA
 template <>
 struct BackendTraits<Backend::Cuda> {
-    using BufferView = cuda::CudaBufferView;
-    using HeapRegion = cuda::CudaBufferView;  // TODO: replace with dedicated region type
-    using Stream = cuda::CUstream_t;     // CUDA stream handle
-    using Device = cuda::CUdevice_t;     // opaque CUDA device handle
+    using BufferView = ::orteaf::internal::runtime::cuda::resource::CudaBufferView;
+    using HeapRegion = ::orteaf::internal::runtime::cuda::resource::CudaBufferView;  // TODO: replace with dedicated region type
+    using Stream = ::orteaf::internal::runtime::cuda::platform::wrapper::CUstream_t;     // CUDA stream handle
+    using Device = ::orteaf::internal::runtime::cuda::platform::wrapper::CUdevice_t;     // opaque CUDA device handle
     using Context = int;                 // placeholder until context abstraction exists
-    using FenceToken = void*;            // placeholder fence token until CUDA token is defined
-    using ReuseToken = void*;            // placeholder reuse token until CUDA token is defined
+    using FenceToken = ::orteaf::internal::runtime::cuda::resource::FenceToken;            // placeholder fence token until CUDA token is defined
+    using ReuseToken = ::orteaf::internal::runtime::cuda::resource::ReuseToken;            // placeholder reuse token until CUDA token is defined
 };
 #endif  // ORTEAF_ENABLE_CUDA
 

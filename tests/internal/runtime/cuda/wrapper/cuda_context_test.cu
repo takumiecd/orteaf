@@ -3,14 +3,14 @@
  * @brief Tests for CUDA context acquisition, creation, and release helpers.
  */
 
-#include "orteaf/internal/backend/cuda/wrapper/cuda_context.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_init.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_device.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_context.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_init.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_device.h"
 #include "tests/internal/testing/error_assert.h"
 
 #include <gtest/gtest.h>
 
-namespace cuda = orteaf::internal::backend::cuda;
+namespace cuda = orteaf::internal::runtime::cuda::platform::wrapper;
 
 class CudaContextTest : public ::testing::Test {
 protected:

@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 
-#include "orteaf/internal/backend/cuda/wrapper/cuda_kernel_embed_api.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_kernel_embed_api.h"
 #include "tests/internal/testing/error_assert.h"
 
-using namespace orteaf::internal::backend::cuda::kernel_embed;
+using namespace orteaf::internal::runtime::cuda::platform::wrapper::kernel_embed;
 
 namespace {
 

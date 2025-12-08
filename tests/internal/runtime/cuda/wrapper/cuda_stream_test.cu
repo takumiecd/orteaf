@@ -3,16 +3,16 @@
  * @brief Tests for CUDA stream creation, synchronization, and signaling helpers.
  */
 
-#include "orteaf/internal/backend/cuda/wrapper/cuda_stream.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_context.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_init.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_device.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_alloc.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_stream.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_context.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_init.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_device.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_alloc.h"
 #include "tests/internal/testing/error_assert.h"
 
 #include <gtest/gtest.h>
 
-namespace cuda = orteaf::internal::backend::cuda;
+namespace cuda = orteaf::internal::runtime::cuda::platform::wrapper;
 
 class CudaStreamTest : public ::testing::Test {
 protected:

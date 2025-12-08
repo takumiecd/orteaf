@@ -3,11 +3,11 @@
  * @brief Tests for CUDA memory allocation, deallocation, and copy operations.
  */
 
-#include "orteaf/internal/backend/cuda/wrapper/cuda_alloc.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_init.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_device.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_context.h"
-#include "orteaf/internal/backend/cuda/wrapper/cuda_stream.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_alloc.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_init.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_device.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_context.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_stream.h"
 #include "tests/internal/testing/error_assert.h"
 
 #include <gtest/gtest.h>
@@ -16,7 +16,7 @@
 #include <cstring>
 #include <vector>
 
-namespace cuda = orteaf::internal::backend::cuda;
+namespace cuda = orteaf::internal::runtime::cuda::platform::wrapper;
 
 /**
  * @brief Test fixture that initializes CUDA and sets up a device and context.

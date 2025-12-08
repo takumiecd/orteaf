@@ -3,14 +3,14 @@
  * @brief Tests for CUDA error checking utilities and error code mapping.
  */
 
-#include "orteaf/internal/backend/cuda/wrapper/cuda_check.h"
+#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_check.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include "tests/internal/testing/error_assert.h"
 #include "tests/internal/testing/error_assert.h"
 
 #include <gtest/gtest.h>
 
-namespace cuda = orteaf::internal::backend::cuda;
+namespace cuda = orteaf::internal::runtime::cuda::platform::wrapper;
 namespace diag = orteaf::internal::diagnostics::error;
 
 /**
