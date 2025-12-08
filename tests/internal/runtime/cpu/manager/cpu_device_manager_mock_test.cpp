@@ -9,7 +9,7 @@
 
 namespace architecture = orteaf::internal::architecture;
 namespace base = orteaf::internal::base;
-namespace cpu_rt = orteaf::internal::runtime::cpu;
+namespace cpu_rt = orteaf::internal::runtime::cpu::manager;
 namespace test = orteaf::tests;
 using ::testing::NiceMock;
 

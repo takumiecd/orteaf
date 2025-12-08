@@ -3,9 +3,9 @@
 #include "orteaf/internal/architecture/architecture.h"
 #include "orteaf/internal/base/handle.h"
 #include "orteaf/internal/diagnostics/error/error.h"
-#include "orteaf/internal/runtime/backend_ops/cpu/cpu_backend_ops.h"
+#include "orteaf/internal/runtime/cpu/platform/cpu_backend_ops.h"
 
-namespace orteaf::internal::runtime::cpu {
+namespace orteaf::internal::runtime::cpu::manager {
 
 /**
  * @brief Minimal CPU device manager that exposes getters for the host CPU
@@ -17,7 +17,7 @@ namespace orteaf::internal::runtime::cpu {
  * detector in `orteaf/internal/architecture/cpu_detect.h`.
  */
 template <class BackendOps =
-              ::orteaf::internal::runtime::backend_ops::cpu::CpuBackendOps>
+              ::orteaf::internal::runtime::cpu::platform::CpuBackendOps>
 struct CpuDeviceManager {
   void initializeDevices() {
     if (initialized_) {
@@ -105,4 +105,4 @@ inline CpuDeviceManager<> &GetCpuDeviceManager() {
   return CpuDeviceManagerInstance;
 }
 
-} // namespace orteaf::internal::runtime::cpu
+} // namespace orteaf::internal::runtime::cpu::manager

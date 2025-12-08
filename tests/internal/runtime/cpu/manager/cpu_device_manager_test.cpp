@@ -7,7 +7,7 @@
 #include <cstdlib>
 
 namespace base = orteaf::internal::base;
-namespace cpu_rt = orteaf::internal::runtime::cpu;
+namespace cpu_rt = orteaf::internal::runtime::cpu::manager;
 namespace architecture = orteaf::internal::architecture;
 
 class CpuDeviceManagerTest : public ::testing::Test {
