@@ -65,7 +65,7 @@ TEST(DeferredReusePolicy, MovesCompletedToReady) {
 
   MemoryBlock out_block{};
   std::size_t out_index = 0;
-  EXPECT_TRUE(policy.getReadyItem(out_block, out_index));
+  EXPECT_TRUE(policy.getReadyItem(out_index, out_block));
   EXPECT_EQ(out_block.handle, block.handle);
   EXPECT_EQ(out_index, freelist_index);
 }
@@ -116,7 +116,7 @@ TEST(DeferredReusePolicy, RemoveBlocksInChunkFiltersPendingAndReady) {
 
   MemoryBlock out_block{};
   std::size_t out_index = 0;
-  EXPECT_FALSE(policy.getReadyItem(out_block, out_index));
+  EXPECT_FALSE(policy.getReadyItem(out_index, out_block));
   EXPECT_EQ(policy.getPendingReuseCount(), 0u);
 }
 
@@ -144,7 +144,7 @@ TEST(DeferredReusePolicy, FlushPendingWaitsUntilComplete) {
 
   MemoryBlock out_block{};
   std::size_t out_index = 0;
-  EXPECT_TRUE(policy.getReadyItem(out_block, out_index));
+  EXPECT_TRUE(policy.getReadyItem(out_index, out_block));
   EXPECT_FALSE(policy.hasPending());
 }
 

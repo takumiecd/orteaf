@@ -94,7 +94,7 @@ public:
     }
   }
 
-  bool getReadyItem(MemoryBlock &block, std::size_t &freelist_index) {
+  bool getReadyItem(std::size_t &freelist_index, MemoryBlock &block) {
     if (ready_queue_.empty())
       return false;
     ReadyReuse item = std::move(ready_queue_.back());

@@ -98,10 +98,10 @@ public:
     void processPendingReuses(LaunchParams& launch_params) {
         reuse_policy_.processPending();
 
-        MemoryBlock block{};
         std::size_t freelist_index = 0;
+        MemoryBlock block{};
 
-        while (reuse_policy_.getReadyItem(block, freelist_index)) {
+        while (reuse_policy_.getReadyItem(freelist_index, block)) {
             free_list_policy_.push(freelist_index, block, launch_params);
         }
     }
