@@ -17,6 +17,8 @@ template <
 class SegregatePool {
 public:
     using MemoryBlock = typename BackendResource::MemoryBlock;
+    using LaunchParams = typename ::orteaf::internal::runtime::base::BackendTraits<BackendType>::KernelLaunchParams;
+
 
     SegregatePool() = default;
     SegregatePool(const SegregatePool&) = delete;
@@ -57,20 +59,20 @@ public:
     ReuseLocatorPolicy& reuse_policy() { return reuse_policy_; }
     FreeListPolicy& free_list_policy() { return free_list_policy_; }
 
-    MemoryBlock allocate(std::size_t size, std::size_t alignment) {
+    MemoryBlock allocate(std::size_t size, std::size_t alignment, LaunchParams& launch_params) {
         
     }
 
-    void deallocate(const MemoryBlock& block, std::size_t size, std::size_t alignment);
-
-    void processPendingReuses() {
+    void deallocate(const MemoryBlock& block, std::size_t size, std::size_t alignment, LaunchParams& launch_params);
+    
+    void processPendingReuses(LaunchParams& launch_params) {
         reuse_policy_.processPending();
 
         MemoryBlock block{};
         std::size_t freelist_index = 0;
 
         while (reuse_policy_.getReadyItem(block, freelist_index)) {
-            free_list_policy_.push(block, freelist_index);
+            free_list_policy_.push(block, freelist_index, launch_params);
         }
     }
 
