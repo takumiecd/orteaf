@@ -12,7 +12,7 @@ CudaResource::BufferView CudaResource::allocate(std::size_t size,
   ORTEAF_THROW_IF(size == 0, InvalidParameter,
                   "CudaResource::allocate requires size > 0");
 
-  CUdeviceptr_t base =
+  auto base =
       ::orteaf::internal::runtime::cuda::platform::wrapper::alloc(size);
   if (base == 0) {
     return {};
@@ -25,7 +25,7 @@ void CudaResource::deallocate(BufferView view, std::size_t size,
   if (!view) {
     return;
   }
-  const auto base = view.data() - static_cast<CUdeviceptr_t>(view.offset());
+  const auto base = view.data() - static_cast<::orteaf::internal::runtime::cuda::platform::wrapper::CUdeviceptr_t>(view.offset());
   ::orteaf::internal::runtime::cuda::platform::wrapper::free(base, size);
 }
 

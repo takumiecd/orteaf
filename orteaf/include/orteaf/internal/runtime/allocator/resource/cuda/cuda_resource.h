@@ -13,8 +13,8 @@ class CudaResource {
 public:
   using BufferView =
       ::orteaf::internal::runtime::cuda::resource::CudaBufferView;
-  using FenceToken = void *;
-  using ReuseToken = void *;
+  struct FenceToken { void* value; };
+  struct ReuseToken { void* value; };
 
   struct Config {};
 
