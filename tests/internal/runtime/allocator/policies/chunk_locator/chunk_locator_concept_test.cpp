@@ -41,14 +41,15 @@ template <typename Policy, typename Config, typename Resource>
     requires policies::ChunkLocator<Policy, Config, Resource>
 bool testChunkLocatorInterface(Policy& policy, const Config& config, Resource* resource) {
     // initialize が呼べる
-    policy.initialize(config, resource);
+    policy.initialize(config);
     return true;
 }
 
 TEST(ChunkLocatorConcept, DirectPolicySatisfiesConcept) {
     DirectPolicy policy;
-    DirectConfig config{};
     MockCpuResource resource;
+    DirectConfig config{};
+    config.resource = &resource;
     
     // コンパイルが通れば concept を満たしている
     EXPECT_TRUE((testChunkLocatorInterface<DirectPolicy, DirectConfig, MockCpuResource>(

@@ -45,15 +45,16 @@ TEST(DeferredReusePolicy, InitializeFailsWithNullResource) {
   Policy policy;
   Policy::Config cfg{};
 
-  orteaf::tests::ExpectError(
-      ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
-      [&] { policy.initialize(nullptr, cfg); });
+    orteaf::tests::ExpectError(::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
+                               [&] { policy.initialize(cfg); });
 }
 
 TEST(DeferredReusePolicy, MovesCompletedToReady) {
-  FakeResource resource;
-  Policy policy;
-  policy.initialize(&resource);
+    FakeResource resource;
+    Policy policy;
+    Policy::Config cfg{};
+    cfg.resource = &resource;
+    policy.initialize(cfg);
 
   MemoryBlock block = makeBlock(BufferHandle{1});
   std::size_t freelist_index = 3;
@@ -70,10 +71,12 @@ TEST(DeferredReusePolicy, MovesCompletedToReady) {
 }
 
 TEST(DeferredReusePolicy, KeepsPendingWhenNotCompleted) {
-  FakeResource resource;
-  resource.next_result.store(false);
-  Policy policy;
-  policy.initialize(&resource);
+    FakeResource resource;
+    resource.next_result.store(false);
+    Policy policy;
+    Policy::Config cfg{};
+    cfg.resource = &resource;
+    policy.initialize(cfg);
 
   MemoryBlock block = makeBlock(BufferHandle{2});
   CpuReuseToken token{};
@@ -89,9 +92,11 @@ TEST(DeferredReusePolicy, KeepsPendingWhenNotCompleted) {
 }
 
 TEST(DeferredReusePolicy, RemoveBlocksInChunkFiltersPendingAndReady) {
-  FakeResource resource;
-  Policy policy;
-  policy.initialize(&resource);
+    FakeResource resource;
+    Policy policy;
+    Policy::Config cfg{};
+    cfg.resource = &resource;
+    policy.initialize(cfg);
 
   CpuReuseToken token{};
   MemoryBlock block1 = makeBlock(BufferHandle{10});
@@ -116,9 +121,12 @@ TEST(DeferredReusePolicy, RemoveBlocksInChunkFiltersPendingAndReady) {
 }
 
 TEST(DeferredReusePolicy, FlushPendingWaitsUntilComplete) {
-  FakeResource resource;
-  Policy policy;
-  policy.initialize(&resource, Policy::Config{std::chrono::milliseconds{5}});
+
+    FakeResource resource;
+    Policy policy;
+    Policy::Config cfg{std::chrono::milliseconds{5}};
+    cfg.resource = &resource;
+    policy.initialize(cfg);
 
   CpuReuseToken token{};
   resource.next_result.store(false);

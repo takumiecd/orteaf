@@ -7,8 +7,7 @@
 
 #include <orteaf/internal/base/heap_vector.h>
 #include <orteaf/internal/diagnostics/error/error_macros.h>
-#include <orteaf/internal/runtime/allocator/memory_block.h>
-#include <orteaf/internal/runtime/base/backend_traits.h>
+#include <orteaf/internal/runtime/allocator/policies/policy_config.h>
 
 namespace orteaf::internal::runtime::allocator::policies {
 
@@ -20,16 +19,15 @@ public:
   using ReuseToken =
       typename ::orteaf::internal::runtime::base::BackendTraits<B>::ReuseToken;
 
-  struct Config {
-    std::chrono::milliseconds timeout_ms{std::chrono::milliseconds{1000}};
-  };
+    struct Config : PolicyConfig<Resource> {
+        std::chrono::milliseconds timeout_ms{std::chrono::milliseconds{1000}};
+    };
 
-  void initialize(Resource *resource, const Config &config = {}) {
-    ORTEAF_THROW_IF_NULL(resource,
-                         "DeferredReusePolicy requires non-null Resource*");
-    resource_ = resource;
-    timeout_ms_ = config.timeout_ms;
-  }
+    void initialize(const Config& config = {}) {
+        ORTEAF_THROW_IF_NULL(config.resource, "DeferredReusePolicy requires non-null Resource*");
+        resource_ = config.resource;
+        timeout_ms_ = config.timeout_ms;
+    }
 
   void scheduleForReuse(MemoryBlock block, std::size_t freelist_index,
                         ReuseToken reuse_token) {

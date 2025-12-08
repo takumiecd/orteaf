@@ -30,9 +30,10 @@ TEST(DirectChunkLocator, ReleaseChunkCallsResourceWhenFree) {
   MockCpuResource resource;
   Policy::Config cfg{};
 
-  NiceMock<MockCpuResourceImpl> impl;
-  MockCpuResource::set(&impl);
-  policy.initialize(cfg, &resource);
+    NiceMock<MockCpuResourceImpl> impl;
+    MockCpuResource::set(&impl);
+    cfg.resource = &resource;
+    policy.initialize(cfg);
 
   CpuView view{reinterpret_cast<void *>(0x10), 0, 256};
   EXPECT_CALL(impl, allocate(256, 1)).WillOnce(Return(view));
@@ -51,9 +52,8 @@ TEST(DirectChunkLocator, InitializeFailsWithNullResource) {
   Policy policy;
   Policy::Config cfg{};
 
-  orteaf::tests::ExpectError(
-      ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
-      [&] { policy.initialize(cfg, nullptr); });
+    orteaf::tests::ExpectError(::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
+                               [&] { policy.initialize(cfg); });
 }
 
 TEST(DirectChunkLocator, AddChunkBeforeInitializeThrows) {
@@ -68,9 +68,10 @@ TEST(DirectChunkLocator, ReleaseChunkSkipsWhenInUse) {
   MockCpuResource resource;
   Policy::Config cfg{};
 
-  NiceMock<MockCpuResourceImpl> impl;
-  MockCpuResource::set(&impl);
-  policy.initialize(cfg, &resource);
+    NiceMock<MockCpuResourceImpl> impl;
+    MockCpuResource::set(&impl);
+    cfg.resource = &resource;
+    policy.initialize(cfg);
 
   CpuView view{reinterpret_cast<void *>(0x20), 0, 128};
   EXPECT_CALL(impl, allocate(128, 1)).WillOnce(Return(view));
@@ -93,9 +94,10 @@ TEST(DirectChunkLocator, DoubleReleaseFails) {
   MockCpuResource resource;
   Policy::Config cfg{};
 
-  NiceMock<MockCpuResourceImpl> impl;
-  MockCpuResource::set(&impl);
-  policy.initialize(cfg, &resource);
+    NiceMock<MockCpuResourceImpl> impl;
+    MockCpuResource::set(&impl);
+    cfg.resource = &resource;
+    policy.initialize(cfg);
 
   CpuView view{reinterpret_cast<void *>(0x21), 0, 128};
   EXPECT_CALL(impl, allocate(128, 1)).WillOnce(Return(view));
@@ -115,9 +117,10 @@ TEST(DirectChunkLocator, PendingBlocksPreventRelease) {
   MockCpuResource resource;
   Policy::Config cfg{};
 
-  NiceMock<MockCpuResourceImpl> impl;
-  MockCpuResource::set(&impl);
-  policy.initialize(cfg, &resource);
+    NiceMock<MockCpuResourceImpl> impl;
+    MockCpuResource::set(&impl);
+    cfg.resource = &resource;
+    policy.initialize(cfg);
 
   CpuView view{reinterpret_cast<void *>(0x30), 0, 64};
   EXPECT_CALL(impl, allocate(64, 1)).WillOnce(Return(view));
@@ -140,9 +143,10 @@ TEST(DirectChunkLocator, OperationsOnInvalidIdAreNoops) {
   MockCpuResource resource;
   Policy::Config cfg{};
 
-  NiceMock<MockCpuResourceImpl> impl;
-  MockCpuResource::set(&impl);
-  policy.initialize(cfg, &resource);
+    NiceMock<MockCpuResourceImpl> impl;
+    MockCpuResource::set(&impl);
+    cfg.resource = &resource;
+    policy.initialize(cfg);
 
   BufferHandle invalid{99999};
   policy.incrementUsed(invalid);
@@ -160,9 +164,10 @@ TEST(DirectChunkLocator, FindChunkSizeReturnsRegisteredValue) {
   MockCpuResource resource;
   Policy::Config cfg{};
 
-  NiceMock<MockCpuResourceImpl> impl;
-  MockCpuResource::set(&impl);
-  policy.initialize(cfg, &resource);
+    NiceMock<MockCpuResourceImpl> impl;
+    MockCpuResource::set(&impl);
+    cfg.resource = &resource;
+    policy.initialize(cfg);
 
   CpuView view{reinterpret_cast<void *>(0x40), 0, 512};
   EXPECT_CALL(impl, allocate(512, 1)).WillOnce(Return(view));
@@ -179,9 +184,10 @@ TEST(DirectChunkLocator, FindChunkSizeReturnsZeroForInvalidId) {
   MockCpuResource resource;
   Policy::Config cfg{};
 
-  NiceMock<MockCpuResourceImpl> impl;
-  MockCpuResource::set(&impl);
-  policy.initialize(cfg, &resource);
+    NiceMock<MockCpuResourceImpl> impl;
+    MockCpuResource::set(&impl);
+    cfg.resource = &resource;
+    policy.initialize(cfg);
 
   BufferHandle invalid{123456};
   EXPECT_EQ(policy.findChunkSize(invalid), 0u);
@@ -194,9 +200,10 @@ TEST(DirectChunkLocator, IsAliveReflectsState) {
   MockCpuResource resource;
   Policy::Config cfg{};
 
-  NiceMock<MockCpuResourceImpl> impl;
-  MockCpuResource::set(&impl);
-  policy.initialize(cfg, &resource);
+    NiceMock<MockCpuResourceImpl> impl;
+    MockCpuResource::set(&impl);
+    cfg.resource = &resource;
+    policy.initialize(cfg);
 
   CpuView view{reinterpret_cast<void *>(0x70), 0, 64};
   EXPECT_CALL(impl, allocate(64, 1)).WillOnce(Return(view));

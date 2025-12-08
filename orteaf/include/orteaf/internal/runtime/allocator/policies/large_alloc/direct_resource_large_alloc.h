@@ -6,10 +6,10 @@
 
 #include "orteaf/internal/backend/backend.h"
 #include "orteaf/internal/base/handle.h"
-#include "orteaf/internal/base/heap_vector.h"
+#include "orteaf/internal/diagnostics/error/error_macros.h"
 #include "orteaf/internal/diagnostics/log/log.h"
 #include "orteaf/internal/runtime/allocator/memory_block.h"
-#include "orteaf/internal/runtime/base/backend_traits.h"
+#include "orteaf/internal/runtime/allocator/policies/policy_config.h"
 
 namespace orteaf::internal::runtime::allocator::policies {
 
@@ -21,15 +21,21 @@ public:
       typename ::orteaf::internal::runtime::base::BackendTraits<B>::BufferView;
   using MemoryBlock = ::orteaf::internal::runtime::allocator::MemoryBlock<B>;
 
-  void initialize() {}
+    struct Config : PolicyConfig<Resource> {};
 
-  MemoryBlock allocate(std::size_t size, std::size_t alignment) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (size == 0) {
-      return {};
+    void initialize(const Config& config) {
+        ORTEAF_THROW_IF_NULL(config.resource, "DirectResourceLargeAllocPolicy requires non-null Resource*");
+        resource_ = config.resource;
     }
 
-    BufferView buffer = Resource::allocate(size, alignment);
+    MemoryBlock allocate(std::size_t size, std::size_t alignment) {
+        ORTEAF_THROW_IF(resource_ == nullptr, InvalidState, "DirectResourceLargeAllocPolicy is not initialized");
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (size == 0) {
+            return {};
+        }
+
+    BufferView buffer = resource_->allocate(size, alignment);
     if (buffer.empty()) {
       return {};
     }
@@ -134,9 +140,20 @@ private:
     return entries_.size() - 1;
   }
 
-  mutable std::mutex mutex_;
-  ::orteaf::internal::base::HeapVector<Entry> entries_;
-  ::orteaf::internal::base::HeapVector<std::size_t> free_list_;
+    std::size_t reserveSlot() {
+        if (!free_list_.empty()) {
+            const auto index = free_list_.back();
+            free_list_.resize(free_list_.size() - 1);
+            return index;
+        }
+        entries_.emplaceBack();
+        return entries_.size() - 1;
+    }
+
+    mutable std::mutex mutex_;
+    Resource* resource_{nullptr};
+    ::orteaf::internal::base::HeapVector<Entry> entries_;
+    ::orteaf::internal::base::HeapVector<std::size_t> free_list_;
 };
 
 } // namespace orteaf::internal::runtime::allocator::policies

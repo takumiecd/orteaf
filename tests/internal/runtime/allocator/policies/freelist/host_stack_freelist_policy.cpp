@@ -26,8 +26,11 @@ TEST(HostStackFreelistPolicy, ConfigureInitializesStacks) {
   Policy policy;
   MockCpuResource resource;
 
-  policy.initialize(&resource);
-  policy.configureBounds(64, 256);
+    Policy::Config cfg{};
+    cfg.resource = &resource;
+    cfg.min_block_size = 64;
+    cfg.max_block_size = 256;
+    policy.initialize(cfg);
 
   EXPECT_EQ(policy.get_active_freelist_count(), 1u);
   EXPECT_EQ(policy.get_total_free_blocks(), 0u);
@@ -36,10 +39,13 @@ TEST(HostStackFreelistPolicy, ConfigureInitializesStacks) {
 }
 
 TEST(HostStackFreelistPolicy, PushAndPopAreLifoAndResizeStacks) {
-  Policy policy;
-  MockCpuResource resource;
-  policy.initialize(&resource);
-  policy.configureBounds(64, 128);
+    Policy policy;
+    MockCpuResource resource;
+    Policy::Config cfg{};
+    cfg.resource = &resource;
+    cfg.min_block_size = 64;
+    cfg.max_block_size = 128;
+    policy.initialize(cfg);
 
   MemoryBlock first{BufferHandle{1},
                     CpuBufferView{reinterpret_cast<void *>(0x1), 0, 64}};
@@ -59,9 +65,13 @@ TEST(HostStackFreelistPolicy, PushAndPopAreLifoAndResizeStacks) {
 }
 
 TEST(HostStackFreelistPolicy, ExpandSplitsChunkIntoBlocks) {
-  Policy policy;
-  MockCpuResource resource;
-  policy.initialize(&resource);
+
+    Policy policy;
+    MockCpuResource resource;
+    Policy::Config cfg{};
+    cfg.resource = &resource;
+    cfg.max_block_size = 256;
+    policy.initialize(cfg);
 
   NiceMock<MockCpuResourceImpl> impl;
   MockCpuResource::set(&impl);
@@ -97,9 +107,12 @@ TEST(HostStackFreelistPolicy, ExpandSplitsChunkIntoBlocks) {
 }
 
 TEST(HostStackFreelistPolicy, RemoveBlocksInChunkRemovesContainedBlocks) {
-  Policy policy;
-  MockCpuResource resource;
-  policy.initialize(&resource);
+    Policy policy;
+    MockCpuResource resource;
+    Policy::Config cfg{};
+    cfg.resource = &resource;
+    cfg.max_block_size = 128;
+    policy.initialize(cfg);
 
   NiceMock<MockCpuResourceImpl> impl;
   MockCpuResource::set(&impl);

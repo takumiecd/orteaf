@@ -8,7 +8,7 @@
 #include <orteaf/internal/base/heap_vector.h>
 #include <orteaf/internal/diagnostics/error/error_macros.h>
 #include <orteaf/internal/runtime/allocator/memory_block.h>
-#include <orteaf/internal/runtime/base/backend_traits.h>
+#include <orteaf/internal/runtime/allocator/policies/policy_config.h>
 
 namespace orteaf::internal::runtime::allocator::policies {
 
@@ -23,12 +23,19 @@ class HostStackFreelistPolicy {
 public:
   using MemoryBlock = ::orteaf::internal::runtime::allocator::MemoryBlock<B>;
 
-  void initialize(Resource *resource) {
-    ORTEAF_THROW_IF_NULL(resource,
-                         "HostStackFreelistPolicy requires non-null Resource*");
-    resource_ = resource;
-  }
 
+    struct Config : PolicyConfig<Resource> {
+        std::size_t min_block_size{64};
+        std::size_t max_block_size{0};
+    };
+
+    void initialize(const Config& config) {
+        ORTEAF_THROW_IF_NULL(config.resource, "HostStackFreelistPolicy requires non-null Resource*");
+        ORTEAF_THROW_IF(config.max_block_size == 0, InvalidParameter, "max_block_size must be non-zero");
+        resource_ = config.resource;
+        configureBounds(config.min_block_size, config.max_block_size);
+    }
+    
   void configureBounds(std::size_t min_block_size, std::size_t max_block_size) {
     ORTEAF_THROW_IF(resource_ == nullptr, InvalidState,
                     "HostStackFreelistPolicy is not initialized");
