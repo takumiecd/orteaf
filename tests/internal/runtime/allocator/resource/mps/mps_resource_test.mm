@@ -6,6 +6,7 @@
 
 #include "orteaf/internal/runtime/mps/platform/wrapper/mps_device.h"
 #include "orteaf/internal/runtime/mps/platform/wrapper/mps_heap.h"
+#include "orteaf/internal/runtime/mps/manager/mps_library_manager.h"
 #include "tests/internal/testing/error_assert.h"
 
 namespace orteaf::tests {
@@ -61,7 +62,14 @@ TEST(MpsResourceTest, AllocateZeroThrowsWhenInitialized) {
     }
 
     MpsResource resource;
-    EXPECT_NO_THROW(resource.initialize({device, heap, mps::kMPSDefaultBufferUsage}));
+    ::orteaf::internal::runtime::mps::MpsLibraryManager dummy_lib_mgr;
+    MpsResource::Config cfg{};
+    cfg.device_handle = ::orteaf::internal::base::DeviceHandle{0};
+    cfg.device = device;
+    cfg.heap = heap;
+    cfg.usage = mps::kMPSDefaultBufferUsage;
+    cfg.library_manager = &dummy_lib_mgr;
+    EXPECT_NO_THROW(resource.initialize(cfg));
     ExpectErrorMessage(diag_error::OrteafErrc::InvalidParameter, {"size", "MpsResource"}, [&] {
         resource.allocate(0, 0);
     });
