@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstddef>
-#include <mutex>
+
 #include <string>
 
 #include "orteaf/internal/backend/backend.h"
@@ -33,7 +33,7 @@ public:
   MemoryBlock allocate(std::size_t size, std::size_t alignment) {
     ORTEAF_THROW_IF(resource_ == nullptr, InvalidState,
                     "DirectResourceLargeAllocPolicy is not initialized");
-    std::lock_guard<std::mutex> lock(mutex_);
+
     if (size == 0) {
       return {};
     }
@@ -57,7 +57,7 @@ public:
 
   void deallocate(BufferHandle handle, std::size_t size,
                   std::size_t alignment) {
-    std::lock_guard<std::mutex> lock(mutex_);
+
     if (!isLargeAlloc(handle)) {
       return;
     }
@@ -96,16 +96,13 @@ public:
     if (!isLargeAlloc(handle)) {
       return false;
     }
-    std::lock_guard<std::mutex> lock(mutex_);
+
     const std::size_t index = indexFromId(handle);
     return index < entries_.size() && entries_[index].in_use &&
            entries_[index].view;
   }
 
-  std::size_t size() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return entries_.size() - free_list_.size();
-  }
+  std::size_t size() const { return entries_.size() - free_list_.size(); }
 
 private:
   static constexpr BufferHandle::underlying_type kLargeMask =
@@ -143,7 +140,6 @@ private:
     return entries_.size() - 1;
   }
 
-  mutable std::mutex mutex_;
   Resource *resource_{nullptr};
   ::orteaf::internal::base::HeapVector<Entry> entries_;
   ::orteaf::internal::base::HeapVector<std::size_t> free_list_;

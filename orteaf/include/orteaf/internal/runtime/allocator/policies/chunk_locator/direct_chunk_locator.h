@@ -2,7 +2,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <mutex>
 
 #include "orteaf/internal/backend/backend.h"
 #include "orteaf/internal/base/handle.h"
@@ -64,7 +63,7 @@ public:
    * @return 確保された MemoryBlock（失敗時は空）
    */
   MemoryBlock addChunk(std::size_t size, std::size_t alignment) {
-    std::lock_guard<std::mutex> lock(mutex_);
+
     ORTEAF_THROW_IF(resource_ == nullptr, InvalidState,
                     "DirectChunkLocatorPolicy is not initialized");
     ORTEAF_THROW_IF(size == 0, InvalidParameter, "size must be non-zero");
@@ -85,7 +84,7 @@ public:
    * @return 解放に成功した場合 true
    */
   bool releaseChunk(BufferHandle handle) {
-    std::lock_guard<std::mutex> lock(mutex_);
+
     const std::size_t slot = indexFromId(handle);
     if (slot >= chunks_.size() || resource_ == nullptr) {
       return false;
@@ -108,15 +107,15 @@ public:
    * @return チャンクサイズ（無効な場合 0）
    */
   std::size_t findChunkSize(BufferHandle handle) const {
-    std::lock_guard<std::mutex> lock(mutex_);
+
     const ChunkInfo *chunk = find(handle);
     return chunk ? chunk->size : 0;
   }
 
   BufferHandle findReleasable() const {
-    std::lock_guard<std::mutex> lock(mutex_);
+
     for (std::size_t i = 0; i < chunks_.size(); ++i) {
-      const ChunkInfo& chunk = chunks_[i];
+      const ChunkInfo &chunk = chunks_[i];
       if (chunk.alive && chunk.used == 0 && chunk.pending == 0) {
         return encodeId(i);
       }
@@ -125,14 +124,14 @@ public:
   }
 
   void incrementUsed(BufferHandle handle) {
-    std::lock_guard<std::mutex> lock(mutex_);
+
     if (auto *chunk = find(handle)) {
       ++chunk->used;
     }
   }
 
   void decrementUsed(BufferHandle handle) {
-    std::lock_guard<std::mutex> lock(mutex_);
+
     if (auto *chunk = find(handle)) {
       if (chunk->used > 0) {
         --chunk->used;
@@ -141,14 +140,14 @@ public:
   }
 
   void incrementPending(BufferHandle handle) {
-    std::lock_guard<std::mutex> lock(mutex_);
+
     if (auto *chunk = find(handle)) {
       ++chunk->pending;
     }
   }
 
   void decrementPending(BufferHandle handle) {
-    std::lock_guard<std::mutex> lock(mutex_);
+
     if (auto *chunk = find(handle)) {
       if (chunk->pending > 0) {
         --chunk->pending;
@@ -157,7 +156,7 @@ public:
   }
 
   void decrementPendingAndUsed(BufferHandle handle) {
-    std::lock_guard<std::mutex> lock(mutex_);
+
     if (auto *chunk = find(handle)) {
       if (chunk->pending > 0) {
         --chunk->pending;
@@ -174,7 +173,7 @@ public:
    * @return 有効な場合 true
    */
   bool isAlive(BufferHandle handle) const {
-    std::lock_guard<std::mutex> lock(mutex_);
+
     const ChunkInfo *chunk = find(handle);
     return chunk && chunk->alive;
   }
@@ -249,7 +248,7 @@ private:
   // ========================================================================
   Config config_{};
   Resource *resource_{nullptr};
-  mutable std::mutex mutex_;
+
   ::orteaf::internal::base::HeapVector<ChunkInfo> chunks_;
   ::orteaf::internal::base::HeapVector<std::size_t> free_list_;
 };
