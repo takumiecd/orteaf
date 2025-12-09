@@ -17,7 +17,7 @@ namespace orteaf::internal::runtime::allocator::policies {
 /**
  * @brief Direct スタイルの ChunkLocator ポリシー。
  *
- * BufferHandle の上位ビットで large/chunk
+ * BufferViewHandle の上位ビットで large/chunk
  * を判別し、下位ビットをチャンクのスロットに割り当てる。 device/context
  * ごとに分けず、配列ひとつで O(1) アクセスにする。
  *
@@ -30,7 +30,7 @@ public:
   // ========================================================================
   // Type aliases
   // ========================================================================
-  using BufferHandle = ::orteaf::internal::base::BufferHandle;
+  using BufferViewHandle = ::orteaf::internal::base::BufferViewHandle;
   using BufferView =
       typename ::orteaf::internal::runtime::base::BackendTraits<B>::BufferView;
   using MemoryBlock = ::orteaf::internal::runtime::allocator::MemoryBlock<B>;
@@ -80,10 +80,10 @@ public:
 
   /**
    * @brief チャンク全体を解放する（used/pending が 0 のときのみ）。
-   * @param id 解放するチャンクの BufferHandle
+   * @param id 解放するチャンクの BufferViewHandle
    * @return 解放に成功した場合 true
    */
-  bool releaseChunk(BufferHandle handle) {
+  bool releaseChunk(BufferViewHandle handle) {
 
     const std::size_t slot = indexFromId(handle);
     if (slot >= chunks_.size() || resource_ == nullptr) {
@@ -103,16 +103,16 @@ public:
 
   /**
    * @brief チャンクサイズを取得する。
-   * @param id チャンクの BufferHandle
+   * @param id チャンクの BufferViewHandle
    * @return チャンクサイズ（無効な場合 0）
    */
-  std::size_t findChunkSize(BufferHandle handle) const {
+  std::size_t findChunkSize(BufferViewHandle handle) const {
 
     const ChunkInfo *chunk = find(handle);
     return chunk ? chunk->size : 0;
   }
 
-  BufferHandle findReleasable() const {
+  BufferViewHandle findReleasable() const {
 
     for (std::size_t i = 0; i < chunks_.size(); ++i) {
       const ChunkInfo &chunk = chunks_[i];
@@ -120,17 +120,17 @@ public:
         return encodeId(i);
       }
     }
-    return BufferHandle::invalid();
+    return BufferViewHandle::invalid();
   }
 
-  void incrementUsed(BufferHandle handle) {
+  void incrementUsed(BufferViewHandle handle) {
 
     if (auto *chunk = find(handle)) {
       ++chunk->used;
     }
   }
 
-  void decrementUsed(BufferHandle handle) {
+  void decrementUsed(BufferViewHandle handle) {
 
     if (auto *chunk = find(handle)) {
       if (chunk->used > 0) {
@@ -139,14 +139,14 @@ public:
     }
   }
 
-  void incrementPending(BufferHandle handle) {
+  void incrementPending(BufferViewHandle handle) {
 
     if (auto *chunk = find(handle)) {
       ++chunk->pending;
     }
   }
 
-  void decrementPending(BufferHandle handle) {
+  void decrementPending(BufferViewHandle handle) {
 
     if (auto *chunk = find(handle)) {
       if (chunk->pending > 0) {
@@ -155,7 +155,7 @@ public:
     }
   }
 
-  void decrementPendingAndUsed(BufferHandle handle) {
+  void decrementPendingAndUsed(BufferViewHandle handle) {
 
     if (auto *chunk = find(handle)) {
       if (chunk->pending > 0) {
@@ -169,10 +169,10 @@ public:
 
   /**
    * @brief チャンクが有効かどうかを確認する。
-   * @param id チャンクの BufferHandle
+   * @param id チャンクの BufferViewHandle
    * @return 有効な場合 true
    */
-  bool isAlive(BufferHandle handle) const {
+  bool isAlive(BufferViewHandle handle) const {
 
     const ChunkInfo *chunk = find(handle);
     return chunk && chunk->alive;
@@ -182,14 +182,14 @@ public:
   // ID encoding/decoding
   // ========================================================================
 
-  BufferHandle encodeId(std::size_t slot) const {
-    return BufferHandle{static_cast<BufferHandle::underlying_type>(slot) &
+  BufferViewHandle encodeId(std::size_t slot) const {
+    return BufferViewHandle{static_cast<BufferViewHandle::underlying_type>(slot) &
                         kChunkMask};
   }
 
-  std::size_t indexFromId(BufferHandle handle) const {
+  std::size_t indexFromId(BufferViewHandle handle) const {
     return static_cast<std::size_t>(
-        static_cast<BufferHandle::underlying_type>(handle) & kChunkMask);
+        static_cast<BufferViewHandle::underlying_type>(handle) & kChunkMask);
   }
 
 private:
@@ -208,14 +208,14 @@ private:
   // ========================================================================
   // Constants
   // ========================================================================
-  static constexpr BufferHandle::underlying_type kLargeMask =
-      BufferHandle::underlying_type{1u} << 31;
-  static constexpr BufferHandle::underlying_type kChunkMask = ~kLargeMask;
+  static constexpr BufferViewHandle::underlying_type kLargeMask =
+      BufferViewHandle::underlying_type{1u} << 31;
+  static constexpr BufferViewHandle::underlying_type kChunkMask = ~kLargeMask;
 
   // ========================================================================
   // Internal methods
   // ========================================================================
-  ChunkInfo *find(BufferHandle handle) {
+  ChunkInfo *find(BufferViewHandle handle) {
     const std::size_t slot = indexFromId(handle);
     if (slot >= chunks_.size()) {
       return nullptr;
@@ -224,7 +224,7 @@ private:
     return chunk.alive ? &chunk : nullptr;
   }
 
-  const ChunkInfo *find(BufferHandle handle) const {
+  const ChunkInfo *find(BufferViewHandle handle) const {
     const std::size_t slot = indexFromId(handle);
     if (slot >= chunks_.size()) {
       return nullptr;

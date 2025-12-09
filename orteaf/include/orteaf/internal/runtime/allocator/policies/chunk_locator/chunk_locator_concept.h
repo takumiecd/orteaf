@@ -31,10 +31,10 @@ concept ChunkLocator = requires(
     Resource* resource,
     std::size_t size,
     std::size_t alignment,
-    typename T::BufferHandle id
+    typename T::BufferViewHandle id
 ) {
     // 型エイリアスの存在確認
-    typename T::BufferHandle;
+    typename T::BufferViewHandle;
     typename T::BufferView;
     typename T::MemoryBlock;
     typename T::Config;
@@ -46,7 +46,7 @@ concept ChunkLocator = requires(
     // チャンク確保・解放
     { locator.addChunk(size, alignment) } -> std::same_as<typename T::MemoryBlock>;
     { locator.releaseChunk(id) } -> std::same_as<bool>;
-    { const_locator.findReleasable() } -> std::same_as<typename T::BufferHandle>;
+    { const_locator.findReleasable() } -> std::same_as<typename T::BufferViewHandle>;
 
     // チャンク情報取得
     { const_locator.findChunkSize(id) } -> std::same_as<std::size_t>;
@@ -61,9 +61,9 @@ concept ChunkLocator = requires(
 };
 
 /**
- * @brief BufferHandle が共通の型であることを確認する concept。
+ * @brief BufferViewHandle が共通の型であることを確認する concept。
  */
 template <typename T>
-concept HasStandardBufferHandle = std::same_as<typename T::BufferHandle, ::orteaf::internal::base::BufferHandle>;
+concept HasStandardBufferViewHandle = std::same_as<typename T::BufferViewHandle, ::orteaf::internal::base::BufferViewHandle>;
 
 }  // namespace orteaf::internal::runtime::allocator::policies

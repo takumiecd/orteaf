@@ -17,7 +17,7 @@ namespace orteaf::internal::runtime::allocator::policies {
  *
  * Resource がデバイス内に next 埋め込みの freelist を持ち、push/pop/expand を
  * カーネル経由で実行する前提。チャンク追加時に buffer と id の対応を保持し、
- * pop したブロックに元の BufferHandle を復元する。
+ * pop したブロックに元の BufferViewHandle を復元する。
  *
  * 制約: Resource はスレッド安全であること（内部で head を管理）。empty/総数は
  * Resource から取得できないため概算のみ。
@@ -64,8 +64,8 @@ public:
         auto view = resource_->popFreelistNode(list_index, launch_params);
         if (!view) return {};
         auto it = buffer_lookup_.find(view.raw());
-        const ::orteaf::internal::base::BufferHandle id = (it != buffer_lookup_.end()) ? it->second
-                                                                                       : ::orteaf::internal::base::BufferHandle{};
+        const ::orteaf::internal::base::BufferViewHandle id = (it != buffer_lookup_.end()) ? it->second
+                                                                                       : ::orteaf::internal::base::BufferViewHandle{};
         return MemoryBlock{id, view};
     }
 
@@ -86,7 +86,7 @@ public:
         resource_->initializeChunkAsFreelist(list_index, chunk.view, chunk_size, block_size, launch_params);
     }
 
-    void removeBlocksInChunk(::orteaf::internal::base::BufferHandle /*handle*/) {
+    void removeBlocksInChunk(::orteaf::internal::base::BufferViewHandle /*handle*/) {
         // デバイス側のみで管理するため未対応。
     }
 
@@ -101,7 +101,7 @@ private:
     std::size_t min_block_size_{64};
     std::size_t size_class_count_{0};
     ::orteaf::internal::base::HeapVector<MemoryBlock> heads_{};  // unused placeholder per size class
-    std::unordered_map<void*, ::orteaf::internal::base::BufferHandle> buffer_lookup_{};
+    std::unordered_map<void*, ::orteaf::internal::base::BufferViewHandle> buffer_lookup_{};
 };
 
 }  // namespace orteaf::internal::runtime::allocator::policies

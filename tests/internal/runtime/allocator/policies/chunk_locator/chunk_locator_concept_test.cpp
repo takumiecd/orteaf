@@ -26,10 +26,10 @@ static_assert(
     "DirectChunkLocatorPolicy must satisfy ChunkLocator concept"
 );
 
-// 標準の BufferHandle を使用している
+// 標準の BufferViewHandle を使用している
 static_assert(
-    policies::HasStandardBufferHandle<DirectPolicy>,
-    "DirectChunkLocatorPolicy must use standard BufferHandle"
+    policies::HasStandardBufferViewHandle<DirectPolicy>,
+    "DirectChunkLocatorPolicy must use standard BufferViewHandle"
 );
 
 // ============================================================================

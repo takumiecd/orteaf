@@ -15,7 +15,7 @@ using ::testing::Return;
 namespace allocator = ::orteaf::internal::runtime::allocator;
 namespace policies = ::orteaf::internal::runtime::allocator::policies;
 using Backend = ::orteaf::internal::backend::Backend;
-using BufferHandle = ::orteaf::internal::base::BufferHandle;
+using BufferViewHandle = ::orteaf::internal::base::BufferViewHandle;
 using CpuView = ::orteaf::internal::runtime::cpu::resource::CpuBufferView;
 using ::orteaf::internal::runtime::allocator::testing::MockCpuResource;
 using ::orteaf::internal::runtime::allocator::testing::MockCpuResourceImpl;
@@ -40,7 +40,7 @@ TEST(DirectChunkLocator, ReleaseChunkCallsResourceWhenFree) {
   EXPECT_CALL(impl, deallocate(view, 256, 1)).Times(1);
 
   auto block = policy.addChunk(256, 1);
-  BufferHandle handle = block.handle;
+  BufferViewHandle handle = block.handle;
 
   EXPECT_TRUE(policy.releaseChunk(handle));
   EXPECT_FALSE(policy.isAlive(handle));
@@ -78,7 +78,7 @@ TEST(DirectChunkLocator, ReleaseChunkSkipsWhenInUse) {
   EXPECT_CALL(impl, deallocate(view, 128, 1)).Times(1);
 
   auto block = policy.addChunk(128, 1);
-  BufferHandle handle = block.handle;
+  BufferViewHandle handle = block.handle;
   policy.incrementUsed(handle);
 
   EXPECT_FALSE(policy.releaseChunk(handle));
@@ -104,7 +104,7 @@ TEST(DirectChunkLocator, DoubleReleaseFails) {
   EXPECT_CALL(impl, deallocate(view, 128, 1)).Times(1);
 
   auto block = policy.addChunk(128, 1);
-  BufferHandle handle = block.handle;
+  BufferViewHandle handle = block.handle;
   EXPECT_TRUE(policy.releaseChunk(handle));
   EXPECT_FALSE(policy.releaseChunk(handle));
   EXPECT_FALSE(policy.isAlive(handle));
@@ -127,7 +127,7 @@ TEST(DirectChunkLocator, PendingBlocksPreventRelease) {
   EXPECT_CALL(impl, deallocate(view, 64, 1)).Times(1);
 
   auto block = policy.addChunk(64, 1);
-  BufferHandle handle = block.handle;
+  BufferViewHandle handle = block.handle;
   policy.incrementPending(handle);
 
   EXPECT_FALSE(policy.releaseChunk(handle));
@@ -150,7 +150,7 @@ TEST(DirectChunkLocator, OperationsOnInvalidIdAreNoops) {
     cfg.resource = &resource;
     policy.initialize(cfg);
 
-  BufferHandle invalid{99999};
+  BufferViewHandle invalid{99999};
   policy.incrementUsed(invalid);
   policy.decrementUsed(invalid);
   policy.incrementPending(invalid);
@@ -191,7 +191,7 @@ TEST(DirectChunkLocator, FindChunkSizeReturnsZeroForInvalidId) {
     cfg.resource = &resource;
     policy.initialize(cfg);
 
-  BufferHandle invalid{123456};
+  BufferViewHandle invalid{123456};
   EXPECT_EQ(policy.findChunkSize(invalid), 0u);
 
   MockCpuResource::reset();
