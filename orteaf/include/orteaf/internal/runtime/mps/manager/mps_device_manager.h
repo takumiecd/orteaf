@@ -14,7 +14,7 @@
 #include "orteaf/internal/runtime/base/base_manager.h"
 #include "orteaf/internal/runtime/mps/manager/mps_command_queue_manager.h"
 #include "orteaf/internal/runtime/mps/manager/mps_event_manager.h"
-#include "orteaf/internal/runtime/mps/manager/mps_fence_pool.h"
+#include "orteaf/internal/runtime/mps/manager/mps_fence_manager.h"
 #include "orteaf/internal/runtime/mps/manager/mps_graph_manager.h"
 #include "orteaf/internal/runtime/mps/manager/mps_heap_manager.h"
 #include "orteaf/internal/runtime/mps/manager/mps_library_manager.h"
@@ -37,7 +37,7 @@ struct MpsDeviceManagerState {
       library_manager{};
   ::orteaf::internal::runtime::mps::manager::MpsGraphManager graph_manager{};
   ::orteaf::internal::runtime::mps::manager::MpsEventManager event_pool{};
-  ::orteaf::internal::runtime::mps::manager::MpsFencePool fence_pool{};
+  ::orteaf::internal::runtime::mps::manager::MpsFenceManager fence_pool{};
 
   MpsDeviceManagerState() = default;
   MpsDeviceManagerState(const MpsDeviceManagerState &) = delete;
@@ -93,7 +93,7 @@ public:
       void, ::orteaf::internal::runtime::mps::manager::MpsEventManager *,
       MpsDeviceManager>;
   using FencePoolLease = ::orteaf::internal::base::Lease<
-      void, ::orteaf::internal::runtime::mps::manager::MpsFencePool *,
+      void, ::orteaf::internal::runtime::mps::manager::MpsFenceManager *,
       MpsDeviceManager>;
 
   MpsDeviceManager() = default;
