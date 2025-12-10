@@ -26,11 +26,10 @@ TEST(HostStackFreelistPolicy, ConfigureInitializesStacks) {
   Policy policy;
   MockCpuResource resource;
 
-    Policy::Config cfg{};
-    cfg.resource = &resource;
-    cfg.min_block_size = 64;
-    cfg.max_block_size = 256;
-    policy.initialize(cfg);
+  Policy::Config cfg{};
+  cfg.resource = &resource;
+  // サイズクラス数を直接渡す (log2(256/64) + 1 = 3)
+  policy.initialize(cfg, 3);
 
   EXPECT_EQ(policy.get_active_freelist_count(), 1u);
   EXPECT_EQ(policy.get_total_free_blocks(), 0u);
@@ -39,18 +38,17 @@ TEST(HostStackFreelistPolicy, ConfigureInitializesStacks) {
 }
 
 TEST(HostStackFreelistPolicy, PushAndPopAreLifoAndResizeStacks) {
-    Policy policy;
-    MockCpuResource resource;
-    Policy::Config cfg{};
-    cfg.resource = &resource;
-    cfg.min_block_size = 64;
-    cfg.max_block_size = 128;
-    policy.initialize(cfg);
+  Policy policy;
+  MockCpuResource resource;
+  Policy::Config cfg{};
+  cfg.resource = &resource;
+  // サイズクラス数を直接渡す (log2(128/64) + 1 = 2)
+  policy.initialize(cfg, 2);
 
   BufferResource first{BufferViewHandle{1},
-                    CpuBufferView{reinterpret_cast<void *>(0x1), 0, 64}};
+                       CpuBufferView{reinterpret_cast<void *>(0x1), 0, 64}};
   BufferResource second{BufferViewHandle{2},
-                     CpuBufferView{reinterpret_cast<void *>(0x1), 64, 64}};
+                        CpuBufferView{reinterpret_cast<void *>(0x1), 64, 64}};
 
   policy.push(2, first);
   policy.push(2, second);
@@ -66,12 +64,12 @@ TEST(HostStackFreelistPolicy, PushAndPopAreLifoAndResizeStacks) {
 
 TEST(HostStackFreelistPolicy, ExpandSplitsChunkIntoBlocks) {
 
-    Policy policy;
-    MockCpuResource resource;
-    Policy::Config cfg{};
-    cfg.resource = &resource;
-    cfg.max_block_size = 256;
-    policy.initialize(cfg);
+  Policy policy;
+  MockCpuResource resource;
+  Policy::Config cfg{};
+  cfg.resource = &resource;
+  // サイズクラス数を渡す (必要に応じて動的にリサイズされる)
+  policy.initialize(cfg, 3);
 
   NiceMock<MockCpuResourceImpl> impl;
   MockCpuResource::set(&impl);
@@ -107,12 +105,11 @@ TEST(HostStackFreelistPolicy, ExpandSplitsChunkIntoBlocks) {
 }
 
 TEST(HostStackFreelistPolicy, RemoveBlocksInChunkRemovesContainedBlocks) {
-    Policy policy;
-    MockCpuResource resource;
-    Policy::Config cfg{};
-    cfg.resource = &resource;
-    cfg.max_block_size = 128;
-    policy.initialize(cfg);
+  Policy policy;
+  MockCpuResource resource;
+  Policy::Config cfg{};
+  cfg.resource = &resource;
+  policy.initialize(cfg, 2);
 
   NiceMock<MockCpuResourceImpl> impl;
   MockCpuResource::set(&impl);
@@ -136,8 +133,9 @@ TEST(HostStackFreelistPolicy, RemoveBlocksInChunkRemovesContainedBlocks) {
       .WillOnce(Return(CpuBufferView{base, 96, 32}));
 
   policy.expand(0, chunk, 128, 32);
-  BufferResource other{BufferViewHandle{99},
-                    CpuBufferView{reinterpret_cast<void *>(0xDEADBEEF), 0, 32}};
+  BufferResource other{
+      BufferViewHandle{99},
+      CpuBufferView{reinterpret_cast<void *>(0xDEADBEEF), 0, 32}};
   policy.push(0, other);
   EXPECT_EQ(policy.get_total_free_blocks(), 5u);
 
