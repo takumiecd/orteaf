@@ -6,6 +6,7 @@
 #include <string>
 
 #include "orteaf/internal/base/handle.h"
+#include "orteaf/internal/base/shared_lease.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include "orteaf/internal/runtime/allocator/buffer.h"
 #include "orteaf/internal/runtime/base/base_manager.h"
@@ -49,6 +50,9 @@ public:
   using Device = typename Traits::DeviceType;
   using Ops = typename Traits::OpsType;
   using BufferHandle = typename Traits::HandleType;
+  using BufferLease =
+      ::orteaf::internal::base::SharedLease<BufferHandle, BufferType,
+                                            BufferManager>;
 
   using Base::device_;
   using Base::free_list_;
@@ -108,10 +112,10 @@ public:
   /**
    * @brief 新規にバッファを確保して返す。
    */
-  BufferType require(std::size_t size, std::size_t alignment) {
+  BufferLease acquire(std::size_t size, std::size_t alignment) {
     Base::ensureInitialized();
     if (size == 0) {
-      return BufferType{};
+      return {};
     }
     const std::size_t index = Base::allocateSlot();
     State &state = states_[index];
@@ -130,13 +134,13 @@ public:
 
     state.in_use = true;
     state.ref_count.store(1, std::memory_order_relaxed);
-    return state.buffer;
+    return BufferLease{static_cast<Derived *>(this), handle, state.buffer};
   }
 
   /**
    * @brief 既存ハンドルを参照し ref_count を増やす。
    */
-  BufferType require(BufferHandle handle) {
+  BufferLease acquire(BufferHandle handle) {
     Base::ensureInitialized();
     const std::size_t index = static_cast<std::size_t>(handle.index);
     if (index >= states_.size()) {
@@ -157,7 +161,7 @@ public:
           std::string(Traits::Name) + " handle is stale");
     }
     state.ref_count.fetch_add(1, std::memory_order_relaxed);
-    return state.buffer;
+    return BufferLease{static_cast<Derived *>(this), handle, state.buffer};
   }
 
   /**
@@ -188,6 +192,11 @@ public:
       ++state.generation;
       free_list_.pushBack(index);
     }
+  }
+
+  void release(BufferLease &lease) noexcept {
+    release(lease.handle());
+    lease.invalidate();
   }
 };
 
