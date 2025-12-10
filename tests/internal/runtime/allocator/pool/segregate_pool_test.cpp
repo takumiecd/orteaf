@@ -94,8 +94,6 @@ TEST(SegregatePool, InitializePropagatesToAllPolicies) {
   cfg.freelist.resource = pool.resource();
   cfg.min_block_size = 64;
   cfg.max_block_size = 256;
-  cfg.freelist.min_block_size = cfg.min_block_size;
-  cfg.freelist.max_block_size = cfg.max_block_size;
 
   EXPECT_CALL(impl, allocate).Times(0);
 
@@ -126,8 +124,6 @@ TEST(SegregatePool, AllocatesFromChunkWhenBelowMaxSize) {
   cfg.chunk_size = 256;
   cfg.min_block_size = 64;
   cfg.max_block_size = 256;
-  cfg.freelist.min_block_size = cfg.min_block_size;
-  cfg.freelist.max_block_size = cfg.max_block_size;
   pool.initialize(cfg);
 
   // One chunk allocation; freelist should hand back a block view aligned to
@@ -166,8 +162,6 @@ TEST(SegregatePool, UsesLargeAllocWhenOverMaxSize) {
   cfg.chunk_size = 256;
   cfg.min_block_size = 64;
   cfg.max_block_size = 128;
-  cfg.freelist.min_block_size = cfg.min_block_size;
-  cfg.freelist.max_block_size = cfg.max_block_size;
   pool.initialize(cfg);
 
   void *base = reinterpret_cast<void *>(0x2000);
@@ -203,8 +197,6 @@ TEST(SegregatePool, DeallocateReturnsBlockToFreelist) {
   cfg.chunk_size = 256;
   cfg.min_block_size = 64;
   cfg.max_block_size = 256;
-  cfg.freelist.min_block_size = cfg.min_block_size;
-  cfg.freelist.max_block_size = cfg.max_block_size;
   pool.initialize(cfg);
 
   void *base = reinterpret_cast<void *>(0x3000);
@@ -240,8 +232,6 @@ TEST(SegregatePool, DeallocateLargeAllocUsesLargePolicy) {
   cfg.chunk_size = 256;
   cfg.min_block_size = 64;
   cfg.max_block_size = 128;
-  cfg.freelist.min_block_size = cfg.min_block_size;
-  cfg.freelist.max_block_size = cfg.max_block_size;
   pool.initialize(cfg);
 
   void *base = reinterpret_cast<void *>(0x4000);
@@ -277,8 +267,6 @@ TEST(SegregatePool, ReleaseChunkFreesBackingAndForcesNewChunkOnNextAlloc) {
   cfg.chunk_size = 256;
   cfg.min_block_size = 64;
   cfg.max_block_size = 256;
-  cfg.freelist.min_block_size = cfg.min_block_size;
-  cfg.freelist.max_block_size = cfg.max_block_size;
   pool.initialize(cfg);
 
   void *base = reinterpret_cast<void *>(0x5000);
@@ -321,8 +309,6 @@ TEST(SegregatePool, StatsTracking) {
   cfg.chunk_size = 256;
   cfg.min_block_size = 64;
   cfg.max_block_size = 256;
-  cfg.freelist.min_block_size = cfg.min_block_size;
-  cfg.freelist.max_block_size = cfg.max_block_size;
   pool.initialize(cfg);
 
   const auto &stats = pool.stats();
