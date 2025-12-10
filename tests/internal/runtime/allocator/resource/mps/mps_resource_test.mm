@@ -10,7 +10,7 @@
 #include "tests/internal/testing/error_assert.h"
 
 namespace orteaf::tests {
-using orteaf::internal::backend::mps::MpsResource;
+using orteaf::internal::runtime::allocator::resource::mps::MpsResource;
 namespace diag_error = ::orteaf::internal::diagnostics::error;
 namespace mps = ::orteaf::internal::runtime::mps::platform::wrapper;
 
