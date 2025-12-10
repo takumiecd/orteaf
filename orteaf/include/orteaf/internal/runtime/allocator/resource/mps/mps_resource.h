@@ -15,7 +15,7 @@
 #include <orteaf/internal/runtime/mps/resource/mps_reuse_token.h>
 #include <unordered_map>
 
-namespace orteaf::internal::backend::mps {
+namespace orteaf::internal::runtime::allocator::resource::mps {
 
 // Simple MPS resource that keeps device/heap handles per instance and creates
 // buffers at offset 0.
@@ -125,6 +125,6 @@ private:
       *library_manager_{nullptr};
 };
 
-} // namespace orteaf::internal::backend::mps
+} // namespace orteaf::internal::runtime::allocator::resource::mps
 
 #endif // ORTEAF_ENABLE_MPS
