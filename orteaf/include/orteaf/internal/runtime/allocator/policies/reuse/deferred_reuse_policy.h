@@ -16,9 +16,14 @@ namespace orteaf::internal::runtime::allocator::policies {
 
 template <typename Resource> class DeferredReusePolicy {
 public:
+  static constexpr auto kBackend = Resource::backend_type_static();
   using BufferResource = typename Resource::BufferResource;
+  using BufferBlock =
+      ::orteaf::internal::runtime::allocator::BufferBlock<kBackend>;
+  using BufferView = typename BufferResource::BufferView;
   using BufferViewHandle = typename BufferResource::BufferViewHandle;
   using ReuseToken = typename Resource::ReuseToken;
+  using FenceToken = typename BufferResource::FenceToken;
 
   DeferredReusePolicy() = default;
   DeferredReusePolicy(const DeferredReusePolicy &) = delete;
@@ -38,11 +43,12 @@ public:
     timeout_ms_ = config.timeout_ms;
   }
 
-  void scheduleForReuse(BufferResource block, std::size_t freelist_index,
-                        ReuseToken reuse_token) {
+  void scheduleForReuse(BufferResource block, std::size_t freelist_index) {
     ORTEAF_THROW_IF(resource_ == nullptr, InvalidState,
                     "DeferredReusePolicy is not initialized");
-    PendingReuse pending{std::move(block), std::move(reuse_token),
+    // Extract BufferBlock and convert FenceToken to ReuseToken
+    PendingReuse pending{BufferBlock{block.handle, std::move(block.view)},
+                         ReuseToken(std::move(block.fence_token)),
                          freelist_index, std::chrono::steady_clock::now()};
     pending_queue_.pushBack(std::move(pending));
   }
@@ -98,20 +104,20 @@ public:
     }
   }
 
-  bool getReadyItem(std::size_t &freelist_index, BufferResource &block) {
+  bool getReadyItem(std::size_t &freelist_index, BufferResource &result) {
     if (ready_queue_.empty())
       return false;
     ReadyReuse item = std::move(ready_queue_.back());
     ready_queue_.resize(ready_queue_.size() - 1);
 
-    block = std::move(item.block);
+    result = BufferResource::fromBlock(item.block);
     freelist_index = item.freelist_index;
     return true;
   }
 
-  void removeBlocksInChunk(const BufferViewHandle &handle) {
-    filterPending(handle);
-    filterReady(handle);
+  void removeBlocksInChunk(const BufferViewHandle &chunk_handle) {
+    filterPending(chunk_handle);
+    filterReady(chunk_handle);
   }
 
   void setTimeout(std::chrono::milliseconds timeout_ms) {
@@ -120,31 +126,31 @@ public:
 
 private:
   struct PendingReuse {
-    BufferResource block;
+    BufferBlock block;
     ReuseToken reuse_token;
     std::size_t freelist_index;
     std::chrono::steady_clock::time_point timestamp;
   };
 
   struct ReadyReuse {
-    BufferResource block;
+    BufferBlock block;
     std::size_t freelist_index;
   };
 
-  void filterPending(const BufferViewHandle &handle) {
+  void filterPending(const BufferViewHandle &chunk_handle) {
     ::orteaf::internal::base::HeapVector<PendingReuse> filtered;
     for (std::size_t i = 0; i < pending_queue_.size(); ++i) {
-      if (pending_queue_[i].block.handle != handle) {
+      if (pending_queue_[i].block.handle != chunk_handle) {
         filtered.pushBack(std::move(pending_queue_[i]));
       }
     }
     pending_queue_ = std::move(filtered);
   }
 
-  void filterReady(const BufferViewHandle &handle) {
+  void filterReady(const BufferViewHandle &chunk_handle) {
     ::orteaf::internal::base::HeapVector<ReadyReuse> filtered;
     for (std::size_t i = 0; i < ready_queue_.size(); ++i) {
-      if (ready_queue_[i].block.handle != handle) {
+      if (ready_queue_[i].block.handle != chunk_handle) {
         filtered.pushBack(std::move(ready_queue_[i]));
       }
     }
