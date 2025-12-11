@@ -10,7 +10,6 @@
 #include "orteaf/internal/diagnostics/error/error_macros.h"
 #include "orteaf/internal/runtime/allocator/buffer_resource.h"
 #include "orteaf/internal/runtime/allocator/policies/policy_config.h"
-#include "orteaf/internal/runtime/base/backend_traits.h"
 
 namespace orteaf::internal::runtime::allocator::policies {
 
@@ -22,18 +21,16 @@ namespace orteaf::internal::runtime::allocator::policies {
  * ごとに分けず、配列ひとつで O(1) アクセスにする。
  *
  * @tparam Resource リソース管理クラス
- * @tparam B バックエンド種別
  */
-template <typename Resource, ::orteaf::internal::backend::Backend B>
+template <typename Resource>
 class DirectChunkLocatorPolicy {
 public:
   // ========================================================================
   // Type aliases
   // ========================================================================
   using BufferViewHandle = ::orteaf::internal::base::BufferViewHandle;
-  using BufferView =
-      typename ::orteaf::internal::runtime::base::BackendTraits<B>::BufferView;
-  using BufferBlock = ::orteaf::internal::runtime::allocator::BufferBlock<B>;
+  using BufferView = typename Resource::BufferView;
+  using BufferBlock = Resource::BufferBlock;
 
   DirectChunkLocatorPolicy() = default;
   DirectChunkLocatorPolicy(const DirectChunkLocatorPolicy &) = delete;
