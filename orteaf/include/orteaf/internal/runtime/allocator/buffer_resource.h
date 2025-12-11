@@ -12,33 +12,38 @@
 
 #if ORTEAF_ENABLE_MPS
 #include <orteaf/internal/runtime/mps/resource/mps_buffer_view.h>
+#include <orteaf/internal/runtime/mps/resource/mps_fence_token.h>
 #endif // ORTEAF_ENABLE_MPS
 
 namespace orteaf::internal::runtime::allocator {
 template <backend::Backend B>
-struct ResourceBufferViewType {
-  using type = ::orteaf::internal::runtime::cpu::resource::CpuBufferView;
+struct ResourceBufferType {
+  using view = ::orteaf::internal::runtime::cpu::resource::CpuBufferView;
 };
 
 #if ORTEAF_ENABLE_CUDA
-template <> struct ResourceBufferViewType<backend::Backend::Cuda> {
-  using type = ::orteaf::internal::runtime::cuda::resource::CudaBufferView;
+template <> struct ResourceBufferType<backend::Backend::Cuda> {
+  using view = ::orteaf::internal::runtime::cuda::resource::CudaBufferView;
 };
 #endif // ORTEAF_ENABLE_CUDA
 
 #if ORTEAF_ENABLE_MPS
-template <> struct ResourceBufferViewType<backend::Backend::Mps> {
-  using type = ::orteaf::internal::runtime::mps::resource::MpsBufferView;
+template <> struct ResourceBufferType<backend::Backend::Mps> {
+  using view = ::orteaf::internal::runtime::mps::resource::MpsBufferView;
+  using fence_token =
+      ::orteaf::internal::runtime::mps::resource::MpsFenceToken;
 };
 #endif // ORTEAF_ENABLE_MPS
 
 // Non-owning view of a buffer with an associated strong ID.
 template <backend::Backend B> struct BufferResource {
-  using BufferView = typename ResourceBufferViewType<B>::type;
+  using BufferView = typename ResourceBufferType<B>::view;
   using BufferViewHandle = ::orteaf::internal::base::BufferViewHandle;
+  using FenceToken = typename ResourceBufferType<B>::fence_token;
 
   BufferViewHandle handle{};
   BufferView view{};
+  FenceToken fence_token{};
 
   BufferResource() = default;
   BufferResource(BufferViewHandle handle, BufferView view)
