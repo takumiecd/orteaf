@@ -39,7 +39,6 @@ struct MpsDeviceManagerState {
   ::orteaf::internal::runtime::mps::manager::MpsGraphManager graph_manager{};
   ::orteaf::internal::runtime::mps::manager::MpsEventManager event_pool{};
   ::orteaf::internal::runtime::mps::manager::MpsFenceManager fence_pool{};
-  ::orteaf::internal::runtime::mps::manager::MpsBufferManager buffer_manager{};
 
   MpsDeviceManagerState() = default;
   MpsDeviceManagerState(const MpsDeviceManagerState &) = delete;
@@ -96,9 +95,6 @@ public:
       MpsDeviceManager>;
   using FencePoolLease = ::orteaf::internal::base::Lease<
       void, ::orteaf::internal::runtime::mps::manager::MpsFenceManager *,
-      MpsDeviceManager>;
-  using BufferManagerLease = ::orteaf::internal::base::Lease<
-      void, ::orteaf::internal::runtime::mps::manager::MpsBufferManager *,
       MpsDeviceManager>;
 
   MpsDeviceManager() = default;
@@ -172,10 +168,6 @@ public:
   FencePoolLease
   acquireFencePool(::orteaf::internal::base::DeviceHandle handle);
   void release(FencePoolLease &lease) noexcept;
-
-  BufferManagerLease
-  acquireBufferManager(::orteaf::internal::base::DeviceHandle handle);
-  void release(BufferManagerLease &lease) noexcept;
 
   ::orteaf::internal::architecture::Architecture
   getArch(::orteaf::internal::base::DeviceHandle handle) const;

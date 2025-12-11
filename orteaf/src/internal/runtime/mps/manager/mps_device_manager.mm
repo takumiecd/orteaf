@@ -46,7 +46,6 @@ void MpsDeviceManager::initialize(SlowOps *slow_ops) {
       state.graph_manager.initialize(device, ops_, graph_initial_capacity_);
       state.event_pool.initialize(device, ops_, 0);
       state.fence_pool.initialize(device, ops_, 0);
-      state.buffer_manager.initialize(device, 0);
     } else {
       state.command_queue_manager.shutdown();
       state.heap_manager.shutdown();
@@ -54,7 +53,6 @@ void MpsDeviceManager::initialize(SlowOps *slow_ops) {
       state.graph_manager.shutdown();
       state.event_pool.shutdown();
       state.fence_pool.shutdown();
-      state.buffer_manager.shutdown();
     }
   }
   initialized_ = true;
@@ -143,16 +141,6 @@ void MpsDeviceManager::release(FencePoolLease &lease) noexcept {
   lease.invalidate();
 }
 
-MpsDeviceManager::BufferManagerLease MpsDeviceManager::acquireBufferManager(
-    ::orteaf::internal::base::DeviceHandle handle) {
-  State &state = ensureValidState(handle);
-  return BufferManagerLease{this, &state.buffer_manager};
-}
-
-void MpsDeviceManager::release(BufferManagerLease &lease) noexcept {
-  lease.invalidate();
-}
-
 ::orteaf::internal::architecture::Architecture
 MpsDeviceManager::getArch(::orteaf::internal::base::DeviceHandle handle) const {
   return ensureValid(handle).arch;
@@ -195,7 +183,6 @@ void MpsDeviceManagerState::reset(SlowOps *slow_ops) noexcept {
   graph_manager.shutdown();
   event_pool.shutdown();
   fence_pool.shutdown();
-  buffer_manager.shutdown();
   if (device != nullptr && slow_ops != nullptr) {
     slow_ops->releaseDevice(device);
   }
@@ -211,7 +198,6 @@ void MpsDeviceManagerState::moveFrom(MpsDeviceManagerState &&other) noexcept {
   graph_manager = std::move(other.graph_manager);
   event_pool = std::move(other.event_pool);
   fence_pool = std::move(other.fence_pool);
-  buffer_manager = std::move(other.buffer_manager);
   device = other.device;
   arch = other.arch;
   is_alive = other.is_alive;
