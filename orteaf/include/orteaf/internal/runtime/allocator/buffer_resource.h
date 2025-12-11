@@ -16,9 +16,11 @@
 #endif // ORTEAF_ENABLE_MPS
 
 namespace orteaf::internal::runtime::allocator {
-template <backend::Backend B>
-struct ResourceBufferType {
+struct CpuFenceToken {};
+
+template <backend::Backend B> struct ResourceBufferType {
   using view = ::orteaf::internal::runtime::cpu::resource::CpuBufferView;
+  using fence_token = CpuFenceToken;
 };
 
 #if ORTEAF_ENABLE_CUDA
@@ -30,8 +32,7 @@ template <> struct ResourceBufferType<backend::Backend::Cuda> {
 #if ORTEAF_ENABLE_MPS
 template <> struct ResourceBufferType<backend::Backend::Mps> {
   using view = ::orteaf::internal::runtime::mps::resource::MpsBufferView;
-  using fence_token =
-      ::orteaf::internal::runtime::mps::resource::MpsFenceToken;
+  using fence_token = ::orteaf::internal::runtime::mps::resource::MpsFenceToken;
 };
 #endif // ORTEAF_ENABLE_MPS
 
