@@ -15,8 +15,7 @@ namespace orteaf::internal::base {
  * @tparam ManagerT The type of the manager that owns the resource. Must provide
  * `acquire(HandleT)` and `release(HandleT)`.
  */
-template <class HandleT, class ResourceT, class ManagerT> 
-class SharedLease {
+template <class HandleT, class ResourceT, class ManagerT> class SharedLease {
 public:
   using HandleType = HandleT;
   using ResourceType = ResourceT;
@@ -33,10 +32,10 @@ public:
     return *this;
   }
 
-  SharedLease(SharedLease&& other) noexcept
-        : manager_(std::exchange(other.manager_, nullptr)),
-          handle_(std::move(other.handle_)),
-          resource_(std::move(other.resource_)) {}
+  SharedLease(SharedLease &&other) noexcept
+      : manager_(std::exchange(other.manager_, nullptr)),
+        handle_(std::move(other.handle_)),
+        resource_(std::move(other.resource_)) {}
 
   SharedLease &operator=(SharedLease &&other) noexcept {
     if (this != &other) {
@@ -50,76 +49,72 @@ public:
 
   ~SharedLease() { release(); }
 
-  
-    auto operator->() noexcept {
-        if constexpr (std::is_pointer_v<ResourceT>) {
-            return resource_;
-        } else {
-            return std::addressof(resource_);
-        }
+  auto operator->() noexcept {
+    if constexpr (std::is_pointer_v<ResourceT>) {
+      return resource_;
+    } else {
+      return std::addressof(resource_);
     }
-    auto operator->() const noexcept {
-        if constexpr (std::is_pointer_v<ResourceT>) {
-            return resource_;
-        } else {
-            return std::addressof(resource_);
-        }
+  }
+  auto operator->() const noexcept {
+    if constexpr (std::is_pointer_v<ResourceT>) {
+      return resource_;
+    } else {
+      return std::addressof(resource_);
     }
+  }
 
-    decltype(auto) operator*() noexcept {
-        if constexpr (std::is_pointer_v<ResourceT>) {
-            return *resource_;
-        } else {
-            return (resource_);
-        }
+  decltype(auto) operator*() noexcept {
+    if constexpr (std::is_pointer_v<ResourceT>) {
+      return *resource_;
+    } else {
+      return (resource_);
     }
-    decltype(auto) operator*() const noexcept {
-        if constexpr (std::is_pointer_v<ResourceT>) {
-            return *resource_;
-        } else {
-            return (resource_);
-        }
+  }
+  decltype(auto) operator*() const noexcept {
+    if constexpr (std::is_pointer_v<ResourceT>) {
+      return *resource_;
+    } else {
+      return (resource_);
     }
+  }
 
-    // Pointer access helper (returns raw pointer regardless of ResourceT being pointer or object).
-    auto pointer() noexcept {
-        if constexpr (std::is_pointer_v<ResourceT>) {
-            return resource_;
-        } else {
-            return std::addressof(resource_);
-        }
+  // Pointer access helper (returns raw pointer regardless of ResourceT being
+  // pointer or object).
+  auto pointer() noexcept {
+    if constexpr (std::is_pointer_v<ResourceT>) {
+      return resource_;
+    } else {
+      return std::addressof(resource_);
     }
-    auto pointer() const noexcept {
-        if constexpr (std::is_pointer_v<ResourceT>) {
-            return resource_;
-        } else {
-            return std::addressof(resource_);
-        }
+  }
+  auto pointer() const noexcept {
+    if constexpr (std::is_pointer_v<ResourceT>) {
+      return resource_;
+    } else {
+      return std::addressof(resource_);
     }
+  }
 
-    template <class F>
-    decltype(auto) with_resource(F&& f) {
-        return static_cast<F&&>(f)(resource_);
-    }
+  template <class F> decltype(auto) with_resource(F &&f) {
+    return static_cast<F &&>(f)(resource_);
+  }
 
-    template <class F>
-    decltype(auto) with_resource(F&& f) const {
-        return static_cast<F&&>(f)(resource_);
-    }
+  template <class F> decltype(auto) with_resource(F &&f) const {
+    return static_cast<F &&>(f)(resource_);
+  }
 
   explicit operator bool() const { return manager_ != nullptr; }
 
   HandleType &handle() { return handle_; }
 
-  void release() {
-    doRelease();
-  }
+  void release() { doRelease(); }
 
 private:
   friend ManagerType;
 
-  SharedLease(ManagerType *manager, HandleType handle, ResourceType resource) 
-  : manager_(manager), handle_(handle), resource_(resource) {}
+  SharedLease(ManagerType *manager, HandleType handle, ResourceType resource)
+      : manager_(manager), handle_(handle), resource_(std::move(resource)) {}
 
   void copyFrom(const SharedLease &other) {
     *this = other.manager_->acquire(other.handle_);
