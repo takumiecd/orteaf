@@ -2,6 +2,8 @@
 
 #include <cstddef>
 
+#include "orteaf/internal/backend/backend.h"
+#include "orteaf/internal/runtime/allocator/buffer_resource.h"
 #include "orteaf/internal/runtime/cpu/resource/cpu_buffer_view.h"
 #include "orteaf/internal/runtime/cpu/resource/cpu_heap_region.h"
 #include <gmock/gmock.h>
@@ -61,6 +63,8 @@ public:
 // Static-API wrapper that forwards to a shared MockCpuResourceImpl instance.
 struct MockCpuResource {
   using BufferView = ::orteaf::internal::runtime::cpu::resource::CpuBufferView;
+  using BufferBlock = ::orteaf::internal::runtime::allocator::BufferBlock<
+      ::orteaf::internal::backend::Backend::Cpu>;
   struct LaunchParams {};
 
   static void set(MockCpuResourceImpl *impl) { impl_ = impl; }

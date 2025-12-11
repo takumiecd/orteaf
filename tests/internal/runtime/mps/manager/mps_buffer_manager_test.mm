@@ -307,8 +307,6 @@ TEST_F(MpsBufferManagerIntegrationTest, BufferRecyclingReusesSlots) {
 
 #include <tests/internal/runtime/mps/manager/testing/mock_mps_resource.h>
 
-namespace {
-
 // StubMpsResource を使った MpsBufferManager
 using StubBufferManager =
     mps_rt::MpsBufferManagerT<orteaf::tests::runtime::mps::StubMpsResource>;
@@ -350,35 +348,35 @@ protected:
 
 TEST_F(MpsBufferManagerMockTest, InitializeSucceeds) {
   configureManager();
-  EXPECT_NO_THROW(manager().initialize(device(), 8));
-  EXPECT_TRUE(manager().isInitialized());
+  EXPECT_NO_THROW(manager_.initialize(device(), 8));
+  EXPECT_TRUE(manager_.isInitialized());
 }
 
 TEST_F(MpsBufferManagerMockTest, ShutdownAfterInitializeWorks) {
   configureManager();
-  manager().initialize(device(), 8);
-  EXPECT_NO_THROW(manager().shutdown());
-  EXPECT_FALSE(manager().isInitialized());
+  manager_.initialize(device(), 8);
+  EXPECT_NO_THROW(manager_.shutdown());
+  EXPECT_FALSE(manager_.isInitialized());
 }
 
 TEST_F(MpsBufferManagerMockTest, AcquireReturnsValidLease) {
   configureManager();
-  manager().initialize(device(), 8);
+  manager_.initialize(device(), 8);
 
-  auto lease = manager().acquire(1024, 16);
+  auto lease = manager_.acquire(1024, 16);
   EXPECT_TRUE(lease);
   EXPECT_TRUE(lease.handle().isValid());
 
-  manager().release(lease);
+  manager_.release(lease);
 }
 
 TEST_F(MpsBufferManagerMockTest, MultipleAcquisitionsWork) {
   configureManager();
-  manager().initialize(device(), 8);
+  manager_.initialize(device(), 8);
 
-  auto lease1 = manager().acquire(256, 16);
-  auto lease2 = manager().acquire(512, 32);
-  auto lease3 = manager().acquire(1024, 64);
+  auto lease1 = manager_.acquire(256, 16);
+  auto lease2 = manager_.acquire(512, 32);
+  auto lease3 = manager_.acquire(1024, 64);
 
   EXPECT_TRUE(lease1);
   EXPECT_TRUE(lease2);
@@ -386,65 +384,63 @@ TEST_F(MpsBufferManagerMockTest, MultipleAcquisitionsWork) {
   EXPECT_NE(lease1.handle().index, lease2.handle().index);
   EXPECT_NE(lease2.handle().index, lease3.handle().index);
 
-  manager().release(lease1);
-  manager().release(lease2);
-  manager().release(lease3);
+  manager_.release(lease1);
+  manager_.release(lease2);
+  manager_.release(lease3);
 }
 
 TEST_F(MpsBufferManagerMockTest, ReleaseRecyclesSlot) {
   configureManager();
-  manager().initialize(device(), 8);
+  manager_.initialize(device(), 8);
 
-  auto first = manager().acquire(256, 16);
+  auto first = manager_.acquire(256, 16);
   const auto first_index = first.handle().index;
-  manager().release(first);
+  manager_.release(first);
 
   // Should reuse the same slot
-  auto second = manager().acquire(512, 16);
+  auto second = manager_.acquire(512, 16);
   EXPECT_EQ(second.handle().index, first_index);
 
-  manager().release(second);
+  manager_.release(second);
 }
 
 TEST_F(MpsBufferManagerMockTest, AcquireByHandleIncreasesRefCount) {
   configureManager();
-  manager().initialize(device(), 8);
+  manager_.initialize(device(), 8);
 
-  auto lease1 = manager().acquire(256, 16);
+  auto lease1 = manager_.acquire(256, 16);
   const auto handle = lease1.handle();
 
   // Acquire by handle
-  auto lease2 = manager().acquire(handle);
+  auto lease2 = manager_.acquire(handle);
   EXPECT_TRUE(lease2);
   EXPECT_EQ(lease2.handle().index, handle.index);
   EXPECT_EQ(lease2.handle().generation, handle.generation);
 
   // Release both
-  manager().release(lease1);
-  manager().release(lease2);
+  manager_.release(lease1);
+  manager_.release(lease2);
 }
 
 TEST_F(MpsBufferManagerMockTest, AcquireWithZeroSizeReturnsInvalidLease) {
   configureManager();
-  manager().initialize(device(), 8);
+  manager_.initialize(device(), 8);
 
-  auto lease = manager().acquire(0, 16);
+  auto lease = manager_.acquire(0, 16);
   EXPECT_FALSE(lease);
 }
 
 TEST_F(MpsBufferManagerMockTest, CapacityGrowsOnAcquire) {
   configureManager();
-  manager().initialize(device(), 4);
+  manager_.initialize(device(), 4);
 
   // Acquire to use capacity
-  auto lease1 = manager().acquire(256, 16);
-  auto lease2 = manager().acquire(256, 16);
-  EXPECT_GE(manager().capacity(), 2u);
+  auto lease1 = manager_.acquire(256, 16);
+  auto lease2 = manager_.acquire(256, 16);
+  EXPECT_GE(manager_.capacity(), 2u);
 
-  manager().release(lease1);
-  manager().release(lease2);
+  manager_.release(lease1);
+  manager_.release(lease2);
 }
-
-} // namespace
 
 #endif // ORTEAF_ENABLE_MPS

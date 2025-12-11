@@ -48,9 +48,9 @@ private:
 #endif // ORTEAF_CORE_DEBUG_ENABLED
 
 TEST(DirectResourceLargeAlloc, AllocateReturnsBufferResourceWithId) {
-    policies::DirectResourceLargeAllocPolicy<MockCpuResource, Backend::Cpu> policy;
-    MockCpuResource resource;
-    policy.initialize({&resource});
+  policies::DirectResourceLargeAllocPolicy<MockCpuResource> policy;
+  MockCpuResource resource;
+  policy.initialize({&resource});
 
   ::testing::NiceMock<MockCpuResourceImpl> impl;
   MockCpuResource::set(&impl);
@@ -66,9 +66,9 @@ TEST(DirectResourceLargeAlloc, AllocateReturnsBufferResourceWithId) {
 }
 
 TEST(DirectResourceLargeAlloc, DeallocateCallsResource) {
-    policies::DirectResourceLargeAllocPolicy<MockCpuResource, Backend::Cpu> policy;
-    MockCpuResource resource;
-    policy.initialize({&resource});
+  policies::DirectResourceLargeAllocPolicy<MockCpuResource> policy;
+  MockCpuResource resource;
+  policy.initialize({&resource});
 
   ::orteaf::internal::runtime::cpu::resource::CpuBufferView view{
       reinterpret_cast<void *>(0x2), 0, 256};
@@ -84,9 +84,9 @@ TEST(DirectResourceLargeAlloc, DeallocateCallsResource) {
 
 #if ORTEAF_CORE_DEBUG_ENABLED
 TEST(DirectResourceLargeAlloc, LogsDebugWhenMetadataMismatches) {
-    policies::DirectResourceLargeAllocPolicy<MockCpuResource, Backend::Cpu> policy;
-    MockCpuResource resource;
-    policy.initialize({&resource});
+  policies::DirectResourceLargeAllocPolicy<MockCpuResource> policy;
+  MockCpuResource resource;
+  policy.initialize({&resource});
 
   ::testing::NiceMock<MockCpuResourceImpl> impl;
   MockCpuResource::set(&impl);

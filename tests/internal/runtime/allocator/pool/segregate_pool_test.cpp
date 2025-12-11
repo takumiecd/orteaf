@@ -33,6 +33,8 @@ struct MockResource {
   using BufferView = CpuBufferView;
   using BufferResource =
       ::orteaf::internal::runtime::allocator::BufferResource<Backend::Cpu>;
+  using BufferBlock =
+      ::orteaf::internal::runtime::allocator::BufferBlock<Backend::Cpu>;
   using FenceToken = typename BufferResource::FenceToken;
   struct ReuseToken {
     ReuseToken() = default;
@@ -84,10 +86,10 @@ struct MockResourceGuard {
 
 using Pool = ::orteaf::internal::runtime::allocator::pool::SegregatePool<
     MockResource, policies::FastFreePolicy, policies::NoLockThreadingPolicy,
-    policies::DirectResourceLargeAllocPolicy<MockResource, Backend::Cpu>,
-    policies::DirectChunkLocatorPolicy<MockResource, Backend::Cpu>,
+    policies::DirectResourceLargeAllocPolicy<MockResource>,
+    policies::DirectChunkLocatorPolicy<MockResource>,
     policies::DeferredReusePolicy<MockResource>,
-    policies::HostStackFreelistPolicy<MockResource, Backend::Cpu>>;
+    policies::HostStackFreelistPolicy<MockResource>>;
 
 using BufferResourceType = BufferResource<Backend::Cpu>;
 

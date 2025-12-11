@@ -27,6 +27,8 @@ public:
   using BufferView = ::orteaf::internal::runtime::mps::resource::MpsBufferView;
   using BufferResource = ::orteaf::internal::runtime::allocator::BufferResource<
       ::orteaf::internal::backend::Backend::Mps>;
+  using BufferBlock = ::orteaf::internal::runtime::allocator::BufferBlock<
+      ::orteaf::internal::backend::Backend::Mps>;
   using FenceToken = ::orteaf::internal::runtime::mps::resource::MpsFenceToken;
   using ReuseToken = ::orteaf::internal::runtime::mps::resource::MpsReuseToken;
   using LaunchParams = ::orteaf::internal::runtime::base::BackendTraits<

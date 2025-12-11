@@ -19,7 +19,7 @@ using ::testing::Sequence;
 
 namespace {
 
-using Policy = policies::HostStackFreelistPolicy<MockCpuResource, Backend::Cpu>;
+using Policy = policies::HostStackFreelistPolicy<MockCpuResource>;
 using BufferBlock = Policy::BufferBlock;
 
 TEST(HostStackFreelistPolicy, ConfigureInitializesStacks) {
