@@ -16,25 +16,25 @@
 
 namespace orteaf::internal::runtime::allocator {
 template <backend::Backend B>
-struct BackendBufferView {
+struct ResourceBufferViewType {
   using type = ::orteaf::internal::runtime::cpu::resource::CpuBufferView;
 };
 
 #if ORTEAF_ENABLE_CUDA
-template <> struct BackendBufferView<backend::Backend::Cuda> {
+template <> struct ResourceBufferViewType<backend::Backend::Cuda> {
   using type = ::orteaf::internal::runtime::cuda::resource::CudaBufferView;
 };
 #endif // ORTEAF_ENABLE_CUDA
 
 #if ORTEAF_ENABLE_MPS
-template <> struct BackendBufferView<backend::Backend::Mps> {
+template <> struct ResourceBufferViewType<backend::Backend::Mps> {
   using type = ::orteaf::internal::runtime::mps::resource::MpsBufferView;
 };
 #endif // ORTEAF_ENABLE_MPS
 
 // Non-owning view of a buffer with an associated strong ID.
 template <backend::Backend B> struct BufferResource {
-  using BufferView = typename BackendBufferView<B>::type;
+  using BufferView = typename ResourceBufferViewType<B>::type;
   using BufferViewHandle = ::orteaf::internal::base::BufferViewHandle;
 
   BufferViewHandle handle{};
