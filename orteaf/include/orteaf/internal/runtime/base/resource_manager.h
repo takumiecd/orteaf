@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <limits>
+#include <memory>
 
 #include "orteaf/internal/base/handle.h"
 #include "orteaf/internal/base/shared_lease.h"
@@ -150,7 +151,9 @@ public:
         ResourceHandle{static_cast<typename ResourceHandle::index_type>(index),
                        static_cast<typename ResourceHandle::generation_type>(
                            state.generation)};
-    return ResourceLease{static_cast<Derived *>(this), handle, state.resource};
+    return ResourceLease{
+        static_cast<Derived *>(this), handle,
+        ResourceLease::makeResourcePointer(state.resource)};
   }
 
   ResourceLease acquire(ResourceHandle handle) {
@@ -178,7 +181,9 @@ public:
     // Increment ref count
     state.ref_count.fetch_add(1, std::memory_order_relaxed);
 
-    return ResourceLease{static_cast<Derived *>(this), handle, state.resource};
+    return ResourceLease{
+        static_cast<Derived *>(this), handle,
+        ResourceLease::makeResourcePointer(state.resource)};
   }
 
   void release(ResourceLease &lease) noexcept {
