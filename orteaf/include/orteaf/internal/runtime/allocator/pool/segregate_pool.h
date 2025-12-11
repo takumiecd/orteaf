@@ -104,16 +104,17 @@ public:
 
   const Stats &stats() const { return stats_; }
 
-  BufferBlock allocate(std::size_t size, std::size_t alignment,
-                       LaunchParams &launch_params) {
+  BufferResource allocate(std::size_t size, std::size_t alignment,
+                          LaunchParams &launch_params) {
     if (size == 0)
-      return BufferBlock{};
+      return BufferResource{};
 
     std::lock_guard<ThreadingPolicy> lock(threading_policy_);
 
     if (size > max_block_size_) {
       stats_.updateAlloc(size, true);
-      return large_alloc_policy_.allocate(size, alignment);
+      BufferBlock block = large_alloc_policy_.allocate(size, alignment);
+      return BufferResource::fromBlock(block);
     }
 
     processPendingReuses(launch_params);
@@ -134,7 +135,7 @@ public:
     chunk_locator_policy_.incrementUsed(block.handle);
 
     stats_.updateAlloc(size, false);
-    return block;
+    return BufferResource::fromBlock(block);
   }
 
   void deallocate(BufferResource block, std::size_t size, std::size_t alignment,
