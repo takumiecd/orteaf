@@ -3,16 +3,13 @@
 #include <concepts>
 #include <cstddef>
 
-#include <orteaf/internal/backend/backend.h>
-#include <orteaf/internal/runtime/base/backend_traits.h>
-
 namespace orteaf::internal::runtime::allocator::policies {
 
-template <typename Policy, typename Resource, ::orteaf::internal::backend::Backend B>
+template <typename Policy, typename Resource>
 concept FreelistPolicy = requires(
     Policy policy, const typename Policy::Config& cfg, std::size_t list_index,
     typename Policy::BufferResource block, std::size_t chunk_size, std::size_t block_size,
-    const typename ::orteaf::internal::runtime::base::BackendTraits<B>::KernelLaunchParams& launch_params) {
+    const typename Resource::LaunchParams& launch_params) {
     policy.initialize(cfg);
     policy.configureBounds(chunk_size, block_size);
     policy.push(list_index, block, launch_params);
