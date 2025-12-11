@@ -55,14 +55,9 @@ public:
         nullptr};
     ::orteaf::internal::runtime::mps::platform::wrapper::MPSHeap_t heap{
         nullptr};
-    ::orteaf::internal::runtime::mps::platform::wrapper::MPSHeap_t staging_heap{
-        nullptr}; // optional host-visible heap for readback
     ::orteaf::internal::runtime::mps::platform::wrapper::MPSBufferUsage_t usage{
         ::orteaf::internal::runtime::mps::platform::wrapper::
             kMPSDefaultBufferUsage};
-    ::orteaf::internal::runtime::mps::platform::wrapper::MPSBufferUsage_t
-        staging_usage{::orteaf::internal::runtime::mps::platform::wrapper::
-                          kMPSDefaultBufferUsage};
     ::orteaf::internal::runtime::mps::manager::MpsLibraryManager
         *library_manager{nullptr};
     std::size_t chunk_table_capacity{16};
