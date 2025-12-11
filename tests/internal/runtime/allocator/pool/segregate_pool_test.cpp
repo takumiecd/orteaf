@@ -11,7 +11,6 @@
 #include "orteaf/internal/runtime/allocator/policies/large_alloc/direct_resource_large_alloc.h"
 #include "orteaf/internal/runtime/allocator/policies/reuse/deferred_reuse_policy.h"
 #include "orteaf/internal/runtime/allocator/policies/threading/threading_policies.h"
-#include "orteaf/internal/runtime/base/backend_traits.h"
 #include "orteaf/internal/runtime/cpu/resource/cpu_buffer_view.h"
 #include "tests/internal/runtime/allocator/testing/mock_resource.h"
 
@@ -33,8 +32,10 @@ struct MockResource {
   using BufferView = CpuBufferView;
   using BufferResource =
       ::orteaf::internal::runtime::allocator::BufferResource<Backend::Cpu>;
-  using ReuseToken = ::orteaf::internal::runtime::base::BackendTraits<
-      Backend::Cpu>::ReuseToken;
+  struct ReuseToken {};
+
+  static constexpr Backend backend_type_static() noexcept { return Backend::Cpu; }
+  constexpr Backend backend_type() const noexcept { return backend_type_static(); }
 
   struct Config {
     // Empty config for mock resource
@@ -75,9 +76,8 @@ using Pool = ::orteaf::internal::runtime::allocator::pool::SegregatePool<
     MockResource, policies::FastFreePolicy, policies::NoLockThreadingPolicy,
     policies::DirectResourceLargeAllocPolicy<MockResource, Backend::Cpu>,
     policies::DirectChunkLocatorPolicy<MockResource, Backend::Cpu>,
-    policies::DeferredReusePolicy<MockResource, Backend::Cpu>,
-    policies::HostStackFreelistPolicy<MockResource, Backend::Cpu>,
-    Backend::Cpu>;
+    policies::DeferredReusePolicy<MockResource>,
+    policies::HostStackFreelistPolicy<MockResource, Backend::Cpu>>;
 
 TEST(SegregatePool, InitializePropagatesToAllPolicies) {
   NiceMock<MockCpuResourceImpl> impl;
