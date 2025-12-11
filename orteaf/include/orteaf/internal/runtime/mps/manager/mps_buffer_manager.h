@@ -43,8 +43,7 @@ using MpsBufferPoolT =
 template <typename ResourceT> struct MpsBufferManagerTraitsT {
   using BufferType = ::orteaf::internal::runtime::allocator::Buffer;
   using StateType = ::orteaf::internal::runtime::base::BufferState<BufferType>;
-  using DeviceType =
-      ::orteaf::internal::runtime::mps::platform::wrapper::MPSDevice_t;
+  using DeviceType = ::orteaf::internal::runtime::mps::platform::wrapper::MPSDevice_t;
   using OpsType = MpsBufferPoolT<ResourceT>; // Simplified: just the pool
   using HandleType = ::orteaf::internal::base::BufferHandle;
 
@@ -84,12 +83,10 @@ template <typename ResourceT> class MpsBufferManagerT;
 // ============================================================================
 template <typename ResourceT>
 class MpsBufferManagerT
-    : public ::orteaf::internal::runtime::base::BufferManager<
-          MpsBufferManagerT<ResourceT>, MpsBufferManagerTraitsT<ResourceT>> {
+    : public ::orteaf::internal::runtime::base::BufferManager<MpsBufferManagerT<ResourceT>, MpsBufferManagerTraitsT<ResourceT>> {
 public:
   using Traits = MpsBufferManagerTraitsT<ResourceT>;
-  using Base = ::orteaf::internal::runtime::base::BufferManager<
-      MpsBufferManagerT<ResourceT>, Traits>;
+  using Base = ::orteaf::internal::runtime::base::BufferManager<MpsBufferManagerT<ResourceT>, Traits>;
   using Buffer = ::orteaf::internal::runtime::allocator::Buffer;
   using BufferHandle = typename Base::BufferHandle;
   using BufferLease = typename Base::BufferLease;
