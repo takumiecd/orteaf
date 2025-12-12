@@ -5,20 +5,9 @@
 #include <cstddef>
 #include <cstdint>
 
-#include <cstddef>
-
 #include "orteaf/internal/runtime/mps/platform/wrapper/mps_types.h"
 
 namespace orteaf::internal::runtime::mps::platform::wrapper {
-
-enum class MpsGraphDataType : std::uint32_t {
-  kInvalid = 0,
-  kFloat16,
-  kFloat32,
-  kInt32,
-  kInt64,
-  kBool,
-};
 
 enum class MpsGraphDataType : std::uint32_t {
   kInvalid = 0,
