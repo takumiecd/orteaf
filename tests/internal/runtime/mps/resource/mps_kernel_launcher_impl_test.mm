@@ -1,7 +1,5 @@
 #include <gtest/gtest.h>
 
-#include "orteaf/internal/runtime/mps/ops/mps_private_ops.h"
-#include "orteaf/internal/runtime/mps/platform/mps_fast_ops.h"
 #include "orteaf/internal/runtime/mps/platform/wrapper/mps_compute_command_encoder.h"
 #include "orteaf/internal/runtime/mps/resource/mps_fence_token.h"
 #include "orteaf/internal/runtime/mps/resource/mps_kernel_launcher_impl.h"
