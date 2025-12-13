@@ -8,8 +8,6 @@
 #include <tests/internal/runtime/mps/manager/testing/backend_mock.h>
 #include <tests/internal/testing/error_assert.h>
 
-namespace backend = orteaf::internal::backend;
-namespace base = orteaf::internal::base;
 namespace mps_wrapper = orteaf::internal::runtime::mps::platform::wrapper;
 namespace diag_error = orteaf::internal::diagnostics::error;
 namespace mps_rt = orteaf::internal::runtime::mps::manager;
@@ -48,10 +46,17 @@ protected:
   mps_wrapper::MPSDevice_t device_{nullptr};
 };
 
+// =============================================================================
+// Initialization Tests
+// =============================================================================
+
 TEST_F(MpsGraphManagerTest, AccessBeforeInitializationThrows) {
+  // Arrange
   mps_rt::GraphKey key = mps_rt::GraphKey::Named("g0");
   key.data_type = mps_wrapper::MpsGraphDataType::kFloat32;
   key.target_tensor_count = 1;
+
+  // Act & Assert
   ExpectError(diag_error::OrteafErrc::InvalidState, [&] {
     manager_.acquire(key, [](auto, auto, auto) {
       return mps_wrapper::MPSGraphExecutable_t{};
@@ -59,7 +64,12 @@ TEST_F(MpsGraphManagerTest, AccessBeforeInitializationThrows) {
   });
 }
 
+// =============================================================================
+// Acquire/Cache Tests
+// =============================================================================
+
 TEST_F(MpsGraphManagerTest, AcquireCachesExecutableForSameKey) {
+  // Arrange
   mps_wrapper::MPSGraph_t graph = makeGraph(0x1010);
   mps_wrapper::MPSGraphExecutable_t exe = makeExecutable(0x2020);
   mps_wrapper::MPSGraphTensor_t target = makeTensor(0x3030);
@@ -84,16 +94,22 @@ TEST_F(MpsGraphManagerTest, AcquireCachesExecutableForSameKey) {
     return ops->compileGraph(g, dev, &feed, 1, &target, 1, nullptr, 0);
   };
 
+  // Act: Acquire twice with same key
   auto lease1 = manager_.acquire(key, compile_fn);
   auto exe1 = lease1.pointer();
   manager_.release(lease1);
 
   auto lease2 = manager_.acquire(key, compile_fn);
+
+  // Assert: Same executable (cached)
   EXPECT_EQ(exe1, lease2.pointer());
+
+  // Cleanup
   manager_.release(lease2);
 }
 
 TEST_F(MpsGraphManagerTest, DifferentKeyShapeTriggersNewCompile) {
+  // Arrange
   mps_wrapper::MPSGraph_t graph1 = makeGraph(0x1111);
   mps_wrapper::MPSGraphExecutable_t exe1 = makeExecutable(0x2222);
   mps_wrapper::MPSGraph_t graph2 = makeGraph(0x3333);
@@ -110,7 +126,6 @@ TEST_F(MpsGraphManagerTest, DifferentKeyShapeTriggersNewCompile) {
   EXPECT_CALL(mock_, compileGraph(graph2, device_, ::testing::_, 1,
                                   ::testing::_, 1, ::testing::_, 0))
       .WillOnce(::testing::Return(exe2));
-  // shutdown walks states in order: state0 exe/graph, then state1 exe/graph
   EXPECT_CALL(mock_, destroyGraphExecutable(exe1)).Times(1);
   EXPECT_CALL(mock_, destroyGraph(graph1)).Times(1);
   EXPECT_CALL(mock_, destroyGraphExecutable(exe2)).Times(1);
@@ -130,20 +145,32 @@ TEST_F(MpsGraphManagerTest, DifferentKeyShapeTriggersNewCompile) {
   key1.target_tensor_count = 1;
 
   mps_rt::GraphKey key2 = key1;
-  key2.shape = {2, 1}; // different shape -> new entry
+  key2.shape = {2, 1}; // Different shape -> new entry
 
+  // Act
   auto lease1 = manager_.acquire(key1, compile_fn);
   auto lease2 = manager_.acquire(key2, compile_fn);
+
+  // Assert: Different executables
   EXPECT_NE(lease1.pointer(), lease2.pointer());
+
+  // Cleanup
   manager_.release(lease1);
   manager_.release(lease2);
 }
 
+// =============================================================================
+// Validation Tests
+// =============================================================================
+
 TEST_F(MpsGraphManagerTest, InvalidKeyRejected) {
+  // Arrange
   manager_.initialize(device_, &mock_, /*capacity=*/1);
   mps_rt::GraphKey key = mps_rt::GraphKey::Named("");
   key.data_type = mps_wrapper::MpsGraphDataType::kFloat32;
   key.target_tensor_count = 1;
+
+  // Act & Assert
   ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
     manager_.acquire(key, [](auto, auto, auto) {
       return mps_wrapper::MPSGraphExecutable_t{};
@@ -151,7 +178,12 @@ TEST_F(MpsGraphManagerTest, InvalidKeyRejected) {
   });
 }
 
+// =============================================================================
+// Error Handling Tests
+// =============================================================================
+
 TEST_F(MpsGraphManagerTest, NullExecutableFromCompileThrowsAndCleansUp) {
+  // Arrange
   mps_wrapper::MPSGraph_t graph = makeGraph(0xABCD);
   EXPECT_CALL(mock_, createGraph()).WillOnce(::testing::Return(graph));
   EXPECT_CALL(mock_, destroyGraph(graph)).Times(1);
@@ -166,6 +198,7 @@ TEST_F(MpsGraphManagerTest, NullExecutableFromCompileThrowsAndCleansUp) {
     return mps_wrapper::MPSGraphExecutable_t{};
   };
 
+  // Act & Assert
   ExpectError(diag_error::OrteafErrc::InvalidState,
               [&] { manager_.acquire(key, compile_fn); });
 }

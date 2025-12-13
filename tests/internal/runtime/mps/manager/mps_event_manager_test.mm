@@ -19,10 +19,6 @@ using orteaf::tests::ExpectError;
 
 namespace {
 
-mps_wrapper::MPSDevice_t makeDevice(std::uintptr_t value) {
-  return reinterpret_cast<mps_wrapper::MPSDevice_t>(value);
-}
-
 mps_wrapper::MPSEvent_t makeEvent(std::uintptr_t value) {
   return reinterpret_cast<mps_wrapper::MPSEvent_t>(value);
 }
@@ -49,8 +45,14 @@ using ProviderTypes = ::testing::Types<testing_mps::MockBackendOpsProvider>;
 
 TYPED_TEST_SUITE(MpsEventManagerTypedTest, ProviderTypes);
 
+// =============================================================================
+// Initialization Tests
+// =============================================================================
+
 TYPED_TEST(MpsEventManagerTypedTest, InitializeRejectsNullDevice) {
   auto &manager = this->manager();
+
+  // Act & Assert
   ExpectError(diag_error::OrteafErrc::InvalidArgument,
               [&] { manager.initialize(nullptr, this->getOps(), 1); });
 }
@@ -58,6 +60,8 @@ TYPED_TEST(MpsEventManagerTypedTest, InitializeRejectsNullDevice) {
 TYPED_TEST(MpsEventManagerTypedTest, InitializeRejectsNullOps) {
   auto &manager = this->manager();
   const auto device = this->adapter().device();
+
+  // Act & Assert
   ExpectError(diag_error::OrteafErrc::InvalidArgument,
               [&] { manager.initialize(device, nullptr, 1); });
 }
@@ -65,16 +69,18 @@ TYPED_TEST(MpsEventManagerTypedTest, InitializeRejectsNullOps) {
 TYPED_TEST(MpsEventManagerTypedTest, InitializeRejectsExcessiveCapacity) {
   auto &manager = this->manager();
   const auto device = this->adapter().device();
-  // Ensure we do the addition in a type that can hold the value without
-  // overflow if size_t > 32-bit
   const std::size_t excessive =
       static_cast<std::size_t>(base::EventHandle::invalid_index()) + 1;
+
+  // Act & Assert
   ExpectError(diag_error::OrteafErrc::InvalidArgument,
               [&] { manager.initialize(device, this->getOps(), excessive); });
 }
 
 TYPED_TEST(MpsEventManagerTypedTest, OperationsBeforeInitializationThrow) {
   auto &manager = this->manager();
+
+  // Act & Assert
   ExpectError(diag_error::OrteafErrc::InvalidState,
               [&] { (void)manager.acquire(); });
 }
@@ -82,13 +88,14 @@ TYPED_TEST(MpsEventManagerTypedTest, OperationsBeforeInitializationThrow) {
 TYPED_TEST(MpsEventManagerTypedTest, InitializeDoesNotEagerlyCreateEvents) {
   auto &manager = this->manager();
   const auto device = this->adapter().device();
-  // Initialize should NOT create events (lazy allocation)
+
+  // Arrange: Initialize should NOT create events (lazy allocation)
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectCreateEvents({}, ::testing::Eq(device));
   }
   manager.initialize(device, this->getOps(), 2);
 
-  // First acquire should create event
+  // Act: First acquire creates event
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectCreateEvents({makeEvent(0x100)},
                                        ::testing::Eq(device));
@@ -96,7 +103,7 @@ TYPED_TEST(MpsEventManagerTypedTest, InitializeDoesNotEagerlyCreateEvents) {
   auto first = manager.acquire();
   EXPECT_TRUE(first);
 
-  // Second acquire should create another event
+  // Act: Second acquire creates another event
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectCreateEvents({makeEvent(0x101)},
                                        ::testing::Eq(device));
@@ -104,6 +111,7 @@ TYPED_TEST(MpsEventManagerTypedTest, InitializeDoesNotEagerlyCreateEvents) {
   auto second = manager.acquire();
   EXPECT_TRUE(second);
 
+  // Cleanup
   manager.release(first);
   manager.release(second);
 
@@ -116,19 +124,24 @@ TYPED_TEST(MpsEventManagerTypedTest, InitializeDoesNotEagerlyCreateEvents) {
 TYPED_TEST(MpsEventManagerTypedTest, InitializeWithZeroCapacitySucceeds) {
   auto &manager = this->manager();
   const auto device = this->adapter().device();
+
+  // Arrange
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectCreateEvents({}, ::testing::Eq(device));
   }
   manager.initialize(device, this->getOps(), 0);
 
-  // Should grow on demand
+  // Act: Should grow on demand
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectCreateEvents({makeEvent(0x200)},
                                        ::testing::Eq(device));
   }
   auto event = manager.acquire();
+
+  // Assert
   EXPECT_TRUE(event);
 
+  // Cleanup
   manager.release(event);
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectDestroyEvents({makeEvent(0x200)});
@@ -136,20 +149,30 @@ TYPED_TEST(MpsEventManagerTypedTest, InitializeWithZeroCapacitySucceeds) {
   manager.shutdown();
 }
 
+// =============================================================================
+// Acquire Tests
+// =============================================================================
+
 TYPED_TEST(MpsEventManagerTypedTest, AcquireReturnsValidLease) {
   auto &manager = this->manager();
   const auto device = this->adapter().device();
   manager.initialize(device, this->getOps(), 1);
 
+  // Arrange
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectCreateEvents({makeEvent(0x300)},
                                        ::testing::Eq(device));
   }
+
+  // Act
   auto lease = manager.acquire();
+
+  // Assert
   EXPECT_TRUE(lease);
   EXPECT_NE(lease.pointer(), nullptr);
   EXPECT_TRUE(lease.handle().isValid());
 
+  // Cleanup
   manager.release(lease);
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectDestroyEvents({makeEvent(0x300)});
@@ -162,21 +185,26 @@ TYPED_TEST(MpsEventManagerTypedTest, AcquireByHandleReturnsValidLease) {
   const auto device = this->adapter().device();
   manager.initialize(device, this->getOps(), 1);
 
+  // Arrange
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectCreateEvents({makeEvent(0x400)},
                                        ::testing::Eq(device));
   }
+
+  // Act
   auto first_lease = manager.acquire();
   EXPECT_TRUE(first_lease);
   const auto handle = first_lease.handle();
 
-  // Acquire by handle should increment ref count
   auto second_lease = manager.acquire(handle);
+
+  // Assert: Same event, ref count incremented
   EXPECT_TRUE(second_lease);
   EXPECT_EQ(second_lease.handle().index, handle.index);
   EXPECT_EQ(second_lease.handle().generation, handle.generation);
   EXPECT_EQ(second_lease.pointer(), first_lease.pointer());
 
+  // Cleanup
   manager.release(first_lease);
   manager.release(second_lease);
   if constexpr (TypeParam::is_mock) {
@@ -191,10 +219,11 @@ TYPED_TEST(MpsEventManagerTypedTest, AcquireByInvalidHandleThrows) {
   manager.initialize(device, this->getOps(), 1);
 
   const auto invalid_handle = base::EventHandle{999};
+
+  // Act & Assert
   ExpectError(diag_error::OrteafErrc::InvalidArgument,
               [&] { (void)manager.acquire(invalid_handle); });
 
-  // No events created, so no destruction expected
   manager.shutdown();
 }
 
@@ -203,51 +232,58 @@ TYPED_TEST(MpsEventManagerTypedTest, AcquireByStaleHandleThrows) {
   const auto device = this->adapter().device();
   manager.initialize(device, this->getOps(), 1);
 
+  // Arrange
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectCreateEvents({makeEvent(0x600)},
                                        ::testing::Eq(device));
   }
+
   auto lease = manager.acquire();
   const auto handle = lease.handle();
   manager.release(lease);
 
-  // Now acquire again. It should reuse the slot.
-  // The event object itself is reused (not destroyed).
+  // Act: Reacquire reuses slot/event
   auto new_lease = manager.acquire();
-  // Implicitly: createEvents expected NOT called (reused).
-
   manager.release(new_lease);
 
-  // Old handle should be stale
+  // Assert: Old handle is stale
   ExpectError(diag_error::OrteafErrc::InvalidState,
               [&] { (void)manager.acquire(handle); });
 
+  // Cleanup
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectDestroyEvents({makeEvent(0x600)});
   }
   manager.shutdown();
 }
 
+// =============================================================================
+// Release Tests
+// =============================================================================
+
 TYPED_TEST(MpsEventManagerTypedTest, ReleaseDecrementsRefCount) {
   auto &manager = this->manager();
   const auto device = this->adapter().device();
   manager.initialize(device, this->getOps(), 1);
 
+  // Arrange
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectCreateEvents({makeEvent(0x700)},
                                        ::testing::Eq(device));
   }
+
   auto lease1 = manager.acquire();
   const auto handle = lease1.handle();
   auto lease2 = manager.acquire(handle);
 
-  // Release first lease, event should still be in use
+  // Act: Release one, event still in use
   manager.release(lease1);
 
-  // Should still be able to acquire by handle
+  // Assert: Can still acquire by handle
   auto lease3 = manager.acquire(handle);
   EXPECT_TRUE(lease3);
 
+  // Cleanup
   manager.release(lease2);
   manager.release(lease3);
 
@@ -262,18 +298,23 @@ TYPED_TEST(MpsEventManagerTypedTest, EventRecyclingReusesSlots) {
   const auto device = this->adapter().device();
   manager.initialize(device, this->getOps(), 1);
 
+  // Arrange
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectCreateEvents({makeEvent(0x800)},
                                        ::testing::Eq(device));
   }
+
+  // Act
   auto first = manager.acquire();
   const auto first_index = first.handle().index;
   manager.release(first);
 
-  // Should reuse the same slot AND the same event
   auto second = manager.acquire();
+
+  // Assert: Same slot and event reused
   EXPECT_EQ(second.handle().index, first_index);
 
+  // Cleanup
   manager.release(second);
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectDestroyEvents({makeEvent(0x800)});
@@ -286,16 +327,21 @@ TYPED_TEST(MpsEventManagerTypedTest, MovedFromLeaseIsInactive) {
   const auto device = this->adapter().device();
   manager.initialize(device, this->getOps(), 1);
 
+  // Arrange
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectCreateEvents({makeEvent(0x900)},
                                        ::testing::Eq(device));
   }
+
+  // Act
   auto lease1 = manager.acquire();
   auto lease2 = std::move(lease1);
 
+  // Assert
   EXPECT_FALSE(lease1);
   EXPECT_TRUE(lease2);
 
+  // Cleanup
   manager.release(lease2);
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectDestroyEvents({makeEvent(0x900)});
@@ -308,6 +354,7 @@ TYPED_TEST(MpsEventManagerTypedTest, DestructionReturnsEventToPool) {
   const auto device = this->adapter().device();
   manager.initialize(device, this->getOps(), 1);
 
+  // Arrange
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectCreateEvents({makeEvent(0xA00)},
                                        ::testing::Eq(device));
@@ -320,10 +367,11 @@ TYPED_TEST(MpsEventManagerTypedTest, DestructionReturnsEventToPool) {
     EXPECT_TRUE(lease);
   }
 
-  // Should be able to reuse the slot
+  // Assert: Can reuse slot
   auto new_lease = manager.acquire();
   EXPECT_EQ(new_lease.handle().index, index);
 
+  // Cleanup
   manager.release(new_lease);
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectDestroyEvents({makeEvent(0xA00)});
@@ -331,11 +379,16 @@ TYPED_TEST(MpsEventManagerTypedTest, DestructionReturnsEventToPool) {
   manager.shutdown();
 }
 
+// =============================================================================
+// Shutdown Tests
+// =============================================================================
+
 TYPED_TEST(MpsEventManagerTypedTest, ShutdownReleasesInitializedEvents) {
   auto &manager = this->manager();
   const auto device = this->adapter().device();
   manager.initialize(device, this->getOps(), 3);
 
+  // Arrange: Create 2 events
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectCreateEvents({makeEvent(0xB00)},
                                        ::testing::Eq(device));
@@ -351,8 +404,7 @@ TYPED_TEST(MpsEventManagerTypedTest, ShutdownReleasesInitializedEvents) {
   manager.release(lease1);
   manager.release(lease2);
 
-  // Only the 2 created events should be destroyed. The 3rd slot was never
-  // used/created.
+  // Act & Assert: Only 2 created events destroyed (3rd slot unused)
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectDestroyEvents({makeEvent(0xB00), makeEvent(0xB01)});
   }
@@ -361,6 +413,8 @@ TYPED_TEST(MpsEventManagerTypedTest, ShutdownReleasesInitializedEvents) {
 
 TYPED_TEST(MpsEventManagerTypedTest, ShutdownWithoutInitializeIsNoOp) {
   auto &manager = this->manager();
+
+  // Act & Assert
   EXPECT_NO_THROW(manager.shutdown());
   EXPECT_NO_THROW(manager.shutdown());
 }
@@ -370,9 +424,8 @@ TYPED_TEST(MpsEventManagerTypedTest, MultipleShutdownsAreIdempotent) {
   const auto device = this->adapter().device();
   manager.initialize(device, this->getOps(), 1);
 
-  // No events created, so no destruction expectation
+  // Act & Assert
   manager.shutdown();
-
   EXPECT_NO_THROW(manager.shutdown());
   EXPECT_NO_THROW(manager.shutdown());
 }
@@ -381,6 +434,7 @@ TYPED_TEST(MpsEventManagerTypedTest, ReinitializeResetsPreviousState) {
   auto &manager = this->manager();
   const auto device = this->adapter().device();
 
+  // Arrange: First initialization
   manager.initialize(device, this->getOps(), 1);
 
   if constexpr (TypeParam::is_mock) {
@@ -390,12 +444,13 @@ TYPED_TEST(MpsEventManagerTypedTest, ReinitializeResetsPreviousState) {
   auto first_lease = manager.acquire();
   manager.release(first_lease);
 
-  // initialize() calls shutdown(), which destroys extant events
+  // Act: Reinitialize destroys previous events
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectDestroyEvents({makeEvent(0xD00)});
   }
   manager.initialize(device, this->getOps(), 2);
 
+  // Assert: New event created
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectCreateEvents({makeEvent(0xD10)},
                                        ::testing::Eq(device));
@@ -403,6 +458,7 @@ TYPED_TEST(MpsEventManagerTypedTest, ReinitializeResetsPreviousState) {
   auto new_lease = manager.acquire();
   EXPECT_TRUE(new_lease);
 
+  // Cleanup
   manager.release(new_lease);
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectDestroyEvents({makeEvent(0xD10)});
@@ -410,23 +466,32 @@ TYPED_TEST(MpsEventManagerTypedTest, ReinitializeResetsPreviousState) {
   manager.shutdown();
 }
 
+// =============================================================================
+// Debug State Tests
+// =============================================================================
+
 #if ORTEAF_ENABLE_TEST
 TYPED_TEST(MpsEventManagerTypedTest, DebugStateReflectsEventState) {
   auto &manager = this->manager();
   const auto device = this->adapter().device();
   manager.initialize(device, this->getOps(), 1);
 
+  // Arrange
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectCreateEvents({makeEvent(0xE00)},
                                        ::testing::Eq(device));
   }
+
+  // Act
   auto lease = manager.acquire();
   const auto handle = lease.handle();
 
+  // Assert
   const auto &snapshot = manager.stateForTest(handle.index);
   EXPECT_TRUE(snapshot.alive);
   EXPECT_EQ(snapshot.generation, handle.generation);
 
+  // Cleanup
   manager.release(lease);
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectDestroyEvents({makeEvent(0xE00)});

@@ -18,9 +18,9 @@ namespace {
 
 #if ORTEAF_ENABLE_MPS
 
-// ============================================================================
-// Phase 1: シンプルなテスト（GPUリソース不要）
-// ============================================================================
+// =============================================================================
+// Phase 1: Simple Tests (No GPU resources required)
+// =============================================================================
 
 class MpsBufferManagerSimpleTest : public ::testing::Test {
 protected:
@@ -31,52 +31,71 @@ protected:
   Manager manager_{};
 };
 
-// --- Shutdown Tests (未初期化時) ---
+// -----------------------------------------------------------------------------
+// Shutdown Tests (Before Initialization)
+// -----------------------------------------------------------------------------
 
 TEST_F(MpsBufferManagerSimpleTest, ShutdownWithoutInitializeIsNoOp) {
+  // Act & Assert: Shutdown before initialization is safe
   EXPECT_NO_THROW(manager().shutdown());
 }
 
 TEST_F(MpsBufferManagerSimpleTest,
        MultipleShutdownsWithoutInitializeAreIdempotent) {
+  // Act & Assert: Multiple shutdowns are idempotent
   EXPECT_NO_THROW(manager().shutdown());
   EXPECT_NO_THROW(manager().shutdown());
   EXPECT_NO_THROW(manager().shutdown());
 }
 
-// --- State Tests (未初期化時) ---
+// -----------------------------------------------------------------------------
+// State Tests (Before Initialization)
+// -----------------------------------------------------------------------------
 
 TEST_F(MpsBufferManagerSimpleTest, IsNotInitializedByDefault) {
+  // Assert: Not initialized by default
   EXPECT_FALSE(manager().isInitialized());
 }
 
 TEST_F(MpsBufferManagerSimpleTest, CapacityIsZeroBeforeInitialize) {
+  // Assert: Capacity is zero before initialization
   EXPECT_EQ(manager().capacity(), 0u);
 }
 
 TEST_F(MpsBufferManagerSimpleTest, AcquireBeforeInitializationThrows) {
+  // Act & Assert: Acquire before initialization throws InvalidState
   ExpectError(diag_error::OrteafErrc::InvalidState,
               [&] { (void)manager().acquire(1024, 16); });
 }
 
 TEST_F(MpsBufferManagerSimpleTest, AcquireByHandleBeforeInitializationThrows) {
+  // Arrange
   base::BufferHandle handle{0, 1};
+
+  // Act & Assert: Acquire by handle before initialization throws InvalidState
   ExpectError(diag_error::OrteafErrc::InvalidState,
               [&] { (void)manager().acquire(handle); });
 }
 
-// --- GrowthChunkSize Tests ---
+// -----------------------------------------------------------------------------
+// GrowthChunkSize Tests
+// -----------------------------------------------------------------------------
 
 TEST_F(MpsBufferManagerSimpleTest, DefaultGrowthChunkSizeIsOne) {
+  // Assert: Default growth chunk size is 1
   EXPECT_EQ(manager().growthChunkSize(), 1u);
 }
 
 TEST_F(MpsBufferManagerSimpleTest, SetGrowthChunkSizeWorks) {
+  // Act
   manager().setGrowthChunkSize(10);
+
+  // Assert
   EXPECT_EQ(manager().growthChunkSize(), 10u);
 }
 
 TEST_F(MpsBufferManagerSimpleTest, SetGrowthChunkSizeToZeroThrows) {
+  // Act & Assert: Zero is invalid
   ExpectError(diag_error::OrteafErrc::InvalidArgument,
               [&] { manager().setGrowthChunkSize(0); });
 }
@@ -85,9 +104,9 @@ TEST_F(MpsBufferManagerSimpleTest, SetGrowthChunkSizeToZeroThrows) {
 
 } // namespace
 
-// ============================================================================
-// Phase 2: GPUリソースを使った統合テスト
-// ============================================================================
+// =============================================================================
+// Phase 2: Integration Tests (Real GPU resources)
+// =============================================================================
 #if ORTEAF_ENABLE_MPS
 
 #include <orteaf/internal/runtime/mps/manager/mps_library_manager.h>
@@ -172,12 +191,16 @@ protected:
   bool setup_successful_{false};
 };
 
-// --- Initialize Tests ---
+// -----------------------------------------------------------------------------
+// Initialization Tests
+// -----------------------------------------------------------------------------
 
 TEST_F(MpsBufferManagerIntegrationTest, InitializeSucceeds) {
   if (!setupSuccessful()) {
     GTEST_SKIP() << "GPU setup failed";
   }
+
+  // Act & Assert
   EXPECT_NO_THROW(initializeManager());
   EXPECT_TRUE(manager().isInitialized());
 }
@@ -186,7 +209,11 @@ TEST_F(MpsBufferManagerIntegrationTest, InitializeWithZeroCapacitySucceeds) {
   if (!setupSuccessful()) {
     GTEST_SKIP() << "GPU setup failed";
   }
+
+  // Act
   EXPECT_NO_THROW(initializeManager(0));
+
+  // Assert
   EXPECT_TRUE(manager().isInitialized());
   EXPECT_EQ(manager().capacity(), 0u);
 }
@@ -195,8 +222,14 @@ TEST_F(MpsBufferManagerIntegrationTest, ShutdownAfterInitializeWorks) {
   if (!setupSuccessful()) {
     GTEST_SKIP() << "GPU setup failed";
   }
+
+  // Arrange
   initializeManager();
+
+  // Act
   EXPECT_NO_THROW(manager().shutdown());
+
+  // Assert
   EXPECT_FALSE(manager().isInitialized());
 }
 
@@ -205,6 +238,7 @@ TEST_F(MpsBufferManagerIntegrationTest, MultipleInitializeShutdownCyclesWork) {
     GTEST_SKIP() << "GPU setup failed";
   }
 
+  // Act & Assert: Multiple cycles work
   for (int i = 0; i < 3; ++i) {
     EXPECT_NO_THROW(initializeManager());
     EXPECT_TRUE(manager().isInitialized());
@@ -213,18 +247,26 @@ TEST_F(MpsBufferManagerIntegrationTest, MultipleInitializeShutdownCyclesWork) {
   }
 }
 
-// --- Acquire/Release Tests ---
+// -----------------------------------------------------------------------------
+// Acquire/Release Tests
+// -----------------------------------------------------------------------------
 
 TEST_F(MpsBufferManagerIntegrationTest, AcquireReturnsValidLease) {
   if (!setupSuccessful()) {
     GTEST_SKIP() << "GPU setup failed";
   }
+
+  // Arrange
   initializeManager();
 
+  // Act
   auto lease = manager().acquire(1024, 16);
+
+  // Assert
   EXPECT_TRUE(lease);
   EXPECT_TRUE(lease.handle().isValid());
 
+  // Cleanup
   manager().release(lease);
 }
 
@@ -233,9 +275,14 @@ TEST_F(MpsBufferManagerIntegrationTest,
   if (!setupSuccessful()) {
     GTEST_SKIP() << "GPU setup failed";
   }
+
+  // Arrange
   initializeManager();
 
+  // Act
   auto lease = manager().acquire(0, 16);
+
+  // Assert: Zero size returns invalid lease
   EXPECT_FALSE(lease);
 }
 
@@ -243,12 +290,16 @@ TEST_F(MpsBufferManagerIntegrationTest, MultipleAllocationsWork) {
   if (!setupSuccessful()) {
     GTEST_SKIP() << "GPU setup failed";
   }
+
+  // Arrange
   initializeManager();
 
+  // Act
   auto lease1 = manager().acquire(1024, 16);
   auto lease2 = manager().acquire(2048, 32);
   auto lease3 = manager().acquire(4096, 64);
 
+  // Assert: All leases are valid and distinct
   EXPECT_TRUE(lease1);
   EXPECT_TRUE(lease2);
   EXPECT_TRUE(lease3);
@@ -256,6 +307,7 @@ TEST_F(MpsBufferManagerIntegrationTest, MultipleAllocationsWork) {
   EXPECT_NE(lease2.handle().index, lease3.handle().index);
   EXPECT_NE(lease1.handle().index, lease3.handle().index);
 
+  // Cleanup
   manager().release(lease1);
   manager().release(lease2);
   manager().release(lease3);
@@ -265,16 +317,20 @@ TEST_F(MpsBufferManagerIntegrationTest, BufferRecyclingReusesSlots) {
   if (!setupSuccessful()) {
     GTEST_SKIP() << "GPU setup failed";
   }
-  initializeManager();
 
+  // Arrange
+  initializeManager();
   auto first = manager().acquire(1024, 16);
   const auto first_index = first.handle().index;
-  manager().release(first);
 
-  // Should reuse the same slot
+  // Act: Release and acquire again
+  manager().release(first);
   auto second = manager().acquire(2048, 16);
+
+  // Assert: Same slot is reused
   EXPECT_EQ(second.handle().index, first_index);
 
+  // Cleanup
   manager().release(second);
 }
 
@@ -282,14 +338,14 @@ TEST_F(MpsBufferManagerIntegrationTest, BufferRecyclingReusesSlots) {
 
 #endif // ORTEAF_ENABLE_MPS
 
-// ============================================================================
-// Phase 3: モックテスト（StubMpsResource を使用、GPU 不要）
-// ============================================================================
+// =============================================================================
+// Phase 3: Mock Tests (Using StubMpsResource, No GPU required)
+// =============================================================================
 #if ORTEAF_ENABLE_MPS
 
 #include <tests/internal/runtime/mps/manager/testing/mock_mps_resource.h>
 
-// StubMpsResource を使った MpsBufferManager
+// StubMpsResource-based MpsBufferManager
 using StubBufferManager =
     mps_rt::MpsBufferManagerT<orteaf::tests::runtime::mps::StubMpsResource>;
 
@@ -301,7 +357,7 @@ protected:
 
   Manager &manager() { return manager_; }
 
-  // StubMpsResource 用のダミーデバイス
+  // Dummy device for StubMpsResource
   typename Manager::DeviceType device() {
     return reinterpret_cast<typename Manager::DeviceType>(0x12345678);
   }
@@ -320,93 +376,127 @@ protected:
   Manager manager_{};
 };
 
-// --- Initialize Tests (モック) ---
+// -----------------------------------------------------------------------------
+// Initialization Tests (Mock)
+// -----------------------------------------------------------------------------
 
 TEST_F(MpsBufferManagerMockTest, InitializeSucceeds) {
+  // Act & Assert
   EXPECT_NO_THROW(initializeManager());
   EXPECT_TRUE(manager_.isInitialized());
 }
 
 TEST_F(MpsBufferManagerMockTest, ShutdownAfterInitializeWorks) {
+  // Arrange
   initializeManager();
+
+  // Act
   EXPECT_NO_THROW(manager_.shutdown());
+
+  // Assert
   EXPECT_FALSE(manager_.isInitialized());
 }
 
+// -----------------------------------------------------------------------------
+// Acquire/Release Tests (Mock)
+// -----------------------------------------------------------------------------
+
 TEST_F(MpsBufferManagerMockTest, AcquireReturnsValidLease) {
+  // Arrange
   initializeManager();
 
+  // Act
   auto lease = manager_.acquire(1024, 16);
+
+  // Assert
   EXPECT_TRUE(lease);
   EXPECT_TRUE(lease.handle().isValid());
 
+  // Cleanup
   manager_.release(lease);
 }
 
 TEST_F(MpsBufferManagerMockTest, MultipleAcquisitionsWork) {
+  // Arrange
   initializeManager();
 
+  // Act
   auto lease1 = manager_.acquire(256, 16);
   auto lease2 = manager_.acquire(512, 32);
   auto lease3 = manager_.acquire(1024, 64);
 
+  // Assert: All distinct handles
   EXPECT_TRUE(lease1);
   EXPECT_TRUE(lease2);
   EXPECT_TRUE(lease3);
   EXPECT_NE(lease1.handle().index, lease2.handle().index);
   EXPECT_NE(lease2.handle().index, lease3.handle().index);
 
+  // Cleanup
   manager_.release(lease1);
   manager_.release(lease2);
   manager_.release(lease3);
 }
 
 TEST_F(MpsBufferManagerMockTest, ReleaseRecyclesSlot) {
+  // Arrange
   initializeManager();
-
   auto first = manager_.acquire(256, 16);
   const auto first_index = first.handle().index;
-  manager_.release(first);
 
-  // Should reuse the same slot
+  // Act: Release and acquire
+  manager_.release(first);
   auto second = manager_.acquire(512, 16);
+
+  // Assert: Same slot reused
   EXPECT_EQ(second.handle().index, first_index);
 
+  // Cleanup
   manager_.release(second);
 }
 
 TEST_F(MpsBufferManagerMockTest, AcquireByHandleIncreasesRefCount) {
+  // Arrange
   initializeManager();
-
   auto lease1 = manager_.acquire(256, 16);
   const auto handle = lease1.handle();
 
-  // Acquire by handle
+  // Act: Acquire by handle
   auto lease2 = manager_.acquire(handle);
+
+  // Assert: Same handle
   EXPECT_TRUE(lease2);
   EXPECT_EQ(lease2.handle().index, handle.index);
   EXPECT_EQ(lease2.handle().generation, handle.generation);
 
-  // Release both
+  // Cleanup
   manager_.release(lease1);
   manager_.release(lease2);
 }
 
 TEST_F(MpsBufferManagerMockTest, AcquireWithZeroSizeReturnsInvalidLease) {
+  // Arrange
   initializeManager();
 
+  // Act
   auto lease = manager_.acquire(0, 16);
+
+  // Assert
   EXPECT_FALSE(lease);
 }
 
 TEST_F(MpsBufferManagerMockTest, CapacityGrowsOnAcquire) {
+  // Arrange
   initializeManager(4);
 
-  // Acquire to use capacity
+  // Act
   auto lease1 = manager_.acquire(256, 16);
   auto lease2 = manager_.acquire(256, 16);
+
+  // Assert: Capacity grows
   EXPECT_GE(manager_.capacity(), 2u);
 
+  // Cleanup
   manager_.release(lease1);
   manager_.release(lease2);
 }

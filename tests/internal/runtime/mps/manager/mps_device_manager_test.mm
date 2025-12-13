@@ -60,8 +60,14 @@ using ProviderTypes = ::testing::Types<testing_mps::MockBackendOpsProvider>;
 
 TYPED_TEST_SUITE(MpsDeviceManagerTypedTest, ProviderTypes);
 
+// =============================================================================
+// Access Before Initialization Tests
+// =============================================================================
+
 TYPED_TEST(MpsDeviceManagerTypedTest, AccessBeforeInitializationThrows) {
   auto &manager = this->manager();
+
+  // Act & Assert: All accessors throw InvalidState before initialization
   ExpectError(diag_error::OrteafErrc::InvalidState,
               [&] { (void)manager.device(base::DeviceHandle{0}); });
   ExpectError(diag_error::OrteafErrc::InvalidState,
@@ -81,10 +87,15 @@ TYPED_TEST(MpsDeviceManagerTypedTest, AccessBeforeInitializationThrows) {
   EXPECT_FALSE(manager.isAlive(base::DeviceHandle{0}));
 }
 
+// =============================================================================
+// Initialization Tests
+// =============================================================================
+
 TYPED_TEST(MpsDeviceManagerTypedTest, InitializeMarksManagerInitialized) {
   auto &manager = this->manager();
   int expected_count = -1;
 
+  // Arrange: Setup mock expectations
   if constexpr (!TypeParam::is_mock) {
     const char *expected_env = std::getenv(ORTEAF_MPS_ENV_COUNT);
     if (!expected_env || std::stoi(expected_env) <= 0) {
@@ -103,8 +114,10 @@ TYPED_TEST(MpsDeviceManagerTypedTest, InitializeMarksManagerInitialized) {
     expected_count = 1;
   }
 
+  // Act
   manager.initialize(this->getOps());
 
+  // Assert
   EXPECT_TRUE(manager.isInitializedForTest());
   EXPECT_EQ(manager.capacity(), manager.getDeviceCount());
   if (expected_count >= 0) {
@@ -112,14 +125,51 @@ TYPED_TEST(MpsDeviceManagerTypedTest, InitializeMarksManagerInitialized) {
               static_cast<std::size_t>(expected_count));
   }
 
+  // Cleanup
   manager.shutdown();
   EXPECT_FALSE(manager.isInitializedForTest());
   EXPECT_EQ(manager.capacity(), 0u);
 }
 
+TYPED_TEST(MpsDeviceManagerTypedTest, InitializeWithNullOpsThrows) {
+  auto &manager = this->manager();
+
+  // Act & Assert
+  ExpectError(diag_error::OrteafErrc::InvalidArgument,
+              [&] { manager.initialize(nullptr); });
+}
+
+TYPED_TEST(MpsDeviceManagerTypedTest, InitializeWithZeroDevicesSucceeds) {
+  if constexpr (!TypeParam::is_mock) {
+    GTEST_SKIP() << "Mock-only test";
+  }
+  auto &manager = this->manager();
+
+  // Arrange
+  this->adapter().expectGetDeviceCount(0);
+
+  // Act
+  manager.initialize(this->getOps());
+
+  // Assert
+  EXPECT_TRUE(manager.isInitializedForTest());
+  EXPECT_EQ(manager.capacity(), 0u);
+  EXPECT_EQ(manager.getDeviceCount(), 0u);
+  ExpectError(diag_error::OrteafErrc::InvalidArgument,
+              [&] { (void)manager.device(base::DeviceHandle{0}); });
+
+  // Cleanup
+  manager.shutdown();
+}
+
+// =============================================================================
+// Device Access Tests
+// =============================================================================
+
 TYPED_TEST(MpsDeviceManagerTypedTest, GetDeviceReturnsRegisteredHandle) {
   auto &manager = this->manager();
 
+  // Arrange
   std::vector<mps_wrapper::MPSDevice_t> expected_handles;
   int expected_count = -1;
   if (const char *expected_env = std::getenv(ORTEAF_MPS_ENV_COUNT)) {
@@ -140,6 +190,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, GetDeviceReturnsRegisteredHandle) {
   this->adapter().expectReleaseDevices(
       {expected_handles[0], expected_handles[1]});
 
+  // Act
   manager.initialize(this->getOps());
   const auto count = manager.getDeviceCount();
   if (expected_count >= 0) {
@@ -149,6 +200,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, GetDeviceReturnsRegisteredHandle) {
     GTEST_SKIP() << "No MPS devices available";
   }
 
+  // Assert: Verify each device
   for (std::uint32_t idx = 0; idx < count; ++idx) {
     const auto device = manager.device(base::DeviceHandle{idx});
     const auto &snapshot = manager.stateForTest(idx);
@@ -162,17 +214,20 @@ TYPED_TEST(MpsDeviceManagerTypedTest, GetDeviceReturnsRegisteredHandle) {
     } else {
       EXPECT_NE(device, nullptr);
       if (expected_count >= 0 && idx == 0) {
-        EXPECT_NE(snapshot.resource.arch, architecture::Architecture::MpsGeneric);
+        EXPECT_NE(snapshot.resource.arch,
+                  architecture::Architecture::MpsGeneric);
       }
     }
   }
 
+  // Cleanup
   manager.shutdown();
 }
 
 TYPED_TEST(MpsDeviceManagerTypedTest, GetArchMatchesReportedArchitecture) {
   auto &manager = this->manager();
 
+  // Arrange
   const char *expected_arch_env = nullptr;
   if constexpr (TypeParam::is_mock) {
     const auto device0 = makeDevice(0xAB);
@@ -188,12 +243,14 @@ TYPED_TEST(MpsDeviceManagerTypedTest, GetArchMatchesReportedArchitecture) {
     expected_arch_env = std::getenv(ORTEAF_MPS_ENV_ARCH);
   }
 
+  // Act
   manager.initialize(this->getOps());
   const auto count = manager.getDeviceCount();
   if (count == 0u) {
     GTEST_SKIP() << "No MPS devices available";
   }
 
+  // Assert: Verify architecture for each device
   for (std::uint32_t idx = 0; idx < count; ++idx) {
     const auto arch = manager.getArch(base::DeviceHandle{idx});
     const auto &snapshot = manager.stateForTest(idx);
@@ -206,19 +263,26 @@ TYPED_TEST(MpsDeviceManagerTypedTest, GetArchMatchesReportedArchitecture) {
       EXPECT_TRUE(snapshot.alive);
     } else if (expected_arch_env && *expected_arch_env != '\0' && idx == 0) {
       EXPECT_STREQ(expected_arch_env, architecture::idOf(arch).data());
-      EXPECT_STREQ(expected_arch_env, architecture::idOf(snapshot.resource.arch).data());
+      EXPECT_STREQ(expected_arch_env,
+                   architecture::idOf(snapshot.resource.arch).data());
     } else {
       EXPECT_FALSE(architecture::idOf(arch).empty());
       EXPECT_FALSE(architecture::idOf(snapshot.resource.arch).empty());
     }
   }
 
+  // Cleanup
   manager.shutdown();
 }
+
+// =============================================================================
+// Invalid Device ID Tests
+// =============================================================================
 
 TYPED_TEST(MpsDeviceManagerTypedTest, InvalidDeviceIdRejectsAccess) {
   auto &manager = this->manager();
 
+  // Arrange
   const auto device0 = makeDevice(0x77);
   this->adapter().expectGetDeviceCount(1);
   this->adapter().expectGetDevices({{0, device0}});
@@ -231,6 +295,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, InvalidDeviceIdRejectsAccess) {
   const auto invalid = base::DeviceHandle{
       static_cast<std::uint32_t>(manager.getDeviceCount() + 1)};
 
+  // Act & Assert: Invalid ID throws
   ExpectError(diag_error::OrteafErrc::InvalidArgument,
               [&] { (void)manager.device(invalid); });
   ExpectError(diag_error::OrteafErrc::InvalidArgument,
@@ -239,12 +304,48 @@ TYPED_TEST(MpsDeviceManagerTypedTest, InvalidDeviceIdRejectsAccess) {
               [&] { (void)manager.commandQueueManager(invalid); });
   EXPECT_FALSE(manager.isAlive(invalid));
 
+  // Cleanup
   manager.shutdown();
 }
+
+TYPED_TEST(MpsDeviceManagerTypedTest, InvalidDeviceIdRejectsManagerAccess) {
+  auto &manager = this->manager();
+
+  // Arrange
+  const auto device0 = makeDevice(0x820);
+  this->adapter().expectGetDeviceCount(1);
+  this->adapter().expectGetDevices({{0, device0}});
+  this->adapter().expectDetectArchitectures({
+      {base::DeviceHandle{0}, architecture::Architecture::MpsM3},
+  });
+  this->adapter().expectReleaseDevices({device0});
+
+  manager.initialize(this->getOps());
+  const auto invalid = base::DeviceHandle{
+      static_cast<std::uint32_t>(manager.getDeviceCount() + 1)};
+
+  // Act & Assert
+  ExpectError(diag_error::OrteafErrc::InvalidArgument,
+              [&] { (void)manager.heapManager(invalid); });
+  ExpectError(diag_error::OrteafErrc::InvalidArgument,
+              [&] { (void)manager.libraryManager(invalid); });
+  ExpectError(diag_error::OrteafErrc::InvalidArgument,
+              [&] { (void)manager.eventPool(invalid); });
+  ExpectError(diag_error::OrteafErrc::InvalidArgument,
+              [&] { (void)manager.fencePool(invalid); });
+
+  // Cleanup
+  manager.shutdown();
+}
+
+// =============================================================================
+// IsAlive Tests
+// =============================================================================
 
 TYPED_TEST(MpsDeviceManagerTypedTest, IsAliveReflectsReportedDeviceCount) {
   auto &manager = this->manager();
 
+  // Arrange
   if constexpr (TypeParam::is_mock) {
     const auto device0 = makeDevice(0xAA);
     const auto device1 = makeDevice(0xBB);
@@ -257,6 +358,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, IsAliveReflectsReportedDeviceCount) {
     this->adapter().expectReleaseDevices({device0, device1});
   }
 
+  // Act
   manager.initialize(this->getOps());
 
   const std::size_t count = manager.getDeviceCount();
@@ -265,6 +367,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, IsAliveReflectsReportedDeviceCount) {
     EXPECT_EQ(count, static_cast<std::size_t>(std::stoi(expected_env)));
   }
 
+  // Assert: All devices are alive
   for (std::uint32_t index = 0; index < static_cast<std::uint32_t>(count);
        ++index) {
     const auto id = base::DeviceHandle{index};
@@ -274,9 +377,11 @@ TYPED_TEST(MpsDeviceManagerTypedTest, IsAliveReflectsReportedDeviceCount) {
     EXPECT_TRUE(snapshot.alive);
   }
 
+  // Assert: Out-of-range ID is not alive
   const auto invalid = base::DeviceHandle{static_cast<std::uint32_t>(count)};
   EXPECT_FALSE(manager.isAlive(invalid));
 
+  // Assert: After shutdown, none are alive
   manager.shutdown();
   for (std::uint32_t index = 0; index < static_cast<std::uint32_t>(count);
        ++index) {
@@ -286,9 +391,56 @@ TYPED_TEST(MpsDeviceManagerTypedTest, IsAliveReflectsReportedDeviceCount) {
   }
 }
 
+TYPED_TEST(MpsDeviceManagerTypedTest, DeviceNotAliveThrowsOnAccess) {
+  if constexpr (!TypeParam::is_mock) {
+    GTEST_SKIP() << "Mock-only test";
+  }
+  auto &manager = this->manager();
+
+  // Arrange: Device returns null pointer
+  this->adapter().expectGetDeviceCount(1);
+  this->adapter().expectGetDevices({{0, nullptr}});
+  this->adapter().expectDetectArchitectures({});
+
+  // Act
+  manager.initialize(this->getOps());
+
+  // Assert
+  EXPECT_EQ(manager.getDeviceCount(), 1u);
+  EXPECT_FALSE(manager.isAlive(base::DeviceHandle{0}));
+
+  ExpectError(diag_error::OrteafErrc::InvalidState,
+              [&] { (void)manager.device(base::DeviceHandle{0}); });
+  ExpectError(diag_error::OrteafErrc::InvalidState,
+              [&] { (void)manager.getArch(base::DeviceHandle{0}); });
+  ExpectError(diag_error::OrteafErrc::InvalidState, [&] {
+    (void)manager.commandQueueManager(base::DeviceHandle{0});
+  });
+  ExpectError(diag_error::OrteafErrc::InvalidState,
+              [&] { (void)manager.heapManager(base::DeviceHandle{0}); });
+  ExpectError(diag_error::OrteafErrc::InvalidState,
+              [&] { (void)manager.libraryManager(base::DeviceHandle{0}); });
+  ExpectError(diag_error::OrteafErrc::InvalidState,
+              [&] { (void)manager.eventPool(base::DeviceHandle{0}); });
+  ExpectError(diag_error::OrteafErrc::InvalidState,
+              [&] { (void)manager.fencePool(base::DeviceHandle{0}); });
+
+  const auto &snapshot = manager.stateForTest(0);
+  EXPECT_FALSE(snapshot.alive);
+  EXPECT_FALSE(snapshot.resource.device != nullptr);
+
+  // Cleanup
+  manager.shutdown();
+}
+
+// =============================================================================
+// Reinitialization Tests
+// =============================================================================
+
 TYPED_TEST(MpsDeviceManagerTypedTest, ReinitializeReleasesPreviousDevices) {
   auto &manager = this->manager();
 
+  // Arrange: First initialization
   const auto first0 = makeDevice(0x301);
   const auto first1 = makeDevice(0x302);
   const auto second0 = makeDevice(0x401);
@@ -313,6 +465,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, ReinitializeReleasesPreviousDevices) {
     EXPECT_EQ(device, first0);
   }
 
+  // Act: Reinitialize with different devices
   this->adapter().expectReleaseDevices({first0, first1});
   this->adapter().expectGetDeviceCount(2);
   this->adapter().expectGetDevices({{0, second0}, {1, second1}});
@@ -322,6 +475,8 @@ TYPED_TEST(MpsDeviceManagerTypedTest, ReinitializeReleasesPreviousDevices) {
   });
 
   manager.initialize(this->getOps());
+
+  // Assert
   const auto reinit_count = manager.getDeviceCount();
   EXPECT_EQ(reinit_count, initial_count);
   if constexpr (TypeParam::is_mock) {
@@ -330,13 +485,19 @@ TYPED_TEST(MpsDeviceManagerTypedTest, ReinitializeReleasesPreviousDevices) {
     EXPECT_NE(second0, first0);
   }
 
+  // Cleanup
   this->adapter().expectReleaseDevices({second0, second1});
   manager.shutdown();
 }
 
+// =============================================================================
+// Shutdown Tests
+// =============================================================================
+
 TYPED_TEST(MpsDeviceManagerTypedTest, ShutdownClearsDeviceState) {
   auto &manager = this->manager();
 
+  // Arrange
   if constexpr (TypeParam::is_mock) {
     const auto device0 = makeDevice(0x111);
     const auto device1 = makeDevice(0x222);
@@ -355,7 +516,10 @@ TYPED_TEST(MpsDeviceManagerTypedTest, ShutdownClearsDeviceState) {
     GTEST_SKIP() << "No MPS devices available";
   }
 
+  // Act
   manager.shutdown();
+
+  // Assert: All state cleared
   EXPECT_EQ(manager.getDeviceCount(), 0u);
   EXPECT_FALSE(manager.isInitializedForTest());
   EXPECT_EQ(manager.capacity(), 0u);
@@ -367,10 +531,50 @@ TYPED_TEST(MpsDeviceManagerTypedTest, ShutdownClearsDeviceState) {
   }
 }
 
+TYPED_TEST(MpsDeviceManagerTypedTest, ShutdownWithoutInitializeIsNoOp) {
+  auto &manager = this->manager();
+
+  // Act
+  manager.shutdown();
+
+  // Assert
+  EXPECT_FALSE(manager.isInitializedForTest());
+  EXPECT_EQ(manager.capacity(), 0u);
+}
+
+TYPED_TEST(MpsDeviceManagerTypedTest, MultipleShutdownsAreIdempotent) {
+  auto &manager = this->manager();
+
+  // Arrange
+  const auto device0 = makeDevice(0x830);
+  this->adapter().expectGetDeviceCount(1);
+  this->adapter().expectGetDevices({{0, device0}});
+  this->adapter().expectDetectArchitectures({
+      {base::DeviceHandle{0}, architecture::Architecture::MpsM3},
+  });
+  this->adapter().expectReleaseDevices({device0});
+
+  manager.initialize(this->getOps());
+  EXPECT_TRUE(manager.isInitializedForTest());
+
+  // Act & Assert: Multiple shutdowns are safe
+  manager.shutdown();
+  EXPECT_FALSE(manager.isInitializedForTest());
+
+  manager.shutdown();
+  EXPECT_FALSE(manager.isInitializedForTest());
+}
+
+// =============================================================================
+// Child Manager Configuration Tests
+// =============================================================================
+
 TYPED_TEST(MpsDeviceManagerTypedTest,
            CommandQueueManagersInitializedWithConfiguredCapacity) {
   auto &manager = this->manager();
   constexpr std::size_t kCapacity = 2;
+
+  // Arrange
   manager.setCommandQueueInitialCapacity(kCapacity);
 
   const auto device0 = makeDevice(0x500);
@@ -389,12 +593,14 @@ TYPED_TEST(MpsDeviceManagerTypedTest,
   this->adapter().expectDestroyCommandQueues(
       {makeQueue(0x900), makeQueue(0x901), makeQueue(0x902), makeQueue(0x903)});
 
+  // Act
   manager.initialize(this->getOps());
   const auto count = manager.getDeviceCount();
   if (count == 0u) {
     GTEST_SKIP() << "No MPS devices available";
   }
 
+  // Assert: CommandQueueManagers have configured capacity
   for (std::uint32_t index = 0; index < static_cast<std::uint32_t>(count);
        ++index) {
     const auto id = base::DeviceHandle{index};
@@ -403,6 +609,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest,
     EXPECT_EQ(queue_manager->capacity(), kCapacity);
   }
 
+  // Cleanup
   manager.shutdown();
 }
 
@@ -410,6 +617,8 @@ TYPED_TEST(MpsDeviceManagerTypedTest,
            HeapManagersInitializedWithConfiguredCapacity) {
   auto &manager = this->manager();
   constexpr std::size_t kCapacity = 4;
+
+  // Arrange
   manager.setHeapInitialCapacity(kCapacity);
 
   const auto device0 = makeDevice(0x700);
@@ -420,21 +629,23 @@ TYPED_TEST(MpsDeviceManagerTypedTest,
   });
   this->adapter().expectReleaseDevices({device0});
 
+  // Act
   manager.initialize(this->getOps());
   const auto count = manager.getDeviceCount();
   if (count == 0u) {
     GTEST_SKIP() << "No MPS devices available";
   }
 
+  // Assert: HeapManagers initialized (cache pattern: capacity grows on demand)
   for (std::uint32_t index = 0; index < static_cast<std::uint32_t>(count);
        ++index) {
     const auto id = base::DeviceHandle{index};
     auto *heap_manager = manager.heapManager(id);
     EXPECT_NE(heap_manager, nullptr);
-    // Cache pattern: capacity is 0 after init, grows on demand
     EXPECT_EQ(heap_manager->capacity(), 0u);
   }
 
+  // Cleanup
   manager.shutdown();
 }
 
@@ -442,6 +653,8 @@ TYPED_TEST(MpsDeviceManagerTypedTest,
            LibraryManagersInitializedWithConfiguredCapacity) {
   auto &manager = this->manager();
   constexpr std::size_t kCapacity = 2;
+
+  // Arrange
   manager.setLibraryInitialCapacity(kCapacity);
 
   const auto device0 = makeDevice(0x750);
@@ -452,52 +665,53 @@ TYPED_TEST(MpsDeviceManagerTypedTest,
   });
   this->adapter().expectReleaseDevices({device0});
 
+  // Act
   manager.initialize(this->getOps());
   const auto count = manager.getDeviceCount();
   if (count == 0u) {
     GTEST_SKIP() << "No MPS devices available";
   }
+
+  // Assert: LibraryManagers initialized (cache pattern)
   for (std::uint32_t index = 0; index < static_cast<std::uint32_t>(count);
        ++index) {
     const auto id = base::DeviceHandle{index};
     auto *library_manager = manager.libraryManager(id);
     EXPECT_NE(library_manager, nullptr);
-    // Cache pattern: capacity is 0 after init, grows on demand
     EXPECT_EQ(library_manager->capacity(), 0u);
   }
+
+  // Cleanup
   manager.shutdown();
 }
 
-TYPED_TEST(MpsDeviceManagerTypedTest, InitializeWithNullOpsThrows) {
-  auto &manager = this->manager();
-  ExpectError(diag_error::OrteafErrc::InvalidArgument,
-              [&] { manager.initialize(nullptr); });
-}
-
-TYPED_TEST(MpsDeviceManagerTypedTest, InitializeWithZeroDevicesSucceeds) {
-  if constexpr (!TypeParam::is_mock) {
-    GTEST_SKIP() << "Mock-only test";
-  }
-
+TYPED_TEST(MpsDeviceManagerTypedTest, CapacityGettersReturnConfiguredValues) {
   auto &manager = this->manager();
 
-  this->adapter().expectGetDeviceCount(0);
+  // Assert: Default values
+  EXPECT_EQ(manager.commandQueueInitialCapacity(), 0u);
+  EXPECT_EQ(manager.heapInitialCapacity(), 0u);
+  EXPECT_EQ(manager.libraryInitialCapacity(), 0u);
 
-  manager.initialize(this->getOps());
+  // Act
+  manager.setCommandQueueInitialCapacity(5);
+  manager.setHeapInitialCapacity(10);
+  manager.setLibraryInitialCapacity(15);
 
-  EXPECT_TRUE(manager.isInitializedForTest());
-  EXPECT_EQ(manager.capacity(), 0u);
-  EXPECT_EQ(manager.getDeviceCount(), 0u);
-
-  ExpectError(diag_error::OrteafErrc::InvalidArgument,
-              [&] { (void)manager.device(base::DeviceHandle{0}); });
-
-  manager.shutdown();
+  // Assert: Updated values
+  EXPECT_EQ(manager.commandQueueInitialCapacity(), 5u);
+  EXPECT_EQ(manager.heapInitialCapacity(), 10u);
+  EXPECT_EQ(manager.libraryInitialCapacity(), 15u);
 }
+
+// =============================================================================
+// Pool Access Tests
+// =============================================================================
 
 TYPED_TEST(MpsDeviceManagerTypedTest, EventPoolAccessSucceeds) {
   auto &manager = this->manager();
 
+  // Arrange
   const auto device0 = makeDevice(0x800);
   this->adapter().expectGetDeviceCount(1);
   this->adapter().expectGetDevices({{0, device0}});
@@ -512,15 +726,18 @@ TYPED_TEST(MpsDeviceManagerTypedTest, EventPoolAccessSucceeds) {
     GTEST_SKIP() << "No MPS devices available";
   }
 
+  // Act & Assert
   auto *event_pool = manager.eventPool(base::DeviceHandle{0});
   EXPECT_NE(event_pool, nullptr);
 
+  // Cleanup
   manager.shutdown();
 }
 
 TYPED_TEST(MpsDeviceManagerTypedTest, FencePoolAccessSucceeds) {
   auto &manager = this->manager();
 
+  // Arrange
   const auto device0 = makeDevice(0x810);
   this->adapter().expectGetDeviceCount(1);
   this->adapter().expectGetDevices({{0, device0}});
@@ -535,127 +752,22 @@ TYPED_TEST(MpsDeviceManagerTypedTest, FencePoolAccessSucceeds) {
     GTEST_SKIP() << "No MPS devices available";
   }
 
+  // Act & Assert
   auto *fence_pool = manager.fencePool(base::DeviceHandle{0});
   EXPECT_NE(fence_pool, nullptr);
 
+  // Cleanup
   manager.shutdown();
 }
 
-TYPED_TEST(MpsDeviceManagerTypedTest, InvalidDeviceIdRejectsManagerAccess) {
-  auto &manager = this->manager();
-
-  const auto device0 = makeDevice(0x820);
-  this->adapter().expectGetDeviceCount(1);
-  this->adapter().expectGetDevices({{0, device0}});
-  this->adapter().expectDetectArchitectures({
-      {base::DeviceHandle{0}, architecture::Architecture::MpsM3},
-  });
-  this->adapter().expectReleaseDevices({device0});
-
-  manager.initialize(this->getOps());
-  const auto invalid = base::DeviceHandle{
-      static_cast<std::uint32_t>(manager.getDeviceCount() + 1)};
-
-  ExpectError(diag_error::OrteafErrc::InvalidArgument,
-              [&] { (void)manager.heapManager(invalid); });
-  ExpectError(diag_error::OrteafErrc::InvalidArgument,
-              [&] { (void)manager.libraryManager(invalid); });
-  ExpectError(diag_error::OrteafErrc::InvalidArgument,
-              [&] { (void)manager.eventPool(invalid); });
-  ExpectError(diag_error::OrteafErrc::InvalidArgument,
-              [&] { (void)manager.fencePool(invalid); });
-
-  manager.shutdown();
-}
-
-TYPED_TEST(MpsDeviceManagerTypedTest, CapacityGettersReturnConfiguredValues) {
-  auto &manager = this->manager();
-
-  EXPECT_EQ(manager.commandQueueInitialCapacity(), 0u);
-  EXPECT_EQ(manager.heapInitialCapacity(), 0u);
-  EXPECT_EQ(manager.libraryInitialCapacity(), 0u);
-
-  manager.setCommandQueueInitialCapacity(5);
-  manager.setHeapInitialCapacity(10);
-  manager.setLibraryInitialCapacity(15);
-
-  EXPECT_EQ(manager.commandQueueInitialCapacity(), 5u);
-  EXPECT_EQ(manager.heapInitialCapacity(), 10u);
-  EXPECT_EQ(manager.libraryInitialCapacity(), 15u);
-}
-
-TYPED_TEST(MpsDeviceManagerTypedTest, DeviceNotAliveThrowsOnAccess) {
-  if constexpr (!TypeParam::is_mock) {
-    GTEST_SKIP() << "Mock-only test";
-  }
-
-  auto &manager = this->manager();
-
-  this->adapter().expectGetDeviceCount(1);
-  this->adapter().expectGetDevices({{0, nullptr}});
-  this->adapter().expectDetectArchitectures({});
-
-  manager.initialize(this->getOps());
-
-  EXPECT_EQ(manager.getDeviceCount(), 1u);
-  EXPECT_FALSE(manager.isAlive(base::DeviceHandle{0}));
-
-  ExpectError(diag_error::OrteafErrc::InvalidState,
-              [&] { (void)manager.device(base::DeviceHandle{0}); });
-  ExpectError(diag_error::OrteafErrc::InvalidState,
-              [&] { (void)manager.getArch(base::DeviceHandle{0}); });
-  ExpectError(diag_error::OrteafErrc::InvalidState, [&] {
-    (void)manager.commandQueueManager(base::DeviceHandle{0});
-  });
-  ExpectError(diag_error::OrteafErrc::InvalidState,
-              [&] { (void)manager.heapManager(base::DeviceHandle{0}); });
-  ExpectError(diag_error::OrteafErrc::InvalidState,
-              [&] { (void)manager.libraryManager(base::DeviceHandle{0}); });
-  ExpectError(diag_error::OrteafErrc::InvalidState,
-              [&] { (void)manager.eventPool(base::DeviceHandle{0}); });
-  ExpectError(diag_error::OrteafErrc::InvalidState,
-              [&] { (void)manager.fencePool(base::DeviceHandle{0}); });
-
-  const auto &snapshot = manager.stateForTest(0);
-  EXPECT_FALSE(snapshot.alive);
-  EXPECT_FALSE(snapshot.resource.device != nullptr);
-
-  manager.shutdown();
-}
-
-TYPED_TEST(MpsDeviceManagerTypedTest, ShutdownWithoutInitializeIsNoOp) {
-  auto &manager = this->manager();
-
-  manager.shutdown();
-
-  EXPECT_FALSE(manager.isInitializedForTest());
-  EXPECT_EQ(manager.capacity(), 0u);
-}
-
-TYPED_TEST(MpsDeviceManagerTypedTest, MultipleShutdownsAreIdempotent) {
-  auto &manager = this->manager();
-
-  const auto device0 = makeDevice(0x830);
-  this->adapter().expectGetDeviceCount(1);
-  this->adapter().expectGetDevices({{0, device0}});
-  this->adapter().expectDetectArchitectures({
-      {base::DeviceHandle{0}, architecture::Architecture::MpsM3},
-  });
-  this->adapter().expectReleaseDevices({device0});
-
-  manager.initialize(this->getOps());
-  EXPECT_TRUE(manager.isInitializedForTest());
-
-  manager.shutdown();
-  EXPECT_FALSE(manager.isInitializedForTest());
-
-  manager.shutdown();
-  EXPECT_FALSE(manager.isInitializedForTest());
-}
+// =============================================================================
+// Direct Access Tests
+// =============================================================================
 
 TYPED_TEST(MpsDeviceManagerTypedTest, DirectAccessReturnsValidPointers) {
   auto &manager = this->manager();
 
+  // Arrange
   const auto device0 = makeDevice(0x840);
   this->adapter().expectGetDeviceCount(1);
   this->adapter().expectGetDevices({{0, device0}});
@@ -666,6 +778,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, DirectAccessReturnsValidPointers) {
 
   manager.initialize(this->getOps());
 
+  // Act & Assert: All accessors return valid pointers
   const auto device = manager.device(base::DeviceHandle{0});
   if constexpr (TypeParam::is_mock) {
     EXPECT_EQ(device, device0);
@@ -688,5 +801,6 @@ TYPED_TEST(MpsDeviceManagerTypedTest, DirectAccessReturnsValidPointers) {
   auto *fence_pool = manager.fencePool(base::DeviceHandle{0});
   EXPECT_NE(fence_pool, nullptr);
 
+  // Cleanup
   manager.shutdown();
 }
