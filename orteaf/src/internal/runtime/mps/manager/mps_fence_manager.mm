@@ -26,8 +26,7 @@ void MpsFenceManager::initialize(DeviceType device, SlowOps *ops,
   }
   device_ = device;
   ops_ = ops;
-  states_.clear();
-  Base::free_list_.clear();
+  clearPoolStates();
   if (capacity > 0) {
     Base::growPool(capacity);
   }
@@ -48,8 +47,7 @@ void MpsFenceManager::shutdown() {
       state.ref_count.store(0, std::memory_order_relaxed);
     }
   }
-  states_.clear();
-  Base::free_list_.clear();
+  clearPoolStates();
   device_ = nullptr;
   ops_ = nullptr;
   initialized_ = false;
@@ -72,34 +70,12 @@ MpsFenceManager::FenceLease MpsFenceManager::acquire() {
   }
 
   markSlotInUse(index);
-
-  const auto handle =
-      FenceHandle{static_cast<FenceHandle::index_type>(index),
-                  static_cast<FenceHandle::generation_type>(state.generation)};
-  return FenceLease{this, handle, state.resource};
+  return FenceLease{this, createHandle<FenceHandle>(index), state.resource};
 }
 
 MpsFenceManager::FenceLease MpsFenceManager::acquire(FenceHandle handle) {
-  ensureInitialized();
-  const std::size_t index = static_cast<std::size_t>(handle.index);
-  if (index >= states_.size()) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-        "MPS fence manager handle out of range");
-  }
-  State &state = states_[index];
-  if (!state.alive || !state.in_use) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-        "MPS fence manager handle is inactive");
-  }
-  if (!isGenerationValid(index, handle)) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-        "MPS fence manager handle is stale");
-  }
-
-  incrementRefCount(index);
+  State &state = validateAndGetState(handle);
+  incrementRefCount(static_cast<std::size_t>(handle.index));
   return FenceLease{this, handle, state.resource};
 }
 
@@ -109,21 +85,11 @@ void MpsFenceManager::release(FenceLease &lease) noexcept {
 }
 
 void MpsFenceManager::release(FenceHandle handle) noexcept {
-  if (!initialized_ || device_ == nullptr || ops_ == nullptr) {
+  State *state = getStateForRelease(handle);
+  if (state == nullptr) {
     return;
   }
   const std::size_t index = static_cast<std::size_t>(handle.index);
-  if (index >= states_.size()) {
-    return;
-  }
-  State &state = states_[index];
-  if (!state.alive || !state.in_use) {
-    return;
-  }
-  if (!isGenerationValid(index, handle)) {
-    return;
-  }
-
   const std::size_t new_count = decrementRefCount(index);
   if (new_count == 0) {
     releaseSlot(index);

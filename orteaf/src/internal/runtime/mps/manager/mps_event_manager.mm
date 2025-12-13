@@ -26,8 +26,7 @@ void MpsEventManager::initialize(DeviceType device, SlowOps *ops,
   }
   device_ = device;
   ops_ = ops;
-  states_.clear();
-  Base::free_list_.clear();
+  clearPoolStates();
   if (capacity > 0) {
     Base::growPool(capacity);
   }
@@ -48,8 +47,7 @@ void MpsEventManager::shutdown() {
       state.ref_count.store(0, std::memory_order_relaxed);
     }
   }
-  states_.clear();
-  Base::free_list_.clear();
+  clearPoolStates();
   device_ = nullptr;
   ops_ = nullptr;
   initialized_ = false;
@@ -72,34 +70,12 @@ MpsEventManager::EventLease MpsEventManager::acquire() {
   }
 
   markSlotInUse(index);
-
-  const auto handle =
-      EventHandle{static_cast<EventHandle::index_type>(index),
-                  static_cast<EventHandle::generation_type>(state.generation)};
-  return EventLease{this, handle, state.resource};
+  return EventLease{this, createHandle<EventHandle>(index), state.resource};
 }
 
 MpsEventManager::EventLease MpsEventManager::acquire(EventHandle handle) {
-  ensureInitialized();
-  const std::size_t index = static_cast<std::size_t>(handle.index);
-  if (index >= states_.size()) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-        "MPS event manager handle out of range");
-  }
-  State &state = states_[index];
-  if (!state.alive || !state.in_use) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-        "MPS event manager handle is inactive");
-  }
-  if (!isGenerationValid(index, handle)) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-        "MPS event manager handle is stale");
-  }
-
-  incrementRefCount(index);
+  State &state = validateAndGetState(handle);
+  incrementRefCount(static_cast<std::size_t>(handle.index));
   return EventLease{this, handle, state.resource};
 }
 
@@ -109,21 +85,11 @@ void MpsEventManager::release(EventLease &lease) noexcept {
 }
 
 void MpsEventManager::release(EventHandle handle) noexcept {
-  if (!initialized_ || device_ == nullptr || ops_ == nullptr) {
+  State *state = getStateForRelease(handle);
+  if (state == nullptr) {
     return;
   }
   const std::size_t index = static_cast<std::size_t>(handle.index);
-  if (index >= states_.size()) {
-    return;
-  }
-  State &state = states_[index];
-  if (!state.alive || !state.in_use) {
-    return;
-  }
-  if (!isGenerationValid(index, handle)) {
-    return;
-  }
-
   const std::size_t new_count = decrementRefCount(index);
   if (new_count == 0) {
     releaseSlot(index);
