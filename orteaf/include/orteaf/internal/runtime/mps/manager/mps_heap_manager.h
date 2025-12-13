@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <unordered_map>
 
 #include <orteaf/internal/base/handle.h>
@@ -60,11 +61,12 @@ struct HeapDescriptorKeyHasher {
   }
 };
 
-// Resource struct: holds heap + buffer_manager
+// Resource struct: holds heap + buffer_manager (heap-allocated for pointer
+// stability)
 struct MpsHeapResource {
   ::orteaf::internal::runtime::mps::platform::wrapper::MPSHeap_t heap{nullptr};
-  ::orteaf::internal::runtime::mps::manager::MpsBufferManagerT<
-      ::orteaf::internal::runtime::allocator::resource::mps::MpsResource>
+  std::unique_ptr<::orteaf::internal::runtime::mps::manager::MpsBufferManagerT<
+      ::orteaf::internal::runtime::allocator::resource::mps::MpsResource>>
       buffer_manager;
 };
 
@@ -92,6 +94,9 @@ public:
       HeapHandle,
       ::orteaf::internal::runtime::mps::platform::wrapper::MPSHeap_t,
       MpsHeapManager>;
+  using BufferManager =
+      ::orteaf::internal::runtime::mps::manager::MpsBufferManagerT<
+          ::orteaf::internal::runtime::allocator::resource::mps::MpsResource>;
 
   MpsHeapManager() = default;
   MpsHeapManager(const MpsHeapManager &) = delete;
@@ -100,7 +105,10 @@ public:
   MpsHeapManager &operator=(MpsHeapManager &&) = default;
   ~MpsHeapManager() = default;
 
-  void initialize(DeviceType device, SlowOps *ops, std::size_t capacity);
+  void initialize(DeviceType device,
+                  ::orteaf::internal::base::DeviceHandle device_handle,
+                  MpsLibraryManager *library_manager, SlowOps *ops,
+                  std::size_t capacity);
   void shutdown();
 
   HeapLease acquire(const HeapDescriptorKey &key);
@@ -115,6 +123,8 @@ private:
   std::unordered_map<HeapDescriptorKey, std::size_t, HeapDescriptorKeyHasher>
       key_to_index_{};
   DeviceType device_{nullptr};
+  ::orteaf::internal::base::DeviceHandle device_handle_{};
+  MpsLibraryManager *library_manager_{nullptr};
 };
 
 } // namespace orteaf::internal::runtime::mps::manager

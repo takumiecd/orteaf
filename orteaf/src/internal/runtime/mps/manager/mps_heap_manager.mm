@@ -6,8 +6,9 @@
 
 namespace orteaf::internal::runtime::mps::manager {
 
-void MpsHeapManager::initialize(DeviceType device, SlowOps *ops,
-                                std::size_t capacity) {
+void MpsHeapManager::initialize(
+    DeviceType device, ::orteaf::internal::base::DeviceHandle device_handle,
+    MpsLibraryManager *library_manager, SlowOps *ops, std::size_t capacity) {
   shutdown();
   if (device == nullptr) {
     ::orteaf::internal::diagnostics::error::throwError(
@@ -25,6 +26,8 @@ void MpsHeapManager::initialize(DeviceType device, SlowOps *ops,
         "MPS heap manager capacity exceeds maximum handle range");
   }
   device_ = device;
+  device_handle_ = device_handle;
+  library_manager_ = library_manager;
   ops_ = ops;
   clearCacheStates();
   key_to_index_.clear();
@@ -40,15 +43,25 @@ void MpsHeapManager::shutdown() {
   }
   for (std::size_t i = 0; i < states_.size(); ++i) {
     State &state = states_[i];
-    if (state.alive && state.resource.heap != nullptr) {
-      ops_->destroyHeap(state.resource.heap);
-      state.resource.heap = nullptr;
+    if (state.alive) {
+      // Shutdown buffer manager first
+      if (state.resource.buffer_manager) {
+        state.resource.buffer_manager->shutdown();
+        state.resource.buffer_manager.reset();
+      }
+      // Then destroy heap
+      if (state.resource.heap != nullptr) {
+        ops_->destroyHeap(state.resource.heap);
+        state.resource.heap = nullptr;
+      }
       state.alive = false;
     }
   }
   clearCacheStates();
   key_to_index_.clear();
   device_ = nullptr;
+  device_handle_ = {};
+  library_manager_ = nullptr;
   ops_ = nullptr;
   initialized_ = false;
 }
@@ -69,6 +82,14 @@ MpsHeapManager::acquire(const HeapDescriptorKey &key) {
   const std::size_t index = allocateSlot();
   State &state = states_[index];
   state.resource.heap = createHeap(key);
+
+  // Initialize buffer manager for this heap
+  state.resource.buffer_manager = std::make_unique<BufferManager>();
+  BufferManager::Config buf_cfg{}; // Use defaults
+  state.resource.buffer_manager->initialize(device_, device_handle_,
+                                            state.resource.heap,
+                                            library_manager_, buf_cfg, 0);
+
   markSlotAlive(index);
   key_to_index_.emplace(key, index);
 

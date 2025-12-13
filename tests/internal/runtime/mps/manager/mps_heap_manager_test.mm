@@ -101,7 +101,7 @@ TYPED_TEST(MpsHeapManagerTypedTest, GrowthChunkSizeReflectedInDebugState) {
   auto &manager = this->manager();
   manager.setGrowthChunkSize(2);
   const auto device = this->adapter().device();
-  manager.initialize(device, this->getOps(), 0);
+  manager.initialize(device, base::DeviceHandle{0}, nullptr, this->getOps(), 0);
   const auto key = this->defaultKey();
   if constexpr (TypeParam::is_mock) {
     const auto descriptor = makeHeapDescriptor(0x1501);
@@ -127,15 +127,17 @@ TYPED_TEST(MpsHeapManagerTypedTest, AccessBeforeInitializationThrows) {
 
 TYPED_TEST(MpsHeapManagerTypedTest, InitializeRejectsNullDevice) {
   auto &manager = this->manager();
-  ExpectError(diag_error::OrteafErrc::InvalidArgument,
-              [&] { manager.initialize(nullptr, this->getOps(), 1); });
+  ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
+    manager.initialize(nullptr, base::DeviceHandle{0}, nullptr, this->getOps(),
+                       1);
+  });
 }
 
 TYPED_TEST(MpsHeapManagerTypedTest, InitializeRejectsCapacityAboveLimit) {
   auto &manager = this->manager();
   const auto device = this->adapter().device();
   ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
-    manager.initialize(device, this->getOps(),
+    manager.initialize(device, base::DeviceHandle{0}, nullptr, this->getOps(),
                        std::numeric_limits<std::size_t>::max());
   });
 }
@@ -144,7 +146,7 @@ TYPED_TEST(MpsHeapManagerTypedTest, CapacityReflectsConfiguredPool) {
   auto &manager = this->manager();
   const auto device = this->adapter().device();
   EXPECT_EQ(manager.capacity(), 0u);
-  manager.initialize(device, this->getOps(), 2);
+  manager.initialize(device, base::DeviceHandle{0}, nullptr, this->getOps(), 2);
   // Cache pattern: capacity is 0 after init, grows on demand
   EXPECT_EQ(manager.capacity(), 0u);
   manager.shutdown();
@@ -155,7 +157,7 @@ TYPED_TEST(MpsHeapManagerTypedTest, GrowthChunkControlsPoolExpansion) {
   auto &manager = this->manager();
   manager.setGrowthChunkSize(3);
   const auto device = this->adapter().device();
-  manager.initialize(device, this->getOps(), 0);
+  manager.initialize(device, base::DeviceHandle{0}, nullptr, this->getOps(), 0);
   const auto key = this->defaultKey();
   if constexpr (TypeParam::is_mock) {
     const auto descriptor = makeHeapDescriptor(0x1600);
@@ -175,7 +177,7 @@ TYPED_TEST(MpsHeapManagerTypedTest, GrowthChunkControlsPoolExpansion) {
 TYPED_TEST(MpsHeapManagerTypedTest, GetOrCreateCachesByDescriptor) {
   auto &manager = this->manager();
   const auto device = this->adapter().device();
-  manager.initialize(device, this->getOps(), 1);
+  manager.initialize(device, base::DeviceHandle{0}, nullptr, this->getOps(), 1);
   const auto key = this->defaultKey();
   if constexpr (TypeParam::is_mock) {
     const auto descriptor = makeHeapDescriptor(0x1700);
@@ -200,7 +202,7 @@ TYPED_TEST(MpsHeapManagerTypedTest, GetOrCreateCachesByDescriptor) {
 TYPED_TEST(MpsHeapManagerTypedTest, DistinctDescriptorsAllocateSeparateHeaps) {
   auto &manager = this->manager();
   const auto device = this->adapter().device();
-  manager.initialize(device, this->getOps(), 0);
+  manager.initialize(device, base::DeviceHandle{0}, nullptr, this->getOps(), 0);
   auto key_a = this->defaultKey(0x1800);
   auto key_b = this->defaultKey(0x2800);
   key_b.storage_mode = mps_wrapper::kMPSStorageModePrivate;
@@ -228,7 +230,7 @@ TYPED_TEST(MpsHeapManagerTypedTest, DistinctDescriptorsAllocateSeparateHeaps) {
 TYPED_TEST(MpsHeapManagerTypedTest, ReleaseAllowsReuseWithoutRecreation) {
   auto &manager = this->manager();
   const auto device = this->adapter().device();
-  manager.initialize(device, this->getOps(), 1);
+  manager.initialize(device, base::DeviceHandle{0}, nullptr, this->getOps(), 1);
   const auto key = this->defaultKey();
   if constexpr (TypeParam::is_mock) {
     const auto descriptor_first = makeHeapDescriptor(0x1900);
@@ -252,7 +254,7 @@ TYPED_TEST(MpsHeapManagerTypedTest, ReleaseAllowsReuseWithoutRecreation) {
 TYPED_TEST(MpsHeapManagerTypedTest, ManualReleaseInvalidatesLease) {
   auto &manager = this->manager();
   const auto device = this->adapter().device();
-  manager.initialize(device, this->getOps(), 1);
+  manager.initialize(device, base::DeviceHandle{0}, nullptr, this->getOps(), 1);
   const auto key = this->defaultKey();
   if constexpr (TypeParam::is_mock) {
     const auto descriptor = makeHeapDescriptor(0x1D00);
@@ -273,7 +275,7 @@ TYPED_TEST(MpsHeapManagerTypedTest, ManualReleaseInvalidatesLease) {
 TYPED_TEST(MpsHeapManagerTypedTest, DescriptorSizeMustBePositive) {
   auto &manager = this->manager();
   const auto device = this->adapter().device();
-  manager.initialize(device, this->getOps(), 0);
+  manager.initialize(device, base::DeviceHandle{0}, nullptr, this->getOps(), 0);
   mps_rt::HeapDescriptorKey key{};
   key.size_bytes = 0;
   ExpectError(diag_error::OrteafErrc::InvalidArgument,
@@ -284,7 +286,7 @@ TYPED_TEST(MpsHeapManagerTypedTest, DescriptorSizeMustBePositive) {
 TYPED_TEST(MpsHeapManagerTypedTest, ShutdownDestroysRemainingHeaps) {
   auto &manager = this->manager();
   const auto device = this->adapter().device();
-  manager.initialize(device, this->getOps(), 1);
+  manager.initialize(device, base::DeviceHandle{0}, nullptr, this->getOps(), 1);
   const auto key = this->defaultKey(0x1F00);
   if constexpr (TypeParam::is_mock) {
     const auto descriptor = makeHeapDescriptor(0x1B00);
