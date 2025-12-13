@@ -4,18 +4,13 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <functional>
-#include <limits>
 #include <string>
 #include <string_view>
 #include <unordered_map>
-#include <utility>
 
 #include "orteaf/internal/base/handle.h"
-#include "orteaf/internal/base/heap_vector.h"
 #include "orteaf/internal/base/lease.h"
-#include "orteaf/internal/diagnostics/error/error.h"
-#include "orteaf/internal/runtime/base/base_manager.h"
+#include "orteaf/internal/runtime/base/shared_cache_manager.h"
 #include "orteaf/internal/runtime/mps/platform/mps_slow_ops.h"
 #include "orteaf/internal/runtime/mps/platform/wrapper/mps_compute_pipeline_state.h"
 #include "orteaf/internal/runtime/mps/platform/wrapper/mps_function.h"
@@ -52,32 +47,39 @@ struct FunctionKeyHasher {
   }
 };
 
-struct MpsComputePipelineStateManagerState {
-  FunctionKey key{};
+// Resource struct: holds function + pipeline_state
+struct MpsPipelineResource {
   ::orteaf::internal::runtime::mps::platform::wrapper::MPSFunction_t function{
       nullptr};
   ::orteaf::internal::runtime::mps::platform::wrapper::MPSComputePipelineState_t
       pipeline_state{nullptr};
-  std::uint32_t generation{0};
-  std::uint32_t use_count{0};
-  bool alive{false};
 };
 
+// Use SharedCacheState template
+using MpsComputePipelineStateManagerState =
+    ::orteaf::internal::runtime::base::SharedCacheState<MpsPipelineResource>;
+
 struct MpsComputePipelineStateManagerTraits {
-  using DeviceType =
-      ::orteaf::internal::runtime::mps::platform::wrapper::MPSDevice_t;
   using OpsType = ::orteaf::internal::runtime::mps::platform::MpsSlowOps;
   using StateType = MpsComputePipelineStateManagerState;
   static constexpr const char *Name = "MPS compute pipeline state manager";
 };
 
 class MpsComputePipelineStateManager
-    : public base::BaseManager<MpsComputePipelineStateManager,
-                               MpsComputePipelineStateManagerTraits> {
+    : public ::orteaf::internal::runtime::base::SharedCacheManager<
+          MpsComputePipelineStateManager,
+          MpsComputePipelineStateManagerTraits> {
 public:
+  using Base = ::orteaf::internal::runtime::base::SharedCacheManager<
+      MpsComputePipelineStateManager, MpsComputePipelineStateManagerTraits>;
   using SlowOps = ::orteaf::internal::runtime::mps::platform::MpsSlowOps;
+  using DeviceType =
+      ::orteaf::internal::runtime::mps::platform::wrapper::MPSDevice_t;
+  using LibraryType =
+      ::orteaf::internal::runtime::mps::platform::wrapper::MPSLibrary_t;
+  using FunctionHandle = ::orteaf::internal::base::FunctionHandle;
   using PipelineLease = ::orteaf::internal::base::Lease<
-      ::orteaf::internal::base::FunctionHandle,
+      FunctionHandle,
       ::orteaf::internal::runtime::mps::platform::wrapper::
           MPSComputePipelineState_t,
       MpsComputePipelineStateManager>;
@@ -92,11 +94,8 @@ public:
   operator=(MpsComputePipelineStateManager &&) = default;
   ~MpsComputePipelineStateManager() = default;
 
-  void initialize(
-      ::orteaf::internal::runtime::mps::platform::wrapper::MPSDevice_t device,
-      ::orteaf::internal::runtime::mps::platform::wrapper::MPSLibrary_t library,
-      SlowOps *slow_ops, std::size_t capacity);
-
+  void initialize(DeviceType device, LibraryType library, SlowOps *ops,
+                  std::size_t capacity);
   void shutdown();
 
   PipelineLease acquire(const FunctionKey &key);
@@ -104,27 +103,12 @@ public:
 
 private:
   void validateKey(const FunctionKey &key) const;
-
-  void destroyState(State &state);
-
-  State &ensureAliveState(::orteaf::internal::base::FunctionHandle handle);
-
-  const State &
-  ensureAliveState(::orteaf::internal::base::FunctionHandle handle) const {
-    return const_cast<MpsComputePipelineStateManager *>(this)->ensureAliveState(
-        handle);
-  }
-
-  ::orteaf::internal::base::FunctionHandle
-  encodeHandle(std::size_t index, std::uint32_t generation) const;
-  void releaseHandle(::orteaf::internal::base::FunctionHandle handle) noexcept;
+  void destroyResource(MpsPipelineResource &resource);
 
   std::unordered_map<FunctionKey, std::size_t, FunctionKeyHasher>
       key_to_index_{};
-  ::orteaf::internal::runtime::mps::platform::wrapper::MPSLibrary_t library_{
-      nullptr};
-  ::orteaf::internal::runtime::mps::platform::wrapper::MPSDevice_t device_{
-      nullptr};
+  LibraryType library_{nullptr};
+  DeviceType device_{nullptr};
 };
 
 } // namespace orteaf::internal::runtime::mps::manager

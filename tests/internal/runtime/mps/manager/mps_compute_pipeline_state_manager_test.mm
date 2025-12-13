@@ -272,10 +272,9 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest,
 
   const auto &snapshot = manager.stateForTest(lease0.handle().index);
   EXPECT_TRUE(snapshot.alive);
-  EXPECT_TRUE(snapshot.pipeline_state != nullptr);
-  EXPECT_TRUE(snapshot.function != nullptr);
+  EXPECT_TRUE(snapshot.resource.pipeline_state != nullptr);
+  EXPECT_TRUE(snapshot.resource.function != nullptr);
   EXPECT_EQ(snapshot.use_count, 2u);
-  EXPECT_EQ(snapshot.key.identifier, *maybe_name);
 
   this->adapter().expectDestroyComputePipelineStates({pipeline_handle});
   this->adapter().expectDestroyFunctions({function_handle});
@@ -412,7 +411,6 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest,
 
   const auto &snapshot = manager.stateForTest(original_handle.index);
   EXPECT_FALSE(snapshot.alive);
-  EXPECT_GT(snapshot.generation, 0u);
 }
 
 TYPED_TEST(MpsComputePipelineStateManagerTypedTest, EmptyIdentifierIsRejected) {
