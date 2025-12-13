@@ -102,8 +102,7 @@ namespace {
 class MpsBufferManagerIntegrationTest : public ::testing::Test {
 protected:
   using Manager = mps_rt::MpsBufferManager;
-  using PoolConfig = typename Manager::PoolConfig;
-  using ResourceConfig = mps_rt::MpsResource::Config;
+  using Config = typename Manager::Config;
 
   void SetUp() override {
     // Acquire real MPS device
@@ -152,22 +151,13 @@ protected:
 
   Manager &manager() { return manager_; }
 
-  void configureManager() {
-    // Pool config
-    PoolConfig pool_cfg{};
-    pool_cfg.min_block_size = 64;
-    pool_cfg.max_block_size = 16 * 1024 * 1024; // 16MB
-    pool_cfg.chunk_size = 16 * 1024 * 1024;     // 16MB
-    manager_.setPoolConfig(pool_cfg);
-
-    // Resource config
-    ResourceConfig res_cfg{};
-    res_cfg.device = device_;
-    res_cfg.device_handle = base::DeviceHandle{0};
-    res_cfg.heap = heap_;
-    res_cfg.usage = mps_wrapper::kMPSDefaultBufferUsage;
-    res_cfg.library_manager = &lib_manager_;
-    manager_.setResourceConfig(res_cfg);
+  void initializeManager(std::size_t capacity = 8) {
+    Config cfg{};
+    cfg.min_block_size = 64;
+    cfg.max_block_size = 16 * 1024 * 1024;
+    cfg.chunk_size = 16 * 1024 * 1024;
+    manager_.initialize(device_, base::DeviceHandle{0}, heap_, &lib_manager_,
+                        cfg, capacity);
   }
 
   mps_wrapper::MPSDevice_t device() { return device_; }
@@ -188,8 +178,7 @@ TEST_F(MpsBufferManagerIntegrationTest, InitializeSucceeds) {
   if (!setupSuccessful()) {
     GTEST_SKIP() << "GPU setup failed";
   }
-  configureManager();
-  EXPECT_NO_THROW(manager().initialize(device(), 8));
+  EXPECT_NO_THROW(initializeManager());
   EXPECT_TRUE(manager().isInitialized());
 }
 
@@ -197,8 +186,7 @@ TEST_F(MpsBufferManagerIntegrationTest, InitializeWithZeroCapacitySucceeds) {
   if (!setupSuccessful()) {
     GTEST_SKIP() << "GPU setup failed";
   }
-  configureManager();
-  EXPECT_NO_THROW(manager().initialize(device(), 0));
+  EXPECT_NO_THROW(initializeManager(0));
   EXPECT_TRUE(manager().isInitialized());
   EXPECT_EQ(manager().capacity(), 0u);
 }
@@ -207,8 +195,7 @@ TEST_F(MpsBufferManagerIntegrationTest, ShutdownAfterInitializeWorks) {
   if (!setupSuccessful()) {
     GTEST_SKIP() << "GPU setup failed";
   }
-  configureManager();
-  manager().initialize(device(), 8);
+  initializeManager();
   EXPECT_NO_THROW(manager().shutdown());
   EXPECT_FALSE(manager().isInitialized());
 }
@@ -217,10 +204,9 @@ TEST_F(MpsBufferManagerIntegrationTest, MultipleInitializeShutdownCyclesWork) {
   if (!setupSuccessful()) {
     GTEST_SKIP() << "GPU setup failed";
   }
-  configureManager();
 
   for (int i = 0; i < 3; ++i) {
-    EXPECT_NO_THROW(manager().initialize(device(), 8));
+    EXPECT_NO_THROW(initializeManager());
     EXPECT_TRUE(manager().isInitialized());
     EXPECT_NO_THROW(manager().shutdown());
     EXPECT_FALSE(manager().isInitialized());
@@ -233,8 +219,7 @@ TEST_F(MpsBufferManagerIntegrationTest, AcquireReturnsValidLease) {
   if (!setupSuccessful()) {
     GTEST_SKIP() << "GPU setup failed";
   }
-  configureManager();
-  manager().initialize(device(), 8);
+  initializeManager();
 
   auto lease = manager().acquire(1024, 16);
   EXPECT_TRUE(lease);
@@ -248,8 +233,7 @@ TEST_F(MpsBufferManagerIntegrationTest,
   if (!setupSuccessful()) {
     GTEST_SKIP() << "GPU setup failed";
   }
-  configureManager();
-  manager().initialize(device(), 8);
+  initializeManager();
 
   auto lease = manager().acquire(0, 16);
   EXPECT_FALSE(lease);
@@ -259,8 +243,7 @@ TEST_F(MpsBufferManagerIntegrationTest, MultipleAllocationsWork) {
   if (!setupSuccessful()) {
     GTEST_SKIP() << "GPU setup failed";
   }
-  configureManager();
-  manager().initialize(device(), 8);
+  initializeManager();
 
   auto lease1 = manager().acquire(1024, 16);
   auto lease2 = manager().acquire(2048, 32);
@@ -282,8 +265,7 @@ TEST_F(MpsBufferManagerIntegrationTest, BufferRecyclingReusesSlots) {
   if (!setupSuccessful()) {
     GTEST_SKIP() << "GPU setup failed";
   }
-  configureManager();
-  manager().initialize(device(), 8);
+  initializeManager();
 
   auto first = manager().acquire(1024, 16);
   const auto first_index = first.handle().index;
@@ -314,9 +296,8 @@ using StubBufferManager =
 class MpsBufferManagerMockTest : public ::testing::Test {
 protected:
   using Manager = StubBufferManager;
-  using PoolConfig = typename Manager::PoolConfig;
+  using Config = typename Manager::Config;
   using StubResource = orteaf::tests::runtime::mps::StubMpsResource;
-  using ResourceConfig = typename StubResource::Config;
 
   Manager &manager() { return manager_; }
 
@@ -325,20 +306,15 @@ protected:
     return reinterpret_cast<typename Manager::DeviceType>(0x12345678);
   }
 
-  void configureManager() {
-    // Pool config
-    PoolConfig pool_cfg{};
-    pool_cfg.min_block_size = 64;
-    pool_cfg.max_block_size = 1024 * 1024; // 1MB
-    pool_cfg.chunk_size = 1024 * 1024;     // 1MB
-    manager_.setPoolConfig(pool_cfg);
+  void *heap() { return reinterpret_cast<void *>(0x87654321); }
 
-    // Resource config
-    ResourceConfig res_cfg{};
-    res_cfg.device = device();
-    res_cfg.device_handle = base::DeviceHandle{0};
-    res_cfg.heap = reinterpret_cast<void *>(0x87654321);
-    manager_.setResourceConfig(res_cfg);
+  void initializeManager(std::size_t capacity = 8) {
+    Config cfg{};
+    cfg.min_block_size = 64;
+    cfg.max_block_size = 1024 * 1024;
+    cfg.chunk_size = 1024 * 1024;
+    manager_.initialize(device(), base::DeviceHandle{0}, heap(), nullptr, cfg,
+                        capacity);
   }
 
   Manager manager_{};
@@ -347,21 +323,18 @@ protected:
 // --- Initialize Tests (モック) ---
 
 TEST_F(MpsBufferManagerMockTest, InitializeSucceeds) {
-  configureManager();
-  EXPECT_NO_THROW(manager_.initialize(device(), 8));
+  EXPECT_NO_THROW(initializeManager());
   EXPECT_TRUE(manager_.isInitialized());
 }
 
 TEST_F(MpsBufferManagerMockTest, ShutdownAfterInitializeWorks) {
-  configureManager();
-  manager_.initialize(device(), 8);
+  initializeManager();
   EXPECT_NO_THROW(manager_.shutdown());
   EXPECT_FALSE(manager_.isInitialized());
 }
 
 TEST_F(MpsBufferManagerMockTest, AcquireReturnsValidLease) {
-  configureManager();
-  manager_.initialize(device(), 8);
+  initializeManager();
 
   auto lease = manager_.acquire(1024, 16);
   EXPECT_TRUE(lease);
@@ -371,8 +344,7 @@ TEST_F(MpsBufferManagerMockTest, AcquireReturnsValidLease) {
 }
 
 TEST_F(MpsBufferManagerMockTest, MultipleAcquisitionsWork) {
-  configureManager();
-  manager_.initialize(device(), 8);
+  initializeManager();
 
   auto lease1 = manager_.acquire(256, 16);
   auto lease2 = manager_.acquire(512, 32);
@@ -390,8 +362,7 @@ TEST_F(MpsBufferManagerMockTest, MultipleAcquisitionsWork) {
 }
 
 TEST_F(MpsBufferManagerMockTest, ReleaseRecyclesSlot) {
-  configureManager();
-  manager_.initialize(device(), 8);
+  initializeManager();
 
   auto first = manager_.acquire(256, 16);
   const auto first_index = first.handle().index;
@@ -405,8 +376,7 @@ TEST_F(MpsBufferManagerMockTest, ReleaseRecyclesSlot) {
 }
 
 TEST_F(MpsBufferManagerMockTest, AcquireByHandleIncreasesRefCount) {
-  configureManager();
-  manager_.initialize(device(), 8);
+  initializeManager();
 
   auto lease1 = manager_.acquire(256, 16);
   const auto handle = lease1.handle();
@@ -423,16 +393,14 @@ TEST_F(MpsBufferManagerMockTest, AcquireByHandleIncreasesRefCount) {
 }
 
 TEST_F(MpsBufferManagerMockTest, AcquireWithZeroSizeReturnsInvalidLease) {
-  configureManager();
-  manager_.initialize(device(), 8);
+  initializeManager();
 
   auto lease = manager_.acquire(0, 16);
   EXPECT_FALSE(lease);
 }
 
 TEST_F(MpsBufferManagerMockTest, CapacityGrowsOnAcquire) {
-  configureManager();
-  manager_.initialize(device(), 4);
+  initializeManager(4);
 
   // Acquire to use capacity
   auto lease1 = manager_.acquire(256, 16);
