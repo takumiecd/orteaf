@@ -3,7 +3,10 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
+#include <string>
+#include <utility>
 
+#include "orteaf/internal/diagnostics/error/error.h"
 #include "orteaf/internal/runtime/base/base_manager.h"
 
 namespace orteaf::internal::runtime::base {
@@ -122,6 +125,65 @@ protected:
     return index < states_.size() &&
            static_cast<std::size_t>(states_[index].generation) ==
                static_cast<std::size_t>(handle.generation);
+  }
+
+  // ===== Combined Helpers =====
+
+  /// Create a handle from index and current generation.
+  template <typename HandleType>
+  HandleType createHandle(std::size_t index) const {
+    return HandleType{static_cast<typename HandleType::index_type>(index),
+                      static_cast<typename HandleType::generation_type>(
+                          states_[index].generation)};
+  }
+
+  /// Validate handle for re-acquisition (throws on invalid).
+  template <typename HandleType> State &validateAndGetState(HandleType handle) {
+    ensureInitialized();
+    const std::size_t index = static_cast<std::size_t>(handle.index);
+    if (index >= states_.size()) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+          std::string(Traits::Name) + " handle out of range");
+    }
+    State &state = states_[index];
+    if (!state.alive || !state.in_use) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+          std::string(Traits::Name) + " handle is inactive");
+    }
+    if (!isGenerationValid(index, handle)) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+          std::string(Traits::Name) + " handle is stale");
+    }
+    return state;
+  }
+
+  /// Check if handle is valid for release (silent, no throw).
+  template <typename HandleType>
+  State *getStateForRelease(HandleType handle) noexcept {
+    if (!initialized_) {
+      return nullptr;
+    }
+    const std::size_t index = static_cast<std::size_t>(handle.index);
+    if (index >= states_.size()) {
+      return nullptr;
+    }
+    State &state = states_[index];
+    if (!state.alive || !state.in_use) {
+      return nullptr;
+    }
+    if (!isGenerationValid(index, handle)) {
+      return nullptr;
+    }
+    return &state;
+  }
+
+  /// Clear all pool states during shutdown.
+  void clearPoolStates() {
+    states_.clear();
+    Base::free_list_.clear();
   }
 };
 
