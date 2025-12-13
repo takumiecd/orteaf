@@ -364,7 +364,7 @@ public:
     if (!entry.initialized || idx >= entry.pipelines.size()) {
       return nullptr;
     }
-    return dispatchOneShot<RuntimeApi, FastOps>(
+    return dispatchOneShot<FastOps, RuntimeApi>(
         queue_lease, device, idx, threadgroups, threads_per_threadgroup,
         static_cast<Binder &&>(binder), fence_token);
   }

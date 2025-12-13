@@ -1,11 +1,11 @@
 #include <gtest/gtest.h>
 
+#include "orteaf/internal/runtime/mps/api/mps_runtime_api.h"
 #include "orteaf/internal/runtime/mps/platform/wrapper/mps_buffer.h"
 #include "orteaf/internal/runtime/mps/platform/wrapper/mps_command_buffer.h"
 #include "orteaf/internal/runtime/mps/platform/wrapper/mps_command_queue.h"
 #include "orteaf/internal/runtime/mps/platform/wrapper/mps_device.h"
 #include "orteaf/internal/runtime/mps/platform/wrapper/mps_heap.h"
-#include "orteaf/internal/runtime/mps/api/mps_runtime_api.h"
 #include "orteaf/internal/runtime/mps/resource/mps_kernel_launcher_impl.h"
 
 namespace base = orteaf::internal::base;
@@ -26,7 +26,7 @@ TEST(MpsKernelLauncherImplDeviceTest, InitializeWithEmbeddedLibraryRealDevice) {
   });
 
   const base::DeviceHandle device{0};
-  impl.initialize<mps_rt::ops::MpsPrivateOps>(device);
+  impl.initialize<mps_api::MpsRuntimeApi>(device);
 
   EXPECT_TRUE(impl.initialized(device));
   ASSERT_EQ(impl.sizeForTest(), 1u);
@@ -50,7 +50,7 @@ TEST(MpsKernelLauncherImplDeviceTest, DispatchOneShotExecutesEmbeddedIdentity) {
   });
 
   const base::DeviceHandle device{0};
-  impl.initialize<mps_rt::ops::MpsPrivateOps>(device);
+  impl.initialize<mps_api::MpsRuntimeApi>(device);
 
   auto *device_handle =
       ::orteaf::internal::runtime::mps::platform::wrapper::getDevice(0);
@@ -97,7 +97,9 @@ TEST(MpsKernelLauncherImplDeviceTest, DispatchOneShotExecutesEmbeddedIdentity) {
       ::orteaf::internal::runtime::mps::manager::MpsCommandQueueManager::
           CommandQueueLease::makeForTest(base::CommandQueueHandle{0}, queue);
 
-  auto *command_buffer = impl.dispatchOneShot<mps_rt::ops::MpsPrivateOps>(
+  auto *command_buffer = impl.dispatchOneShot<
+      ::orteaf::internal::runtime::mps::platform::MpsFastOps,
+      mps_api::MpsRuntimeApi>(
       queue_lease, device, 0, tg, tptg, [&](auto *encoder) {
         impl.setBuffer<>(encoder, buffer, 0, 0);
         impl.setBytes<>(encoder, &length, sizeof(length), 1);
