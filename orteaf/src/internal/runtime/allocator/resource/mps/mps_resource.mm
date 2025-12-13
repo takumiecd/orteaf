@@ -1,5 +1,6 @@
 
 #include "orteaf/internal/runtime/allocator/resource/mps/mps_resource.h"
+#include <orteaf/internal/runtime/mps/platform/mps_fast_ops.h>
 #include <orteaf/internal/runtime/mps/platform/wrapper/mps_buffer.h>
 
 #include "orteaf/internal/diagnostics/error/error_macros.h"
@@ -54,7 +55,7 @@ bool MpsResource::isCompleted(FenceToken &token) {
     if (!ticket.valid()) {
       continue;
     }
-    if (::orteaf::internal::runtime::mps::platform::wrapper::isCompleted(
+    if (::orteaf::internal::runtime::mps::platform::MpsFastOps::isCompleted(
             ticket.commandBuffer())) {
       ticket.reset(); // mark as invalid so subsequent calls skip it
       continue;
@@ -75,7 +76,7 @@ bool MpsResource::isCompleted(ReuseToken &token) {
     if (!ticket.valid()) {
       continue;
     }
-    if (::orteaf::internal::runtime::mps::platform::wrapper::isCompleted(
+    if (::orteaf::internal::runtime::mps::platform::MpsFastOps::isCompleted(
             ticket.commandBuffer())) {
       ticket.reset();
       continue;

@@ -92,6 +92,13 @@ struct MpsFastOps {
     ::orteaf::internal::runtime::mps::platform::wrapper::waitForFence(encoder,
                                                                       fence);
   }
+
+  static inline bool isCompleted(
+      ::orteaf::internal::runtime::mps::platform::wrapper::MPSCommandBuffer_t
+          command_buffer) {
+    return ::orteaf::internal::runtime::mps::platform::wrapper::isCompleted(
+        command_buffer);
+  }
 };
 
 } // namespace orteaf::internal::runtime::mps::platform
