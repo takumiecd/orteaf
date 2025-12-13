@@ -185,7 +185,6 @@ TYPED_TEST(MpsHeapManagerTypedTest, GetOrCreateCachesByDescriptor) {
               [&] { (void)manager.acquire(key); });
   const auto &snapshot = manager.stateForTest(first.handle().index);
   EXPECT_TRUE(snapshot.alive);
-  EXPECT_EQ(snapshot.key.size_bytes, key.size_bytes);
   first.release();
   auto second = manager.acquire(key);
   EXPECT_NE(first.handle(), second.handle());
@@ -216,9 +215,6 @@ TYPED_TEST(MpsHeapManagerTypedTest, DistinctDescriptorsAllocateSeparateHeaps) {
   auto lease_a = manager.acquire(key_a);
   auto lease_b = manager.acquire(key_b);
   EXPECT_NE(lease_a.handle(), lease_b.handle());
-  const auto &snapshot_b = manager.stateForTest(lease_b.handle().index);
-  EXPECT_EQ(snapshot_b.key.storage_mode, key_b.storage_mode);
-  EXPECT_EQ(snapshot_b.key.heap_type, key_b.heap_type);
   lease_a.release();
   lease_b.release();
   if constexpr (TypeParam::is_mock) {
@@ -266,7 +262,6 @@ TYPED_TEST(MpsHeapManagerTypedTest, ManualReleaseInvalidatesLease) {
 
   manager.release(lease);
   EXPECT_FALSE(static_cast<bool>(lease));
-  EXPECT_GT(manager.stateForTest(handle.index).generation, 0u);
 
   manager.shutdown();
 }

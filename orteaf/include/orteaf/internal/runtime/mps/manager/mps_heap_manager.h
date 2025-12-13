@@ -4,15 +4,12 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <limits>
 #include <unordered_map>
 
 #include <orteaf/internal/base/handle.h>
-#include <orteaf/internal/base/heap_vector.h>
 #include <orteaf/internal/base/lease.h>
-#include <orteaf/internal/diagnostics/error/error.h>
 #include <orteaf/internal/runtime/allocator/resource/mps/mps_resource.h>
-#include <orteaf/internal/runtime/base/base_manager.h>
+#include <orteaf/internal/runtime/base/shared_cache_manager.h>
 #include <orteaf/internal/runtime/mps/manager/mps_buffer_manager.h>
 #include <orteaf/internal/runtime/mps/platform/mps_slow_ops.h>
 #include <orteaf/internal/runtime/mps/platform/wrapper/mps_heap.h>
@@ -63,38 +60,36 @@ struct HeapDescriptorKeyHasher {
   }
 };
 
-struct MpsHeapManagerState {
-  HeapDescriptorKey key{};
+// Resource struct: holds heap + buffer_manager
+struct MpsHeapResource {
   ::orteaf::internal::runtime::mps::platform::wrapper::MPSHeap_t heap{nullptr};
   ::orteaf::internal::runtime::mps::manager::MpsBufferManagerT<
       ::orteaf::internal::runtime::allocator::resource::mps::MpsResource>
       buffer_manager;
-  std::uint32_t generation{0};
-  bool alive{false};
-  bool in_use{false};
-
-  void reset() {
-    key = HeapDescriptorKey{};
-    heap = nullptr;
-    alive = false;
-    in_use = false;
-  }
 };
 
+// Use SharedCacheState template
+using MpsHeapManagerState =
+    ::orteaf::internal::runtime::base::SharedCacheState<MpsHeapResource>;
+
 struct MpsHeapManagerTraits {
-  using DeviceType =
-      ::orteaf::internal::runtime::mps::platform::wrapper::MPSDevice_t;
   using OpsType = ::orteaf::internal::runtime::mps::platform::MpsSlowOps;
   using StateType = MpsHeapManagerState;
   static constexpr const char *Name = "MPS heap manager";
 };
 
 class MpsHeapManager
-    : public base::BaseManager<MpsHeapManager, MpsHeapManagerTraits> {
+    : public ::orteaf::internal::runtime::base::SharedCacheManager<
+          MpsHeapManager, MpsHeapManagerTraits> {
 public:
+  using Base = ::orteaf::internal::runtime::base::SharedCacheManager<
+      MpsHeapManager, MpsHeapManagerTraits>;
   using SlowOps = ::orteaf::internal::runtime::mps::platform::MpsSlowOps;
+  using DeviceType =
+      ::orteaf::internal::runtime::mps::platform::wrapper::MPSDevice_t;
+  using HeapHandle = ::orteaf::internal::base::HeapHandle;
   using HeapLease = ::orteaf::internal::base::Lease<
-      ::orteaf::internal::base::HeapHandle,
+      HeapHandle,
       ::orteaf::internal::runtime::mps::platform::wrapper::MPSHeap_t,
       MpsHeapManager>;
 
@@ -105,33 +100,21 @@ public:
   MpsHeapManager &operator=(MpsHeapManager &&) = default;
   ~MpsHeapManager() = default;
 
-  void initialize(
-      ::orteaf::internal::runtime::mps::platform::wrapper::MPSDevice_t device,
-      SlowOps *slow_ops, std::size_t capacity);
-
+  void initialize(DeviceType device, SlowOps *ops, std::size_t capacity);
   void shutdown();
 
   HeapLease acquire(const HeapDescriptorKey &key);
-
   void release(HeapLease &lease) noexcept;
 
 private:
   void validateKey(const HeapDescriptorKey &key) const;
-
-  State &ensureAliveState(::orteaf::internal::base::HeapHandle handle);
-
-  const State &
-  ensureAliveState(::orteaf::internal::base::HeapHandle handle) const {
-    return const_cast<MpsHeapManager *>(this)->ensureAliveState(handle);
-  }
 
   ::orteaf::internal::runtime::mps::platform::wrapper::MPSHeap_t
   createHeap(const HeapDescriptorKey &key);
 
   std::unordered_map<HeapDescriptorKey, std::size_t, HeapDescriptorKeyHasher>
       key_to_index_{};
-  ::orteaf::internal::runtime::mps::platform::wrapper::MPSDevice_t device_{
-      nullptr};
+  DeviceType device_{nullptr};
 };
 
 } // namespace orteaf::internal::runtime::mps::manager
