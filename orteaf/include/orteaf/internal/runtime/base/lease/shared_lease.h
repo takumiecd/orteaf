@@ -18,7 +18,7 @@ public:
   using HandleType = HandleT;
   using ResourceType = ResourceT;
   using ManagerType = ManagerT;
-  using CompatibleCategory = ::orteaf::internal::base::lease_category::Shared;
+  using CompatibleCategory = lease_category::Shared;
 
   SharedLease() = default;
 

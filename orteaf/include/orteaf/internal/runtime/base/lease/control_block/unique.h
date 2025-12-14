@@ -19,6 +19,25 @@ struct UniqueControlBlock {
   std::atomic<bool> in_use{false};
   SlotT slot{};
 
+  UniqueControlBlock() = default;
+  UniqueControlBlock(const UniqueControlBlock &) = delete;
+  UniqueControlBlock &operator=(const UniqueControlBlock &) = delete;
+
+  UniqueControlBlock(UniqueControlBlock &&other) noexcept
+      : slot(std::move(other.slot)) {
+    in_use.store(other.in_use.load(std::memory_order_relaxed),
+                 std::memory_order_relaxed);
+  }
+
+  UniqueControlBlock &operator=(UniqueControlBlock &&other) noexcept {
+    if (this != &other) {
+      in_use.store(other.in_use.load(std::memory_order_relaxed),
+                   std::memory_order_relaxed);
+      slot = std::move(other.slot);
+    }
+    return *this;
+  }
+
   /// @brief Try to acquire exclusive ownership
   /// @return true if successfully acquired, false if already in use
   bool tryAcquire() noexcept {

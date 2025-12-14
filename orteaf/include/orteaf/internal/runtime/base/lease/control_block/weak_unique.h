@@ -23,6 +23,29 @@ struct WeakUniqueControlBlock {
   std::atomic<std::uint32_t> weak_count{0};
   SlotT slot{};
 
+  WeakUniqueControlBlock() = default;
+  WeakUniqueControlBlock(const WeakUniqueControlBlock &) = delete;
+  WeakUniqueControlBlock &operator=(const WeakUniqueControlBlock &) = delete;
+
+  WeakUniqueControlBlock(WeakUniqueControlBlock &&other) noexcept
+      : slot(std::move(other.slot)) {
+    in_use.store(other.in_use.load(std::memory_order_relaxed),
+                 std::memory_order_relaxed);
+    weak_count.store(other.weak_count.load(std::memory_order_relaxed),
+                     std::memory_order_relaxed);
+  }
+
+  WeakUniqueControlBlock &operator=(WeakUniqueControlBlock &&other) noexcept {
+    if (this != &other) {
+      in_use.store(other.in_use.load(std::memory_order_relaxed),
+                   std::memory_order_relaxed);
+      weak_count.store(other.weak_count.load(std::memory_order_relaxed),
+                       std::memory_order_relaxed);
+      slot = std::move(other.slot);
+    }
+    return *this;
+  }
+
   /// @brief Try to acquire exclusive (strong) ownership
   /// @return true if successfully acquired
   bool tryAcquire() noexcept {

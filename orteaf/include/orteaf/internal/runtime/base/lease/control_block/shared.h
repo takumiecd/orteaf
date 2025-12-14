@@ -20,6 +20,25 @@ struct SharedControlBlock {
   std::atomic<std::uint32_t> strong_count{0};
   SlotT slot{};
 
+  SharedControlBlock() = default;
+  SharedControlBlock(const SharedControlBlock &) = delete;
+  SharedControlBlock &operator=(const SharedControlBlock &) = delete;
+
+  SharedControlBlock(SharedControlBlock &&other) noexcept
+      : slot(std::move(other.slot)) {
+    strong_count.store(other.strong_count.load(std::memory_order_relaxed),
+                       std::memory_order_relaxed);
+  }
+
+  SharedControlBlock &operator=(SharedControlBlock &&other) noexcept {
+    if (this != &other) {
+      strong_count.store(other.strong_count.load(std::memory_order_relaxed),
+                         std::memory_order_relaxed);
+      slot = std::move(other.slot);
+    }
+    return *this;
+  }
+
   /// @brief Try to acquire (first acquisition)
   /// @return true if this is the first acquisition (count goes 0->1)
   bool tryAcquire() noexcept {

@@ -22,6 +22,29 @@ struct WeakSharedControlBlock {
   std::atomic<std::uint32_t> weak_count{0};
   SlotT slot{};
 
+  WeakSharedControlBlock() = default;
+  WeakSharedControlBlock(const WeakSharedControlBlock &) = delete;
+  WeakSharedControlBlock &operator=(const WeakSharedControlBlock &) = delete;
+
+  WeakSharedControlBlock(WeakSharedControlBlock &&other) noexcept
+      : slot(std::move(other.slot)) {
+    strong_count.store(other.strong_count.load(std::memory_order_relaxed),
+                       std::memory_order_relaxed);
+    weak_count.store(other.weak_count.load(std::memory_order_relaxed),
+                     std::memory_order_relaxed);
+  }
+
+  WeakSharedControlBlock &operator=(WeakSharedControlBlock &&other) noexcept {
+    if (this != &other) {
+      strong_count.store(other.strong_count.load(std::memory_order_relaxed),
+                         std::memory_order_relaxed);
+      weak_count.store(other.weak_count.load(std::memory_order_relaxed),
+                       std::memory_order_relaxed);
+      slot = std::move(other.slot);
+    }
+    return *this;
+  }
+
   /// @brief Try to acquire first strong reference
   /// @return true if this is the first acquisition
   bool tryAcquire() noexcept {
