@@ -6,7 +6,7 @@
 #include <orteaf/internal/runtime/base/lease/category.h>
 #include <orteaf/internal/runtime/base/lease/concepts.h>
 
-namespace orteaf::internal::base {
+namespace orteaf::internal::runtime::base {
 
 /// @brief Weak-unique control block - single ownership with weak reference
 /// support
@@ -62,4 +62,4 @@ static_assert(ControlBlockConcept<WeakUniqueControlBlock<int>>);
 static_assert(WeakableControlBlockConcept<WeakUniqueControlBlock<int>>);
 static_assert(PromotableControlBlockConcept<WeakUniqueControlBlock<int>>);
 
-} // namespace orteaf::internal::base
+} // namespace orteaf::internal::runtime::base

@@ -5,7 +5,7 @@
 #include <orteaf/internal/runtime/base/lease/category.h>
 #include <orteaf/internal/runtime/base/lease/concepts.h>
 
-namespace orteaf::internal::base {
+namespace orteaf::internal::runtime::base {
 
 /// @brief Unique control block - single ownership with in_use flag
 /// @details Only one lease can hold this resource at a time.
@@ -39,4 +39,4 @@ struct UniqueControlBlock {
 // Verify concept satisfaction
 static_assert(ControlBlockConcept<UniqueControlBlock<int>>);
 
-} // namespace orteaf::internal::base
+} // namespace orteaf::internal::runtime::base

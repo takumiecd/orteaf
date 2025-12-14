@@ -6,7 +6,7 @@
 #include <orteaf/internal/runtime/base/lease/category.h>
 #include <orteaf/internal/runtime/base/lease/concepts.h>
 
-namespace orteaf::internal::base {
+namespace orteaf::internal::runtime::base {
 
 /// @brief Shared control block - shared ownership with reference counting
 /// @details Multiple leases can share this resource. Uses atomic reference
@@ -52,4 +52,4 @@ struct SharedControlBlock {
 static_assert(ControlBlockConcept<SharedControlBlock<int>>);
 static_assert(SharedControlBlockConcept<SharedControlBlock<int>>);
 
-} // namespace orteaf::internal::base
+} // namespace orteaf::internal::runtime::base

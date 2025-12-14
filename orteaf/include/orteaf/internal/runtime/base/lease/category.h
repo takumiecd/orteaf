@@ -1,6 +1,6 @@
 #pragma once
 
-namespace orteaf::internal::base::lease_category {
+namespace orteaf::internal::runtime::base::lease_category {
 
 /// @brief Raw category - no reference counting, payload only
 struct Raw {};
@@ -17,4 +17,4 @@ struct WeakUnique {};
 /// @brief WeakShared category - shared ownership with weak reference support
 struct WeakShared {};
 
-} // namespace orteaf::internal::base::lease_category
+} // namespace orteaf::internal::runtime::base::lease_category

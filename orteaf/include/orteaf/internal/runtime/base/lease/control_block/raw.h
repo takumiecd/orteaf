@@ -3,7 +3,7 @@
 #include <orteaf/internal/runtime/base/lease/category.h>
 #include <orteaf/internal/runtime/base/lease/concepts.h>
 
-namespace orteaf::internal::base {
+namespace orteaf::internal::runtime::base {
 
 /// @brief Raw control block - no reference counting, only payload
 /// @details Used for resources that don't need lifecycle management.
@@ -30,4 +30,4 @@ struct RawControlBlock {
 // Verify concept satisfaction
 static_assert(ControlBlockConcept<RawControlBlock<int>>);
 
-} // namespace orteaf::internal::base
+} // namespace orteaf::internal::runtime::base

@@ -6,7 +6,7 @@
 #include <orteaf/internal/runtime/base/lease/category.h>
 #include <orteaf/internal/runtime/base/lease/concepts.h>
 
-namespace orteaf::internal::base {
+namespace orteaf::internal::runtime::base {
 
 /// @brief Weak-shared control block - shared ownership with weak reference
 /// support
@@ -88,4 +88,4 @@ static_assert(SharedControlBlockConcept<WeakSharedControlBlock<int>>);
 static_assert(WeakableControlBlockConcept<WeakSharedControlBlock<int>>);
 static_assert(PromotableControlBlockConcept<WeakSharedControlBlock<int>>);
 
-} // namespace orteaf::internal::base
+} // namespace orteaf::internal::runtime::base
