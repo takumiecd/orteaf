@@ -305,17 +305,17 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest,
   // Assert: Same handle (cached)
   EXPECT_EQ(lease0.handle(), lease1.handle());
   if constexpr (TypeParam::is_mock) {
-    EXPECT_EQ(lease0.with_resource([](auto &r) { return r; }), pipeline_handle);
+    EXPECT_EQ(lease0.pointer(), pipeline_handle);
   } else {
     EXPECT_TRUE(lease0);
   }
 
-  // Assert: State reflects both leases
-  const auto &snapshot = manager.stateForTest(lease0.handle().index);
-  EXPECT_TRUE(snapshot.alive);
-  EXPECT_TRUE(snapshot.resource.pipeline_state != nullptr);
-  EXPECT_TRUE(snapshot.resource.function != nullptr);
-  EXPECT_EQ(snapshot.use_count, 2u);
+  // Assert: State is initialized with valid resource
+  const auto &cb =
+      manager.stateForTest(static_cast<std::size_t>(lease0.handle().index));
+  EXPECT_TRUE(cb.payload.isInitialized());
+  EXPECT_TRUE(cb.payload.get().pipeline_state != nullptr);
+  EXPECT_TRUE(cb.payload.get().function != nullptr);
 
   // Cleanup
   this->adapter().expectDestroyComputePipelineStates({pipeline_handle});
@@ -357,16 +357,15 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest,
   lease.release();
 
   // Assert: State stays alive (cache pattern)
-  const auto &released_snapshot = manager.stateForTest(handle.index);
-  EXPECT_TRUE(released_snapshot.alive);
-  EXPECT_EQ(released_snapshot.use_count, 0u);
+  const auto &released_cb =
+      manager.stateForTest(static_cast<std::size_t>(handle.index));
+  EXPECT_TRUE(released_cb.payload.isInitialized());
 
   // Act: Reacquire returns same cached resource
   auto reacquired = manager.acquire(key);
   EXPECT_EQ(reacquired.handle(), handle);
   if constexpr (TypeParam::is_mock) {
-    EXPECT_EQ(reacquired.with_resource([](auto &r) { return r; }),
-              first_pipeline);
+    EXPECT_EQ(reacquired.pointer(), first_pipeline);
   } else {
     EXPECT_TRUE(reacquired);
   }
@@ -411,9 +410,9 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest,
   // Assert
   EXPECT_FALSE(static_cast<bool>(lease));
 
-  const auto &snapshot = manager.stateForTest(original_handle.index);
-  EXPECT_TRUE(snapshot.alive);
-  EXPECT_EQ(snapshot.use_count, 0u);
+  const auto &cb =
+      manager.stateForTest(static_cast<std::size_t>(original_handle.index));
+  EXPECT_TRUE(cb.payload.isInitialized());
 
   // Cleanup
   manager.shutdown();

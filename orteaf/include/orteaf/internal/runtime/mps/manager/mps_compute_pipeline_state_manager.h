@@ -9,8 +9,10 @@
 #include <unordered_map>
 
 #include "orteaf/internal/base/handle.h"
-#include "orteaf/internal/base/lease.h"
-#include "orteaf/internal/runtime/base/shared_cache_manager.h"
+#include "orteaf/internal/runtime/base/lease/control_block/raw.h"
+#include "orteaf/internal/runtime/base/lease/raw_lease.h"
+#include "orteaf/internal/runtime/base/lease/slot.h"
+#include "orteaf/internal/runtime/base/manager/base_manager_core.h"
 #include "orteaf/internal/runtime/mps/platform/mps_slow_ops.h"
 #include "orteaf/internal/runtime/mps/platform/wrapper/mps_compute_pipeline_state.h"
 #include "orteaf/internal/runtime/mps/platform/wrapper/mps_function.h"
@@ -55,34 +57,31 @@ struct MpsPipelineResource {
       pipeline_state{nullptr};
 };
 
-// Use SharedCacheState template
-using MpsComputePipelineStateManagerState =
-    ::orteaf::internal::runtime::base::SharedCacheState<MpsPipelineResource>;
+// Slot type with initialization flag (lazy creation)
+using PipelineSlot =
+    ::orteaf::internal::runtime::base::Slot<MpsPipelineResource>;
 
-struct MpsComputePipelineStateManagerTraits {
-  using OpsType = ::orteaf::internal::runtime::mps::platform::MpsSlowOps;
-  using StateType = MpsComputePipelineStateManagerState;
-  static constexpr const char *Name = "MPS compute pipeline state manager";
-};
+// Control block type (Raw - no ref counting needed)
+using PipelineControlBlock =
+    ::orteaf::internal::runtime::base::RawControlBlock<PipelineSlot>;
 
 class MpsComputePipelineStateManager
-    : public ::orteaf::internal::runtime::base::SharedCacheManager<
-          MpsComputePipelineStateManager,
-          MpsComputePipelineStateManagerTraits> {
+    : protected ::orteaf::internal::runtime::base::BaseManagerCore<
+          PipelineControlBlock, ::orteaf::internal::base::FunctionHandle> {
+  using Base = ::orteaf::internal::runtime::base::BaseManagerCore<
+      PipelineControlBlock, ::orteaf::internal::base::FunctionHandle>;
+
 public:
-  using Base = ::orteaf::internal::runtime::base::SharedCacheManager<
-      MpsComputePipelineStateManager, MpsComputePipelineStateManagerTraits>;
   using SlowOps = ::orteaf::internal::runtime::mps::platform::MpsSlowOps;
   using DeviceType =
       ::orteaf::internal::runtime::mps::platform::wrapper::MPSDevice_t;
   using LibraryType =
       ::orteaf::internal::runtime::mps::platform::wrapper::MPSLibrary_t;
   using FunctionHandle = ::orteaf::internal::base::FunctionHandle;
-  using PipelineLease = ::orteaf::internal::base::Lease<
-      FunctionHandle,
-      ::orteaf::internal::runtime::mps::platform::wrapper::
-          MPSComputePipelineState_t,
-      MpsComputePipelineStateManager>;
+  using PipelineState = ::orteaf::internal::runtime::mps::platform::wrapper::
+      MPSComputePipelineState_t;
+  using PipelineLease = ::orteaf::internal::runtime::base::RawLease<
+      FunctionHandle, PipelineState, MpsComputePipelineStateManager>;
 
   MpsComputePipelineStateManager() = default;
   MpsComputePipelineStateManager(const MpsComputePipelineStateManager &) =
@@ -101,7 +100,40 @@ public:
   PipelineLease acquire(const FunctionKey &key);
   void release(PipelineLease &lease) noexcept;
 
+  // Growth configuration
+  void setGrowthChunkSize(std::size_t chunk) {
+    if (chunk == 0) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+          "Growth chunk size must be > 0");
+    }
+    growth_chunk_size_ = chunk;
+  }
+  std::size_t growthChunkSize() const noexcept { return growth_chunk_size_; }
+
+  // Expose some base methods
+  using Base::capacity;
+  using Base::isInitialized;
+
+#if ORTEAF_ENABLE_TEST
+  using Base::controlBlockForTest;
+  using Base::freeListSizeForTest;
+  using Base::isInitializedForTest;
+
+  std::size_t growthChunkSizeForTest() const noexcept {
+    return growth_chunk_size_;
+  }
+
+  // Compatibility with old API: stateForTest returns control block reference
+  auto &stateForTest(std::size_t index) { return controlBlockForTest(index); }
+  const auto &stateForTest(std::size_t index) const {
+    return controlBlockForTest(index);
+  }
+#endif
+
 private:
+  friend PipelineLease; // For release access
+
   void validateKey(const FunctionKey &key) const;
   void destroyResource(MpsPipelineResource &resource);
 
@@ -109,6 +141,8 @@ private:
       key_to_index_{};
   LibraryType library_{nullptr};
   DeviceType device_{nullptr};
+  SlowOps *ops_{nullptr};
+  std::size_t growth_chunk_size_{1};
 };
 
 } // namespace orteaf::internal::runtime::mps::manager
