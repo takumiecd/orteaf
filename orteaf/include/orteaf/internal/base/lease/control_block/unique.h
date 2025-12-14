@@ -1,0 +1,42 @@
+#pragma once
+
+#include <atomic>
+
+#include <orteaf/internal/base/lease/category.h>
+#include <orteaf/internal/base/lease/concepts.h>
+
+namespace orteaf::internal::base {
+
+/// @brief Unique control block - single ownership with in_use flag
+/// @details Only one lease can hold this resource at a time.
+/// Uses atomic CAS for thread-safe acquisition.
+template <typename PayloadT>
+  requires PayloadConcept<PayloadT>
+struct UniqueControlBlock {
+  using Category = lease_category::Unique;
+  using Payload = PayloadT;
+
+  std::atomic<bool> in_use{false};
+  PayloadT payload{};
+
+  /// @brief Try to acquire exclusive ownership
+  /// @return true if successfully acquired, false if already in use
+  bool tryAcquire() noexcept {
+    bool expected = false;
+    return in_use.compare_exchange_strong(
+        expected, true, std::memory_order_acquire, std::memory_order_relaxed);
+  }
+
+  /// @brief Release ownership
+  void release() noexcept { in_use.store(false, std::memory_order_release); }
+
+  /// @brief Check if currently in use
+  bool isAlive() const noexcept {
+    return in_use.load(std::memory_order_acquire);
+  }
+};
+
+// Verify concept satisfaction
+static_assert(ControlBlockConcept<UniqueControlBlock<int>>);
+
+} // namespace orteaf::internal::base

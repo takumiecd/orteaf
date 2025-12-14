@@ -1,0 +1,55 @@
+#pragma once
+
+#include <atomic>
+#include <cstdint>
+
+#include <orteaf/internal/base/lease/category.h>
+#include <orteaf/internal/base/lease/concepts.h>
+
+namespace orteaf::internal::base {
+
+/// @brief Shared control block - shared ownership with reference counting
+/// @details Multiple leases can share this resource. Uses atomic reference
+/// count for thread-safe sharing.
+template <typename PayloadT>
+  requires PayloadConcept<PayloadT>
+struct SharedControlBlock {
+  using Category = lease_category::Shared;
+  using Payload = PayloadT;
+
+  std::atomic<std::uint32_t> strong_count{0};
+  PayloadT payload{};
+
+  /// @brief Try to acquire (first acquisition)
+  /// @return true if this is the first acquisition (count goes 0->1)
+  bool tryAcquire() noexcept {
+    std::uint32_t expected = 0;
+    return strong_count.compare_exchange_strong(
+        expected, 1, std::memory_order_acquire, std::memory_order_relaxed);
+  }
+
+  /// @brief Acquire a shared reference (increment count)
+  void acquire() noexcept {
+    strong_count.fetch_add(1, std::memory_order_relaxed);
+  }
+
+  /// @brief Release a shared reference
+  /// @return true if this was the last reference (count goes 1->0)
+  bool release() noexcept {
+    return strong_count.fetch_sub(1, std::memory_order_acq_rel) == 1;
+  }
+
+  /// @brief Get current reference count
+  std::uint32_t count() const noexcept {
+    return strong_count.load(std::memory_order_acquire);
+  }
+
+  /// @brief Check if any references exist
+  bool isAlive() const noexcept { return count() > 0; }
+};
+
+// Verify concept satisfaction
+static_assert(ControlBlockConcept<SharedControlBlock<int>>);
+static_assert(SharedControlBlockConcept<SharedControlBlock<int>>);
+
+} // namespace orteaf::internal::base
