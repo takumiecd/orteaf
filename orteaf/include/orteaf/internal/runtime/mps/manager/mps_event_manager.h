@@ -3,37 +3,45 @@
 #if ORTEAF_ENABLE_MPS
 
 #include "orteaf/internal/base/handle.h"
-#include "orteaf/internal/base/shared_lease.h"
-#include "orteaf/internal/runtime/base/shared_pool_manager.h"
+#include "orteaf/internal/runtime/base/lease/control_block/shared.h"
+#include "orteaf/internal/runtime/base/lease/shared_lease.h"
+#include "orteaf/internal/runtime/base/lease/slot.h"
+#include "orteaf/internal/runtime/base/manager/base_manager_core.h"
 #include "orteaf/internal/runtime/mps/platform/mps_slow_ops.h"
 #include "orteaf/internal/runtime/mps/platform/wrapper/mps_event.h"
 
 namespace orteaf::internal::runtime::mps::manager {
 
-// Use the standard SharedPoolState template
-using MpsEventManagerState = ::orteaf::internal::runtime::base::SharedPoolState<
+// Slot type: Standard Slot with initialization tracking
+using EventSlot = ::orteaf::internal::runtime::base::Slot<
     ::orteaf::internal::runtime::mps::platform::wrapper::MPSEvent_t>;
 
+// Control block: Shared ownership
+using EventControlBlock =
+    ::orteaf::internal::runtime::base::SharedControlBlock<EventSlot>;
+
 struct MpsEventManagerTraits {
-  using OpsType = ::orteaf::internal::runtime::mps::platform::MpsSlowOps;
-  using StateType = MpsEventManagerState;
-  static constexpr const char *Name = "MPS event manager";
+  using ControlBlock = EventControlBlock;
+  using Handle = ::orteaf::internal::base::EventHandle;
+  static constexpr const char *Name = "MpsEventManager";
 };
 
 class MpsEventManager
-    : public ::orteaf::internal::runtime::base::SharedPoolManager<
-          MpsEventManager, MpsEventManagerTraits> {
+    : protected ::orteaf::internal::runtime::base::BaseManagerCore<
+          MpsEventManagerTraits> {
+  using Base =
+      ::orteaf::internal::runtime::base::BaseManagerCore<MpsEventManagerTraits>;
+
 public:
-  using Base = ::orteaf::internal::runtime::base::SharedPoolManager<
-      MpsEventManager, MpsEventManagerTraits>;
   using SlowOps = ::orteaf::internal::runtime::mps::platform::MpsSlowOps;
   using DeviceType =
       ::orteaf::internal::runtime::mps::platform::wrapper::MPSDevice_t;
   using EventHandle = ::orteaf::internal::base::EventHandle;
-  using EventLease = ::orteaf::internal::base::SharedLease<
-      EventHandle,
-      ::orteaf::internal::runtime::mps::platform::wrapper::MPSEvent_t,
-      MpsEventManager>;
+  using EventType =
+      ::orteaf::internal::runtime::mps::platform::wrapper::MPSEvent_t;
+  using EventLease =
+      ::orteaf::internal::runtime::base::SharedLease<EventHandle, EventType,
+                                                     MpsEventManager>;
 
   MpsEventManager() = default;
   MpsEventManager(const MpsEventManager &) = delete;
@@ -50,8 +58,22 @@ public:
   void release(EventLease &lease) noexcept;
   void release(EventHandle handle) noexcept;
 
+  // Expose capacity
+  using Base::capacity;
+  using Base::isInitialized;
+
+#if ORTEAF_ENABLE_TEST
+  using Base::controlBlockForTest;
+  using Base::freeListSizeForTest;
+  using Base::isInitializedForTest;
+#endif
+
 private:
+  void destroyResource(EventType &resource);
+
   DeviceType device_{nullptr};
+  SlowOps *ops_{nullptr};
+  std::size_t growth_chunk_size_{1};
 };
 
 } // namespace orteaf::internal::runtime::mps::manager

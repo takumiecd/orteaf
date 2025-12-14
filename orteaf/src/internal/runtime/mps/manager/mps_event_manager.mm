@@ -26,57 +26,70 @@ void MpsEventManager::initialize(DeviceType device, SlowOps *ops,
   }
   device_ = device;
   ops_ = ops;
-  clearPoolStates();
-  if (capacity > 0) {
-    Base::growPool(capacity);
+
+  // Fill pool with capacity
+  Base::setupPool(capacity);
+}
+
+void MpsEventManager::destroyResource(EventType &resource) {
+  if (resource != nullptr) {
+    ops_->destroyEvent(resource);
+    resource = nullptr;
   }
-  initialized_ = true;
 }
 
 void MpsEventManager::shutdown() {
-  if (!initialized_) {
+  if (!Base::isInitialized()) {
     return;
   }
-  for (std::size_t i = 0; i < states_.size(); ++i) {
-    State &state = states_[i];
-    if (state.alive && state.resource != nullptr) {
-      ops_->destroyEvent(state.resource);
-      state.resource = nullptr;
-      state.alive = false;
-      state.in_use = false;
-      state.ref_count.store(0, std::memory_order_relaxed);
+  // Teardown and destroy all initialized resources
+  Base::teardownPool([this](EventControlBlock &cb, EventHandle h) {
+    if (cb.slot.isInitialized()) {
+      destroyResource(cb.slot.get());
     }
-  }
-  clearPoolStates();
+  });
+
   device_ = nullptr;
   ops_ = nullptr;
-  initialized_ = false;
 }
 
 MpsEventManager::EventLease MpsEventManager::acquire() {
   ensureInitialized();
-  const std::size_t index = Base::allocateSlot();
-  State &state = states_[index];
 
-  if (!state.alive) {
-    state.resource = ops_->createEvent(device_);
-    if (state.resource == nullptr) {
-      ::orteaf::internal::diagnostics::error::throwError(
-          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-          "Failed to create MPS event");
-    }
-    state.alive = true;
-    state.generation = 0;
+  // acquireOrCreate handles finding a free slot (allocating if needed)
+  // and creating the resource if it's not initialized.
+  auto handle = Base::acquireOrCreate(
+      growth_chunk_size_, [this](EventControlBlock &cb, EventHandle) {
+        auto event = ops_->createEvent(device_);
+        if (event == nullptr) {
+          return false;
+        }
+        cb.slot.get() = event;
+        return true;
+      });
+
+  if (!handle.isValid()) {
+    ::orteaf::internal::diagnostics::error::throwError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+        "Failed to create MPS event");
   }
 
-  markSlotInUse(index);
-  return EventLease{this, createHandle<EventHandle>(index), state.resource};
+  // Handle acquired -> ref count 0->1 managed by acquireOrCreate (via
+  // tryAcquire)
+  auto &cb = Base::getControlBlock(handle);
+
+  return EventLease{this, handle, cb.slot.get()};
 }
 
 MpsEventManager::EventLease MpsEventManager::acquire(EventHandle handle) {
-  State &state = validateAndGetState(handle);
-  incrementRefCount(static_cast<std::size_t>(handle.index));
-  return EventLease{this, handle, state.resource};
+  auto &cb = Base::getControlBlockChecked(handle);
+  if (cb.count() == 0) {
+    ::orteaf::internal::diagnostics::error::throwError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+        "Cannot acquire shared handle to a released resource");
+  }
+  cb.acquire(); // Increment ref count
+  return EventLease{this, handle, cb.slot.get()};
 }
 
 void MpsEventManager::release(EventLease &lease) noexcept {
@@ -85,14 +98,15 @@ void MpsEventManager::release(EventLease &lease) noexcept {
 }
 
 void MpsEventManager::release(EventHandle handle) noexcept {
-  State *state = getStateForRelease(handle);
-  if (state == nullptr) {
+  if (!Base::isValidHandle(handle)) {
     return;
   }
-  const std::size_t index = static_cast<std::size_t>(handle.index);
-  const std::size_t new_count = decrementRefCount(index);
-  if (new_count == 0) {
-    releaseSlot(index);
+  auto &cb = Base::getControlBlock(handle);
+
+  // Decrement ref count. If it drops to 0, release back to freelist.
+  // Note: resource is NOT destroyed, it remains cached in the slot.
+  if (cb.release()) {
+    Base::pushToFreelist(handle);
   }
 }
 
