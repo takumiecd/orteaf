@@ -3,8 +3,8 @@
 #include <atomic>
 #include <cstdint>
 
-#include <orteaf/internal/base/lease/category.h>
-#include <orteaf/internal/base/lease/concepts.h>
+#include <orteaf/internal/runtime/base/lease/category.h>
+#include <orteaf/internal/runtime/base/lease/concepts.h>
 
 namespace orteaf::internal::base {
 
