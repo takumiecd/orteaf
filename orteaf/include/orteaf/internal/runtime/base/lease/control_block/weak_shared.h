@@ -63,10 +63,18 @@ struct WeakSharedControlBlock {
   /// @brief Acquire a strong reference (alias for acquire)
   bool acquireStrong() noexcept { return acquire(); }
 
-  /// @brief Release a strong reference
+  /// @brief Release a strong reference and prepare for reuse if last
   /// @return true if this was the last strong reference
+  /// @note Automatically increments generation if this was the last reference
   bool release() noexcept {
-    return strong_count.fetch_sub(1, std::memory_order_acq_rel) == 1;
+    if (strong_count.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+      // This was the last reference, increment generation for reuse
+      if constexpr (SlotT::has_generation) {
+        slot.incrementGeneration();
+      }
+      return true;
+    }
+    return false;
   }
 
   /// @brief Release a strong reference (alias for release)
@@ -115,12 +123,26 @@ struct WeakSharedControlBlock {
            weak_count.load(std::memory_order_acquire) == 0;
   }
 
+  /// @brief Mark slot as initialized/valid
+  void validate() noexcept {
+    if constexpr (SlotT::has_initialized) {
+      slot.markInitialized();
+    }
+  }
+
+  /// @brief Mark slot as uninitialized/invalid
+  void invalidate() noexcept {
+    if constexpr (SlotT::has_initialized) {
+      slot.markUninitialized();
+    }
+  }
+
   /// @brief Prepare for reuse - validates state and increments generation
   /// @return true if successfully prepared (was released), false if still in
   /// use
   bool prepareForReuse() noexcept {
     if (!isReleased()) {
-      return false; // Still has strong references, cannot reuse
+      return false;
     }
     if constexpr (SlotT::has_generation) {
       slot.incrementGeneration();

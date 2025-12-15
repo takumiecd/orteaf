@@ -54,10 +54,18 @@ struct SharedControlBlock {
     return true;
   }
 
-  /// @brief Release a shared reference
+  /// @brief Release a shared reference and prepare for reuse if last
   /// @return true if this was the last reference (count goes 1->0)
+  /// @note Automatically increments generation if this was the last reference
   bool release() noexcept {
-    return strong_count.fetch_sub(1, std::memory_order_acq_rel) == 1;
+    if (strong_count.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+      // This was the last reference, increment generation for reuse
+      if constexpr (SlotT::has_generation) {
+        slot.incrementGeneration();
+      }
+      return true;
+    }
+    return false;
   }
 
   /// @brief Get current reference count
@@ -71,12 +79,26 @@ struct SharedControlBlock {
   /// @brief Check if fully released (count == 0)
   bool isReleased() const noexcept { return count() == 0; }
 
+  /// @brief Mark slot as initialized/valid
+  void validate() noexcept {
+    if constexpr (SlotT::has_initialized) {
+      slot.markInitialized();
+    }
+  }
+
+  /// @brief Mark slot as uninitialized/invalid
+  void invalidate() noexcept {
+    if constexpr (SlotT::has_initialized) {
+      slot.markUninitialized();
+    }
+  }
+
   /// @brief Prepare for reuse - validates state and increments generation
   /// @return true if successfully prepared (was released), false if still in
   /// use
   bool prepareForReuse() noexcept {
     if (!isReleased()) {
-      return false; // Still has references, cannot reuse
+      return false;
     }
     if constexpr (SlotT::has_generation) {
       slot.incrementGeneration();

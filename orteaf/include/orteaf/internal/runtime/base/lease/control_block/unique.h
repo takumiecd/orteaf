@@ -51,8 +51,22 @@ struct UniqueControlBlock {
   /// @note For Unique, this is the same as tryAcquire()
   bool acquire() noexcept { return tryAcquire(); }
 
-  /// @brief Release ownership
-  void release() noexcept { in_use.store(false, std::memory_order_release); }
+  /// @brief Release ownership and prepare for reuse
+  /// @return true if was in use and now released, false if wasn't in use
+  /// @note Automatically increments generation if supported
+  bool release() noexcept {
+    bool expected = true;
+    if (in_use.compare_exchange_strong(expected, false,
+                                       std::memory_order_release,
+                                       std::memory_order_relaxed)) {
+      // Successfully released, increment generation for reuse
+      if constexpr (SlotT::has_generation) {
+        slot.incrementGeneration();
+      }
+      return true;
+    }
+    return false; // Wasn't in use
+  }
 
   /// @brief Check if currently in use
   bool isAlive() const noexcept {
@@ -62,12 +76,26 @@ struct UniqueControlBlock {
   /// @brief Check if fully released (not in use)
   bool isReleased() const noexcept { return !isAlive(); }
 
+  /// @brief Mark slot as initialized/valid
+  void validate() noexcept {
+    if constexpr (SlotT::has_initialized) {
+      slot.markInitialized();
+    }
+  }
+
+  /// @brief Mark slot as uninitialized/invalid
+  void invalidate() noexcept {
+    if constexpr (SlotT::has_initialized) {
+      slot.markUninitialized();
+    }
+  }
+
   /// @brief Prepare for reuse - validates state and increments generation
   /// @return true if successfully prepared (was released), false if still in
   /// use
   bool prepareForReuse() noexcept {
     if (!isReleased()) {
-      return false; // Still in use, cannot reuse
+      return false;
     }
     if constexpr (SlotT::has_generation) {
       slot.incrementGeneration();

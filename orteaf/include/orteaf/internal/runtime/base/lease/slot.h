@@ -17,6 +17,7 @@ template <typename PayloadT> struct RawSlot {
   PayloadT payload{};
 
   static constexpr bool has_generation = false;
+  static constexpr bool has_initialized = false;
   static constexpr bool isInitialized() noexcept { return true; }
   static constexpr void markInitialized() noexcept {}
   static constexpr void markUninitialized() noexcept {}
@@ -44,6 +45,7 @@ template <typename PayloadT> struct Slot {
   PayloadT payload{};
 
   static constexpr bool has_generation = false;
+  static constexpr bool has_initialized = true;
   constexpr bool isInitialized() const noexcept { return initialized_; }
   constexpr void markInitialized() noexcept { initialized_ = true; }
   constexpr void markUninitialized() noexcept { initialized_ = false; }
@@ -76,6 +78,7 @@ struct GenerationalRawSlot {
   PayloadT payload{};
 
   static constexpr bool has_generation = true;
+  static constexpr bool has_initialized = false;
   static constexpr bool isInitialized() noexcept { return true; }
   static constexpr void markInitialized() noexcept {}
   static constexpr void markUninitialized() noexcept {}
@@ -108,6 +111,7 @@ struct GenerationalSlot {
   PayloadT payload{};
 
   static constexpr bool has_generation = true;
+  static constexpr bool has_initialized = true;
   constexpr bool isInitialized() const noexcept { return initialized_; }
   constexpr void markInitialized() noexcept { initialized_ = true; }
   constexpr void markUninitialized() noexcept { initialized_ = false; }

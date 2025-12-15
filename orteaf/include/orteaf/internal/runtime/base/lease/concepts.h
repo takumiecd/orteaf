@@ -11,21 +11,21 @@ namespace orteaf::internal::runtime::base {
 // =============================================================================
 
 /// @brief Base concept for all control blocks
-/// @details All control blocks must provide Category, Slot, tryAcquire,
-/// acquire, release, isAlive, isReleased, and prepareForReuse.
-/// - tryAcquire: first-time acquisition (0->1 for Shared, false->true for
-/// Unique)
-/// - acquire: general acquisition, returns bool (true if succeeded)
+/// @details Minimal interface - essential lifecycle operations:
+/// - acquire: take ownership, returns bool (true if succeeded)
+/// - release: release ownership, returns bool (true if fully released)
+/// - isAlive: check if currently owned/active
+/// - validate: mark resource as initialized/valid
+/// - invalidate: mark resource as uninitialized/invalid
 template <typename CB>
 concept ControlBlockConcept = requires(CB cb, const CB ccb) {
   typename CB::Category;
   typename CB::Slot;
-  { cb.tryAcquire() } -> std::same_as<bool>;
   { cb.acquire() } -> std::same_as<bool>;
-  { cb.release() };
+  { cb.release() } -> std::same_as<bool>;
   { ccb.isAlive() } -> std::same_as<bool>;
-  { ccb.isReleased() } -> std::same_as<bool>;
-  { cb.prepareForReuse() } -> std::same_as<bool>;
+  { cb.validate() };
+  { cb.invalidate() };
 };
 
 // =============================================================================
