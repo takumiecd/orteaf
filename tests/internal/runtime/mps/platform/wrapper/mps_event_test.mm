@@ -43,14 +43,14 @@ protected:
   }
 
   mps::MpsDevice_t device_ = nullptr;
-  mps::MPSCommandQueue_t queue_ = nullptr;
+  mps::MpsCommandQueue_t queue_ = nullptr;
 };
 
 /**
  * @brief Test that event can be created.
  */
 TEST_F(MpsEventTest, CreateEventSucceeds) {
-  mps::MPSEvent_t event = mps::createEvent(device_);
+  mps::MpsEvent_t event = mps::createEvent(device_);
   EXPECT_NE(event, nullptr);
 
   // Verify it's a valid MTLSharedEvent
@@ -64,7 +64,7 @@ TEST_F(MpsEventTest, CreateEventSucceeds) {
  * @brief Test that event can be destroyed.
  */
 TEST_F(MpsEventTest, DestroyEventSucceeds) {
-  mps::MPSEvent_t event = mps::createEvent(device_);
+  mps::MpsEvent_t event = mps::createEvent(device_);
   EXPECT_NE(event, nullptr);
 
   EXPECT_NO_THROW(mps::destroyEvent(event));
@@ -81,7 +81,7 @@ TEST_F(MpsEventTest, DestroyEventNullptrIsIgnored) {
  * @brief Test that event initial value is 0.
  */
 TEST_F(MpsEventTest, EventInitialValueIsZero) {
-  mps::MPSEvent_t event = mps::createEvent(device_);
+  mps::MpsEvent_t event = mps::createEvent(device_);
   ASSERT_NE(event, nullptr);
 
   EXPECT_EQ(mps::eventValue(event), 0);
@@ -93,7 +93,7 @@ TEST_F(MpsEventTest, EventInitialValueIsZero) {
  * @brief Test that query_event works.
  */
 TEST_F(MpsEventTest, QueryEventWorks) {
-  mps::MPSEvent_t event = mps::createEvent(device_);
+  mps::MpsEvent_t event = mps::createEvent(device_);
   ASSERT_NE(event, nullptr);
 
   // Initial value is 0, so query for 1 should be false
@@ -109,10 +109,10 @@ TEST_F(MpsEventTest, QueryEventWorks) {
  * @brief Test that record_event works.
  */
 TEST_F(MpsEventTest, RecordEventSucceeds) {
-  mps::MPSEvent_t event = mps::createEvent(device_);
+  mps::MpsEvent_t event = mps::createEvent(device_);
   ASSERT_NE(event, nullptr);
 
-  mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
+  mps::MpsCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
   ASSERT_NE(buffer, nullptr);
 
   EXPECT_NO_THROW(mps::recordEvent(event, buffer, 1));
@@ -133,12 +133,12 @@ TEST_F(MpsEventTest, RecordEventSucceeds) {
  * @brief Test that wait_event works.
  */
 TEST_F(MpsEventTest, WaitEventSucceeds) {
-  mps::MPSEvent_t event = mps::createEvent(device_);
+  mps::MpsEvent_t event = mps::createEvent(device_);
   ASSERT_NE(event, nullptr);
 
   // First signal the event using explicit command buffer
   {
-    mps::MPSCommandBuffer_t buffer_signal = mps::createCommandBuffer(queue_);
+    mps::MpsCommandBuffer_t buffer_signal = mps::createCommandBuffer(queue_);
     ASSERT_NE(buffer_signal, nullptr);
     mps::recordEvent(event, buffer_signal, 1);
     mps::commit(buffer_signal);
@@ -147,7 +147,7 @@ TEST_F(MpsEventTest, WaitEventSucceeds) {
   }
 
   // Then create a buffer that waits for it
-  mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
+  mps::MpsCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
   ASSERT_NE(buffer, nullptr);
 
   EXPECT_NO_THROW(mps::waitEvent(buffer, event, 1));
@@ -167,11 +167,11 @@ TEST_F(MpsEventTest, WaitEventSucceeds) {
  * @brief Test that event values can be incremented.
  */
 TEST_F(MpsEventTest, EventValuesCanBeIncremented) {
-  mps::MPSEvent_t event = mps::createEvent(device_);
+  mps::MpsEvent_t event = mps::createEvent(device_);
   ASSERT_NE(event, nullptr);
 
   {
-    mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
+    mps::MpsCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
     ASSERT_NE(buffer, nullptr);
     mps::recordEvent(event, buffer, 1);
     mps::commit(buffer);
@@ -181,7 +181,7 @@ TEST_F(MpsEventTest, EventValuesCanBeIncremented) {
   EXPECT_EQ(mps::eventValue(event), 1);
 
   {
-    mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
+    mps::MpsCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
     ASSERT_NE(buffer, nullptr);
     mps::recordEvent(event, buffer, 2);
     mps::commit(buffer);
@@ -191,7 +191,7 @@ TEST_F(MpsEventTest, EventValuesCanBeIncremented) {
   EXPECT_EQ(mps::eventValue(event), 2);
 
   {
-    mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
+    mps::MpsCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
     ASSERT_NE(buffer, nullptr);
     mps::recordEvent(event, buffer, 3);
     mps::commit(buffer);
@@ -207,13 +207,13 @@ TEST_F(MpsEventTest, EventValuesCanBeIncremented) {
  * @brief Test that query_event checks correctly.
  */
 TEST_F(MpsEventTest, QueryEventChecksCorrectly) {
-  mps::MPSEvent_t event = mps::createEvent(device_);
+  mps::MpsEvent_t event = mps::createEvent(device_);
   ASSERT_NE(event, nullptr);
 
   EXPECT_FALSE(mps::queryEvent(event, 1));
 
   {
-    mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
+    mps::MpsCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
     ASSERT_NE(buffer, nullptr);
     mps::recordEvent(event, buffer, 1);
     mps::commit(buffer);
@@ -224,7 +224,7 @@ TEST_F(MpsEventTest, QueryEventChecksCorrectly) {
   EXPECT_FALSE(mps::queryEvent(event, 2));
 
   {
-    mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
+    mps::MpsCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
     ASSERT_NE(buffer, nullptr);
     mps::recordEvent(event, buffer, 3);
     mps::commit(buffer);
@@ -243,8 +243,8 @@ TEST_F(MpsEventTest, QueryEventChecksCorrectly) {
  * @brief Test that multiple events can be created.
  */
 TEST_F(MpsEventTest, CreateMultipleEvents) {
-  mps::MPSEvent_t event1 = mps::createEvent(device_);
-  mps::MPSEvent_t event2 = mps::createEvent(device_);
+  mps::MpsEvent_t event1 = mps::createEvent(device_);
+  mps::MpsEvent_t event2 = mps::createEvent(device_);
 
   EXPECT_NE(event1, nullptr);
   EXPECT_NE(event2, nullptr);
@@ -258,16 +258,16 @@ TEST_F(MpsEventTest, CreateMultipleEvents) {
  * @brief Test that event can be used across multiple command buffers.
  */
 TEST_F(MpsEventTest, EventAcrossMultipleBuffers) {
-  mps::MPSEvent_t event = mps::createEvent(device_);
+  mps::MpsEvent_t event = mps::createEvent(device_);
   ASSERT_NE(event, nullptr);
 
   // Signal from first buffer
-  mps::MPSCommandBuffer_t buffer1 = mps::createCommandBuffer(queue_);
+  mps::MpsCommandBuffer_t buffer1 = mps::createCommandBuffer(queue_);
   mps::recordEvent(event, buffer1, 1);
   mps::commit(buffer1);
 
   // Wait in second buffer
-  mps::MPSCommandBuffer_t buffer2 = mps::createCommandBuffer(queue_);
+  mps::MpsCommandBuffer_t buffer2 = mps::createCommandBuffer(queue_);
   mps::waitEvent(buffer2, event, 1);
   mps::commit(buffer2);
 
@@ -282,7 +282,7 @@ TEST_F(MpsEventTest, EventAcrossMultipleBuffers) {
 }
 
 TEST_F(MpsEventTest, RecordEventWithoutCommandBufferUpdatesValue) {
-  mps::MPSEvent_t event = mps::createEvent(device_);
+  mps::MpsEvent_t event = mps::createEvent(device_);
   ASSERT_NE(event, nullptr);
 
   EXPECT_NO_THROW(mps::recordEvent(event, nullptr, 1));
@@ -310,7 +310,7 @@ TEST_F(MpsEventTest, EventValueNullptrThrows) {
 }
 
 TEST_F(MpsEventTest, WaitEventNullCommandBufferThrows) {
-  mps::MPSEvent_t event = mps::createEvent(device_);
+  mps::MpsEvent_t event = mps::createEvent(device_);
   ASSERT_NE(event, nullptr);
   ::orteaf::tests::ExpectError(
       ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
@@ -319,7 +319,7 @@ TEST_F(MpsEventTest, WaitEventNullCommandBufferThrows) {
 }
 
 TEST_F(MpsEventTest, WaitEventNullEventThrows) {
-  mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
+  mps::MpsCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
   ASSERT_NE(buffer, nullptr);
   ::orteaf::tests::ExpectError(
       ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,

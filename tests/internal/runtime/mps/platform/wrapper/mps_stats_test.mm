@@ -209,7 +209,7 @@ TEST_F(MpsStatsTest, CommandQueueCreationUpdatesStats) {
   auto &stats = mps::statsInstance();
   uint64_t initial_streams = stats.activeStreams();
 
-  mps::MPSCommandQueue_t queue = mps::createCommandQueue(device_);
+  mps::MpsCommandQueue_t queue = mps::createCommandQueue(device_);
   if (queue != nullptr) {
     EXPECT_EQ(stats.activeStreams(), initial_streams + 1);
     mps::destroyCommandQueue(queue);
@@ -224,7 +224,7 @@ TEST_F(MpsStatsTest, EventCreationUpdatesStats) {
   auto &stats = mps::statsInstance();
   uint64_t initial_events = stats.activeEvents();
 
-  mps::MPSEvent_t event = mps::createEvent(device_);
+  mps::MpsEvent_t event = mps::createEvent(device_);
   if (event != nullptr) {
     EXPECT_EQ(stats.activeEvents(), initial_events + 1);
     mps::destroyEvent(event);

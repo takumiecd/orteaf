@@ -75,9 +75,9 @@ struct GraphKeyHasher {
 // =============================================================================
 
 struct MpsGraphResource {
-  ::orteaf::internal::runtime::mps::platform::wrapper::MPSGraph_t graph{
+  ::orteaf::internal::runtime::mps::platform::wrapper::MpsGraph_t graph{
       nullptr};
-  ::orteaf::internal::runtime::mps::platform::wrapper::MPSGraphExecutable_t
+  ::orteaf::internal::runtime::mps::platform::wrapper::MpsGraphExecutable_t
       executable{nullptr};
 };
 
@@ -112,11 +112,11 @@ public:
       ::orteaf::internal::runtime::mps::platform::wrapper::MpsDevice_t;
   using GraphHandle = ::orteaf::internal::base::GraphHandle;
   using ExecutableType =
-      ::orteaf::internal::runtime::mps::platform::wrapper::MPSGraphExecutable_t;
+      ::orteaf::internal::runtime::mps::platform::wrapper::MpsGraphExecutable_t;
   using GraphLease = ::orteaf::internal::runtime::base::SharedLease<
       GraphHandle, ExecutableType, MpsGraphManager>;
   using CompileFn = std::function<ExecutableType(
-      ::orteaf::internal::runtime::mps::platform::wrapper::MPSGraph_t graph,
+      ::orteaf::internal::runtime::mps::platform::wrapper::MpsGraph_t graph,
       DeviceType device, SlowOps *slow_ops)>;
 
   MpsGraphManager() = default;

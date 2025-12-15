@@ -57,7 +57,7 @@ protected:
     }
   }
 
-  mps::MPSHeap_t createDefaultHeap() {
+  mps::MpsHeap_t createDefaultHeap() {
     if (heap_ != nullptr) {
       mps::destroyHeap(heap_);
       heap_ = nullptr;
@@ -68,8 +68,8 @@ protected:
 
   static constexpr std::size_t kDefaultHeapSize = 1u << 20;
   mps::MpsDevice_t device_ = nullptr;
-  mps::MPSHeapDescriptor_t descriptor_ = nullptr;
-  mps::MPSHeap_t heap_ = nullptr;
+  mps::MpsHeapDescriptor_t descriptor_ = nullptr;
+  mps::MpsHeap_t heap_ = nullptr;
 };
 
 TEST_F(MpsHeapTest, CreateHeapDescriptorSetsSize) {
@@ -87,7 +87,7 @@ TEST_F(MpsHeapTest, SetHeapDescriptorSizeZeroThrows) {
 
 TEST_F(MpsHeapTest, HeapCreationAndQueriesSucceed) {
   ASSERT_NE(descriptor_, nullptr);
-  mps::MPSHeap_t heap = createDefaultHeap();
+  mps::MpsHeap_t heap = createDefaultHeap();
   ASSERT_NE(heap, nullptr);
 
   EXPECT_GE(mps::heapSize(heap), kDefaultHeapSize);
@@ -103,7 +103,7 @@ TEST_F(MpsHeapTest, HeapCreationAndQueriesSucceed) {
 
 TEST_F(MpsHeapTest, HeapMaxAvailableSizeRejectsZeroAlignment) {
   ASSERT_NE(descriptor_, nullptr);
-  mps::MPSHeap_t heap = createDefaultHeap();
+  mps::MpsHeap_t heap = createDefaultHeap();
   ASSERT_NE(heap, nullptr);
   ::orteaf::tests::ExpectError(
       ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,

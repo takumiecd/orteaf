@@ -33,8 +33,8 @@ public:
       ::orteaf::internal::runtime::allocator::BufferResource<BackendType>;
   using FenceToken = ::orteaf::internal::runtime::mps::resource::MpsFenceToken;
   using ReuseToken = ::orteaf::internal::runtime::mps::resource::MpsReuseToken;
-  using MPSBuffer_t =
-      ::orteaf::internal::runtime::mps::platform::wrapper::MPSBuffer_t;
+  using MpsBuffer_t =
+      ::orteaf::internal::runtime::mps::platform::wrapper::MpsBuffer_t;
   struct LaunchParams {
     ::orteaf::internal::base::DeviceHandle device_handle;
     ::orteaf::internal::runtime::mps::manager::MpsCommandQueueManager::
@@ -53,9 +53,9 @@ public:
     ::orteaf::internal::base::DeviceHandle device_handle{};
     ::orteaf::internal::runtime::mps::platform::wrapper::MpsDevice_t device{
         nullptr};
-    ::orteaf::internal::runtime::mps::platform::wrapper::MPSHeap_t heap{
+    ::orteaf::internal::runtime::mps::platform::wrapper::MpsHeap_t heap{
         nullptr};
-    ::orteaf::internal::runtime::mps::platform::wrapper::MPSBufferUsage_t usage{
+    ::orteaf::internal::runtime::mps::platform::wrapper::MpsBufferUsage_t usage{
         ::orteaf::internal::runtime::mps::platform::wrapper::
             kMPSDefaultBufferUsage};
     ::orteaf::internal::runtime::mps::manager::MpsLibraryManager
@@ -88,7 +88,7 @@ public:
   device() const noexcept {
     return device_;
   }
-  ::orteaf::internal::runtime::mps::platform::wrapper::MPSHeap_t
+  ::orteaf::internal::runtime::mps::platform::wrapper::MpsHeap_t
   heap() const noexcept {
     return heap_;
   }
@@ -114,8 +114,8 @@ private:
   ::orteaf::internal::runtime::mps::platform::wrapper::MpsDevice_t device_{
       nullptr};
   ::orteaf::internal::base::DeviceHandle device_handle_{};
-  ::orteaf::internal::runtime::mps::platform::wrapper::MPSHeap_t heap_{nullptr};
-  ::orteaf::internal::runtime::mps::platform::wrapper::MPSBufferUsage_t usage_{
+  ::orteaf::internal::runtime::mps::platform::wrapper::MpsHeap_t heap_{nullptr};
+  ::orteaf::internal::runtime::mps::platform::wrapper::MpsBufferUsage_t usage_{
       ::orteaf::internal::runtime::mps::platform::wrapper::
           kMPSDefaultBufferUsage};
   bool initialized_{false};

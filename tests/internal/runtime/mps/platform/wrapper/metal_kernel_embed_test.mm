@@ -43,8 +43,8 @@ TEST(MetalKernelEmbedTest, EntriesExposeEmbeddedLibraryData) {
 }
 
 TEST(MetalKernelEmbedTest, CreateEmbeddedLibraryFailsWithInvalidDevice) {
-  mps::MPSError_t error = nullptr;
-  mps::MPSLibrary_t lib =
+  mps::MpsError_t error = nullptr;
+  mps::MpsLibrary_t lib =
       embed::createEmbeddedLibrary(nullptr, kExistingLibrary, &error);
 
   EXPECT_EQ(lib, nullptr);
@@ -58,9 +58,9 @@ TEST(MetalKernelEmbedTest, CreateEmbeddedLibraryFailsWithMissingLibrary) {
   if (!hasDevice()) {
     GTEST_SKIP() << "No MPS devices available";
   }
-  mps::MPSError_t error = nullptr;
+  mps::MpsError_t error = nullptr;
   mps::MpsDevice_t device = mps::getDevice(0);
-  mps::MPSLibrary_t lib =
+  mps::MpsLibrary_t lib =
       embed::createEmbeddedLibrary(device, "nonexistent_metal_library", &error);
 
   EXPECT_EQ(lib, nullptr);
@@ -75,15 +75,15 @@ TEST(MetalKernelEmbedTest, CreateEmbeddedLibraryAndFunctionSucceeds) {
   if (!hasDevice()) {
     GTEST_SKIP() << "No MPS devices available";
   }
-  mps::MPSError_t error = nullptr;
+  mps::MpsError_t error = nullptr;
   mps::MpsDevice_t device = mps::getDevice(0);
-  mps::MPSLibrary_t lib =
+  mps::MpsLibrary_t lib =
       embed::createEmbeddedLibrary(device, kExistingLibrary, &error);
 
   ASSERT_NE(lib, nullptr);
   EXPECT_EQ(error, nullptr);
 
-  mps::MPSFunction_t fn = mps::createFunction(lib, kExistingFunction);
+  mps::MpsFunction_t fn = mps::createFunction(lib, kExistingFunction);
   EXPECT_NE(fn, nullptr);
 
   mps::destroyFunction(fn);

@@ -42,7 +42,7 @@ protected:
  * @brief Test that command queue can be created.
  */
 TEST_F(MpsCommandQueueBufferTest, CreateCommandQueueSucceeds) {
-  mps::MPSCommandQueue_t queue = mps::createCommandQueue(device_);
+  mps::MpsCommandQueue_t queue = mps::createCommandQueue(device_);
   EXPECT_NE(queue, nullptr);
 
   // Verify it's a valid MTLCommandQueue
@@ -62,7 +62,7 @@ TEST_F(MpsCommandQueueBufferTest, CreateCommandQueueNullDeviceThrows) {
  * @brief Test that command queue can be destroyed.
  */
 TEST_F(MpsCommandQueueBufferTest, DestroyCommandQueueSucceeds) {
-  mps::MPSCommandQueue_t queue = mps::createCommandQueue(device_);
+  mps::MpsCommandQueue_t queue = mps::createCommandQueue(device_);
   EXPECT_NE(queue, nullptr);
 
   EXPECT_NO_THROW(mps::destroyCommandQueue(queue));
@@ -79,8 +79,8 @@ TEST_F(MpsCommandQueueBufferTest, DestroyCommandQueueNullptrIsIgnored) {
  * @brief Test that multiple command queues can be created.
  */
 TEST_F(MpsCommandQueueBufferTest, CreateMultipleCommandQueues) {
-  mps::MPSCommandQueue_t queue1 = mps::createCommandQueue(device_);
-  mps::MPSCommandQueue_t queue2 = mps::createCommandQueue(device_);
+  mps::MpsCommandQueue_t queue1 = mps::createCommandQueue(device_);
+  mps::MpsCommandQueue_t queue2 = mps::createCommandQueue(device_);
 
   EXPECT_NE(queue1, nullptr);
   EXPECT_NE(queue2, nullptr);
@@ -94,10 +94,10 @@ TEST_F(MpsCommandQueueBufferTest, CreateMultipleCommandQueues) {
  * @brief Test that command buffer can be created from queue.
  */
 TEST_F(MpsCommandQueueBufferTest, CreateCommandBufferSucceeds) {
-  mps::MPSCommandQueue_t queue = mps::createCommandQueue(device_);
+  mps::MpsCommandQueue_t queue = mps::createCommandQueue(device_);
   ASSERT_NE(queue, nullptr);
 
-  mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue);
+  mps::MpsCommandBuffer_t buffer = mps::createCommandBuffer(queue);
   EXPECT_NE(buffer, nullptr);
 
   // Verify it's a valid MTLCommandBuffer
@@ -112,10 +112,10 @@ TEST_F(MpsCommandQueueBufferTest, CreateCommandBufferSucceeds) {
  * @brief Test that command buffer can be destroyed.
  */
 TEST_F(MpsCommandQueueBufferTest, DestroyCommandBufferSucceeds) {
-  mps::MPSCommandQueue_t queue = mps::createCommandQueue(device_);
+  mps::MpsCommandQueue_t queue = mps::createCommandQueue(device_);
   ASSERT_NE(queue, nullptr);
 
-  mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue);
+  mps::MpsCommandBuffer_t buffer = mps::createCommandBuffer(queue);
   ASSERT_NE(buffer, nullptr);
 
   EXPECT_NO_THROW(mps::destroyCommandBuffer(buffer));
@@ -139,11 +139,11 @@ TEST_F(MpsCommandQueueBufferTest, CreateCommandBufferNullQueueThrows) {
  * @brief Test that multiple command buffers can be created.
  */
 TEST_F(MpsCommandQueueBufferTest, CreateMultipleCommandBuffers) {
-  mps::MPSCommandQueue_t queue = mps::createCommandQueue(device_);
+  mps::MpsCommandQueue_t queue = mps::createCommandQueue(device_);
   ASSERT_NE(queue, nullptr);
 
-  mps::MPSCommandBuffer_t buffer1 = mps::createCommandBuffer(queue);
-  mps::MPSCommandBuffer_t buffer2 = mps::createCommandBuffer(queue);
+  mps::MpsCommandBuffer_t buffer1 = mps::createCommandBuffer(queue);
+  mps::MpsCommandBuffer_t buffer2 = mps::createCommandBuffer(queue);
 
   EXPECT_NE(buffer1, nullptr);
   EXPECT_NE(buffer2, nullptr);
@@ -158,10 +158,10 @@ TEST_F(MpsCommandQueueBufferTest, CreateMultipleCommandBuffers) {
  * @brief Test that command buffer can be committed.
  */
 TEST_F(MpsCommandQueueBufferTest, CommitCommandBufferSucceeds) {
-  mps::MPSCommandQueue_t queue = mps::createCommandQueue(device_);
+  mps::MpsCommandQueue_t queue = mps::createCommandQueue(device_);
   ASSERT_NE(queue, nullptr);
 
-  mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue);
+  mps::MpsCommandBuffer_t buffer = mps::createCommandBuffer(queue);
   ASSERT_NE(buffer, nullptr);
 
   EXPECT_NO_THROW(mps::commit(buffer));
@@ -180,10 +180,10 @@ TEST_F(MpsCommandQueueBufferTest, CommitNullCommandBufferThrows) {
  * @brief Test that command buffer can be waited for completion.
  */
 TEST_F(MpsCommandQueueBufferTest, WaitUntilCompletedSucceeds) {
-  mps::MPSCommandQueue_t queue = mps::createCommandQueue(device_);
+  mps::MpsCommandQueue_t queue = mps::createCommandQueue(device_);
   ASSERT_NE(queue, nullptr);
 
-  mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue);
+  mps::MpsCommandBuffer_t buffer = mps::createCommandBuffer(queue);
   ASSERT_NE(buffer, nullptr);
 
   mps::commit(buffer);
@@ -203,10 +203,10 @@ TEST_F(MpsCommandQueueBufferTest, WaitUntilCompletedNullCommandBufferThrows) {
  * @brief Test complete command buffer lifecycle.
  */
 TEST_F(MpsCommandQueueBufferTest, CommandBufferLifecycle) {
-  mps::MPSCommandQueue_t queue = mps::createCommandQueue(device_);
+  mps::MpsCommandQueue_t queue = mps::createCommandQueue(device_);
   ASSERT_NE(queue, nullptr);
 
-  mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue);
+  mps::MpsCommandBuffer_t buffer = mps::createCommandBuffer(queue);
   ASSERT_NE(buffer, nullptr);
 
   // Commit and wait
@@ -225,13 +225,13 @@ TEST_F(MpsCommandQueueBufferTest, CommandBufferLifecycle) {
  * @brief Test that encode_signal_event works.
  */
 TEST_F(MpsCommandQueueBufferTest, EncodeSignalEventSucceeds) {
-  mps::MPSCommandQueue_t queue = mps::createCommandQueue(device_);
+  mps::MpsCommandQueue_t queue = mps::createCommandQueue(device_);
   ASSERT_NE(queue, nullptr);
 
-  mps::MPSEvent_t event = mps::createEvent(device_);
+  mps::MpsEvent_t event = mps::createEvent(device_);
   ASSERT_NE(event, nullptr);
 
-  mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue);
+  mps::MpsCommandBuffer_t buffer = mps::createCommandBuffer(queue);
   ASSERT_NE(buffer, nullptr);
 
   EXPECT_NO_THROW(mps::encodeSignalEvent(buffer, event, 1));
@@ -248,15 +248,15 @@ TEST_F(MpsCommandQueueBufferTest, EncodeSignalEventSucceeds) {
  * @brief Test that encode_wait works.
  */
 TEST_F(MpsCommandQueueBufferTest, EncodeWaitSucceeds) {
-  mps::MPSCommandQueue_t queue = mps::createCommandQueue(device_);
+  mps::MpsCommandQueue_t queue = mps::createCommandQueue(device_);
   ASSERT_NE(queue, nullptr);
 
-  mps::MPSEvent_t event = mps::createEvent(device_);
+  mps::MpsEvent_t event = mps::createEvent(device_);
   ASSERT_NE(event, nullptr);
 
   // First, signal the event using explicit command buffer
   {
-    mps::MPSCommandBuffer_t buffer_signal = mps::createCommandBuffer(queue);
+    mps::MpsCommandBuffer_t buffer_signal = mps::createCommandBuffer(queue);
     ASSERT_NE(buffer_signal, nullptr);
     mps::recordEvent(event, buffer_signal, 1);
     mps::commit(buffer_signal);
@@ -265,7 +265,7 @@ TEST_F(MpsCommandQueueBufferTest, EncodeWaitSucceeds) {
   }
 
   // Then create a buffer that waits for it
-  mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue);
+  mps::MpsCommandBuffer_t buffer = mps::createCommandBuffer(queue);
   ASSERT_NE(buffer, nullptr);
 
   EXPECT_NO_THROW(mps::encodeWait(buffer, event, 1));
@@ -282,9 +282,9 @@ TEST_F(MpsCommandQueueBufferTest, EncodeWaitSucceeds) {
  * @brief Test that encode_signal_event with nullptr is handled.
  */
 TEST_F(MpsCommandQueueBufferTest, EncodeSignalEventNullEventThrows) {
-  mps::MPSCommandQueue_t queue = mps::createCommandQueue(device_);
+  mps::MpsCommandQueue_t queue = mps::createCommandQueue(device_);
   ASSERT_NE(queue, nullptr);
-  mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue);
+  mps::MpsCommandBuffer_t buffer = mps::createCommandBuffer(queue);
   ASSERT_NE(buffer, nullptr);
 
   ::orteaf::tests::ExpectError(
@@ -296,7 +296,7 @@ TEST_F(MpsCommandQueueBufferTest, EncodeSignalEventNullEventThrows) {
 }
 
 TEST_F(MpsCommandQueueBufferTest, EncodeSignalEventNullCommandBufferThrows) {
-  mps::MPSEvent_t event = mps::createEvent(device_);
+  mps::MpsEvent_t event = mps::createEvent(device_);
   ASSERT_NE(event, nullptr);
   ::orteaf::tests::ExpectError(
       ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
@@ -305,9 +305,9 @@ TEST_F(MpsCommandQueueBufferTest, EncodeSignalEventNullCommandBufferThrows) {
 }
 
 TEST_F(MpsCommandQueueBufferTest, EncodeWaitNullEventThrows) {
-  mps::MPSCommandQueue_t queue = mps::createCommandQueue(device_);
+  mps::MpsCommandQueue_t queue = mps::createCommandQueue(device_);
   ASSERT_NE(queue, nullptr);
-  mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue);
+  mps::MpsCommandBuffer_t buffer = mps::createCommandBuffer(queue);
   ASSERT_NE(buffer, nullptr);
 
   ::orteaf::tests::ExpectError(
@@ -319,7 +319,7 @@ TEST_F(MpsCommandQueueBufferTest, EncodeWaitNullEventThrows) {
 }
 
 TEST_F(MpsCommandQueueBufferTest, EncodeWaitNullCommandBufferThrows) {
-  mps::MPSEvent_t event = mps::createEvent(device_);
+  mps::MpsEvent_t event = mps::createEvent(device_);
   ASSERT_NE(event, nullptr);
   ::orteaf::tests::ExpectError(
       ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,

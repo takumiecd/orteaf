@@ -14,7 +14,7 @@ namespace orteaf::internal::runtime::mps::manager {
 
 // Slot type: Standard Slot with initialization tracking
 using FenceSlot = ::orteaf::internal::runtime::base::GenerationalSlot<
-    ::orteaf::internal::runtime::mps::platform::wrapper::MPSFence_t>;
+    ::orteaf::internal::runtime::mps::platform::wrapper::MpsFence_t>;
 
 // Control block: Shared ownership
 using FenceControlBlock =
@@ -38,7 +38,7 @@ public:
       ::orteaf::internal::runtime::mps::platform::wrapper::MpsDevice_t;
   using FenceHandle = ::orteaf::internal::base::FenceHandle;
   using FenceType =
-      ::orteaf::internal::runtime::mps::platform::wrapper::MPSFence_t;
+      ::orteaf::internal::runtime::mps::platform::wrapper::MpsFence_t;
   using FenceLease =
       ::orteaf::internal::runtime::base::SharedLease<FenceHandle, FenceType,
                                                      MpsFenceManager>;

@@ -55,15 +55,15 @@ protected:
   }
 
   mps::MpsDevice_t device_ = nullptr;
-  mps::MPSHeapDescriptor_t heap_descriptor_ = nullptr;
-  mps::MPSHeap_t heap_ = nullptr;
+  mps::MpsHeapDescriptor_t heap_descriptor_ = nullptr;
+  mps::MpsHeap_t heap_ = nullptr;
 };
 
 /**
  * @brief Test that buffer creation succeeds.
  */
 TEST_F(MpsBufferTest, CreateBufferSucceeds) {
-  mps::MPSBuffer_t buffer = mps::createBuffer(heap_, 1024);
+  mps::MpsBuffer_t buffer = mps::createBuffer(heap_, 1024);
   EXPECT_NE(buffer, nullptr);
 
   mps::destroyBuffer(buffer);
@@ -91,7 +91,7 @@ TEST_F(MpsBufferTest, CreateBufferZeroSizeThrows) {
  * @brief Test that buffer destruction works.
  */
 TEST_F(MpsBufferTest, DestroyBufferSucceeds) {
-  mps::MPSBuffer_t buffer = mps::createBuffer(heap_, 1024);
+  mps::MpsBuffer_t buffer = mps::createBuffer(heap_, 1024);
   ASSERT_NE(buffer, nullptr);
 
   EXPECT_NO_THROW(mps::destroyBuffer(buffer));
@@ -108,8 +108,8 @@ TEST_F(MpsBufferTest, DestroyBufferNullptrIsIgnored) {
  * @brief Test that multiple buffers can be created.
  */
 TEST_F(MpsBufferTest, CreateMultipleBuffers) {
-  mps::MPSBuffer_t buffer1 = mps::createBuffer(heap_, 256);
-  mps::MPSBuffer_t buffer2 = mps::createBuffer(heap_, 512);
+  mps::MpsBuffer_t buffer1 = mps::createBuffer(heap_, 256);
+  mps::MpsBuffer_t buffer2 = mps::createBuffer(heap_, 512);
 
   EXPECT_NE(buffer1, nullptr);
   EXPECT_NE(buffer2, nullptr);
@@ -123,7 +123,7 @@ TEST_F(MpsBufferTest, CreateMultipleBuffers) {
  * @brief Test that buffer contents can be accessed.
  */
 TEST_F(MpsBufferTest, GetBufferContentsSucceeds) {
-  mps::MPSBuffer_t buffer = mps::createBuffer(heap_, 1024);
+  mps::MpsBuffer_t buffer = mps::createBuffer(heap_, 1024);
   ASSERT_NE(buffer, nullptr);
 
   const void *contents = mps::getBufferContentsConst(buffer);

@@ -104,7 +104,7 @@ public:
     std::size_t chunk_size{16 * 1024 * 1024};
     std::size_t min_block_size{64};
     std::size_t max_block_size{16 * 1024 * 1024};
-    ::orteaf::internal::runtime::mps::platform::wrapper::MPSBufferUsage_t usage{
+    ::orteaf::internal::runtime::mps::platform::wrapper::MpsBufferUsage_t usage{
         ::orteaf::internal::runtime::mps::platform::wrapper::
             kMPSDefaultBufferUsage};
   };

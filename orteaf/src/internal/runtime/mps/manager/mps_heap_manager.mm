@@ -161,7 +161,7 @@ void MpsHeapManager::setGrowthChunkSize(std::size_t size) {
   growth_chunk_size_ = size;
 }
 
-::orteaf::internal::runtime::mps::platform::wrapper::MPSHeap_t
+::orteaf::internal::runtime::mps::platform::wrapper::MpsHeap_t
 MpsHeapManager::createHeap(const HeapDescriptorKey &key) {
   auto descriptor = ops_->createHeapDescriptor();
   if (descriptor == nullptr) {
@@ -170,7 +170,7 @@ MpsHeapManager::createHeap(const HeapDescriptorKey &key) {
         "Failed to allocate MPS heap descriptor");
   }
   struct DescriptorGuard {
-    ::orteaf::internal::runtime::mps::platform::wrapper::MPSHeapDescriptor_t
+    ::orteaf::internal::runtime::mps::platform::wrapper::MpsHeapDescriptor_t
         handle{nullptr};
     SlowOps *slow_ops{nullptr};
     ~DescriptorGuard() {

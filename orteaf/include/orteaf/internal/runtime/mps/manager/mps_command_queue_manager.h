@@ -17,7 +17,7 @@ namespace orteaf::internal::runtime::mps::manager {
 
 // Slot type
 using CommandQueueSlot = ::orteaf::internal::runtime::base::GenerationalSlot<
-    ::orteaf::internal::runtime::mps::platform::wrapper::MPSCommandQueue_t>;
+    ::orteaf::internal::runtime::mps::platform::wrapper::MpsCommandQueue_t>;
 
 // Control block: Unique (exclusive) ownership
 using CommandQueueControlBlock =
@@ -41,7 +41,7 @@ public:
       ::orteaf::internal::runtime::mps::platform::wrapper::MpsDevice_t;
   using CommandQueueHandle = ::orteaf::internal::base::CommandQueueHandle;
   using CommandQueueType =
-      ::orteaf::internal::runtime::mps::platform::wrapper::MPSCommandQueue_t;
+      ::orteaf::internal::runtime::mps::platform::wrapper::MpsCommandQueue_t;
   using CommandQueueLease = ::orteaf::internal::runtime::base::UniqueLease<
       CommandQueueHandle, CommandQueueType, MpsCommandQueueManager>;
 

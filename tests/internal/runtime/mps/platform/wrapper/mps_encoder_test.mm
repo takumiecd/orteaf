@@ -71,19 +71,19 @@ protected:
   }
 
   mps::MpsDevice_t device_ = nullptr;
-  mps::MPSCommandQueue_t queue_ = nullptr;
-  mps::MPSHeapDescriptor_t heap_descriptor_ = nullptr;
-  mps::MPSHeap_t heap_ = nullptr;
+  mps::MpsCommandQueue_t queue_ = nullptr;
+  mps::MpsHeapDescriptor_t heap_descriptor_ = nullptr;
+  mps::MpsHeap_t heap_ = nullptr;
 };
 
 /**
  * @brief Test that compute command encoder can be created.
  */
 TEST_F(MpsEncoderTest, CreateComputeCommandEncoderSucceeds) {
-  mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
+  mps::MpsCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
   ASSERT_NE(buffer, nullptr);
 
-  mps::MPSComputeCommandEncoder_t encoder =
+  mps::MpsComputeCommandEncoder_t encoder =
       mps::createComputeCommandEncoder(buffer);
   EXPECT_NE(encoder, nullptr);
 
@@ -95,10 +95,10 @@ TEST_F(MpsEncoderTest, CreateComputeCommandEncoderSucceeds) {
  * @brief Test that compute command encoder can be destroyed.
  */
 TEST_F(MpsEncoderTest, DestroyComputeCommandEncoderSucceeds) {
-  mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
+  mps::MpsCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
   ASSERT_NE(buffer, nullptr);
 
-  mps::MPSComputeCommandEncoder_t encoder =
+  mps::MpsComputeCommandEncoder_t encoder =
       mps::createComputeCommandEncoder(buffer);
   ASSERT_NE(encoder, nullptr);
 
@@ -117,10 +117,10 @@ TEST_F(MpsEncoderTest, DestroyComputeCommandEncoderNullptrIsIgnored) {
  * @brief Test that end_encoding works.
  */
 TEST_F(MpsEncoderTest, EndEncodingSucceeds) {
-  mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
+  mps::MpsCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
   ASSERT_NE(buffer, nullptr);
 
-  mps::MPSComputeCommandEncoder_t encoder =
+  mps::MpsComputeCommandEncoder_t encoder =
       mps::createComputeCommandEncoder(buffer);
   ASSERT_NE(encoder, nullptr);
 
@@ -134,24 +134,24 @@ TEST_F(MpsEncoderTest, EndEncodingSucceeds) {
  * @brief Test that set_pipeline_state works.
  */
 TEST_F(MpsEncoderTest, SetPipelineStateSucceeds) {
-  mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
+  mps::MpsCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
   ASSERT_NE(buffer, nullptr);
 
-  mps::MPSComputeCommandEncoder_t encoder =
+  mps::MpsComputeCommandEncoder_t encoder =
       mps::createComputeCommandEncoder(buffer);
   ASSERT_NE(encoder, nullptr);
 
   // Create minimal compute pipeline and bind it
-  mps::MPSError_t error = nullptr;
-  mps::MPSString_t source =
+  mps::MpsError_t error = nullptr;
+  mps::MpsString_t source =
       mps::toNsString(std::string_view("kernel void test() {}"));
-  mps::MPSCompileOptions_t options = mps::createCompileOptions();
-  mps::MPSLibrary_t library =
+  mps::MpsCompileOptions_t options = mps::createCompileOptions();
+  mps::MpsLibrary_t library =
       mps::createLibraryWithSource(device_, source, options, &error);
   ASSERT_NE(library, nullptr);
-  mps::MPSFunction_t function = mps::createFunction(library, "test");
+  mps::MpsFunction_t function = mps::createFunction(library, "test");
   ASSERT_NE(function, nullptr);
-  mps::MPSComputePipelineState_t pipeline =
+  mps::MpsComputePipelineState_t pipeline =
       mps::createComputePipelineState(device_, function, &error);
   ASSERT_NE(pipeline, nullptr);
 
@@ -171,14 +171,14 @@ TEST_F(MpsEncoderTest, SetPipelineStateSucceeds) {
  * @brief Test that set_buffer works.
  */
 TEST_F(MpsEncoderTest, SetBufferSucceeds) {
-  mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
+  mps::MpsCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
   ASSERT_NE(buffer, nullptr);
 
-  mps::MPSComputeCommandEncoder_t encoder =
+  mps::MpsComputeCommandEncoder_t encoder =
       mps::createComputeCommandEncoder(buffer);
   ASSERT_NE(encoder, nullptr);
 
-  mps::MPSBuffer_t mps_buffer = mps::createBuffer(heap_, 1024);
+  mps::MpsBuffer_t mps_buffer = mps::createBuffer(heap_, 1024);
   if (mps_buffer != nullptr) {
     EXPECT_NO_THROW(mps::setBuffer(encoder, mps_buffer, 0, 0));
     mps::destroyBuffer(mps_buffer);
@@ -193,10 +193,10 @@ TEST_F(MpsEncoderTest, SetBufferSucceeds) {
  * @brief Test that set_buffer with nullptr buffer throws.
  */
 TEST_F(MpsEncoderTest, SetBufferNullptrThrows) {
-  mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
+  mps::MpsCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
   ASSERT_NE(buffer, nullptr);
 
-  mps::MPSComputeCommandEncoder_t encoder =
+  mps::MpsComputeCommandEncoder_t encoder =
       mps::createComputeCommandEncoder(buffer);
   ASSERT_NE(encoder, nullptr);
 
@@ -213,10 +213,10 @@ TEST_F(MpsEncoderTest, SetBufferNullptrThrows) {
  * @brief Test that set_bytes works.
  */
 TEST_F(MpsEncoderTest, SetBytesSucceeds) {
-  mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
+  mps::MpsCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
   ASSERT_NE(buffer, nullptr);
 
-  mps::MPSComputeCommandEncoder_t encoder =
+  mps::MpsComputeCommandEncoder_t encoder =
       mps::createComputeCommandEncoder(buffer);
   ASSERT_NE(encoder, nullptr);
 
@@ -232,24 +232,24 @@ TEST_F(MpsEncoderTest, SetBytesSucceeds) {
  * @brief Test that set_threadgroups works.
  */
 TEST_F(MpsEncoderTest, SetThreadgroupsSucceeds) {
-  mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
+  mps::MpsCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
   ASSERT_NE(buffer, nullptr);
 
-  mps::MPSComputeCommandEncoder_t encoder =
+  mps::MpsComputeCommandEncoder_t encoder =
       mps::createComputeCommandEncoder(buffer);
   ASSERT_NE(encoder, nullptr);
 
   // Create minimal compute pipeline and bind it
-  mps::MPSError_t error = nullptr;
-  mps::MPSString_t source =
+  mps::MpsError_t error = nullptr;
+  mps::MpsString_t source =
       mps::toNsString(std::string_view("kernel void test() {}"));
-  mps::MPSCompileOptions_t options = mps::createCompileOptions();
-  mps::MPSLibrary_t library =
+  mps::MpsCompileOptions_t options = mps::createCompileOptions();
+  mps::MpsLibrary_t library =
       mps::createLibraryWithSource(device_, source, options, &error);
   ASSERT_NE(library, nullptr);
-  mps::MPSFunction_t function = mps::createFunction(library, "test");
+  mps::MpsFunction_t function = mps::createFunction(library, "test");
   ASSERT_NE(function, nullptr);
-  mps::MPSComputePipelineState_t pipeline =
+  mps::MpsComputePipelineState_t pipeline =
       mps::createComputePipelineState(device_, function, &error);
   ASSERT_NE(pipeline, nullptr);
 
@@ -275,14 +275,14 @@ TEST_F(MpsEncoderTest, SetThreadgroupsSucceeds) {
  * @brief Test that encoder can be used with buffer.
  */
 TEST_F(MpsEncoderTest, EncoderWithBuffer) {
-  mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
+  mps::MpsCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
   ASSERT_NE(buffer, nullptr);
 
-  mps::MPSComputeCommandEncoder_t encoder =
+  mps::MpsComputeCommandEncoder_t encoder =
       mps::createComputeCommandEncoder(buffer);
   ASSERT_NE(encoder, nullptr);
 
-  mps::MPSBuffer_t mps_buffer = mps::createBuffer(heap_, 256);
+  mps::MpsBuffer_t mps_buffer = mps::createBuffer(heap_, 256);
   if (mps_buffer != nullptr) {
     mps::setBuffer(encoder, mps_buffer, 0, 0);
     mps::endEncoding(encoder);
@@ -301,16 +301,16 @@ TEST_F(MpsEncoderTest, EncoderWithBuffer) {
  * @brief Test that multiple encoders can be created from same buffer.
  */
 TEST_F(MpsEncoderTest, MultipleEncodersFromSameBuffer) {
-  mps::MPSCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
+  mps::MpsCommandBuffer_t buffer = mps::createCommandBuffer(queue_);
   ASSERT_NE(buffer, nullptr);
 
-  mps::MPSComputeCommandEncoder_t encoder1 =
+  mps::MpsComputeCommandEncoder_t encoder1 =
       mps::createComputeCommandEncoder(buffer);
   EXPECT_NE(encoder1, nullptr);
   mps::endEncoding(encoder1);
   mps::destroyComputeCommandEncoder(encoder1);
 
-  mps::MPSComputeCommandEncoder_t encoder2 =
+  mps::MpsComputeCommandEncoder_t encoder2 =
       mps::createComputeCommandEncoder(buffer);
   EXPECT_NE(encoder2, nullptr);
   mps::endEncoding(encoder2);

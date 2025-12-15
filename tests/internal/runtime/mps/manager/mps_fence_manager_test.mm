@@ -19,8 +19,8 @@ using orteaf::tests::ExpectError;
 
 namespace {
 
-mps_wrapper::MPSFence_t makeFence(std::uintptr_t value) {
-  return reinterpret_cast<mps_wrapper::MPSFence_t>(value);
+mps_wrapper::MpsFence_t makeFence(std::uintptr_t value) {
+  return reinterpret_cast<mps_wrapper::MpsFence_t>(value);
 }
 
 template <class Provider>

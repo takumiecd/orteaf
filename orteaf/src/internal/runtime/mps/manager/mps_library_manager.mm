@@ -146,7 +146,7 @@ void MpsLibraryManager::validateKey(const LibraryKey &key) const {
   }
 }
 
-::orteaf::internal::runtime::mps::platform::wrapper::MPSLibrary_t
+::orteaf::internal::runtime::mps::platform::wrapper::MpsLibrary_t
 MpsLibraryManager::createLibrary(const LibraryKey &key) {
   switch (key.kind) {
   case LibraryKeyKind::kNamed:

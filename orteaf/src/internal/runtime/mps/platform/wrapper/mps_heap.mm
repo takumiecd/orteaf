@@ -26,13 +26,13 @@ constexpr const char *kDescriptorNullMsg =
     "MPS heap descriptor cannot be nullptr";
 constexpr const char *kHeapNullMsg = "MPS heap cannot be nullptr";
 
-inline void ensureDescriptor(MPSHeapDescriptor_t descriptor) {
+inline void ensureDescriptor(MpsHeapDescriptor_t descriptor) {
   if (descriptor == nullptr) {
     throwError(OrteafErrc::NullPointer, kDescriptorNullMsg);
   }
 }
 
-inline void ensureHeap(MPSHeap_t heap) {
+inline void ensureHeap(MpsHeap_t heap) {
   if (heap == nullptr) {
     throwError(OrteafErrc::NullPointer, kHeapNullMsg);
   }
@@ -40,7 +40,7 @@ inline void ensureHeap(MPSHeap_t heap) {
 
 } // namespace
 
-MPSHeapDescriptor_t createHeapDescriptor() {
+MpsHeapDescriptor_t createHeapDescriptor() {
   MTLHeapDescriptor *descriptor = [[MTLHeapDescriptor alloc] init];
   descriptor.storageMode = static_cast<MTLStorageMode>(kMPSStorageModePrivate);
   descriptor.cpuCacheMode =
@@ -51,16 +51,16 @@ MPSHeapDescriptor_t createHeapDescriptor() {
       static_cast<MTLResourceOptions>(kMPSDefaultResourceOptions);
   descriptor.size = 0;
   descriptor.type = static_cast<MTLHeapType>(kMPSHeapTypeAutomatic);
-  return (MPSHeapDescriptor_t)opaqueFromObjcRetained(descriptor);
+  return (MpsHeapDescriptor_t)opaqueFromObjcRetained(descriptor);
 }
 
-void destroyHeapDescriptor(MPSHeapDescriptor_t descriptor) {
+void destroyHeapDescriptor(MpsHeapDescriptor_t descriptor) {
   if (descriptor == nullptr)
     return;
   opaqueReleaseRetained(descriptor);
 }
 
-void setHeapDescriptorSize(MPSHeapDescriptor_t descriptor, std::size_t size) {
+void setHeapDescriptorSize(MpsHeapDescriptor_t descriptor, std::size_t size) {
   ensureDescriptor(descriptor);
   if (size == 0) {
     throwError(OrteafErrc::InvalidParameter,
@@ -71,7 +71,7 @@ void setHeapDescriptorSize(MPSHeapDescriptor_t descriptor, std::size_t size) {
   objc_descriptor.size = size;
 }
 
-std::size_t getHeapDescriptorSize(MPSHeapDescriptor_t descriptor) {
+std::size_t getHeapDescriptorSize(MpsHeapDescriptor_t descriptor) {
   if (descriptor == nullptr) {
     return 0;
   }
@@ -80,24 +80,24 @@ std::size_t getHeapDescriptorSize(MPSHeapDescriptor_t descriptor) {
   return objc_descriptor ? objc_descriptor.size : 0;
 }
 
-void setHeapDescriptorStorageMode(MPSHeapDescriptor_t descriptor,
-                                  MPSStorageMode_t storage_mode) {
+void setHeapDescriptorStorageMode(MpsHeapDescriptor_t descriptor,
+                                  MpsStorageMode_t storage_mode) {
   ensureDescriptor(descriptor);
   MTLHeapDescriptor *objc_descriptor =
       objcFromOpaqueNoown<MTLHeapDescriptor *>(descriptor);
   objc_descriptor.storageMode = static_cast<MTLStorageMode>(storage_mode);
 }
 
-void setHeapDescriptorCPUCacheMode(MPSHeapDescriptor_t descriptor,
-                                   MPSCPUCacheMode_t cache_mode) {
+void setHeapDescriptorCPUCacheMode(MpsHeapDescriptor_t descriptor,
+                                   MpsCPUCacheMode_t cache_mode) {
   ensureDescriptor(descriptor);
   MTLHeapDescriptor *objc_descriptor =
       objcFromOpaqueNoown<MTLHeapDescriptor *>(descriptor);
   objc_descriptor.cpuCacheMode = static_cast<MTLCPUCacheMode>(cache_mode);
 }
 
-void setHeapDescriptorHazardTrackingMode(MPSHeapDescriptor_t descriptor,
-                                         MPSHazardTrackingMode_t hazard_mode) {
+void setHeapDescriptorHazardTrackingMode(MpsHeapDescriptor_t descriptor,
+                                         MpsHazardTrackingMode_t hazard_mode) {
   ensureDescriptor(descriptor);
   MTLHeapDescriptor *objc_descriptor =
       objcFromOpaqueNoown<MTLHeapDescriptor *>(descriptor);
@@ -105,16 +105,16 @@ void setHeapDescriptorHazardTrackingMode(MPSHeapDescriptor_t descriptor,
       static_cast<MTLHazardTrackingMode>(hazard_mode);
 }
 
-void setHeapDescriptorType(MPSHeapDescriptor_t descriptor,
-                           MPSHeapType_t heap_type) {
+void setHeapDescriptorType(MpsHeapDescriptor_t descriptor,
+                           MpsHeapType_t heap_type) {
   ensureDescriptor(descriptor);
   MTLHeapDescriptor *objc_descriptor =
       objcFromOpaqueNoown<MTLHeapDescriptor *>(descriptor);
   objc_descriptor.type = static_cast<MTLHeapType>(heap_type);
 }
 
-void setHeapDescriptorResourceOptions(MPSHeapDescriptor_t descriptor,
-                                      MPSResourceOptions_t resource_options) {
+void setHeapDescriptorResourceOptions(MpsHeapDescriptor_t descriptor,
+                                      MpsResourceOptions_t resource_options) {
   ensureDescriptor(descriptor);
   MTLHeapDescriptor *objc_descriptor =
       objcFromOpaqueNoown<MTLHeapDescriptor *>(descriptor);
@@ -122,7 +122,7 @@ void setHeapDescriptorResourceOptions(MPSHeapDescriptor_t descriptor,
       static_cast<MTLResourceOptions>(resource_options);
 }
 
-MPSHeap_t createHeap(MpsDevice_t device, MPSHeapDescriptor_t descriptor) {
+MpsHeap_t createHeap(MpsDevice_t device, MpsHeapDescriptor_t descriptor) {
   if (device == nullptr) {
     throwError(OrteafErrc::NullPointer, "createHeap: device cannot be nullptr");
   }
@@ -137,10 +137,10 @@ MPSHeap_t createHeap(MpsDevice_t device, MPSHeapDescriptor_t descriptor) {
   }
   const std::size_t bytes = [objc_heap size];
   updateAlloc(bytes);
-  return (MPSHeap_t)opaqueFromObjcRetained(objc_heap);
+  return (MpsHeap_t)opaqueFromObjcRetained(objc_heap);
 }
 
-void destroyHeap(MPSHeap_t heap) {
+void destroyHeap(MpsHeap_t heap) {
   if (heap == nullptr) {
     return;
   }
@@ -151,21 +151,21 @@ void destroyHeap(MPSHeap_t heap) {
   }
 }
 
-std::size_t heapSize(MPSHeap_t heap) {
+std::size_t heapSize(MpsHeap_t heap) {
   if (heap == nullptr)
     return 0;
   id<MTLHeap> objc_heap = objcFromOpaqueNoown<id<MTLHeap>>(heap);
   return objc_heap ? [objc_heap size] : 0;
 }
 
-std::size_t heapUsedSize(MPSHeap_t heap) {
+std::size_t heapUsedSize(MpsHeap_t heap) {
   if (heap == nullptr)
     return 0;
   id<MTLHeap> objc_heap = objcFromOpaqueNoown<id<MTLHeap>>(heap);
   return objc_heap ? [objc_heap usedSize] : 0;
 }
 
-std::size_t heapMaxAvailableSize(MPSHeap_t heap, std::size_t alignment) {
+std::size_t heapMaxAvailableSize(MpsHeap_t heap, std::size_t alignment) {
   ensureHeap(heap);
   if (alignment == 0) {
     throwError(OrteafErrc::InvalidParameter,
@@ -175,45 +175,45 @@ std::size_t heapMaxAvailableSize(MPSHeap_t heap, std::size_t alignment) {
   return objc_heap ? [objc_heap maxAvailableSizeWithAlignment:alignment] : 0;
 }
 
-MPSResourceOptions_t heapResourceOptions(MPSHeap_t heap) {
+MpsResourceOptions_t heapResourceOptions(MpsHeap_t heap) {
   if (heap == nullptr)
     return kMPSDefaultResourceOptions;
   id<MTLHeap> objc_heap = objcFromOpaqueNoown<id<MTLHeap>>(heap);
   return objc_heap
-             ? static_cast<MPSResourceOptions_t>(objc_heap.resourceOptions)
+             ? static_cast<MpsResourceOptions_t>(objc_heap.resourceOptions)
              : kMPSDefaultResourceOptions;
 }
 
-MPSStorageMode_t heapStorageMode(MPSHeap_t heap) {
+MpsStorageMode_t heapStorageMode(MpsHeap_t heap) {
   if (heap == nullptr)
     return kMPSStorageModeShared;
   id<MTLHeap> objc_heap = objcFromOpaqueNoown<id<MTLHeap>>(heap);
-  return objc_heap ? static_cast<MPSStorageMode_t>(objc_heap.storageMode)
+  return objc_heap ? static_cast<MpsStorageMode_t>(objc_heap.storageMode)
                    : kMPSStorageModeShared;
 }
 
-MPSCPUCacheMode_t heapCPUCacheMode(MPSHeap_t heap) {
+MpsCPUCacheMode_t heapCPUCacheMode(MpsHeap_t heap) {
   if (heap == nullptr)
     return kMPSCPUCacheModeDefaultCache;
   id<MTLHeap> objc_heap = objcFromOpaqueNoown<id<MTLHeap>>(heap);
-  return objc_heap ? static_cast<MPSCPUCacheMode_t>(objc_heap.cpuCacheMode)
+  return objc_heap ? static_cast<MpsCPUCacheMode_t>(objc_heap.cpuCacheMode)
                    : kMPSCPUCacheModeDefaultCache;
 }
 
-MPSHazardTrackingMode_t heapHazardTrackingMode(MPSHeap_t heap) {
+MpsHazardTrackingMode_t heapHazardTrackingMode(MpsHeap_t heap) {
   if (heap == nullptr)
     return kMPSHazardTrackingModeDefault;
   id<MTLHeap> objc_heap = objcFromOpaqueNoown<id<MTLHeap>>(heap);
-  return objc_heap ? static_cast<MPSHazardTrackingMode_t>(
+  return objc_heap ? static_cast<MpsHazardTrackingMode_t>(
                          objc_heap.hazardTrackingMode)
                    : kMPSHazardTrackingModeDefault;
 }
 
-MPSHeapType_t heapType(MPSHeap_t heap) {
+MpsHeapType_t heapType(MpsHeap_t heap) {
   if (heap == nullptr)
     return kMPSHeapTypeAutomatic;
   id<MTLHeap> objc_heap = objcFromOpaqueNoown<id<MTLHeap>>(heap);
-  return objc_heap ? static_cast<MPSHeapType_t>(objc_heap.type)
+  return objc_heap ? static_cast<MpsHeapType_t>(objc_heap.type)
                    : kMPSHeapTypeAutomatic;
 }
 

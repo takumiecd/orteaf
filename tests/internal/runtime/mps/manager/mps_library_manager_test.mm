@@ -20,8 +20,8 @@ using orteaf::tests::ExpectError;
 
 namespace {
 
-mps_wrapper::MPSLibrary_t makeLibrary(std::uintptr_t value) {
-  return reinterpret_cast<mps_wrapper::MPSLibrary_t>(value);
+mps_wrapper::MpsLibrary_t makeLibrary(std::uintptr_t value) {
+  return reinterpret_cast<mps_wrapper::MpsLibrary_t>(value);
 }
 
 template <class Provider>

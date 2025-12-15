@@ -20,12 +20,12 @@ using orteaf::tests::ExpectError;
 
 namespace {
 
-mps_wrapper::MPSHeap_t makeHeap(std::uintptr_t value) {
-  return reinterpret_cast<mps_wrapper::MPSHeap_t>(value);
+mps_wrapper::MpsHeap_t makeHeap(std::uintptr_t value) {
+  return reinterpret_cast<mps_wrapper::MpsHeap_t>(value);
 }
 
-mps_wrapper::MPSHeapDescriptor_t makeHeapDescriptor(std::uintptr_t value) {
-  return reinterpret_cast<mps_wrapper::MPSHeapDescriptor_t>(value);
+mps_wrapper::MpsHeapDescriptor_t makeHeapDescriptor(std::uintptr_t value) {
+  return reinterpret_cast<mps_wrapper::MpsHeapDescriptor_t>(value);
 }
 
 template <class Provider>
@@ -47,7 +47,7 @@ protected:
 
   void
   expectDescriptorConfiguration(const mps_rt::HeapDescriptorKey &key,
-                                mps_wrapper::MPSHeapDescriptor_t descriptor,
+                                mps_wrapper::MpsHeapDescriptor_t descriptor,
                                 bool expect_creation = true) {
     if constexpr (!Provider::is_mock) {
       (void)key;

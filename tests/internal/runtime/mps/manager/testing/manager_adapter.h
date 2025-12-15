@@ -32,7 +32,7 @@ public:
 
   void expectCreateCommandQueues(
       std::initializer_list<::orteaf::internal::runtime::mps::platform::
-                                wrapper::MPSCommandQueue_t>
+                                wrapper::MpsCommandQueue_t>
           handles,
       ::testing::Matcher<
           ::orteaf::internal::runtime::mps::platform::wrapper::MpsDevice_t>
@@ -46,7 +46,7 @@ public:
 
   void expectCreateEvents(
       std::initializer_list<
-          ::orteaf::internal::runtime::mps::platform::wrapper::MPSEvent_t>
+          ::orteaf::internal::runtime::mps::platform::wrapper::MpsEvent_t>
           handles,
       ::testing::Matcher<
           ::orteaf::internal::runtime::mps::platform::wrapper::MpsDevice_t>
@@ -59,7 +59,7 @@ public:
 
   void expectCreateFences(
       std::initializer_list<
-          ::orteaf::internal::runtime::mps::platform::wrapper::MPSFence_t>
+          ::orteaf::internal::runtime::mps::platform::wrapper::MpsFence_t>
           handles,
       ::testing::Matcher<
           ::orteaf::internal::runtime::mps::platform::wrapper::MpsDevice_t>
@@ -73,7 +73,7 @@ public:
   void expectCreateLibraries(
       std::initializer_list<std::pair<
           std::string,
-          ::orteaf::internal::runtime::mps::platform::wrapper::MPSLibrary_t>>
+          ::orteaf::internal::runtime::mps::platform::wrapper::MpsLibrary_t>>
           expectations,
       ::testing::Matcher<
           ::orteaf::internal::runtime::mps::platform::wrapper::MpsDevice_t>
@@ -88,10 +88,10 @@ public:
   void expectCreateFunctions(
       std::initializer_list<std::pair<
           std::string,
-          ::orteaf::internal::runtime::mps::platform::wrapper::MPSFunction_t>>
+          ::orteaf::internal::runtime::mps::platform::wrapper::MpsFunction_t>>
           expectations,
       ::testing::Matcher<
-          ::orteaf::internal::runtime::mps::platform::wrapper::MPSLibrary_t>
+          ::orteaf::internal::runtime::mps::platform::wrapper::MpsLibrary_t>
           matcher = ::testing::_) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
@@ -102,9 +102,9 @@ public:
 
   void expectCreateComputePipelineStates(
       std::initializer_list<std::pair<
-          ::orteaf::internal::runtime::mps::platform::wrapper::MPSFunction_t,
+          ::orteaf::internal::runtime::mps::platform::wrapper::MpsFunction_t,
           ::orteaf::internal::runtime::mps::platform::wrapper::
-              MPSComputePipelineState_t>>
+              MpsComputePipelineState_t>>
           expectations,
       ::testing::Matcher<
           ::orteaf::internal::runtime::mps::platform::wrapper::MpsDevice_t>
@@ -118,7 +118,7 @@ public:
 
   void expectDestroyCommandQueues(
       std::initializer_list<::orteaf::internal::runtime::mps::platform::
-                                wrapper::MPSCommandQueue_t>
+                                wrapper::MpsCommandQueue_t>
           handles) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
@@ -128,7 +128,7 @@ public:
 
   void expectDestroyEvents(
       std::initializer_list<
-          ::orteaf::internal::runtime::mps::platform::wrapper::MPSEvent_t>
+          ::orteaf::internal::runtime::mps::platform::wrapper::MpsEvent_t>
           handles) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
@@ -138,7 +138,7 @@ public:
 
   void expectDestroyFences(
       std::initializer_list<
-          ::orteaf::internal::runtime::mps::platform::wrapper::MPSFence_t>
+          ::orteaf::internal::runtime::mps::platform::wrapper::MpsFence_t>
           handles) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
@@ -148,7 +148,7 @@ public:
 
   void expectDestroyLibraries(
       std::initializer_list<
-          ::orteaf::internal::runtime::mps::platform::wrapper::MPSLibrary_t>
+          ::orteaf::internal::runtime::mps::platform::wrapper::MpsLibrary_t>
           handles) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
@@ -158,7 +158,7 @@ public:
 
   void expectDestroyFunctions(
       std::initializer_list<
-          ::orteaf::internal::runtime::mps::platform::wrapper::MPSFunction_t>
+          ::orteaf::internal::runtime::mps::platform::wrapper::MpsFunction_t>
           handles) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
@@ -168,7 +168,7 @@ public:
 
   void expectDestroyComputePipelineStates(
       std::initializer_list<::orteaf::internal::runtime::mps::platform::
-                                wrapper::MPSComputePipelineState_t>
+                                wrapper::MpsComputePipelineState_t>
           handles) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
@@ -179,13 +179,13 @@ public:
 
   void expectCreateHeaps(
       std::initializer_list<
-          ::orteaf::internal::runtime::mps::platform::wrapper::MPSHeap_t>
+          ::orteaf::internal::runtime::mps::platform::wrapper::MpsHeap_t>
           handles,
       ::testing::Matcher<
           ::orteaf::internal::runtime::mps::platform::wrapper::MpsDevice_t>
           device_matcher = ::testing::_,
       ::testing::Matcher<::orteaf::internal::runtime::mps::platform::wrapper::
-                             MPSHeapDescriptor_t>
+                             MpsHeapDescriptor_t>
           descriptor_matcher = ::testing::_) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
@@ -196,7 +196,7 @@ public:
 
   void expectDestroyHeaps(
       std::initializer_list<
-          ::orteaf::internal::runtime::mps::platform::wrapper::MPSHeap_t>
+          ::orteaf::internal::runtime::mps::platform::wrapper::MpsHeap_t>
           handles) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
@@ -207,8 +207,8 @@ public:
   void expectCreateHeapsInOrder(
       std::initializer_list<std::pair<
           ::orteaf::internal::runtime::mps::platform::wrapper::
-              MPSHeapDescriptor_t,
-          ::orteaf::internal::runtime::mps::platform::wrapper::MPSHeap_t>>
+              MpsHeapDescriptor_t,
+          ::orteaf::internal::runtime::mps::platform::wrapper::MpsHeap_t>>
           expectations,
       ::testing::Matcher<
           ::orteaf::internal::runtime::mps::platform::wrapper::MpsDevice_t>
@@ -222,7 +222,7 @@ public:
 
   void expectCreateHeapDescriptors(
       std::initializer_list<::orteaf::internal::runtime::mps::platform::
-                                wrapper::MPSHeapDescriptor_t>
+                                wrapper::MpsHeapDescriptor_t>
           handles) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
@@ -232,7 +232,7 @@ public:
 
   void expectDestroyHeapDescriptors(
       std::initializer_list<::orteaf::internal::runtime::mps::platform::
-                                wrapper::MPSHeapDescriptor_t>
+                                wrapper::MpsHeapDescriptor_t>
           handles) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
@@ -243,7 +243,7 @@ public:
   void expectSetHeapDescriptorSize(
       std::initializer_list<
           std::pair<::orteaf::internal::runtime::mps::platform::wrapper::
-                        MPSHeapDescriptor_t,
+                        MpsHeapDescriptor_t,
                     std::size_t>>
           expectations) {
     if constexpr (Provider::is_mock) {
@@ -256,9 +256,9 @@ public:
   void expectSetHeapDescriptorResourceOptions(
       std::initializer_list<
           std::pair<::orteaf::internal::runtime::mps::platform::wrapper::
-                        MPSHeapDescriptor_t,
+                        MpsHeapDescriptor_t,
                     ::orteaf::internal::runtime::mps::platform::wrapper::
-                        MPSResourceOptions_t>>
+                        MpsResourceOptions_t>>
           expectations) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
@@ -270,9 +270,9 @@ public:
   void expectSetHeapDescriptorStorageMode(
       std::initializer_list<
           std::pair<::orteaf::internal::runtime::mps::platform::wrapper::
-                        MPSHeapDescriptor_t,
+                        MpsHeapDescriptor_t,
                     ::orteaf::internal::runtime::mps::platform::wrapper::
-                        MPSStorageMode_t>>
+                        MpsStorageMode_t>>
           expectations) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
@@ -284,9 +284,9 @@ public:
   void expectSetHeapDescriptorCPUCacheMode(
       std::initializer_list<
           std::pair<::orteaf::internal::runtime::mps::platform::wrapper::
-                        MPSHeapDescriptor_t,
+                        MpsHeapDescriptor_t,
                     ::orteaf::internal::runtime::mps::platform::wrapper::
-                        MPSCPUCacheMode_t>>
+                        MpsCPUCacheMode_t>>
           expectations) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
@@ -298,9 +298,9 @@ public:
   void expectSetHeapDescriptorHazardTrackingMode(
       std::initializer_list<
           std::pair<::orteaf::internal::runtime::mps::platform::wrapper::
-                        MPSHeapDescriptor_t,
+                        MpsHeapDescriptor_t,
                     ::orteaf::internal::runtime::mps::platform::wrapper::
-                        MPSHazardTrackingMode_t>>
+                        MpsHazardTrackingMode_t>>
           expectations) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
@@ -312,8 +312,8 @@ public:
   void expectSetHeapDescriptorType(
       std::initializer_list<std::pair<
           ::orteaf::internal::runtime::mps::platform::wrapper::
-              MPSHeapDescriptor_t,
-          ::orteaf::internal::runtime::mps::platform::wrapper::MPSHeapType_t>>
+              MpsHeapDescriptor_t,
+          ::orteaf::internal::runtime::mps::platform::wrapper::MpsHeapType_t>>
           expectations) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
@@ -324,7 +324,7 @@ public:
 
   void expectDestroyCommandQueuesInOrder(
       std::initializer_list<::orteaf::internal::runtime::mps::platform::
-                                wrapper::MPSCommandQueue_t>
+                                wrapper::MpsCommandQueue_t>
           handles) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
@@ -334,7 +334,7 @@ public:
 
   void expectDestroyEventsInOrder(
       std::initializer_list<
-          ::orteaf::internal::runtime::mps::platform::wrapper::MPSEvent_t>
+          ::orteaf::internal::runtime::mps::platform::wrapper::MpsEvent_t>
           handles) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);

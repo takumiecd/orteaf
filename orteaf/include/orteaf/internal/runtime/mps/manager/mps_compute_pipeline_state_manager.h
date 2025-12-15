@@ -51,9 +51,9 @@ struct FunctionKeyHasher {
 
 // Resource struct: holds function + pipeline_state
 struct MpsPipelineResource {
-  ::orteaf::internal::runtime::mps::platform::wrapper::MPSFunction_t function{
+  ::orteaf::internal::runtime::mps::platform::wrapper::MpsFunction_t function{
       nullptr};
-  ::orteaf::internal::runtime::mps::platform::wrapper::MPSComputePipelineState_t
+  ::orteaf::internal::runtime::mps::platform::wrapper::MpsComputePipelineState_t
       pipeline_state{nullptr};
 };
 
@@ -83,10 +83,10 @@ public:
   using DeviceType =
       ::orteaf::internal::runtime::mps::platform::wrapper::MpsDevice_t;
   using LibraryType =
-      ::orteaf::internal::runtime::mps::platform::wrapper::MPSLibrary_t;
+      ::orteaf::internal::runtime::mps::platform::wrapper::MpsLibrary_t;
   using FunctionHandle = ::orteaf::internal::base::FunctionHandle;
   using PipelineState = ::orteaf::internal::runtime::mps::platform::wrapper::
-      MPSComputePipelineState_t;
+      MpsComputePipelineState_t;
   using PipelineLease = ::orteaf::internal::runtime::base::RawLease<
       FunctionHandle, PipelineState, MpsComputePipelineStateManager>;
 

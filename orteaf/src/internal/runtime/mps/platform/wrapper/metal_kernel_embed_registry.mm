@@ -24,11 +24,11 @@ bool available(std::string_view library_name) {
   return blob.data != nullptr && blob.size > 0;
 }
 
-::orteaf::internal::runtime::mps::platform::wrapper::MPSLibrary_t
+::orteaf::internal::runtime::mps::platform::wrapper::MpsLibrary_t
 createEmbeddedLibrary(
     ::orteaf::internal::runtime::mps::platform::wrapper::MpsDevice_t device,
     std::string_view library_name,
-    ::orteaf::internal::runtime::mps::platform::wrapper::MPSError_t *error) {
+    ::orteaf::internal::runtime::mps::platform::wrapper::MpsError_t *error) {
 #if defined(ORTEAF_ENABLE_MPS) && defined(__OBJC__)
   if (!device) {
     if (error) {
@@ -45,9 +45,9 @@ createEmbeddedLibrary(
     }
     return nil;
   }
-  ::orteaf::internal::runtime::mps::platform::wrapper::MPSError_t local_error =
+  ::orteaf::internal::runtime::mps::platform::wrapper::MpsError_t local_error =
       nullptr;
-  ::orteaf::internal::runtime::mps::platform::wrapper::MPSLibrary_t library =
+  ::orteaf::internal::runtime::mps::platform::wrapper::MpsLibrary_t library =
       ::orteaf::internal::runtime::mps::platform::wrapper::
           createLibraryWithData(device, blob.data, blob.size, &local_error);
   if (library == nil) {

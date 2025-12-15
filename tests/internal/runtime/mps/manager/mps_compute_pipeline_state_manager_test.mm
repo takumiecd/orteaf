@@ -24,16 +24,16 @@ using orteaf::tests::ExpectError;
 
 namespace {
 
-mps_wrapper::MPSLibrary_t makeLibrary(std::uintptr_t value) {
-  return reinterpret_cast<mps_wrapper::MPSLibrary_t>(value);
+mps_wrapper::MpsLibrary_t makeLibrary(std::uintptr_t value) {
+  return reinterpret_cast<mps_wrapper::MpsLibrary_t>(value);
 }
 
-mps_wrapper::MPSFunction_t makeFunction(std::uintptr_t value) {
-  return reinterpret_cast<mps_wrapper::MPSFunction_t>(value);
+mps_wrapper::MpsFunction_t makeFunction(std::uintptr_t value) {
+  return reinterpret_cast<mps_wrapper::MpsFunction_t>(value);
 }
 
-mps_wrapper::MPSComputePipelineState_t makePipeline(std::uintptr_t value) {
-  return reinterpret_cast<mps_wrapper::MPSComputePipelineState_t>(value);
+mps_wrapper::MpsComputePipelineState_t makePipeline(std::uintptr_t value) {
+  return reinterpret_cast<mps_wrapper::MpsComputePipelineState_t>(value);
 }
 
 template <class Provider>
@@ -94,7 +94,7 @@ protected:
     return std::string{value};
   }
 
-  std::optional<mps_wrapper::MPSLibrary_t> ensureLibrary() {
+  std::optional<mps_wrapper::MpsLibrary_t> ensureLibrary() {
     if (library_ != nullptr) {
       return library_;
     }
@@ -118,7 +118,7 @@ protected:
   }
 
 private:
-  mps_wrapper::MPSLibrary_t library_{nullptr};
+  mps_wrapper::MpsLibrary_t library_{nullptr};
 };
 
 #if ORTEAF_ENABLE_MPS
@@ -286,8 +286,8 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest,
                     " to a valid function name to run";
     return;
   }
-  mps_wrapper::MPSFunction_t function_handle = nullptr;
-  mps_wrapper::MPSComputePipelineState_t pipeline_handle = nullptr;
+  mps_wrapper::MpsFunction_t function_handle = nullptr;
+  mps_wrapper::MpsComputePipelineState_t pipeline_handle = nullptr;
   if constexpr (TypeParam::is_mock) {
     function_handle = makeFunction(0x801);
     pipeline_handle = makePipeline(0x901);
@@ -337,8 +337,8 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest,
     return;
   }
 
-  mps_wrapper::MPSFunction_t first_function = nullptr;
-  mps_wrapper::MPSComputePipelineState_t first_pipeline = nullptr;
+  mps_wrapper::MpsFunction_t first_function = nullptr;
+  mps_wrapper::MpsComputePipelineState_t first_pipeline = nullptr;
   if constexpr (TypeParam::is_mock) {
     first_function = makeFunction(0x820);
     first_pipeline = makePipeline(0x920);
@@ -502,8 +502,8 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest, ReleaseIgnoresStaleHandle) {
                     " to a valid function name to run";
     return;
   }
-  mps_wrapper::MPSFunction_t function_handle = nullptr;
-  mps_wrapper::MPSComputePipelineState_t pipeline_handle = nullptr;
+  mps_wrapper::MpsFunction_t function_handle = nullptr;
+  mps_wrapper::MpsComputePipelineState_t pipeline_handle = nullptr;
   if constexpr (TypeParam::is_mock) {
     function_handle = makeFunction(0x830);
     pipeline_handle = makePipeline(0x930);
@@ -540,8 +540,8 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest,
                     " to a valid function name to run";
     return;
   }
-  mps_wrapper::MPSFunction_t function_handle = nullptr;
-  mps_wrapper::MPSComputePipelineState_t pipeline_handle = nullptr;
+  mps_wrapper::MpsFunction_t function_handle = nullptr;
+  mps_wrapper::MpsComputePipelineState_t pipeline_handle = nullptr;
   if constexpr (TypeParam::is_mock) {
     function_handle = makeFunction(0x840);
     pipeline_handle = makePipeline(0x940);

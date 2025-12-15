@@ -188,8 +188,8 @@ protected:
   mps_platform::MpsSlowOpsImpl ops_{};
   Manager manager_{};
   mps_wrapper::MpsDevice_t device_{nullptr};
-  mps_wrapper::MPSHeapDescriptor_t heap_descriptor_{nullptr};
-  mps_wrapper::MPSHeap_t heap_{nullptr};
+  mps_wrapper::MpsHeapDescriptor_t heap_descriptor_{nullptr};
+  mps_wrapper::MpsHeap_t heap_{nullptr};
   mps_rt::MpsLibraryManager lib_manager_{};
   bool setup_successful_{false};
   Manager::LaunchParams params_{};

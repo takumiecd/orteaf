@@ -14,7 +14,7 @@ namespace orteaf::internal::runtime::mps::manager {
 
 // Slot type: Standard Slot with initialization tracking
 using EventSlot = ::orteaf::internal::runtime::base::GenerationalSlot<
-    ::orteaf::internal::runtime::mps::platform::wrapper::MPSEvent_t>;
+    ::orteaf::internal::runtime::mps::platform::wrapper::MpsEvent_t>;
 
 // Control block: Shared ownership
 using EventControlBlock =
@@ -38,7 +38,7 @@ public:
       ::orteaf::internal::runtime::mps::platform::wrapper::MpsDevice_t;
   using EventHandle = ::orteaf::internal::base::EventHandle;
   using EventType =
-      ::orteaf::internal::runtime::mps::platform::wrapper::MPSEvent_t;
+      ::orteaf::internal::runtime::mps::platform::wrapper::MpsEvent_t;
   using EventLease =
       ::orteaf::internal::runtime::base::SharedLease<EventHandle, EventType,
                                                      MpsEventManager>;

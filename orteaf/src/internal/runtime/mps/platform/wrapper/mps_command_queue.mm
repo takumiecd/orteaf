@@ -18,7 +18,7 @@ namespace orteaf::internal::runtime::mps::platform::wrapper {
 /**
  * @copydoc orteaf::internal::backend::mps::createCommandQueue
  */
-MPSCommandQueue_t createCommandQueue(MpsDevice_t device) {
+MpsCommandQueue_t createCommandQueue(MpsDevice_t device) {
   if (device == nullptr) {
     using namespace orteaf::internal::diagnostics::error;
     throwError(OrteafErrc::NullPointer,
@@ -27,13 +27,13 @@ MPSCommandQueue_t createCommandQueue(MpsDevice_t device) {
   id<MTLDevice> objc_device = objcFromOpaqueNoown<id<MTLDevice>>(device);
   id<MTLCommandQueue> objc_command_queue = [objc_device newCommandQueue];
   updateCreateCommandQueue();
-  return (MPSCommandQueue_t)opaqueFromObjcRetained(objc_command_queue);
+  return (MpsCommandQueue_t)opaqueFromObjcRetained(objc_command_queue);
 }
 
 /**
  * @copydoc orteaf::internal::backend::mps::destroyCommandQueue
  */
-void destroyCommandQueue(MPSCommandQueue_t command_queue) {
+void destroyCommandQueue(MpsCommandQueue_t command_queue) {
   if (command_queue == nullptr)
     return;
   opaqueReleaseRetained(command_queue);

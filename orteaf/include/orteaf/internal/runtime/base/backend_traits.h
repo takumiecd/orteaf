@@ -75,7 +75,7 @@ template <> struct BackendTraits<::orteaf::internal::backend::Backend::Mps> {
   using HeapRegion = ::orteaf::internal::runtime::mps::resource::MpsHeapRegion;
   using Context = int; // placeholder until context abstraction exists
   using Stream = ::orteaf::internal::runtime::mps::platform::wrapper::
-      MPSCommandQueue_t; // command queue as stream token
+      MpsCommandQueue_t; // command queue as stream token
   using Device = ::orteaf::internal::runtime::mps::platform::wrapper::
       MpsDevice_t; // opaque Metal device handle
   using FenceToken = ::orteaf::internal::runtime::mps::resource::MpsFenceToken;

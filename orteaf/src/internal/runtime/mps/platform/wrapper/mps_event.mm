@@ -22,7 +22,7 @@ namespace orteaf::internal::runtime::mps::platform::wrapper {
 /**
  * @copydoc orteaf::internal::backend::mps::createEvent
  */
-MPSEvent_t createEvent(MpsDevice_t device) {
+MpsEvent_t createEvent(MpsDevice_t device) {
   ::orteaf::internal::runtime::mps::platform::wrapper::AutoreleasePool pool{};
   id<MTLDevice> objc_device = objcFromOpaqueNoown<id<MTLDevice>>(device);
   id<MTLSharedEvent> objc_event = [objc_device newSharedEvent];
@@ -32,13 +32,13 @@ MPSEvent_t createEvent(MpsDevice_t device) {
   [objc_event setSignaledValue:0];
   updateCreateEvent();
   auto retained = opaqueFromObjcRetained(objc_event);
-  return (MPSEvent_t)retained;
+  return (MpsEvent_t)retained;
 }
 
 /**
  * @copydoc orteaf::internal::backend::mps::destroyEvent
  */
-void destroyEvent(MPSEvent_t event) {
+void destroyEvent(MpsEvent_t event) {
   if (event == nullptr)
     return;
   ::orteaf::internal::runtime::mps::platform::wrapper::AutoreleasePool pool{};
@@ -49,7 +49,7 @@ void destroyEvent(MPSEvent_t event) {
 /**
  * @copydoc orteaf::internal::backend::mps::recordEvent
  */
-void recordEvent(MPSEvent_t event, MPSCommandBuffer_t command_buffer,
+void recordEvent(MpsEvent_t event, MpsCommandBuffer_t command_buffer,
                  uint64_t value) {
   if (event == nullptr) {
     using namespace orteaf::internal::diagnostics::error;
@@ -69,7 +69,7 @@ void recordEvent(MPSEvent_t event, MPSCommandBuffer_t command_buffer,
 /**
  * @copydoc orteaf::internal::backend::mps::queryEvent
  */
-bool queryEvent(MPSEvent_t event, uint64_t expected_value) {
+bool queryEvent(MpsEvent_t event, uint64_t expected_value) {
   if (event == nullptr) {
     using namespace orteaf::internal::diagnostics::error;
     throwError(OrteafErrc::NullPointer, "queryEvent: event cannot be nullptr");
@@ -82,7 +82,7 @@ bool queryEvent(MPSEvent_t event, uint64_t expected_value) {
 /**
  * @copydoc orteaf::internal::backend::mps::eventValue
  */
-uint64_t eventValue(MPSEvent_t event) {
+uint64_t eventValue(MpsEvent_t event) {
   if (event == nullptr) {
     using namespace orteaf::internal::diagnostics::error;
     throwError(OrteafErrc::NullPointer, "eventValue: event cannot be nullptr");
@@ -94,7 +94,7 @@ uint64_t eventValue(MPSEvent_t event) {
 /**
  * @copydoc orteaf::internal::backend::mps::waitEvent
  */
-void waitEvent(MPSCommandBuffer_t command_buffer, MPSEvent_t event,
+void waitEvent(MpsCommandBuffer_t command_buffer, MpsEvent_t event,
                uint64_t value) {
   if (command_buffer == nullptr) {
     using namespace orteaf::internal::diagnostics::error;

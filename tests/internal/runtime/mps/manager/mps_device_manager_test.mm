@@ -31,8 +31,8 @@ mps_wrapper::MpsDevice_t makeDevice(std::uintptr_t value) {
   return reinterpret_cast<mps_wrapper::MpsDevice_t>(value);
 }
 
-mps_wrapper::MPSCommandQueue_t makeQueue(std::uintptr_t value) {
-  return reinterpret_cast<mps_wrapper::MPSCommandQueue_t>(value);
+mps_wrapper::MpsCommandQueue_t makeQueue(std::uintptr_t value) {
+  return reinterpret_cast<mps_wrapper::MpsCommandQueue_t>(value);
 }
 
 template <class Provider>

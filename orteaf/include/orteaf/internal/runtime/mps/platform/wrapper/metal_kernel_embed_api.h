@@ -28,9 +28,9 @@ namespace orteaf::internal::runtime::mps::platform::metal_kernel_embed {
  * using namespace orteaf::internal::runtime::mps::platform::metal_kernel_embed;
  *
  * MpsDevice_t device = acquire_default_device();  // user-defined helper
- * MPSError_t error = nullptr;
- * MPSLibrary_t lib = createEmbeddedLibrary(device, "embed_test_library",
- * &error); MPSFunction_t fn = createFunction(lib, "my_kernel");
+ * MpsError_t error = nullptr;
+ * MpsLibrary_t lib = createEmbeddedLibrary(device, "embed_test_library",
+ * &error); MpsFunction_t fn = createFunction(lib, "my_kernel");
  * // Continue with pipeline creation, command encoder setup, etc.
  * @endcode
  */
@@ -52,11 +52,11 @@ MetallibBlob findLibraryData(std::string_view library_name);
 
 bool available(std::string_view library_name);
 
-::orteaf::internal::runtime::mps::platform::wrapper::MPSLibrary_t
+::orteaf::internal::runtime::mps::platform::wrapper::MpsLibrary_t
 createEmbeddedLibrary(
     ::orteaf::internal::runtime::mps::platform::wrapper::MpsDevice_t device,
     std::string_view library_name,
-    ::orteaf::internal::runtime::mps::platform::wrapper::MPSError_t *error =
+    ::orteaf::internal::runtime::mps::platform::wrapper::MpsError_t *error =
         nullptr);
 
 } // namespace orteaf::internal::runtime::mps::platform::metal_kernel_embed

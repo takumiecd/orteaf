@@ -69,10 +69,10 @@ protected:
   static constexpr std::size_t kHeight = 4;
 
   mps::MpsDevice_t device_ = nullptr;
-  mps::MPSTextureDescriptor_t descriptor_ = nullptr;
-  mps::MPSHeapDescriptor_t heap_desc_ = nullptr;
-  mps::MPSHeap_t heap_ = nullptr;
-  mps::MPSTexture_t texture_ = nullptr;
+  mps::MpsTextureDescriptor_t descriptor_ = nullptr;
+  mps::MpsHeapDescriptor_t heap_desc_ = nullptr;
+  mps::MpsHeap_t heap_ = nullptr;
+  mps::MpsTexture_t texture_ = nullptr;
 };
 
 TEST_F(MpsTextureTest, CreateTextureFromDevice) {

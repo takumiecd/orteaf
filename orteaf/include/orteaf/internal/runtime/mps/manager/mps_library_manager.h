@@ -51,7 +51,7 @@ struct LibraryKeyHasher {
 
 // Resource struct: holds library + pipeline_manager
 struct MpsLibraryResource {
-  ::orteaf::internal::runtime::mps::platform::wrapper::MPSLibrary_t library{
+  ::orteaf::internal::runtime::mps::platform::wrapper::MpsLibrary_t library{
       nullptr};
   MpsComputePipelineStateManager pipeline_manager{};
 };
@@ -81,7 +81,7 @@ public:
   using Handle = LibraryHandle;
   using LibraryLease = ::orteaf::internal::runtime::base::RawLease<
       LibraryHandle,
-      ::orteaf::internal::runtime::mps::platform::wrapper::MPSLibrary_t,
+      ::orteaf::internal::runtime::mps::platform::wrapper::MpsLibrary_t,
       MpsLibraryManager>;
 
   MpsLibraryManager() = default;
@@ -124,7 +124,7 @@ public:
 private:
   void validateKey(const LibraryKey &key) const;
 
-  ::orteaf::internal::runtime::mps::platform::wrapper::MPSLibrary_t
+  ::orteaf::internal::runtime::mps::platform::wrapper::MpsLibrary_t
   createLibrary(const LibraryKey &key);
 
   void destroyResource(MpsLibraryResource &resource);

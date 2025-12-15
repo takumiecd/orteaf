@@ -68,12 +68,12 @@ TEST_F(MpsLibraryFunctionPipelineTest,
  * @brief Test that create_library_with_source handles invalid source.
  */
 TEST_F(MpsLibraryFunctionPipelineTest, CreateLibraryWithSourceInvalidSource) {
-  mps::MPSString_t source =
+  mps::MpsString_t source =
       mps::toNsString(std::string_view("invalid metal code"));
-  mps::MPSCompileOptions_t options = mps::createCompileOptions();
+  mps::MpsCompileOptions_t options = mps::createCompileOptions();
 
-  mps::MPSError_t error = nullptr;
-  mps::MPSLibrary_t library =
+  mps::MpsError_t error = nullptr;
+  mps::MpsLibrary_t library =
       mps::createLibraryWithSource(device_, source, options, &error);
 
   // Should fail with invalid source
@@ -87,8 +87,8 @@ TEST_F(MpsLibraryFunctionPipelineTest, CreateLibraryWithSourceInvalidSource) {
  */
 TEST_F(MpsLibraryFunctionPipelineTest, CreateLibraryWithDataInvalidData) {
   const char invalid_data[] = "not a valid Metal library";
-  mps::MPSError_t error = nullptr;
-  mps::MPSLibrary_t library = mps::createLibraryWithData(
+  mps::MpsError_t error = nullptr;
+  mps::MpsLibrary_t library = mps::createLibraryWithData(
       device_, invalid_data, sizeof(invalid_data), &error);
 
   // Should fail with invalid data
@@ -109,11 +109,11 @@ TEST_F(MpsLibraryFunctionPipelineTest, CreateFunctionNullptrLibraryThrows) {
  */
 TEST_F(MpsLibraryFunctionPipelineTest, CreateFunctionEmptyNameThrows) {
   // Try to create a minimal valid library first
-  mps::MPSError_t error = nullptr;
-  mps::MPSString_t source =
+  mps::MpsError_t error = nullptr;
+  mps::MpsString_t source =
       mps::toNsString(std::string_view("kernel void test() {}"));
-  mps::MPSCompileOptions_t options = mps::createCompileOptions();
-  mps::MPSLibrary_t library =
+  mps::MpsCompileOptions_t options = mps::createCompileOptions();
+  mps::MpsLibrary_t library =
       mps::createLibraryWithSource(device_, source, options, &error);
 
   if (library != nullptr) {
@@ -141,7 +141,7 @@ TEST_F(MpsLibraryFunctionPipelineTest,
  */
 TEST_F(MpsLibraryFunctionPipelineTest,
        CreateComputePipelineStateNullptrFunction) {
-  mps::MPSError_t error = nullptr;
+  mps::MpsError_t error = nullptr;
   ::orteaf::tests::ExpectError(
       ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
       [&] { mps::createComputePipelineState(device_, nullptr, &error); });
@@ -151,7 +151,7 @@ TEST_F(MpsLibraryFunctionPipelineTest,
  * @brief Test that compile options can be created and destroyed.
  */
 TEST_F(MpsLibraryFunctionPipelineTest, CompileOptionsLifecycle) {
-  mps::MPSCompileOptions_t options = mps::createCompileOptions();
+  mps::MpsCompileOptions_t options = mps::createCompileOptions();
   EXPECT_NE(options, nullptr);
 
   EXPECT_NO_THROW(mps::destroyCompileOptions(options));
@@ -168,7 +168,7 @@ TEST_F(MpsLibraryFunctionPipelineTest, DestroyCompileOptionsNullptrIsIgnored) {
  * @brief Test that compile options can be configured.
  */
 TEST_F(MpsLibraryFunctionPipelineTest, ConfigureCompileOptions) {
-  mps::MPSCompileOptions_t options = mps::createCompileOptions();
+  mps::MpsCompileOptions_t options = mps::createCompileOptions();
   ASSERT_NE(options, nullptr);
 
   EXPECT_NO_THROW(mps::setCompileOptionsMathMode(options, true));
@@ -210,7 +210,7 @@ TEST_F(MpsLibraryFunctionPipelineTest,
  * @brief Test that string conversion works.
  */
 TEST_F(MpsLibraryFunctionPipelineTest, StringConversionWorks) {
-  mps::MPSString_t str = mps::toNsString(std::string_view("test_string"));
+  mps::MpsString_t str = mps::toNsString(std::string_view("test_string"));
   EXPECT_NE(str, nullptr);
 
   NSString *ns_str = (__bridge NSString *)str;
@@ -222,7 +222,7 @@ TEST_F(MpsLibraryFunctionPipelineTest, StringConversionWorks) {
  * @brief Test that library creation with nullptr device throws.
  */
 TEST_F(MpsLibraryFunctionPipelineTest, CreateLibraryNullptrDeviceThrows) {
-  mps::MPSString_t name = mps::toNsString(std::string_view("default"));
+  mps::MpsString_t name = mps::toNsString(std::string_view("default"));
   ::orteaf::tests::ExpectError(
       ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
       [&] { (void)mps::createLibrary(nullptr, name); });
@@ -241,7 +241,7 @@ TEST_F(MpsLibraryFunctionPipelineTest, CreateLibraryNullptrNameThrows) {
  * @brief Test that library creation with empty name throws.
  */
 TEST_F(MpsLibraryFunctionPipelineTest, CreateLibraryEmptyNameThrows) {
-  mps::MPSString_t empty_name = mps::toNsString(std::string_view(""));
+  mps::MpsString_t empty_name = mps::toNsString(std::string_view(""));
   ::orteaf::tests::ExpectError(
       ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
       [&] { (void)mps::createLibrary(device_, empty_name); });
@@ -252,7 +252,7 @@ TEST_F(MpsLibraryFunctionPipelineTest, CreateLibraryEmptyNameThrows) {
  */
 TEST_F(MpsLibraryFunctionPipelineTest,
        CreateLibraryWithSourceNullptrSourceThrows) {
-  mps::MPSCompileOptions_t options = mps::createCompileOptions();
+  mps::MpsCompileOptions_t options = mps::createCompileOptions();
   ::orteaf::tests::ExpectError(
       ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer, [&] {
         (void)mps::createLibraryWithSource(device_, nullptr, options, nullptr);
@@ -265,8 +265,8 @@ TEST_F(MpsLibraryFunctionPipelineTest,
  */
 TEST_F(MpsLibraryFunctionPipelineTest,
        CreateLibraryWithSourceEmptySourceThrows) {
-  mps::MPSString_t empty_source = mps::toNsString(std::string_view(""));
-  mps::MPSCompileOptions_t options = mps::createCompileOptions();
+  mps::MpsString_t empty_source = mps::toNsString(std::string_view(""));
+  mps::MpsCompileOptions_t options = mps::createCompileOptions();
   ::orteaf::tests::ExpectError(
       ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
       [&] {

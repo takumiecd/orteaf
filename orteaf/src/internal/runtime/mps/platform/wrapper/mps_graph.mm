@@ -75,7 +75,7 @@ buildFeedsDictionary(const MpsGraphFeed *feeds, std::size_t feed_count) {
   return dict;
 }
 
-NSArray<MPSGraphTensor *> *buildTensorArray(const MPSGraphTensor_t *tensors,
+NSArray<MPSGraphTensor *> *buildTensorArray(const MpsGraphTensor_t *tensors,
                                             std::size_t count) {
   NSMutableArray<MPSGraphTensor *> *array =
       [[NSMutableArray alloc] initWithCapacity:count];
@@ -90,7 +90,7 @@ NSArray<MPSGraphTensor *> *buildTensorArray(const MPSGraphTensor_t *tensors,
 }
 
 NSArray<MPSGraphOperation *> *
-buildOperationArray(const MPSGraphOperation_t *operations, std::size_t count) {
+buildOperationArray(const MpsGraphOperation_t *operations, std::size_t count) {
   NSMutableArray<MPSGraphOperation *> *array =
       [[NSMutableArray alloc] initWithCapacity:count];
   for (std::size_t i = 0; i < count; ++i) {
@@ -106,20 +106,20 @@ buildOperationArray(const MPSGraphOperation_t *operations, std::size_t count) {
 
 } // namespace
 
-MPSGraph_t createGraph() {
+MpsGraph_t createGraph() {
   MPSGraph *graph = [[MPSGraph alloc] init];
-  return (MPSGraph_t)opaqueFromObjcRetained(graph);
+  return (MpsGraph_t)opaqueFromObjcRetained(graph);
 }
 
-void destroyGraph(MPSGraph_t graph) {
+void destroyGraph(MpsGraph_t graph) {
   if (graph == nullptr) {
     return;
   }
   opaqueReleaseRetained(graph);
 }
 
-MPSGraphTensorData_t
-createGraphTensorDataFromBuffer(MPSBuffer_t buffer, const std::int64_t *shape,
+MpsGraphTensorData_t
+createGraphTensorDataFromBuffer(MpsBuffer_t buffer, const std::int64_t *shape,
                                 std::size_t shape_rank,
                                 MpsGraphDataType data_type) {
   if (buffer == nullptr) {
@@ -134,22 +134,22 @@ createGraphTensorDataFromBuffer(MPSBuffer_t buffer, const std::int64_t *shape,
                                               shape:shape_array
                                            dataType:toMpsDataType(data_type)];
   [shape_array release];
-  return (MPSGraphTensorData_t)opaqueFromObjcRetained(tensor_data);
+  return (MpsGraphTensorData_t)opaqueFromObjcRetained(tensor_data);
 }
 
-void destroyGraphTensorData(MPSGraphTensorData_t data) {
+void destroyGraphTensorData(MpsGraphTensorData_t data) {
   if (data == nullptr) {
     return;
   }
   opaqueReleaseRetained(data);
 }
 
-MPSGraphExecutable_t compileGraph(MPSGraph_t graph, MpsDevice_t device,
+MpsGraphExecutable_t compileGraph(MpsGraph_t graph, MpsDevice_t device,
                                   const MpsGraphFeed *feeds,
                                   std::size_t feed_count,
-                                  const MPSGraphTensor_t *target_tensors,
+                                  const MpsGraphTensor_t *target_tensors,
                                   std::size_t target_tensor_count,
-                                  const MPSGraphOperation_t *target_operations,
+                                  const MpsGraphOperation_t *target_operations,
                                   std::size_t target_operation_count) {
   if (graph == nullptr || device == nullptr) {
     using namespace ::orteaf::internal::diagnostics::error;
@@ -181,15 +181,15 @@ MPSGraphExecutable_t compileGraph(MPSGraph_t graph, MpsDevice_t device,
     throwError(OrteafErrc::OperationFailed,
                "Failed to compile MPSGraph executable");
   }
-  return (MPSGraphExecutable_t)opaqueFromObjcRetained(executable);
+  return (MpsGraphExecutable_t)opaqueFromObjcRetained(executable);
 }
 
 std::size_t runGraphExecutable(
-    MPSGraphExecutable_t executable, MPSCommandQueue_t command_queue,
+    MpsGraphExecutable_t executable, MpsCommandQueue_t command_queue,
     const MpsGraphFeed *feeds, std::size_t feed_count,
-    const MPSGraphTensor_t *target_tensors, std::size_t target_tensor_count,
-    const MPSGraphOperation_t *target_operations,
-    std::size_t target_operation_count, MPSGraphTensorData_t *out_tensor_data,
+    const MpsGraphTensor_t *target_tensors, std::size_t target_tensor_count,
+    const MpsGraphOperation_t *target_operations,
+    std::size_t target_operation_count, MpsGraphTensorData_t *out_tensor_data,
     std::size_t out_capacity) {
   if (executable == nullptr || command_queue == nullptr) {
     using namespace ::orteaf::internal::diagnostics::error;
@@ -238,12 +238,12 @@ std::size_t runGraphExecutable(
   for (std::size_t i = 0; i < copy_count; ++i) {
     MPSGraphTensorData *tensor_data = [results objectAtIndex:i];
     out_tensor_data[i] =
-        (MPSGraphTensorData_t)opaqueFromObjcRetained(tensor_data);
+        (MpsGraphTensorData_t)opaqueFromObjcRetained(tensor_data);
   }
   return copy_count;
 }
 
-void destroyGraphExecutable(MPSGraphExecutable_t executable) {
+void destroyGraphExecutable(MpsGraphExecutable_t executable) {
   if (executable == nullptr) {
     return;
   }

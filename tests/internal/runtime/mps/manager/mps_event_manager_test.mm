@@ -19,8 +19,8 @@ using orteaf::tests::ExpectError;
 
 namespace {
 
-mps_wrapper::MPSEvent_t makeEvent(std::uintptr_t value) {
-  return reinterpret_cast<mps_wrapper::MPSEvent_t>(value);
+mps_wrapper::MpsEvent_t makeEvent(std::uintptr_t value) {
+  return reinterpret_cast<mps_wrapper::MpsEvent_t>(value);
 }
 
 template <class Provider>

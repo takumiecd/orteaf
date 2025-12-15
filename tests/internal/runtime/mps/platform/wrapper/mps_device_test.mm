@@ -166,7 +166,7 @@ TEST_F(MpsDeviceTest, EnumerateMultipleDevices) {
  * @brief Test that get_device_array returns valid array.
  */
 TEST_F(MpsDeviceTest, GetDeviceArrayReturnsValidArray) {
-  mps::MPSDeviceArray_t array = mps::getDeviceArray();
+  mps::MpsDeviceArray_t array = mps::getDeviceArray();
 
   if (array == nullptr) {
     GTEST_SKIP() << "No Metal devices available";

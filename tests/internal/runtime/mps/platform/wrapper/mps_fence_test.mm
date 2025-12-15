@@ -40,11 +40,11 @@ protected:
   }
 
   mps::MpsDevice_t device_{nullptr};
-  mps::MPSCommandQueue_t queue_{nullptr};
+  mps::MpsCommandQueue_t queue_{nullptr};
 };
 
 TEST_F(MpsFenceTest, CreateFenceSucceeds) {
-  mps::MPSFence_t fence = mps::createFence(device_);
+  mps::MpsFence_t fence = mps::createFence(device_);
   ASSERT_NE(fence, nullptr);
 
   id<MTLFence> objc_fence = (__bridge id<MTLFence>)fence;
@@ -58,13 +58,13 @@ TEST_F(MpsFenceTest, DestroyFenceIgnoresNullptr) {
 }
 
 TEST_F(MpsFenceTest, DestroyFenceReleasesHandle) {
-  mps::MPSFence_t fence = mps::createFence(device_);
+  mps::MpsFence_t fence = mps::createFence(device_);
   ASSERT_NE(fence, nullptr);
   EXPECT_NO_THROW(mps::destroyFence(fence));
 }
 
 TEST_F(MpsFenceTest, UpdateAndWaitFenceOnComputeEncoder) {
-  mps::MPSFence_t fence = mps::createFence(device_);
+  mps::MpsFence_t fence = mps::createFence(device_);
   ASSERT_NE(fence, nullptr);
 
   auto command_buffer = mps::createCommandBuffer(queue_);
@@ -84,7 +84,7 @@ TEST_F(MpsFenceTest, UpdateAndWaitFenceOnComputeEncoder) {
 }
 
 TEST_F(MpsFenceTest, UpdateFenceNullEncoderThrows) {
-  mps::MPSFence_t fence = mps::createFence(device_);
+  mps::MpsFence_t fence = mps::createFence(device_);
   ASSERT_NE(fence, nullptr);
   ::orteaf::tests::ExpectError(
       ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,
@@ -105,7 +105,7 @@ TEST_F(MpsFenceTest, UpdateFenceNullFenceThrows) {
 }
 
 TEST_F(MpsFenceTest, WaitFenceNullEncoderThrows) {
-  mps::MPSFence_t fence = mps::createFence(device_);
+  mps::MpsFence_t fence = mps::createFence(device_);
   ASSERT_NE(fence, nullptr);
   ::orteaf::tests::ExpectError(
       ::orteaf::internal::diagnostics::error::OrteafErrc::NullPointer,

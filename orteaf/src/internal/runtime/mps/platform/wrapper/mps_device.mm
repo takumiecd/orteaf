@@ -99,9 +99,9 @@ void deviceRelease(MpsDevice_t device) {
 /**
  * @copydoc orteaf::internal::backend::mps::getDeviceArray
  */
-MPSDeviceArray_t getDeviceArray() {
+MpsDeviceArray_t getDeviceArray() {
   NSArray<id<MTLDevice>> *devices = MTLCopyAllDevices();
-  return (MPSDeviceArray_t)opaqueFromObjcNoown(devices);
+  return (MpsDeviceArray_t)opaqueFromObjcNoown(devices);
 }
 
 namespace {

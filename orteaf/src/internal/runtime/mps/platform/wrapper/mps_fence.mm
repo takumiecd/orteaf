@@ -22,7 +22,7 @@ namespace orteaf::internal::runtime::mps::platform::wrapper {
 /**
  * @copydoc orteaf::internal::backend::mps::createFence
  */
-MPSFence_t createFence(MpsDevice_t device) {
+MpsFence_t createFence(MpsDevice_t device) {
   if (device == nullptr) {
     using namespace orteaf::internal::diagnostics::error;
     throwError(OrteafErrc::NullPointer,
@@ -35,13 +35,13 @@ MPSFence_t createFence(MpsDevice_t device) {
     return nullptr;
   }
   updateCreateFence();
-  return (MPSFence_t)opaqueFromObjcRetained(objc_fence);
+  return (MpsFence_t)opaqueFromObjcRetained(objc_fence);
 }
 
 /**
  * @copydoc orteaf::internal::backend::mps::destroyFence
  */
-void destroyFence(MPSFence_t fence) {
+void destroyFence(MpsFence_t fence) {
   if (fence == nullptr) {
     return;
   }
@@ -53,7 +53,7 @@ void destroyFence(MPSFence_t fence) {
 /**
  * @copydoc orteaf::internal::backend::mps::updateFence
  */
-void updateFence(MPSComputeCommandEncoder_t encoder, MPSFence_t fence) {
+void updateFence(MpsComputeCommandEncoder_t encoder, MpsFence_t fence) {
   if (encoder == nullptr) {
     using namespace orteaf::internal::diagnostics::error;
     throwError(OrteafErrc::NullPointer,
@@ -72,7 +72,7 @@ void updateFence(MPSComputeCommandEncoder_t encoder, MPSFence_t fence) {
 /**
  * @copydoc orteaf::internal::backend::mps::waitForFence
  */
-void waitForFence(MPSComputeCommandEncoder_t encoder, MPSFence_t fence) {
+void waitForFence(MpsComputeCommandEncoder_t encoder, MpsFence_t fence) {
   if (encoder == nullptr) {
     using namespace orteaf::internal::diagnostics::error;
     throwError(OrteafErrc::NullPointer,

@@ -18,9 +18,9 @@ namespace orteaf::internal::runtime::mps::platform::wrapper {
 /**
  * @copydoc orteaf::internal::backend::mps::createComputePipelineState
  */
-MPSComputePipelineState_t createComputePipelineState(MpsDevice_t device,
-                                                     MPSFunction_t function,
-                                                     MPSError_t *error) {
+MpsComputePipelineState_t createComputePipelineState(MpsDevice_t device,
+                                                     MpsFunction_t function,
+                                                     MpsError_t *error) {
   if (device == nullptr || function == nullptr) {
     (void)error;
     using namespace orteaf::internal::diagnostics::error;
@@ -36,13 +36,13 @@ MPSComputePipelineState_t createComputePipelineState(MpsDevice_t device,
   id<MTLComputePipelineState> objc_pipeline_state =
       [objc_device newComputePipelineStateWithFunction:objc_function
                                                  error:objc_error];
-  return (MPSComputePipelineState_t)opaqueFromObjcRetained(objc_pipeline_state);
+  return (MpsComputePipelineState_t)opaqueFromObjcRetained(objc_pipeline_state);
 }
 
 /**
  * @copydoc orteaf::internal::backend::mps::destroyComputePipelineState
  */
-void destroyComputePipelineState(MPSComputePipelineState_t pipeline_state) {
+void destroyComputePipelineState(MpsComputePipelineState_t pipeline_state) {
   if (pipeline_state == nullptr)
     return;
   opaqueReleaseRetained(pipeline_state);

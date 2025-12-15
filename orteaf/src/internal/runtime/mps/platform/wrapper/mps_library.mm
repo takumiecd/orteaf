@@ -20,8 +20,8 @@ namespace orteaf::internal::runtime::mps::platform::wrapper {
 /**
  * @copydoc orteaf::internal::backend::mps::createLibrary
  */
-[[nodiscard]] MPSLibrary_t createLibrary(MpsDevice_t device, MPSString_t name,
-                                         MPSError_t *error) {
+[[nodiscard]] MpsLibrary_t createLibrary(MpsDevice_t device, MpsString_t name,
+                                         MpsError_t *error) {
   if (device == nullptr) {
     if (error != nullptr) {
       *error = nullptr;
@@ -69,22 +69,22 @@ namespace orteaf::internal::runtime::mps::platform::wrapper {
 
   if (error != nullptr) {
     if (objc_error != nil) {
-      *error = (MPSError_t)opaqueFromObjcRetained(objc_error);
+      *error = (MpsError_t)opaqueFromObjcRetained(objc_error);
     } else {
       *error = nullptr;
     }
   }
 
-  return (MPSLibrary_t)opaqueFromObjcRetained(objc_library);
+  return (MpsLibrary_t)opaqueFromObjcRetained(objc_library);
 }
 
 /**
  * @copydoc orteaf::internal::backend::mps::createLibraryWithSource
  */
-[[nodiscard]] MPSLibrary_t
-createLibraryWithSource(MpsDevice_t device, MPSString_t source,
-                        MPSCompileOptions_t compile_options,
-                        MPSError_t *error) {
+[[nodiscard]] MpsLibrary_t
+createLibraryWithSource(MpsDevice_t device, MpsString_t source,
+                        MpsCompileOptions_t compile_options,
+                        MpsError_t *error) {
   if (device == nullptr) {
     if (error != nullptr) {
       *error = nullptr;
@@ -125,19 +125,19 @@ createLibraryWithSource(MpsDevice_t device, MPSString_t source,
 
   if (error != nullptr) {
     if (objc_error != nil) {
-      *error = (MPSError_t)opaqueFromObjcRetained(objc_error);
+      *error = (MpsError_t)opaqueFromObjcRetained(objc_error);
     } else {
       *error = nullptr;
     }
   }
 
-  return (MPSLibrary_t)opaqueFromObjcRetained(objc_library);
+  return (MpsLibrary_t)opaqueFromObjcRetained(objc_library);
 }
 
 /**
  * @copydoc orteaf::internal::backend::mps::destroyLibrary
  */
-void destroyLibrary(MPSLibrary_t library) {
+void destroyLibrary(MpsLibrary_t library) {
   if (library == nullptr)
     return;
   opaqueReleaseRetained(library);
@@ -146,10 +146,10 @@ void destroyLibrary(MPSLibrary_t library) {
 /**
  * @copydoc orteaf::internal::backend::mps::createLibraryWithData
  */
-[[nodiscard]] MPSLibrary_t createLibraryWithData(MpsDevice_t device,
+[[nodiscard]] MpsLibrary_t createLibraryWithData(MpsDevice_t device,
                                                  const void *data,
                                                  std::size_t size,
-                                                 MPSError_t *error) {
+                                                 MpsError_t *error) {
   if (device == nullptr) {
     if (error != nullptr) {
       *error = nullptr;
@@ -207,13 +207,13 @@ void destroyLibrary(MPSLibrary_t library) {
 
   if (error != nullptr) {
     if (objc_error != nil) {
-      *error = (MPSError_t)opaqueFromObjcRetained(objc_error);
+      *error = (MpsError_t)opaqueFromObjcRetained(objc_error);
     } else {
       *error = nullptr;
     }
   }
 
-  return (MPSLibrary_t)opaqueFromObjcRetained(objc_library);
+  return (MpsLibrary_t)opaqueFromObjcRetained(objc_library);
 }
 
 } // namespace orteaf::internal::runtime::mps::platform::wrapper
