@@ -177,9 +177,9 @@ TYPED_TEST(MpsHeapManagerTypedTest, CapacityReflectsConfiguredPool) {
   // Before initialization
   EXPECT_EQ(manager.capacity(), 0u);
 
-  // After initialization (cache pattern: starts at 0, grows on demand)
+  // After initialization: capacity matches configured pool size
   manager.initialize(device, base::DeviceHandle{0}, nullptr, this->getOps(), 2);
-  EXPECT_EQ(manager.capacity(), 0u);
+  EXPECT_EQ(manager.capacity(), 2u);
 
   // After shutdown
   manager.shutdown();

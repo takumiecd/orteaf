@@ -79,11 +79,11 @@ struct MpsHeapResource {
 };
 
 // =============================================================================
-// BaseManagerCore Types (RawControlBlock - no lifecycle tracking)
+// BaseManagerCore Types (RawControlBlock with initialization tracking)
 // =============================================================================
 
 using HeapSlot =
-    ::orteaf::internal::runtime::base::GenerationalRawSlot<MpsHeapResource>;
+    ::orteaf::internal::runtime::base::GenerationalSlot<MpsHeapResource>;
 using HeapControlBlock =
     ::orteaf::internal::runtime::base::RawControlBlock<HeapSlot>;
 

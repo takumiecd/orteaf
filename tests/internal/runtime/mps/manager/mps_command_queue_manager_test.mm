@@ -214,19 +214,13 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, AcquireGrowsPoolWhenFreelistEmpty) {
 }
 
 TYPED_TEST(MpsCommandQueueManagerTypedTest,
-           AcquireFailsWhenGrowthWouldExceedLimit) {
+           SetGrowthChunkSizeRejectsExcessiveValue) {
   auto &manager = this->manager();
-  const auto device = this->adapter().device();
 
-  // Arrange
-  manager.setGrowthChunkSize(std::numeric_limits<std::size_t>::max());
-  this->adapter().expectCreateCommandQueues({makeQueue(0x600)});
-  manager.initialize(device, this->getOps(), 1);
-  auto lease = manager.acquire(); // Keep to prevent return to free list
-
-  // Act & Assert
-  ExpectError(diag_error::OrteafErrc::InvalidArgument,
-              [&] { (void)manager.acquire(); });
+  // Act & Assert: SIZE_MAX exceeds Handle's max index range
+  ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
+    manager.setGrowthChunkSize(std::numeric_limits<std::size_t>::max());
+  });
 }
 
 // =============================================================================

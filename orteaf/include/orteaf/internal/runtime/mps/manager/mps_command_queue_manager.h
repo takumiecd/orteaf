@@ -70,6 +70,13 @@ public:
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
           "Growth chunk size must be non-zero");
     }
+    constexpr std::size_t max_index =
+        static_cast<std::size_t>(CommandQueueHandle::invalid_index());
+    if (size > max_index) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+          "Growth chunk size exceeds maximum handle range");
+    }
     growth_chunk_size_ = size;
   }
   std::size_t growthChunkSize() const { return growth_chunk_size_; }
