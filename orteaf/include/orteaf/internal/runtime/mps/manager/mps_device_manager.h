@@ -11,6 +11,7 @@
 #include "orteaf/internal/base/heap_vector.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include "orteaf/internal/runtime/base/lease/control_block/raw.h"
+#include "orteaf/internal/runtime/base/lease/raw_lease.h"
 #include "orteaf/internal/runtime/base/lease/slot.h"
 #include "orteaf/internal/runtime/base/manager/base_manager_core.h"
 #include "orteaf/internal/runtime/mps/manager/mps_buffer_manager.h"
@@ -117,7 +118,12 @@ class MpsDeviceManager
 public:
   using SlowOps = ::orteaf::internal::runtime::mps::platform::MpsSlowOps;
   using DeviceHandle = ::orteaf::internal::base::DeviceHandle;
+  using DeviceType =
+      ::orteaf::internal::runtime::mps::platform::wrapper::MpsDevice_t;
   using ControlBlock = typename Base::ControlBlock;
+  using DeviceLease =
+      ::orteaf::internal::runtime::base::RawLease<DeviceHandle, DeviceType,
+                                                  MpsDeviceManager>;
 
   MpsDeviceManager() = default;
   MpsDeviceManager(const MpsDeviceManager &) = delete;
@@ -164,12 +170,12 @@ public:
   void shutdown();
 
   // =========================================================================
-  // Device info
+  // Device access
   // =========================================================================
   std::size_t getDeviceCount() const { return Base::capacity(); }
 
-  ::orteaf::internal::runtime::mps::platform::wrapper::MpsDevice_t
-  device(DeviceHandle handle) const;
+  DeviceLease acquire(DeviceHandle handle);
+  void release(DeviceLease &lease) noexcept;
 
   ::orteaf::internal::architecture::Architecture
   getArch(DeviceHandle handle) const;

@@ -63,9 +63,14 @@ void MpsDeviceManager::shutdown() {
   ops_ = nullptr;
 }
 
-::orteaf::internal::runtime::mps::platform::wrapper::MpsDevice_t
-MpsDeviceManager::device(DeviceHandle handle) const {
-  return ensureValidControlBlockConst(handle).payload().device;
+MpsDeviceManager::DeviceLease MpsDeviceManager::acquire(DeviceHandle handle) {
+  auto &cb = ensureValidControlBlock(handle);
+  return DeviceLease{this, handle, cb.payload().device};
+}
+
+void MpsDeviceManager::release(DeviceLease &lease) noexcept {
+  // RawLease - no lifecycle management, just invalidate
+  lease.invalidate();
 }
 
 ::orteaf::internal::architecture::Architecture
