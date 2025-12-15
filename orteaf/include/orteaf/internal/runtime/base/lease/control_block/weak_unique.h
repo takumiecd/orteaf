@@ -14,13 +14,14 @@ namespace orteaf::internal::runtime::base {
 /// @details Allows weak references to observe the resource without owning it.
 /// The resource is destroyed when the strong owner releases, but control block
 /// persists until all weak references are gone.
+/// Initialization state is tracked by the ControlBlock itself.
 template <typename SlotT>
   requires SlotConcept<SlotT>
 class WeakUniqueControlBlock {
   // WeakUnique does not support generation tracking.
   static_assert(!SlotT::has_generation,
                 "WeakUniqueControlBlock does not support generation tracking. "
-                "Use a Slot without generation (e.g., Slot<T> or RawSlot<T>).");
+                "Use RawSlot<T> instead.");
 
 public:
   using Category = lease_category::WeakUnique;
@@ -32,7 +33,7 @@ public:
   WeakUniqueControlBlock &operator=(const WeakUniqueControlBlock &) = delete;
 
   WeakUniqueControlBlock(WeakUniqueControlBlock &&other) noexcept
-      : slot_(std::move(other.slot_)) {
+      : initialized_(other.initialized_), slot_(std::move(other.slot_)) {
     in_use_.store(other.in_use_.load(std::memory_order_relaxed),
                   std::memory_order_relaxed);
     weak_count_.store(other.weak_count_.load(std::memory_order_relaxed),
@@ -41,6 +42,7 @@ public:
 
   WeakUniqueControlBlock &operator=(WeakUniqueControlBlock &&other) noexcept {
     if (this != &other) {
+      initialized_ = other.initialized_;
       in_use_.store(other.in_use_.load(std::memory_order_relaxed),
                     std::memory_order_relaxed);
       weak_count_.store(other.weak_count_.load(std::memory_order_relaxed),
@@ -51,7 +53,7 @@ public:
   }
 
   // =========================================================================
-  // Concept Required API
+  // Lifecycle API
   // =========================================================================
 
   /// @brief Acquire exclusive ownership
@@ -75,19 +77,18 @@ public:
     return in_use_.load(std::memory_order_acquire);
   }
 
-  /// @brief Mark slot as initialized/valid
-  void validate() noexcept {
-    if constexpr (SlotT::has_initialized) {
-      slot_.markInitialized();
-    }
-  }
+  // =========================================================================
+  // Initialization State (managed by ControlBlock)
+  // =========================================================================
 
-  /// @brief Mark slot as uninitialized/invalid
-  void invalidate() noexcept {
-    if constexpr (SlotT::has_initialized) {
-      slot_.markUninitialized();
-    }
-  }
+  /// @brief Check if resource is initialized
+  bool isInitialized() const noexcept { return initialized_; }
+
+  /// @brief Mark resource as initialized/valid
+  void validate() noexcept { initialized_ = true; }
+
+  /// @brief Mark resource as uninitialized/invalid
+  void invalidate() noexcept { initialized_ = false; }
 
   // =========================================================================
   // Weak Reference API (WeakableControlBlockConcept)
@@ -122,23 +123,23 @@ public:
   // Additional Queries
   // =========================================================================
 
-  /// @brief Check if slot is initialized
-  bool isInitialized() const noexcept { return slot_.isInitialized(); }
-
   /// @brief Get weak reference count
   std::uint32_t weakCount() const noexcept {
     return weak_count_.load(std::memory_order_acquire);
   }
 
 private:
+  bool initialized_{false};
   std::atomic<bool> in_use_{false};
   std::atomic<std::uint32_t> weak_count_{0};
   SlotT slot_{};
 };
 
 // Verify concept satisfaction
-static_assert(ControlBlockConcept<WeakUniqueControlBlock<Slot<int>>>);
-static_assert(WeakableControlBlockConcept<WeakUniqueControlBlock<Slot<int>>>);
-static_assert(PromotableControlBlockConcept<WeakUniqueControlBlock<Slot<int>>>);
+static_assert(ControlBlockConcept<WeakUniqueControlBlock<RawSlot<int>>>);
+static_assert(
+    WeakableControlBlockConcept<WeakUniqueControlBlock<RawSlot<int>>>);
+static_assert(
+    PromotableControlBlockConcept<WeakUniqueControlBlock<RawSlot<int>>>);
 
 } // namespace orteaf::internal::runtime::base

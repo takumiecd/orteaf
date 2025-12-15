@@ -11,6 +11,7 @@ namespace orteaf::internal::runtime::base {
 /// @brief Unique control block - single ownership with in_use flag
 /// @details Only one lease can hold this resource at a time.
 /// Uses atomic CAS for thread-safe acquisition.
+/// Initialization state is tracked by the ControlBlock itself.
 template <typename SlotT>
   requires SlotConcept<SlotT>
 class UniqueControlBlock {
@@ -24,13 +25,14 @@ public:
   UniqueControlBlock &operator=(const UniqueControlBlock &) = delete;
 
   UniqueControlBlock(UniqueControlBlock &&other) noexcept
-      : slot_(std::move(other.slot_)) {
+      : initialized_(other.initialized_), slot_(std::move(other.slot_)) {
     in_use_.store(other.in_use_.load(std::memory_order_relaxed),
                   std::memory_order_relaxed);
   }
 
   UniqueControlBlock &operator=(UniqueControlBlock &&other) noexcept {
     if (this != &other) {
+      initialized_ = other.initialized_;
       in_use_.store(other.in_use_.load(std::memory_order_relaxed),
                     std::memory_order_relaxed);
       slot_ = std::move(other.slot_);
@@ -39,7 +41,7 @@ public:
   }
 
   // =========================================================================
-  // Concept Required API
+  // Lifecycle API
   // =========================================================================
 
   /// @brief Acquire exclusive ownership
@@ -71,19 +73,18 @@ public:
     return in_use_.load(std::memory_order_acquire);
   }
 
-  /// @brief Mark slot as initialized/valid
-  void validate() noexcept {
-    if constexpr (SlotT::has_initialized) {
-      slot_.markInitialized();
-    }
-  }
+  // =========================================================================
+  // Initialization State (managed by ControlBlock)
+  // =========================================================================
 
-  /// @brief Mark slot as uninitialized/invalid
-  void invalidate() noexcept {
-    if constexpr (SlotT::has_initialized) {
-      slot_.markUninitialized();
-    }
-  }
+  /// @brief Check if resource is initialized
+  bool isInitialized() const noexcept { return initialized_; }
+
+  /// @brief Mark resource as initialized/valid
+  void validate() noexcept { initialized_ = true; }
+
+  /// @brief Mark resource as uninitialized/invalid
+  void invalidate() noexcept { initialized_ = false; }
 
   // =========================================================================
   // Payload Access
@@ -94,16 +95,14 @@ public:
   const Payload &payload() const noexcept { return slot_.get(); }
 
   // =========================================================================
-  // Additional Queries
+  // Generation (delegated to Slot)
   // =========================================================================
-
-  /// @brief Check if slot is initialized
-  bool isInitialized() const noexcept { return slot_.isInitialized(); }
 
   /// @brief Get current generation (0 if not supported)
   auto generation() const noexcept { return slot_.generation(); }
 
 private:
+  bool initialized_{false};
   std::atomic<bool> in_use_{false};
   SlotT slot_{};
 };

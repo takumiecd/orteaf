@@ -12,6 +12,7 @@ namespace orteaf::internal::runtime::base {
 /// @brief Shared control block - shared ownership with reference counting
 /// @details Multiple leases can share this resource. Uses atomic reference
 /// count for thread-safe sharing.
+/// Initialization state is tracked by the ControlBlock itself.
 template <typename SlotT>
   requires SlotConcept<SlotT>
 class SharedControlBlock {
@@ -25,13 +26,14 @@ public:
   SharedControlBlock &operator=(const SharedControlBlock &) = delete;
 
   SharedControlBlock(SharedControlBlock &&other) noexcept
-      : slot_(std::move(other.slot_)) {
+      : initialized_(other.initialized_), slot_(std::move(other.slot_)) {
     strong_count_.store(other.strong_count_.load(std::memory_order_relaxed),
                         std::memory_order_relaxed);
   }
 
   SharedControlBlock &operator=(SharedControlBlock &&other) noexcept {
     if (this != &other) {
+      initialized_ = other.initialized_;
       strong_count_.store(other.strong_count_.load(std::memory_order_relaxed),
                           std::memory_order_relaxed);
       slot_ = std::move(other.slot_);
@@ -40,7 +42,7 @@ public:
   }
 
   // =========================================================================
-  // Concept Required API
+  // Lifecycle API
   // =========================================================================
 
   /// @brief Acquire a shared reference (increment count)
@@ -66,19 +68,18 @@ public:
   /// @brief Check if any references exist
   bool isAlive() const noexcept { return count() > 0; }
 
-  /// @brief Mark slot as initialized/valid
-  void validate() noexcept {
-    if constexpr (SlotT::has_initialized) {
-      slot_.markInitialized();
-    }
-  }
+  // =========================================================================
+  // Initialization State (managed by ControlBlock)
+  // =========================================================================
 
-  /// @brief Mark slot as uninitialized/invalid
-  void invalidate() noexcept {
-    if constexpr (SlotT::has_initialized) {
-      slot_.markUninitialized();
-    }
-  }
+  /// @brief Check if resource is initialized
+  bool isInitialized() const noexcept { return initialized_; }
+
+  /// @brief Mark resource as initialized/valid
+  void validate() noexcept { initialized_ = true; }
+
+  /// @brief Mark resource as uninitialized/invalid
+  void invalidate() noexcept { initialized_ = false; }
 
   // =========================================================================
   // Shared-specific API (SharedControlBlockConcept)
@@ -98,16 +99,14 @@ public:
   const Payload &payload() const noexcept { return slot_.get(); }
 
   // =========================================================================
-  // Additional Queries
+  // Generation (delegated to Slot)
   // =========================================================================
-
-  /// @brief Check if slot is initialized
-  bool isInitialized() const noexcept { return slot_.isInitialized(); }
 
   /// @brief Get current generation (0 if not supported)
   auto generation() const noexcept { return slot_.generation(); }
 
 private:
+  bool initialized_{false};
   std::atomic<std::uint32_t> strong_count_{0};
   SlotT slot_{};
 };

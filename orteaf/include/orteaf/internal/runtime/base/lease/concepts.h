@@ -75,9 +75,9 @@ concept CompatibleLeaseControlBlock =
 // Payload Concept
 // =============================================================================
 
-/// @brief Concept for payload types that can be stored in control blocks
+/// @brief Concept for payload types that can be stored in slots
 template <typename P>
-concept SlotConcept =
+concept PayloadConcept =
     std::is_default_constructible_v<P> && std::is_move_constructible_v<P> &&
     std::is_move_assignable_v<P>;
 

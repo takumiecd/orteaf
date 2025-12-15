@@ -6,9 +6,9 @@
 
 namespace orteaf::internal::runtime::base {
 
-/// @brief Raw control block - no reference counting, only slot
+/// @brief Raw control block - no reference counting
 /// @details Used for resources that don't need lifecycle management.
-/// All operations are no-op.
+/// Initialization state is tracked by the ControlBlock itself.
 template <typename SlotT>
   requires SlotConcept<SlotT>
 class RawControlBlock {
@@ -24,10 +24,10 @@ public:
   RawControlBlock &operator=(RawControlBlock &&) = default;
 
   // =========================================================================
-  // Concept Required API
+  // Lifecycle API
   // =========================================================================
 
-  /// @brief Always succeeds (no tracking)
+  /// @brief Always succeeds (no ref counting)
   constexpr bool acquire() noexcept { return true; }
 
   /// @brief Release and prepare for reuse
@@ -39,22 +39,21 @@ public:
     return true;
   }
 
-  /// @brief Always alive (no tracking)
+  /// @brief Always alive (no ref counting)
   constexpr bool isAlive() const noexcept { return true; }
 
-  /// @brief Mark slot as initialized/valid
-  void validate() noexcept {
-    if constexpr (SlotT::has_initialized) {
-      slot_.markInitialized();
-    }
-  }
+  // =========================================================================
+  // Initialization State (managed by ControlBlock)
+  // =========================================================================
 
-  /// @brief Mark slot as uninitialized/invalid
-  void invalidate() noexcept {
-    if constexpr (SlotT::has_initialized) {
-      slot_.markUninitialized();
-    }
-  }
+  /// @brief Check if resource is initialized
+  bool isInitialized() const noexcept { return initialized_; }
+
+  /// @brief Mark resource as initialized/valid
+  void validate() noexcept { initialized_ = true; }
+
+  /// @brief Mark resource as uninitialized/invalid
+  void invalidate() noexcept { initialized_ = false; }
 
   // =========================================================================
   // Payload Access
@@ -65,16 +64,14 @@ public:
   const Payload &payload() const noexcept { return slot_.get(); }
 
   // =========================================================================
-  // Additional Queries
+  // Generation (delegated to Slot)
   // =========================================================================
-
-  /// @brief Check if slot is initialized
-  bool isInitialized() const noexcept { return slot_.isInitialized(); }
 
   /// @brief Get current generation (0 if not supported)
   auto generation() const noexcept { return slot_.generation(); }
 
 private:
+  bool initialized_{false};
   SlotT slot_{};
 };
 
