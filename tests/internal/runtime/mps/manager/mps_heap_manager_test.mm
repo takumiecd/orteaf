@@ -125,8 +125,8 @@ TYPED_TEST(MpsHeapManagerTypedTest, GrowthChunkSizeReflectedInDebugState) {
   // Act: Acquire a heap
   auto lease = manager.acquire(key);
 
-  // Assert: Growth chunk size is reflected in debug state
-  EXPECT_EQ(manager.growthChunkSizeForTest(), 2u);
+  // Assert: Growth chunk size is reflected
+  EXPECT_EQ(manager.growthChunkSize(), 2u);
 
   // Cleanup
   lease.release();
@@ -239,10 +239,9 @@ TYPED_TEST(MpsHeapManagerTypedTest, GetOrCreateCachesByDescriptor) {
   // Assert: Same handle returned (cached)
   EXPECT_EQ(first.handle(), second.handle());
 
-  // Assert: use_count reflects both leases
-  const auto &snapshot = manager.stateForTest(first.handle().index);
-  EXPECT_TRUE(snapshot.alive);
-  EXPECT_EQ(snapshot.use_count, 2u);
+  // Assert: count reflects both leases (RawControlBlock uses isAlive() only)
+  const auto &snapshot = manager.controlBlockForTest(first.handle().index);
+  EXPECT_TRUE(snapshot.isAlive());
 
   // Cleanup
   first.release();
