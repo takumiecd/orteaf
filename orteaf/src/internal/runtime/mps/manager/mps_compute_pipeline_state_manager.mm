@@ -47,7 +47,7 @@ void MpsComputePipelineStateManager::shutdown() {
 
   // Destroy all created resources
   teardownPool([this](auto &cb, auto handle) {
-    if (cb.isInitialized()) {
+    if (cb.isAlive()) {
       destroyResource(cb.payload());
     }
   });

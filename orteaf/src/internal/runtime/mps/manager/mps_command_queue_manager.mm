@@ -30,7 +30,8 @@ void MpsCommandQueueManager::initialize(DeviceType device, SlowOps *ops,
     auto queue = ops_->createCommandQueue(device_);
     if (queue) {
       cb.payload() = queue;
-      cb.validate();
+      // is_alive_ is set automatically by acquire(), we don't call acquire here
+      // so we leave it for when the queue is actually acquired
     }
     // in_use defaults to false
   });
@@ -42,9 +43,9 @@ void MpsCommandQueueManager::shutdown() {
   }
   // Cleanup all resources
   Base::teardownPool([this](CommandQueueControlBlock &cb, CommandQueueHandle) {
-    if (cb.isInitialized()) {
+    if (cb.payload() != nullptr) {
       destroyResource(cb.payload());
-      cb.invalidate();
+      cb.payload() = nullptr;
     }
   });
   device_ = nullptr;
@@ -78,7 +79,7 @@ void MpsCommandQueueManager::growCapacity(std::size_t additional) {
     auto queue = ops_->createCommandQueue(device_);
     if (queue) {
       cb.payload() = queue;
-      cb.validate();
+      // is_alive_ is set automatically by acquire()
     }
   }
 }
@@ -135,9 +136,9 @@ void MpsCommandQueueManager::releaseUnusedQueues() {
 
   // Destroy all resources and recreate pool (empty) implies teardown
   Base::teardownPool([this](CommandQueueControlBlock &cb, CommandQueueHandle) {
-    if (cb.isInitialized()) {
+    if (cb.payload() != nullptr) {
       destroyResource(cb.payload());
-      cb.invalidate();
+      cb.payload() = nullptr;
     }
   });
 

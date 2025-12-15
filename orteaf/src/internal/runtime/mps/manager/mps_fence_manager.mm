@@ -34,7 +34,7 @@ void MpsFenceManager::shutdown() {
     return;
   }
   Base::teardownPool([this](FenceControlBlock &cb, FenceHandle) {
-    if (cb.isInitialized()) {
+    if (cb.isAlive()) {
       destroyResource(cb.payload());
     }
   });

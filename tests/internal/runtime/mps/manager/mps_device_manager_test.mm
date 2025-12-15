@@ -427,8 +427,8 @@ TYPED_TEST(MpsDeviceManagerTypedTest, DeviceNotAliveThrowsOnAccess) {
 
   const auto &snapshot = manager.controlBlockForTest(0);
   // Note: RawControlBlock::isAlive() always returns true (no lifecycle
-  // tracking) Check isInitialized() or payload directly instead
-  EXPECT_FALSE(snapshot.isInitialized());
+  // tracking) Check isAlive() or payload directly instead
+  EXPECT_FALSE(snapshot.isAlive());
   EXPECT_FALSE(snapshot.payload().device != nullptr);
 
   // Cleanup

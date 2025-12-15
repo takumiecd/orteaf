@@ -44,7 +44,7 @@ void MpsEventManager::shutdown() {
   }
   // Teardown and destroy all initialized resources
   Base::teardownPool([this](EventControlBlock &cb, EventHandle h) {
-    if (cb.isInitialized()) {
+    if (cb.isAlive()) {
       destroyResource(cb.payload());
     }
   });

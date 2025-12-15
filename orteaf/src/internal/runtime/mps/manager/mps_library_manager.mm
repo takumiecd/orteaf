@@ -41,7 +41,7 @@ void MpsLibraryManager::shutdown() {
 
   // Destroy all created resources
   teardownPool([this](auto &cb, auto) {
-    if (cb.isInitialized()) {
+    if (cb.isAlive()) {
       destroyResource(cb.payload());
     }
   });

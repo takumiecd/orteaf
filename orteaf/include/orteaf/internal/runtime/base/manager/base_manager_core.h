@@ -275,13 +275,13 @@ protected:
     Handle h = allocate(growthSize);
     auto &cb = getControlBlock(h);
 
-    // Create only if not initialized
-    if (!cb.isInitialized()) {
+    // Create only if not initialized (not alive yet)
+    if (!cb.isAlive()) {
       if (!createFn(cb, h)) {
         pushToFreelist(h.index);
         return Handle::invalid();
       }
-      cb.validate();
+      // Note: is_alive_ will be set by acquire() below
     }
 
     // Acquire the control block
@@ -369,9 +369,7 @@ protected:
       auto &cb = control_blocks_[idx];
       destroyFn(cb, h);
 
-      // Mark slot as uninitialized
-      cb.invalidate();
-
+      // Release will automatically set is_alive_ = false
       if (cb.release()) {
         freelist_.push_back(static_cast<IndexType>(idx));
       }

@@ -33,7 +33,7 @@ void MpsGraphManager::initialize(DeviceType device, SlowOps *ops,
 
 void MpsGraphManager::shutdown() {
   Base::teardownPool([this](GraphControlBlock &cb, GraphHandle) {
-    if (cb.isInitialized()) {
+    if (cb.isAlive()) {
       destroyResource(cb.payload());
     }
   });
