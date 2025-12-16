@@ -53,14 +53,16 @@ public:
 
   /// @brief Destroy the resource by executing the destructor (idempotent)
   /// @tparam Destructor Callable that takes Payload& and cleans it up
+  /// @return true if destroyed, false if not created
   template <typename Destructor>
     requires std::invocable<Destructor, PayloadT &>
-  void destroy(Destructor &&destructor) {
+  bool destroy(Destructor &&destructor) {
     if (!is_created_) {
-      return; // Not created, nothing to destroy
+      return false; // Not created, nothing to destroy
     }
     std::forward<Destructor>(destructor)(payload_);
     is_created_ = false;
+    return true;
   }
 
 private:
@@ -118,14 +120,16 @@ public:
 
   /// @brief Destroy the resource by executing the destructor (idempotent)
   /// @tparam Destructor Callable that takes Payload& and cleans it up
+  /// @return true if destroyed, false if not created
   template <typename Destructor>
     requires std::invocable<Destructor, PayloadT &>
-  void destroy(Destructor &&destructor) {
+  bool destroy(Destructor &&destructor) {
     if (!is_created_) {
-      return; // Not created, nothing to destroy
+      return false; // Not created, nothing to destroy
     }
     std::forward<Destructor>(destructor)(payload_);
     is_created_ = false;
+    return true;
   }
 
 private:

@@ -52,13 +52,15 @@ public:
 
   /// @brief Release and destroy the resource
   /// @tparam DestroyFn Callable that takes Payload&
+  /// @return true if destroyed, false if not created
   template <typename DestroyFn>
     requires std::invocable<DestroyFn, Payload &>
-  void releaseAndDestroy(DestroyFn &&destroyFn) {
-    slot_.destroy(std::forward<DestroyFn>(destroyFn));
+  bool releaseAndDestroy(DestroyFn &&destroyFn) {
+    bool destroyed = slot_.destroy(std::forward<DestroyFn>(destroyFn));
     if constexpr (SlotT::has_generation) {
       slot_.incrementGeneration();
     }
+    return destroyed;
   }
 
   /// @brief Check if resource is alive (for Raw, this means created)

@@ -77,15 +77,18 @@ public:
 
   /// @brief Release and destroy the resource (non-reusable)
   /// @tparam DestroyFn Callable that takes Payload&
+  /// @return true if last reference and destroyed, false otherwise
   template <typename DestroyFn>
     requires std::invocable<DestroyFn, Payload &>
-  void releaseAndDestroy(DestroyFn &&destroyFn) {
+  bool releaseAndDestroy(DestroyFn &&destroyFn) {
     if (strong_count_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-      slot_.destroy(std::forward<DestroyFn>(destroyFn));
+      bool destroyed = slot_.destroy(std::forward<DestroyFn>(destroyFn));
       if constexpr (SlotT::has_generation) {
         slot_.incrementGeneration();
       }
+      return destroyed;
     }
+    return false;
   }
 
   /// @brief Check if resource is currently acquired
