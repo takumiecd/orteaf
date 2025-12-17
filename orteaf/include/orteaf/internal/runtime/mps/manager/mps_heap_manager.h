@@ -136,15 +136,14 @@ public:
   // Direct access to BufferManager for a given heap
   BufferManager *bufferManager(const HeapLease &lease);
   BufferManager *bufferManager(const HeapDescriptorKey &key);
-  
+
   // Expose base methods
-  using Base::isAlive;
-  // Growth chunk size
   using Base::growthChunkSize;
   using Base::setGrowthChunkSize;
 
   // Expose base methods
   using Base::capacity;
+  using Base::isAlive;
   using Base::isInitialized;
 
 #if ORTEAF_ENABLE_TEST

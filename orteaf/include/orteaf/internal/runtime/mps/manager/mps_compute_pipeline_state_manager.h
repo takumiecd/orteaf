@@ -107,13 +107,13 @@ public:
   PipelineLease acquire(const FunctionKey &key);
   void release(PipelineLease &lease) noexcept;
 
-  using Base::isAlive;
   // Growth configuration
   using Base::growthChunkSize;
   using Base::setGrowthChunkSize;
 
   // Expose some base methods
   using Base::capacity;
+  using Base::isAlive;
   using Base::isInitialized;
 
 #if ORTEAF_ENABLE_TEST

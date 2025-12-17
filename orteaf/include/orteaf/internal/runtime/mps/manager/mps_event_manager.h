@@ -57,10 +57,10 @@ public:
   EventLease acquire(EventHandle handle);
   void release(EventLease &lease) noexcept;
   void release(EventHandle handle) noexcept;
-  
-  using Base::isAlive;
-  // Expose capacity 
+
+  // Expose capacity
   using Base::capacity;
+  using Base::isAlive;
   using Base::isInitialized;
 
 #if ORTEAF_ENABLE_TEST

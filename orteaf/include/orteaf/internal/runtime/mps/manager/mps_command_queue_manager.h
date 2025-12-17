@@ -75,14 +75,13 @@ public:
   void dropWeakRef(CommandQueueWeakLease &lease) noexcept;
   CommandQueueLease tryPromote(CommandQueueHandle handle);
 
-  using Base::isAlive;
-
   // Config
   using Base::growthChunkSize;
   using Base::setGrowthChunkSize;
 
   // Expose capacity
   using Base::capacity;
+  using Base::isAlive;
   using Base::isInitialized;
 
 #if ORTEAF_ENABLE_TEST

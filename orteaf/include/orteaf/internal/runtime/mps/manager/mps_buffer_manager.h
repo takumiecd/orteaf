@@ -291,8 +291,6 @@ public:
   Pool *pool() { return &pool_; }
   const Pool *pool() const { return &pool_; }
 
-  using Base::isAlive;
-
   // =========================================================================
   // Growth chunk size (for pool expansion)
   // =========================================================================
@@ -301,6 +299,7 @@ public:
 
   // Expose base methods
   using Base::capacity;
+  using Base::isAlive;
   using Base::isInitialized;
 
 #if ORTEAF_ENABLE_TEST
