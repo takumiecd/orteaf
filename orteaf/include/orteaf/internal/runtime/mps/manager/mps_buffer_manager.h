@@ -291,6 +291,8 @@ public:
   Pool *pool() { return &pool_; }
   const Pool *pool() const { return &pool_; }
 
+  using Base::isAlive;
+
   // =========================================================================
   // Growth chunk size (for pool expansion)
   // =========================================================================

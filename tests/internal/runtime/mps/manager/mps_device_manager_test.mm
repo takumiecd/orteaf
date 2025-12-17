@@ -205,7 +205,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, GetDeviceReturnsRegisteredHandle) {
     const auto device = manager.acquire(base::DeviceHandle{idx});
     const auto &snapshot = manager.controlBlockForTest(idx);
     EXPECT_EQ(snapshot.payload().device != nullptr, static_cast<bool>(device));
-    EXPECT_EQ(snapshot.isAlive(), static_cast<bool>(device));
+    EXPECT_EQ(snapshot.isCreated(), static_cast<bool>(device));
     if constexpr (TypeParam::is_mock) {
       EXPECT_EQ(device.pointer(), expected_handles[idx]);
       const auto expected_arch = (idx == 0) ? architecture::Architecture::MpsM3
@@ -260,7 +260,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, GetArchMatchesReportedArchitecture) {
       EXPECT_EQ(arch, expected_arch);
       EXPECT_EQ(snapshot.payload().arch, expected_arch);
       EXPECT_TRUE(snapshot.payload().device != nullptr);
-      EXPECT_TRUE(snapshot.isAlive());
+      EXPECT_TRUE(snapshot.isCreated());
     } else if (expected_arch_env && *expected_arch_env != '\0' && idx == 0) {
       EXPECT_STREQ(expected_arch_env, architecture::idOf(arch).data());
       EXPECT_STREQ(expected_arch_env,
@@ -374,7 +374,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, IsAliveReflectsReportedDeviceCount) {
     const auto &snapshot = manager.controlBlockForTest(index);
     EXPECT_TRUE(manager.isAlive(id))
         << "Device " << index << " should be alive";
-    EXPECT_TRUE(snapshot.isAlive());
+    EXPECT_TRUE(snapshot.isCreated());
   }
 
   // Assert: Out-of-range ID is not alive
@@ -426,9 +426,8 @@ TYPED_TEST(MpsDeviceManagerTypedTest, DeviceNotAliveThrowsOnAccess) {
               [&] { (void)manager.fencePool(base::DeviceHandle{0}); });
 
   const auto &snapshot = manager.controlBlockForTest(0);
-  // Note: RawControlBlock::isAlive() always returns true (no lifecycle
-  // tracking) Check isAlive() or payload directly instead
-  EXPECT_FALSE(snapshot.isAlive());
+  // tracking) Check isCreated() or payload directly instead
+  EXPECT_FALSE(snapshot.isCreated());
   EXPECT_FALSE(snapshot.payload().device != nullptr);
 
   // Cleanup

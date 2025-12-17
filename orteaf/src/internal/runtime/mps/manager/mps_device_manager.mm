@@ -78,17 +78,6 @@ MpsDeviceManager::getArch(DeviceHandle handle) const {
   return ensureValidControlBlockConst(handle).payload().arch;
 }
 
-bool MpsDeviceManager::isAlive(DeviceHandle handle) const {
-  if (!Base::isInitialized()) {
-    return false;
-  }
-  const std::size_t index = static_cast<std::size_t>(handle.index);
-  if (index >= Base::capacity()) {
-    return false;
-  }
-  return Base::getControlBlock(handle).payload().device != nullptr;
-}
-
 MpsCommandQueueManager *
 MpsDeviceManager::commandQueueManager(DeviceHandle handle) {
   return &ensureValidControlBlock(handle).payload().command_queue_manager;

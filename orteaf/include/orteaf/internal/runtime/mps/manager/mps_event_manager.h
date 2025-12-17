@@ -57,8 +57,9 @@ public:
   EventLease acquire(EventHandle handle);
   void release(EventLease &lease) noexcept;
   void release(EventHandle handle) noexcept;
-
-  // Expose capacity
+  
+  using Base::isAlive;
+  // Expose capacity 
   using Base::capacity;
   using Base::isInitialized;
 

@@ -107,6 +107,7 @@ public:
   PipelineLease acquire(const FunctionKey &key);
   void release(PipelineLease &lease) noexcept;
 
+  using Base::isAlive;
   // Growth configuration
   using Base::growthChunkSize;
   using Base::setGrowthChunkSize;

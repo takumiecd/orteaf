@@ -131,7 +131,8 @@ public:
 
   GraphLease acquire(const GraphKey &key, const CompileFn &compile_fn);
   void release(GraphLease &lease) noexcept;
-
+  
+  using Base::isAlive;
   // Expose base methods
   using Base::capacity;
   using Base::isInitialized;

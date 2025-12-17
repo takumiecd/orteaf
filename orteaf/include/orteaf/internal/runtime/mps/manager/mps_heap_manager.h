@@ -136,7 +136,9 @@ public:
   // Direct access to BufferManager for a given heap
   BufferManager *bufferManager(const HeapLease &lease);
   BufferManager *bufferManager(const HeapDescriptorKey &key);
-
+  
+  // Expose base methods
+  using Base::isAlive;
   // Growth chunk size
   using Base::growthChunkSize;
   using Base::setGrowthChunkSize;

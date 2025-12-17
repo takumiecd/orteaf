@@ -58,6 +58,7 @@ public:
   void release(FenceLease &lease) noexcept;
   void release(FenceHandle handle) noexcept;
 
+  using Base::isAlive;
   // Expose capacity
   using Base::capacity;
   using Base::isInitialized;

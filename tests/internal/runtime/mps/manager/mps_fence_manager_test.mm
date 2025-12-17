@@ -488,7 +488,7 @@ TYPED_TEST(MpsFenceManagerTypedTest, DebugStateReflectsFenceState) {
 
   // Assert
   const auto &snapshot = manager.controlBlockForTest(handle.index);
-  EXPECT_TRUE(snapshot.isAlive());
+  EXPECT_TRUE(snapshot.isCreated());
 
   // Cleanup
   manager.release(lease);

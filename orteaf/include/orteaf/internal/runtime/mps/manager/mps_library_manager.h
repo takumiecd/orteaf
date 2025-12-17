@@ -104,7 +104,8 @@ public:
   PipelineManager *pipelineManager(const LibraryKey &key);
 
   std::size_t capacity() const noexcept { return Base::capacity(); }
-
+  
+  using Base::isAlive;
   using Base::growthChunkSize;
   using Base::setGrowthChunkSize;
 
