@@ -253,16 +253,8 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, ManualReleaseInvalidatesLease) {
   // Assert: Lease is invalidated
   EXPECT_FALSE(static_cast<bool>(lease));
 
-  const auto &state = manager.controlBlockForTest(original_handle.index);
-  EXPECT_FALSE(state.isCreated());
-  // BaseManagerCore does not track generation in this way (Slot has it, but
-  // accessor returns ControlBlock). Slot generation is hidden or available via
-  // slot.generation? Basic Slot does not have generation. Only GenerationalSlot
-  // has generation. MpsCommandQueueManager is using base::Slot (not
-  // GenerationalSlot) via UniqueControlBlock? UniqueControlBlock takes SlotT.
-  // mps_command_queue_manager.h defines Slot = base::Slot. base::Slot does not
-  // have generation. So EXPECT_GT(state.generation, ...) is invalid now. We can
-  // only check in_use.
+  // Assert: With old handle, isAlive returns false (generation mismatch)
+  EXPECT_FALSE(manager.isAlive(original_handle));
 
   // Act: Reacquire gets new generation
   auto reacquired = manager.acquire();
@@ -415,9 +407,8 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, DebugStateReflectsSetterUpdates) {
   const auto handle = lease.handle();
   lease.release();
 
-  // Assert
-  const auto &released_state = manager.controlBlockForTest(handle.index);
-  EXPECT_FALSE(released_state.isCreated());
+  // Assert: With old handle, isAlive returns false (generation mismatch)
+  EXPECT_FALSE(manager.isAlive(handle));
 }
 #endif
 
@@ -563,8 +554,9 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest,
   // Act: Release strong lease
   strong_lease.release();
 
-  // Assert: Resource is not alive (in_use = false)
-  EXPECT_FALSE(manager.isAlive(handle));
+  // Assert: Resource is not in use (strong ref released, canTeardown = true)
+  const auto &cb = manager.controlBlockForTest(handle.index);
+  EXPECT_TRUE(cb.canTeardown());
 
   // Weak lease still valid but points to released resource
   EXPECT_TRUE(static_cast<bool>(weak_lease));
