@@ -21,47 +21,45 @@ void MpsDeviceManager::initialize(SlowOps *slow_ops) {
   }
 
   // Setup pool with device count
-  Base::setupPool(
-      static_cast<std::size_t>(device_count),
-      [this](ControlBlock &cb, std::size_t index) {
-        const int i = static_cast<int>(index);
-        const DeviceHandle handle{static_cast<std::uint32_t>(i)};
+  Base::setupPool(static_cast<std::size_t>(device_count));
 
-        const auto device = ops_->getDevice(
-            static_cast<
-                ::orteaf::internal::runtime::mps::platform::wrapper::MPSInt_t>(
-                i));
+  // Initialize devices in a separate loop since create() only gets Payload
+  for (int i = 0; i < device_count; ++i) {
+    const DeviceHandle handle{static_cast<std::uint32_t>(i)};
+    auto &cb = Base::getControlBlock(handle);
 
-        MpsDeviceResource &resource = cb.payload();
-        resource.device = device;
+    const auto device = ops_->getDevice(
+        static_cast<
+            ::orteaf::internal::runtime::mps::platform::wrapper::MPSInt_t>(i));
 
-        if (device != nullptr) {
-          resource.arch = ops_->detectArchitecture(handle);
-          resource.command_queue_manager.initialize(
-              device, ops_, command_queue_initial_capacity_);
-          resource.library_manager.initialize(device, ops_,
-                                              library_initial_capacity_);
-          resource.heap_manager.initialize(device, handle,
-                                           &resource.library_manager, ops_,
-                                           heap_initial_capacity_);
-          resource.graph_manager.initialize(device, ops_,
-                                            graph_initial_capacity_);
-          resource.event_pool.initialize(device, ops_, 0);
-          resource.fence_pool.initialize(device, ops_, 0);
-          // Mark as acquired (alive)
-          cb.acquire([](auto &) { return true; });
-        } else {
-          resource.arch =
-              ::orteaf::internal::architecture::Architecture::MpsGeneric;
-        }
+    MpsDeviceResource &resource = cb.payload();
+    resource.device = device;
 
-        return true;
-      });
+    if (device != nullptr) {
+      resource.arch = ops_->detectArchitecture(handle);
+      resource.command_queue_manager.initialize(
+          device, ops_, command_queue_initial_capacity_);
+      resource.library_manager.initialize(device, ops_,
+                                          library_initial_capacity_);
+      resource.heap_manager.initialize(device, handle,
+                                       &resource.library_manager, ops_,
+                                       heap_initial_capacity_);
+      resource.graph_manager.initialize(device, ops_, graph_initial_capacity_);
+      resource.event_pool.initialize(device, ops_, 0);
+      resource.fence_pool.initialize(device, ops_, 0);
+      // Mark as acquired (alive)
+      cb.acquire([](auto &) { return true; });
+    } else {
+      resource.arch =
+          ::orteaf::internal::architecture::Architecture::MpsGeneric;
+    }
+  }
 }
 
 void MpsDeviceManager::shutdown() {
-  Base::teardownPool(
-      [this](ControlBlock &cb, DeviceHandle) { cb.payload().reset(ops_); });
+  Base::teardownPool([this](MpsDeviceResource &payload) {
+    payload.reset(ops_);
+  });
   ops_ = nullptr;
 }
 

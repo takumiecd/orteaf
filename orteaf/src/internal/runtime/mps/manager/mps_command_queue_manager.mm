@@ -25,15 +25,12 @@ void MpsCommandQueueManager::initialize(DeviceType device, SlowOps *ops,
 
   // Initialize and pre-create resources (lazy creation is also supported, but
   // this matches previous implementation of pre-creation if capacity > 0)
-  // Actually, let's use setupPool with factory to pre-create.
-  Base::setupPool(capacity, [&](CommandQueueControlBlock &cb, std::size_t) {
+  Base::setupPool(capacity, [&](CommandQueueType &payload) {
     auto queue = ops_->createCommandQueue(device_);
     if (queue) {
-      cb.payload() = queue;
-      // is_alive_ is set automatically by acquire(), we don't call acquire here
-      // so we leave it for when the queue is actually acquired
+      payload = queue;
     }
-    // in_use defaults to false, always add to freelist
+    // Always return true to add to freelist (in_use defaults to false)
     return true;
   });
 }
@@ -43,10 +40,10 @@ void MpsCommandQueueManager::shutdown() {
     return;
   }
   // Cleanup all resources
-  Base::teardownPool([this](CommandQueueControlBlock &cb, CommandQueueHandle) {
-    if (cb.payload() != nullptr) {
-      destroyResource(cb.payload());
-      cb.payload() = nullptr;
+  Base::teardownPool([this](CommandQueueType &payload) {
+    if (payload != nullptr) {
+      destroyResource(payload);
+      payload = nullptr;
     }
   });
   device_ = nullptr;
@@ -122,6 +119,65 @@ void MpsCommandQueueManager::release(CommandQueueHandle handle) noexcept {
   Base::releaseForReuse(handle);
 }
 
+// =============================================================================
+// Weak Reference Support
+// =============================================================================
+
+MpsCommandQueueManager::CommandQueueWeakLease
+MpsCommandQueueManager::acquireWeak(const CommandQueueLease &lease) {
+  if (!lease) {
+    return CommandQueueWeakLease{};
+  }
+  Base::getControlBlockChecked(lease.handle()).acquireWeak();
+  return CommandQueueWeakLease{this, lease.handle()};
+}
+
+MpsCommandQueueManager::CommandQueueWeakLease
+MpsCommandQueueManager::acquireWeak(CommandQueueHandle handle) {
+  if (!Base::isValidHandle(handle)) {
+    return CommandQueueWeakLease{};
+  }
+  Base::getControlBlockChecked(handle).acquireWeak();
+  return CommandQueueWeakLease{this, handle};
+}
+
+void MpsCommandQueueManager::addWeakRef(CommandQueueHandle handle) noexcept {
+  if (Base::isValidHandle(handle)) {
+    Base::getControlBlockChecked(handle).acquireWeak();
+  }
+}
+
+void MpsCommandQueueManager::dropWeakRef(
+    CommandQueueWeakLease &lease) noexcept {
+  if (!lease) {
+    return;
+  }
+  auto handle = lease.handle();
+  if (Base::isValidHandle(handle)) {
+    Base::getControlBlockChecked(handle).releaseWeak();
+  }
+  lease.invalidate();
+}
+
+bool MpsCommandQueueManager::isAlive(CommandQueueHandle handle) const noexcept {
+  if (!Base::isInitialized() || !Base::isValidHandle(handle)) {
+    return false;
+  }
+  return Base::getControlBlock(handle).isAlive();
+}
+
+MpsCommandQueueManager::CommandQueueLease
+MpsCommandQueueManager::tryPromote(CommandQueueHandle handle) {
+  if (!Base::isValidHandle(handle)) {
+    return CommandQueueLease{};
+  }
+  auto &cb = Base::getControlBlockChecked(handle);
+  if (cb.tryPromote()) {
+    return CommandQueueLease{this, handle, cb.payload()};
+  }
+  return CommandQueueLease{};
+}
+
 bool MpsCommandQueueManager::isInUse(CommandQueueHandle handle) const {
   if (!Base::isInitialized() || !Base::isValidHandle(handle)) {
     return false;
@@ -138,10 +194,10 @@ void MpsCommandQueueManager::releaseUnusedQueues() {
   }
 
   // Destroy all resources and recreate pool (empty) implies teardown
-  Base::teardownPool([this](CommandQueueControlBlock &cb, CommandQueueHandle) {
-    if (cb.payload() != nullptr) {
-      destroyResource(cb.payload());
-      cb.payload() = nullptr;
+  Base::teardownPool([this](CommandQueueType &payload) {
+    if (payload != nullptr) {
+      destroyResource(payload);
+      payload = nullptr;
     }
   });
 

@@ -202,9 +202,9 @@ public:
   // Shutdown (explicit params version)
   // =========================================================================
   void shutdown(LaunchParams &params) {
-    Base::teardownPool([this, &params](ControlBlock &cb, BufferHandle) {
-      if (cb.isAlive()) {
-        deallocateBuffer(cb.payload().buffer, params);
+    Base::teardownPool([this, &params](MpsBufferResource &resource) {
+      if (resource.buffer.valid()) {
+        deallocateBuffer(resource.buffer, params);
       }
     });
 

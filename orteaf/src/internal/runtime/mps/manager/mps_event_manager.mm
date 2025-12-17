@@ -43,10 +43,9 @@ void MpsEventManager::shutdown() {
     return;
   }
   // Teardown and destroy all created resources
-  Base::teardownPool([this](EventControlBlock &cb, EventHandle h) {
-    // Check if resource was created (payload is valid)
-    if (cb.payload() != nullptr) {
-      destroyResource(cb.payload());
+  Base::teardownPool([this](EventType &payload) {
+    if (payload != nullptr) {
+      destroyResource(payload);
     }
   });
 

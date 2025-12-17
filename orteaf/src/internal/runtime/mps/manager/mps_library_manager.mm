@@ -40,10 +40,9 @@ void MpsLibraryManager::shutdown() {
   }
 
   // Destroy all created resources
-  teardownPool([this](auto &cb, auto) {
-    // Check if resource was created (payload has valid library)
-    if (cb.payload().library != nullptr) {
-      destroyResource(cb.payload());
+  teardownPool([this](MpsLibraryResource &payload) {
+    if (payload.library != nullptr) {
+      destroyResource(payload);
     }
   });
 

@@ -31,11 +31,9 @@ void MpsGraphManager::initialize(DeviceType device, SlowOps *ops,
 }
 
 void MpsGraphManager::shutdown() {
-  Base::teardownPool([this](GraphControlBlock &cb, GraphHandle) {
-    // Check if resource was created (payload has valid pointers)
-    // isAlive() indicates acquisition state, not resource validity
-    if (cb.payload().graph != nullptr || cb.payload().executable != nullptr) {
-      destroyResource(cb.payload());
+  Base::teardownPool([this](MpsGraphResource &payload) {
+    if (payload.graph != nullptr || payload.executable != nullptr) {
+      destroyResource(payload);
     }
   });
   key_to_index_.clear();

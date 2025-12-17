@@ -46,10 +46,9 @@ void MpsComputePipelineStateManager::shutdown() {
   }
 
   // Destroy all created resources
-  teardownPool([this](auto &cb, auto handle) {
-    // Check if resource was created (payload has valid pipeline_state)
-    if (cb.payload().pipeline_state != nullptr) {
-      destroyResource(cb.payload());
+  teardownPool([this](MpsPipelineResource &payload) {
+    if (payload.pipeline_state != nullptr) {
+      destroyResource(payload);
     }
   });
 

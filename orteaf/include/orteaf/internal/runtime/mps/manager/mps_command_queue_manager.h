@@ -5,13 +5,14 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "orteaf/internal/base/handle.h"
-#include "orteaf/internal/runtime/base/lease/control_block/unique.h"
-#include "orteaf/internal/runtime/base/lease/slot.h"
-#include "orteaf/internal/runtime/base/lease/unique_lease.h"
-#include "orteaf/internal/runtime/base/manager/base_manager_core.h"
-#include "orteaf/internal/runtime/mps/platform/mps_slow_ops.h"
-#include "orteaf/internal/runtime/mps/platform/wrapper/mps_command_queue.h"
+#include <orteaf/internal/base/handle.h>
+#include <orteaf/internal/runtime/base/lease/control_block/weak_unique.h>
+#include <orteaf/internal/runtime/base/lease/slot.h>
+#include <orteaf/internal/runtime/base/lease/unique_lease.h>
+#include <orteaf/internal/runtime/base/lease/weak_unique_lease.h>
+#include <orteaf/internal/runtime/base/manager/base_manager_core.h>
+#include <orteaf/internal/runtime/mps/platform/mps_slow_ops.h>
+#include <orteaf/internal/runtime/mps/platform/wrapper/mps_command_queue.h>
 
 namespace orteaf::internal::runtime::mps::manager {
 
@@ -19,9 +20,9 @@ namespace orteaf::internal::runtime::mps::manager {
 using CommandQueueSlot = ::orteaf::internal::runtime::base::GenerationalSlot<
     ::orteaf::internal::runtime::mps::platform::wrapper::MpsCommandQueue_t>;
 
-// Control block: Unique (exclusive) ownership
+// Control block: WeakUnique (exclusive ownership with weak reference support)
 using CommandQueueControlBlock =
-    ::orteaf::internal::runtime::base::UniqueControlBlock<CommandQueueSlot>;
+    ::orteaf::internal::runtime::base::WeakUniqueControlBlock<CommandQueueSlot>;
 
 struct MpsCommandQueueManagerTraits {
   using ControlBlock = CommandQueueControlBlock;
@@ -44,6 +45,9 @@ public:
       ::orteaf::internal::runtime::mps::platform::wrapper::MpsCommandQueue_t;
   using CommandQueueLease = ::orteaf::internal::runtime::base::UniqueLease<
       CommandQueueHandle, CommandQueueType, MpsCommandQueueManager>;
+  using CommandQueueWeakLease =
+      ::orteaf::internal::runtime::base::WeakUniqueLease<
+          CommandQueueHandle, CommandQueueType, MpsCommandQueueManager>;
 
   MpsCommandQueueManager() = default;
   MpsCommandQueueManager(const MpsCommandQueueManager &) = delete;
@@ -59,6 +63,18 @@ public:
   CommandQueueLease acquire();
   void release(CommandQueueLease &lease) noexcept;
   void release(CommandQueueHandle handle) noexcept;
+
+  // Weak reference support
+  /// @brief Acquire a weak lease from an existing strong lease
+  CommandQueueWeakLease acquireWeak(const CommandQueueLease &lease);
+  /// @brief Acquire a weak lease from a handle
+  CommandQueueWeakLease acquireWeak(CommandQueueHandle handle);
+
+  // Internal methods required by WeakUniqueLease
+  void addWeakRef(CommandQueueHandle handle) noexcept;
+  void dropWeakRef(CommandQueueWeakLease &lease) noexcept;
+  bool isAlive(CommandQueueHandle handle) const noexcept;
+  CommandQueueLease tryPromote(CommandQueueHandle handle);
 
   bool isInUse(CommandQueueHandle handle) const;
   void releaseUnusedQueues();
