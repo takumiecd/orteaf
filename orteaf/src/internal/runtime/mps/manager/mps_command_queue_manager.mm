@@ -178,39 +178,6 @@ MpsCommandQueueManager::tryPromote(CommandQueueHandle handle) {
   return CommandQueueLease{};
 }
 
-bool MpsCommandQueueManager::isInUse(CommandQueueHandle handle) const {
-  if (!Base::isInitialized() || !Base::isValidHandle(handle)) {
-    return false;
-  }
-  return Base::getControlBlock(handle).isAlive();
-}
-
-void MpsCommandQueueManager::releaseUnusedQueues() {
-  ensureInitialized();
-  if (Base::inUse() > 0) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-        "Cannot release unused queues while queues are in use");
-  }
-
-  // Destroy all resources and recreate pool (empty) implies teardown
-  Base::teardownPool([this](CommandQueueType &payload) {
-    if (payload != nullptr) {
-      destroyResource(payload);
-      payload = nullptr;
-    }
-  });
-
-  // Restore state to "Initialized but empty"
-  // Previous implementation cleared internal states but kept initialized=true?
-  // Let's check original: "clearPoolStates();" does "states_.clear();
-  // free_list_.clear();". And "initialized_ = true;" was NOT reset in
-  // releaseUnusedQueues? Actually original said: "clearPoolStates();" at end.
-  // And "ensureInitialized()" at start.
-  // So manager remains initialized but empty.
-  Base::setupPoolEmpty();
-}
-
 void MpsCommandQueueManager::destroyResource(CommandQueueType &resource) {
   if (resource != nullptr) {
     if (ops_) {

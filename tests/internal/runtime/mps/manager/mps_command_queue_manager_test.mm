@@ -368,62 +368,6 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, GrowCapacityAddsAdditionalQueues) {
   manager.shutdown();
 }
 
-TYPED_TEST(MpsCommandQueueManagerTypedTest,
-           ReleaseUnusedQueuesFreesResourcesAndReallocatesOnDemand) {
-  auto &manager = this->manager();
-  const auto device = this->adapter().device();
-
-  // Arrange
-  this->adapter().expectCreateCommandQueues(
-      {makeQueue(0x400), makeQueue(0x401)});
-  manager.initialize(device, this->getOps(), 2);
-
-  // Act: Acquire and release
-  auto lease = manager.acquire();
-  lease.release();
-
-  this->adapter().expectDestroyCommandQueues(
-      {makeQueue(0x400), makeQueue(0x401)});
-  manager.releaseUnusedQueues();
-
-  // Assert: Capacity is now 0
-  EXPECT_EQ(manager.capacity(), 0u);
-
-  // Act: Reacquire creates new queue
-  this->adapter().expectCreateCommandQueues({makeQueue(0x420)});
-  auto reacquired = manager.acquire();
-  reacquired.release();
-  EXPECT_EQ(manager.capacity(), 1u);
-
-  // Cleanup
-  this->adapter().expectDestroyCommandQueues({makeQueue(0x420)});
-  manager.shutdown();
-  EXPECT_EQ(manager.capacity(), 0u);
-}
-
-TYPED_TEST(MpsCommandQueueManagerTypedTest,
-           ReleaseUnusedQueuesFailsIfQueuesAreInUse) {
-  auto &manager = this->manager();
-  const auto device = this->adapter().device();
-
-  // Arrange
-  this->adapter().expectCreateCommandQueues(
-      {makeQueue(0x430), makeQueue(0x431)});
-  manager.initialize(device, this->getOps(), 2);
-
-  auto lease = manager.acquire();
-
-  // Act & Assert: Cannot release while in use
-  ExpectError(diag_error::OrteafErrc::InvalidState,
-              [&] { manager.releaseUnusedQueues(); });
-
-  // Cleanup
-  manager.release(lease);
-  this->adapter().expectDestroyCommandQueues(
-      {makeQueue(0x430), makeQueue(0x431)});
-  manager.shutdown();
-}
-
 // =============================================================================
 // Debug State Tests
 // =============================================================================
@@ -476,3 +420,261 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, DebugStateReflectsSetterUpdates) {
   EXPECT_FALSE(released_state.isAlive());
 }
 #endif
+
+// =============================================================================
+// Weak Reference Tests
+// =============================================================================
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest,
+           AcquireWeakFromLeaseReturnsValidWeakLease) {
+  auto &manager = this->manager();
+  const auto device = this->adapter().device();
+
+  // Arrange
+  this->adapter().expectCreateCommandQueues({makeQueue(0xA00)});
+  manager.initialize(device, this->getOps(), 1);
+
+  // Act
+  auto strong_lease = manager.acquire();
+  auto weak_lease = manager.acquireWeak(strong_lease);
+
+  // Assert
+  EXPECT_TRUE(static_cast<bool>(weak_lease));
+  EXPECT_EQ(weak_lease.handle(), strong_lease.handle());
+
+  // Cleanup
+  strong_lease.release();
+  this->adapter().expectDestroyCommandQueues({makeQueue(0xA00)});
+  manager.shutdown();
+}
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest,
+           AcquireWeakFromHandleReturnsValidWeakLease) {
+  auto &manager = this->manager();
+  const auto device = this->adapter().device();
+
+  // Arrange
+  this->adapter().expectCreateCommandQueues({makeQueue(0xA10)});
+  manager.initialize(device, this->getOps(), 1);
+
+  auto strong_lease = manager.acquire();
+  auto handle = strong_lease.handle();
+
+  // Act
+  auto weak_lease = manager.acquireWeak(handle);
+
+  // Assert
+  EXPECT_TRUE(static_cast<bool>(weak_lease));
+  EXPECT_EQ(weak_lease.handle(), handle);
+
+  // Cleanup
+  strong_lease.release();
+  this->adapter().expectDestroyCommandQueues({makeQueue(0xA10)});
+  manager.shutdown();
+}
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest,
+           AcquireWeakFromEmptyLeaseReturnsEmpty) {
+  auto &manager = this->manager();
+  const auto device = this->adapter().device();
+
+  // Arrange
+  this->adapter().expectCreateCommandQueues({makeQueue(0xA20)});
+  manager.initialize(device, this->getOps(), 1);
+
+  // Act
+  mps_rt::MpsCommandQueueManager::CommandQueueLease empty_lease{};
+  auto weak_lease = manager.acquireWeak(empty_lease);
+
+  // Assert
+  EXPECT_FALSE(static_cast<bool>(weak_lease));
+
+  // Cleanup
+  this->adapter().expectDestroyCommandQueues({makeQueue(0xA20)});
+  manager.shutdown();
+}
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest,
+           IsAliveReturnsTrueWhileStrongLeaseHeld) {
+  auto &manager = this->manager();
+  const auto device = this->adapter().device();
+
+  // Arrange
+  this->adapter().expectCreateCommandQueues({makeQueue(0xA30)});
+  manager.initialize(device, this->getOps(), 1);
+
+  auto lease = manager.acquire();
+  auto handle = lease.handle();
+
+  // Act & Assert
+  EXPECT_TRUE(manager.isAlive(handle));
+
+  // Release and check
+  lease.release();
+  EXPECT_FALSE(manager.isAlive(handle));
+
+  // Cleanup
+  this->adapter().expectDestroyCommandQueues({makeQueue(0xA30)});
+  manager.shutdown();
+}
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest,
+           TryPromoteSucceedsWhileResourceAlive) {
+  auto &manager = this->manager();
+  const auto device = this->adapter().device();
+
+  // Arrange
+  this->adapter().expectCreateCommandQueues({makeQueue(0xA40)});
+  manager.initialize(device, this->getOps(), 1);
+
+  auto strong_lease = manager.acquire();
+  auto weak_lease = manager.acquireWeak(strong_lease);
+  auto handle = weak_lease.handle();
+
+  // Release strong lease first
+  strong_lease.release();
+
+  // Act: Try to promote weak to strong
+  auto promoted = manager.tryPromote(handle);
+
+  // Assert: Should succeed because resource still created
+  EXPECT_TRUE(static_cast<bool>(promoted));
+  EXPECT_EQ(promoted.handle(), handle);
+
+  // Cleanup
+  promoted.release();
+  this->adapter().expectDestroyCommandQueues({makeQueue(0xA40)});
+  manager.shutdown();
+}
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest,
+           WeakLeaseDoesNotPreventResourceRelease) {
+  auto &manager = this->manager();
+  const auto device = this->adapter().device();
+
+  // Arrange
+  this->adapter().expectCreateCommandQueues({makeQueue(0xA50)});
+  manager.initialize(device, this->getOps(), 1);
+
+  auto strong_lease = manager.acquire();
+  auto weak_lease = manager.acquireWeak(strong_lease);
+  auto handle = strong_lease.handle();
+
+  // Act: Release strong lease
+  strong_lease.release();
+
+  // Assert: Resource is not alive (in_use = false)
+  EXPECT_FALSE(manager.isAlive(handle));
+
+  // Weak lease still valid but points to released resource
+  EXPECT_TRUE(static_cast<bool>(weak_lease));
+
+  // Cleanup
+  this->adapter().expectDestroyCommandQueues({makeQueue(0xA50)});
+  manager.shutdown();
+}
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest, WeakLeaseCanBeCopied) {
+  auto &manager = this->manager();
+  const auto device = this->adapter().device();
+
+  // Arrange
+  this->adapter().expectCreateCommandQueues({makeQueue(0xA60)});
+  manager.initialize(device, this->getOps(), 1);
+
+  auto strong_lease = manager.acquire();
+  auto weak1 = manager.acquireWeak(strong_lease);
+
+  // Act: Copy weak lease
+  auto weak2 = weak1;
+
+  // Assert
+  EXPECT_TRUE(static_cast<bool>(weak1));
+  EXPECT_TRUE(static_cast<bool>(weak2));
+  EXPECT_EQ(weak1.handle(), weak2.handle());
+
+  // Cleanup
+  strong_lease.release();
+  this->adapter().expectDestroyCommandQueues({makeQueue(0xA60)});
+  manager.shutdown();
+}
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest, MultipleWeakLeasesCanCoexist) {
+  auto &manager = this->manager();
+  const auto device = this->adapter().device();
+
+  // Arrange
+  this->adapter().expectCreateCommandQueues({makeQueue(0xA70)});
+  manager.initialize(device, this->getOps(), 1);
+
+  auto strong_lease = manager.acquire();
+  auto handle = strong_lease.handle();
+
+  // Act: Create multiple weak leases
+  auto weak1 = manager.acquireWeak(strong_lease);
+  auto weak2 = manager.acquireWeak(handle);
+  auto weak3 = weak1;
+
+  // Assert: All are valid and point to same handle
+  EXPECT_TRUE(static_cast<bool>(weak1));
+  EXPECT_TRUE(static_cast<bool>(weak2));
+  EXPECT_TRUE(static_cast<bool>(weak3));
+  EXPECT_EQ(weak1.handle(), handle);
+  EXPECT_EQ(weak2.handle(), handle);
+  EXPECT_EQ(weak3.handle(), handle);
+
+  // Cleanup
+  strong_lease.release();
+  this->adapter().expectDestroyCommandQueues({makeQueue(0xA70)});
+  manager.shutdown();
+}
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest, TryPromoteFailsForInvalidHandle) {
+  auto &manager = this->manager();
+  const auto device = this->adapter().device();
+
+  // Arrange
+  this->adapter().expectCreateCommandQueues({makeQueue(0xA80)});
+  manager.initialize(device, this->getOps(), 1);
+
+  // Act: Try to promote with out-of-range handle
+  mps_rt::MpsCommandQueueManager::CommandQueueHandle out_of_range_handle{999,
+                                                                         0};
+  auto promoted = manager.tryPromote(out_of_range_handle);
+
+  // Assert
+  EXPECT_FALSE(static_cast<bool>(promoted));
+
+  // Cleanup
+  this->adapter().expectDestroyCommandQueues({makeQueue(0xA80)});
+  manager.shutdown();
+}
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest, TryPromoteFailsForStaleHandle) {
+  auto &manager = this->manager();
+  const auto device = this->adapter().device();
+
+  // Arrange
+  this->adapter().expectCreateCommandQueues({makeQueue(0xA90)});
+  manager.initialize(device, this->getOps(), 1);
+
+  // Get a lease and release it to make the handle stale
+  auto lease = manager.acquire();
+  auto stale_handle = lease.handle();
+  lease.release();
+
+  // Reacquire to bump generation
+  auto new_lease = manager.acquire();
+  EXPECT_NE(new_lease.handle(), stale_handle);
+
+  // Act: Try to promote with stale handle (old generation)
+  auto promoted = manager.tryPromote(stale_handle);
+
+  // Assert: Should fail because handle is stale (generation mismatch)
+  EXPECT_FALSE(static_cast<bool>(promoted));
+
+  // Cleanup
+  new_lease.release();
+  this->adapter().expectDestroyCommandQueues({makeQueue(0xA90)});
+  manager.shutdown();
+}

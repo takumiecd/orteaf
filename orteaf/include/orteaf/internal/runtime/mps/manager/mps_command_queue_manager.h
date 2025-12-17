@@ -76,9 +76,6 @@ public:
   bool isAlive(CommandQueueHandle handle) const noexcept;
   CommandQueueLease tryPromote(CommandQueueHandle handle);
 
-  bool isInUse(CommandQueueHandle handle) const;
-  void releaseUnusedQueues();
-
   // Config
   using Base::growthChunkSize;
   using Base::setGrowthChunkSize;
