@@ -1,25 +1,24 @@
 #pragma once
 
-#include <atomic>
 #include <concepts>
 #include <cstdint>
+#include <mutex>
 #include <utility>
 
 #include <orteaf/internal/runtime/base/lease/control_block/shared.h>
 
 namespace orteaf::internal::runtime::base {
 
-/// @brief Lockable shared control block - shared ownership with exclusive lock
-/// @details Extends SharedControlBlock with a lock flag.
-///          Supports shared ownership (ref counting) and explicit locking.
-///          canShutdown() returns true when count == 0 AND not locked.
+/// @brief Lockable shared control block - shared ownership with mutex lock
+/// @details Extends SharedControlBlock with a mutex for exclusive access.
+///          Supports shared ownership (ref counting) and mutex-based locking.
+///          canShutdown() returns true when count == 0.
 template <typename SlotT>
   requires SlotConcept<SlotT>
 class LockableSharedControlBlock : public SharedControlBlock<SlotT> {
 public:
   using Base = SharedControlBlock<SlotT>;
-  using Category =
-      typename Base::Category; // Kept as Shared for now? Or new category?
+  using Category = typename Base::Category;
   using Slot = typename Base::Slot;
   using Payload = typename Base::Payload;
 
@@ -29,16 +28,18 @@ public:
   LockableSharedControlBlock &
   operator=(const LockableSharedControlBlock &) = delete;
 
+  // Note: std::mutex is not movable, so we must handle move specially
   LockableSharedControlBlock(LockableSharedControlBlock &&other) noexcept
-      : Base(std::move(other)),
-        locked_(other.locked_.load(std::memory_order_relaxed)) {}
+      : Base(std::move(other)) {
+    // mutex_ is default-initialized (unlocked state)
+    // The moved-from object should not be used anymore
+  }
 
   LockableSharedControlBlock &
   operator=(LockableSharedControlBlock &&other) noexcept {
     if (this != &other) {
       Base::operator=(std::move(other));
-      locked_.store(other.locked_.load(std::memory_order_relaxed),
-                    std::memory_order_relaxed);
+      // mutex_ remains in its current state (should be unlocked)
     }
     return *this;
   }
@@ -47,47 +48,31 @@ public:
   // Locking API
   // =========================================================================
 
-  /// @brief Try to acquire exclusive lock
-  /// @return true if lock acquired, false if already locked
-  bool tryLock() noexcept {
-    bool expected = false;
-    return locked_.compare_exchange_strong(
-        expected, true, std::memory_order_acquire, std::memory_order_relaxed);
+  /// @brief Acquire exclusive lock (blocking)
+  /// @return unique_lock holding the mutex
+  std::unique_lock<std::mutex> lock() {
+    return std::unique_lock<std::mutex>(mutex_);
   }
 
-  /// @brief Release exclusive lock
-  void unlock() noexcept { locked_.store(false, std::memory_order_release); }
-
-  /// @brief Check if currently locked
-  bool isLocked() const noexcept {
-    return locked_.load(std::memory_order_acquire);
+  /// @brief Try to acquire exclusive lock (non-blocking)
+  /// @return unique_lock that may or may not own the lock
+  std::unique_lock<std::mutex> tryLock() {
+    return std::unique_lock<std::mutex>(mutex_, std::try_to_lock);
   }
+
+  /// @brief Get reference to the mutex (for advanced use)
+  std::mutex &mutex() noexcept { return mutex_; }
 
   // =========================================================================
   // Lifecycle Overrides
   // =========================================================================
 
-  /// @brief Release a shared reference, ensuring lock is cleared if last ref
-  /// @return true if this was the last reference
-  bool release() noexcept {
-    bool fullyReleased = Base::release();
-    if (fullyReleased) {
-      // If we are the last one out, ensure lock is cleared (sanitization)
-      if (locked_.load(std::memory_order_acquire)) {
-        locked_.store(false, std::memory_order_release);
-      }
-    }
-    return fullyReleased;
-  }
-
   /// @brief Check if shutdown is allowed
-  /// @return true if strong count is 0 AND not locked
-  bool canShutdown() const noexcept {
-    return this->count() == 0 && !locked_.load(std::memory_order_acquire);
-  }
+  /// @return true if strong count is 0
+  bool canShutdown() const noexcept { return this->count() == 0; }
 
 private:
-  std::atomic<bool> locked_{false};
+  std::mutex mutex_;
 };
 
 } // namespace orteaf::internal::runtime::base
