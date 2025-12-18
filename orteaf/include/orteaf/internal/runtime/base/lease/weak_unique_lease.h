@@ -58,9 +58,9 @@ public:
 
   /// @brief Try to promote to a strong unique lease
   /// @return A valid UniqueLease if successful, invalid otherwise
-  auto lock() const {
+  auto lock() {
     if (manager_) {
-      return manager_->tryPromote(handle_);
+      return manager_->tryPromote(*this);
     }
     return typename ManagerT::UniqueLease{};
   }
@@ -69,7 +69,7 @@ public:
 
   void release() noexcept {
     if (manager_) {
-      manager_->dropWeakRef(*this);
+      manager_->release(*this);
       manager_ = nullptr;
     }
   }
@@ -82,7 +82,7 @@ private:
     if (other.manager_) {
       manager_ = other.manager_;
       handle_ = other.handle_;
-      manager_->addWeakRef(handle_);
+      manager_->acquireWeak(handle_);
     }
   }
 
