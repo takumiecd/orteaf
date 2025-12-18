@@ -110,6 +110,13 @@ public:
     return !in_use_.load(std::memory_order_acquire);
   }
 
+  /// @brief Check if shutdown is allowed
+  /// @note For UniqueControlBlock, shutdown is allowed if not in use (same as
+  /// teardown)
+  bool canShutdown() const noexcept {
+    return !in_use_.load(std::memory_order_acquire);
+  }
+
   // =========================================================================
   // Payload Access
   // =========================================================================

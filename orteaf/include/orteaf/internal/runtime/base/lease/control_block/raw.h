@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <concepts>
 #include <utility>
 
@@ -21,10 +22,21 @@ public:
   using Payload = typename SlotT::Payload;
 
   RawControlBlock() = default;
-  RawControlBlock(const RawControlBlock &) = default;
-  RawControlBlock &operator=(const RawControlBlock &) = default;
-  RawControlBlock(RawControlBlock &&) = default;
-  RawControlBlock &operator=(RawControlBlock &&) = default;
+  RawControlBlock(const RawControlBlock &) = delete;
+  RawControlBlock &operator=(const RawControlBlock &) = delete;
+
+  RawControlBlock(RawControlBlock &&other) noexcept
+      : weak_count_(other.weak_count_.load(std::memory_order_relaxed)),
+        slot_(std::move(other.slot_)) {}
+
+  RawControlBlock &operator=(RawControlBlock &&other) noexcept {
+    if (this != &other) {
+      weak_count_.store(other.weak_count_.load(std::memory_order_relaxed),
+                        std::memory_order_relaxed);
+      slot_ = std::move(other.slot_);
+    }
+    return *this;
+  }
 
   // =========================================================================
   // Lifecycle API
@@ -38,12 +50,14 @@ public:
              std::convertible_to<std::invoke_result_t<CreateFn, Payload &>,
                                  bool>
   bool acquire(CreateFn &&createFn) noexcept {
+    weak_count_.fetch_add(1, std::memory_order_relaxed);
     return slot_.create(std::forward<CreateFn>(createFn));
   }
 
   /// @brief Release and prepare for reuse (no-op for raw)
   /// @return always true for raw resources
   bool release() noexcept {
+    weak_count_.fetch_sub(1, std::memory_order_relaxed);
     if constexpr (SlotT::has_generation) {
       slot_.incrementGeneration();
     }
@@ -60,6 +74,9 @@ public:
     if constexpr (SlotT::has_generation) {
       slot_.incrementGeneration();
     }
+    if (destroyed) {
+      weak_count_.fetch_sub(1, std::memory_order_relaxed);
+    }
     return destroyed;
   }
 
@@ -67,6 +84,8 @@ public:
   /// @note Raw resources are "always weak" - teardown is always allowed
   /// @return Always true for Raw (no strong reference blocking)
   bool canTeardown() const noexcept { return true; }
+
+  bool canShutdown() const noexcept { return weak_count_ == 0; }
 
   // =========================================================================
   // Payload Access
@@ -105,6 +124,7 @@ public:
   }
 
 private:
+  std::atomic<std::uint32_t> weak_count_{0};
   SlotT slot_{};
 };
 

@@ -95,6 +95,10 @@ public:
   /// @return true if no strong references (count == 0)
   bool canTeardown() const noexcept { return count() == 0; }
 
+  /// @brief Check if shutdown is allowed
+  /// @return true if strong count is 0
+  bool canShutdown() const noexcept { return count() == 0; }
+
   // =========================================================================
   // Shared-specific API (SharedControlBlockConcept)
   // =========================================================================

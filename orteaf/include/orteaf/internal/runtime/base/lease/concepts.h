@@ -24,6 +24,7 @@ concept ControlBlockConcept = requires(CB cb, const CB ccb) {
   // Note: acquire() is a template so can't be checked here
   { cb.release() } -> std::same_as<bool>;
   { ccb.canTeardown() } -> std::same_as<bool>;
+  { ccb.canShutdown() } -> std::same_as<bool>;
   { ccb.isCreated() } -> std::same_as<bool>;
   // Note: releaseAndDestroy() is a template so can't be checked here
 };

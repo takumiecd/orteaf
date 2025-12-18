@@ -133,6 +133,13 @@ public:
     return !in_use_.load(std::memory_order_acquire);
   }
 
+  /// @brief Check if shutdown is allowed
+  /// @return true if no strong refs AND no weak refs
+  bool canShutdown() const noexcept {
+    return !in_use_.load(std::memory_order_acquire) &&
+           weak_count_.load(std::memory_order_acquire) == 0;
+  }
+
   // =========================================================================
   // Weak Reference API (WeakableControlBlockConcept)
   // =========================================================================
