@@ -72,6 +72,21 @@ protected:
     }
   }
 
+  /// @brief Validate that capacity expansion won't exceed handle range
+  /// @throws InvalidArgument if would exceed maximum handle range
+  void validateCapacityExpansion(std::size_t additionalCount) const {
+    const std::size_t current_capacity = control_blocks_.size();
+    const std::size_t max_index =
+        static_cast<std::size_t>(Handle::invalid_index());
+    if (current_capacity > max_index ||
+        additionalCount > (max_index - current_capacity)) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+          std::string(managerName()) +
+              " capacity exceeds maximum handle range");
+    }
+  }
+
   // =========================================================================
   // Setup / Teardown
   // =========================================================================
@@ -124,6 +139,7 @@ protected:
   /// @param additionalCount Number of control blocks to add
   /// @param createFn Factory function to create resources
   /// @return The starting index of new control blocks
+  /// @throws InvalidArgument if capacity would exceed maximum handle index
   template <typename CreateFn>
     requires std::invocable<CreateFn, typename ControlBlock::Payload &> &&
              std::convertible_to<
@@ -132,6 +148,10 @@ protected:
                  bool>
   std::size_t expandPool(std::size_t additionalCount, CreateFn &&createFn) {
     ensureInitialized();
+    if (additionalCount == 0) {
+      return control_blocks_.size();
+    }
+    validateCapacityExpansion(additionalCount);
     std::size_t oldSize = control_blocks_.size();
     control_blocks_.resize(oldSize + additionalCount);
     for (std::size_t i = oldSize; i < oldSize + additionalCount; ++i) {
@@ -145,8 +165,13 @@ protected:
   /// @brief Expand pool by adding more control blocks (no resource creation)
   /// @param additionalCount Number of control blocks to add
   /// @return The starting index of new control blocks
+  /// @throws InvalidArgument if capacity would exceed maximum handle index
   std::size_t expandPool(std::size_t additionalCount) {
     ensureInitialized();
+    if (additionalCount == 0) {
+      return control_blocks_.size();
+    }
+    validateCapacityExpansion(additionalCount);
     std::size_t oldSize = control_blocks_.size();
     control_blocks_.resize(oldSize + additionalCount);
     for (std::size_t i = oldSize; i < oldSize + additionalCount; ++i) {
@@ -244,7 +269,7 @@ protected:
   Handle allocate(std::size_t growthSize = 1) {
     ensureInitialized();
     if (freelist_.empty()) {
-      expandPool(growthSize, /*addToFreelist=*/true);
+      expandPool(growthSize);
     }
     IndexType idx = freelist_.back();
     freelist_.pop_back();
