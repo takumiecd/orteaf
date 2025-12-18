@@ -17,7 +17,7 @@
 namespace orteaf::internal::runtime::mps::manager {
 
 // Slot type
-using CommandQueueSlot = ::orteaf::internal::runtime::base::GenerationalSlot<
+using CommandQueueSlot = ::orteaf::internal::runtime::base::RawSlot<
     ::orteaf::internal::runtime::mps::platform::wrapper::MpsCommandQueue_t>;
 
 // Control block: WeakUnique (exclusive ownership with weak reference support)

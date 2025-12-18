@@ -73,7 +73,7 @@ void MpsCommandQueueManager::growCapacity(std::size_t additional) {
 
   for (std::size_t i = 0; i < additional; ++i) {
     auto &cb = Base::getControlBlockChecked(
-        CommandQueueHandle{static_cast<uint32_t>(start_index + i), 0});
+        CommandQueueHandle{static_cast<uint32_t>(start_index + i)});
     auto queue = ops_->createCommandQueue(device_);
     if (queue) {
       cb.payload() = queue;
