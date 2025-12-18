@@ -394,14 +394,47 @@ protected:
     }
   }
 
-  /// @deprecated Use releaseForReuse() instead
-  void releaseToFreelist(Handle h) { releaseForReuse(h); }
+  // =========================================================================
+  // Weak Reference Support (for ControlBlocks with weak ref capability)
+  // =========================================================================
 
-  /// @deprecated Use releaseForReuse() instead
-  void releaseShared(Handle h) { releaseForReuse(h); }
+  /// @brief Acquire a weak reference to a handle
+  /// @param h Handle to acquire weak reference for
+  /// @note Only valid for ControlBlocks that support weak references
+  void acquireWeakRef(Handle h) noexcept {
+    isValidHandle(h);
+    control_blocks_[static_cast<std::size_t>(h.index)].acquireWeak();
+  }
 
-  /// @deprecated Use releaseForReuse() instead
-  void releaseUnique(Handle h) { releaseForReuse(h); }
+  /// @brief Release a weak reference
+  /// @param h Handle to release weak reference for
+  /// @return true if this was the last reference (slot returned to freelist)
+  bool releaseWeakRef(Handle h) noexcept {
+    if (!isValidHandle(h)) {
+      return false;
+    }
+    return control_blocks_[static_cast<std::size_t>(h.index)].releaseWeak();
+  }
+
+  /// @brief Try to promote a weak reference to a strong reference
+  /// @param h Handle to promote
+  /// @return Valid handle if promotion succeeded, invalid handle otherwise
+  Handle tryPromoteWeak(Handle h) noexcept {
+    if (!isValidHandle(h)) {
+      return Handle{Handle::invalid_index()};
+    }
+    auto &cb = control_blocks_[static_cast<std::size_t>(h.index)];
+    if (!cb.tryPromote()) {
+      return Handle{Handle::invalid_index()};
+    }
+    // Return handle with current generation if applicable
+    Handle result{h.index};
+    if constexpr (Handle::has_generation) {
+      result.generation =
+          static_cast<typename Handle::generation_type>(cb.generation());
+    }
+    return result;
+  }
 
   // =========================================================================
   // ControlBlock Accessors
