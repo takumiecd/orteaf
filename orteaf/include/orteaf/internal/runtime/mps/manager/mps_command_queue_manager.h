@@ -62,7 +62,6 @@ public:
 
   CommandQueueLease acquire();
   void release(CommandQueueLease &lease) noexcept;
-  void release(CommandQueueHandle handle) noexcept;
 
   // Weak reference support
   /// @brief Acquire a weak lease from an existing strong lease

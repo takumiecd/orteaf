@@ -235,37 +235,6 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, ReleaseFailsBeforeInitialization) {
               [&] { (void)manager.acquire(); });
 }
 
-TYPED_TEST(MpsCommandQueueManagerTypedTest, ManualReleaseInvalidatesLease) {
-  auto &manager = this->manager();
-  const auto device = this->adapter().device();
-
-  // Arrange
-  this->adapter().expectCreateCommandQueues({makeQueue(0x455)});
-  manager.initialize(device, this->getOps(), 1);
-
-  // Act
-  auto lease = manager.acquire();
-  const auto original_handle = lease.handle();
-  ASSERT_TRUE(static_cast<bool>(lease));
-
-  manager.release(lease);
-
-  // Assert: Lease is invalidated
-  EXPECT_FALSE(static_cast<bool>(lease));
-
-  // Assert: With old handle, isAlive returns false (generation mismatch)
-  EXPECT_FALSE(manager.isAlive(original_handle));
-
-  // Act: Reacquire gets new generation
-  auto reacquired = manager.acquire();
-  EXPECT_NE(reacquired.handle(), original_handle);
-  reacquired.release();
-
-  // Cleanup
-  this->adapter().expectDestroyCommandQueues({makeQueue(0x455)});
-  manager.shutdown();
-}
-
 TYPED_TEST(MpsCommandQueueManagerTypedTest, ReleaseRejectsNonAcquiredId) {
   auto &manager = this->manager();
   const auto device = this->adapter().device();
@@ -314,8 +283,9 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest,
   this->adapter().expectCreateCommandQueues({});
   auto recycled = manager.acquire();
 
-  // Assert: Handle changed (generation bumped)
-  EXPECT_NE(recycled.handle(), old_handle);
+  // Assert: For non-generational handles, same slot is reused (same index)
+  // With generation, handles would differ; without generation, index is same
+  EXPECT_EQ(recycled.handle().index, old_handle.index);
 }
 
 // =============================================================================
@@ -407,8 +377,9 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, DebugStateReflectsSetterUpdates) {
   const auto handle = lease.handle();
   lease.release();
 
-  // Assert: With old handle, isAlive returns false (generation mismatch)
-  EXPECT_FALSE(manager.isAlive(handle));
+  // Assert: Resource is not in use (canTeardown = true)
+  const auto &cb = manager.controlBlockForTest(handle.index);
+  EXPECT_TRUE(cb.canTeardown());
 }
 #endif
 
@@ -497,12 +468,15 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest,
   auto lease = manager.acquire();
   auto handle = lease.handle();
 
-  // Act & Assert
+  // Act & Assert: isAlive while lease held
   EXPECT_TRUE(manager.isAlive(handle));
 
-  // Release and check
+  // Release and check: resource is still created but not in use
   lease.release();
-  EXPECT_FALSE(manager.isAlive(handle));
+  // Non-generational handles: isAlive checks index+isCreated, not in_use
+  // To check "not in use", we verify canTeardown via control block
+  const auto &cb = manager.controlBlockForTest(handle.index);
+  EXPECT_TRUE(cb.canTeardown());
 
   // Cleanup
   this->adapter().expectDestroyCommandQueues({makeQueue(0xA30)});
@@ -630,8 +604,7 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, TryPromoteFailsForInvalidHandle) {
   manager.initialize(device, this->getOps(), 1);
 
   // Act: Try to promote with out-of-range handle
-  mps_rt::MpsCommandQueueManager::CommandQueueHandle out_of_range_handle{999,
-                                                                         0};
+  mps_rt::MpsCommandQueueManager::CommandQueueHandle out_of_range_handle{999};
   auto promoted = manager.tryPromote(out_of_range_handle);
 
   // Assert
@@ -650,23 +623,19 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, TryPromoteFailsForStaleHandle) {
   this->adapter().expectCreateCommandQueues({makeQueue(0xA90)});
   manager.initialize(device, this->getOps(), 1);
 
-  // Get a lease and release it to make the handle stale
+  // Acquire a lease - the slot is now in use
   auto lease = manager.acquire();
-  auto stale_handle = lease.handle();
-  lease.release();
+  auto handle = lease.handle();
 
-  // Reacquire to bump generation
-  auto new_lease = manager.acquire();
-  EXPECT_NE(new_lease.handle(), stale_handle);
+  // Act: Try to promote while already in use (no generation = no stale concept)
+  // For non-generational handles, tryPromote should fail because slot is in use
+  auto promoted = manager.tryPromote(handle);
 
-  // Act: Try to promote with stale handle (old generation)
-  auto promoted = manager.tryPromote(stale_handle);
-
-  // Assert: Should fail because handle is stale (generation mismatch)
+  // Assert: Should fail because slot is already in use (in_use = true)
   EXPECT_FALSE(static_cast<bool>(promoted));
 
   // Cleanup
-  new_lease.release();
+  lease.release();
   this->adapter().expectDestroyCommandQueues({makeQueue(0xA90)});
   manager.shutdown();
 }

@@ -51,35 +51,10 @@ void MpsCommandQueueManager::shutdown() {
 }
 
 void MpsCommandQueueManager::growCapacity(std::size_t additional) {
-  ensureInitialized();
-  if (additional == 0) {
-    return;
-  }
-  const std::size_t current_capacity = Base::capacity();
-  const std::size_t max_index =
-      static_cast<std::size_t>(CommandQueueHandle::invalid_index());
-  if (current_capacity > max_index ||
-      additional > (max_index - current_capacity)) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-        "MPS command queue manager capacity exceeds maximum handle range");
-  }
-
-  // Provide a factory to pre-create resources for the new slots
-  // expandPool does not take a factory, it only resizes.
-  // We need to iterate and initialize manually if we want eager creation.
-  const std::size_t start_index =
-      Base::expandPool(additional, /*addToFreelist=*/true);
-
-  for (std::size_t i = 0; i < additional; ++i) {
-    auto &cb = Base::getControlBlockChecked(
-        CommandQueueHandle{static_cast<uint32_t>(start_index + i)});
-    auto queue = ops_->createCommandQueue(device_);
-    if (queue) {
-      cb.payload() = queue;
-      // is_alive_ is set automatically by acquire()
-    }
-  }
+  Base::expandPool(additional, [this](CommandQueueType &payload) {
+    payload = ops_->createCommandQueue(device_);
+    return payload != nullptr;
+  });
 }
 
 MpsCommandQueueManager::CommandQueueLease MpsCommandQueueManager::acquire() {
@@ -108,11 +83,11 @@ MpsCommandQueueManager::CommandQueueLease MpsCommandQueueManager::acquire() {
 }
 
 void MpsCommandQueueManager::release(CommandQueueLease &lease) noexcept {
-  release(lease.handle());
+  if (!lease) {
+    return;
+  }
+  auto handle = lease.handle();
   lease.invalidate();
-}
-
-void MpsCommandQueueManager::release(CommandQueueHandle handle) noexcept {
   if (!Base::isValidHandle(handle)) {
     return;
   }
