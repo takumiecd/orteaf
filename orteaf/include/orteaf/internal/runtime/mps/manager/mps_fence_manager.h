@@ -43,6 +43,10 @@ public:
       ::orteaf::internal::runtime::base::SharedLease<FenceHandle, FenceType,
                                                      MpsFenceManager>;
 
+private:
+  friend FenceLease;
+
+public:
   MpsFenceManager() = default;
   MpsFenceManager(const MpsFenceManager &) = delete;
   MpsFenceManager &operator=(const MpsFenceManager &) = delete;
@@ -70,6 +74,8 @@ public:
 #endif
 
 private:
+  using Base::acquireExisting;
+
   void destroyResource(FenceType &resource);
 
   DeviceType device_{nullptr};

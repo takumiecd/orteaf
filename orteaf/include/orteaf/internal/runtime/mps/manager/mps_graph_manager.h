@@ -119,6 +119,10 @@ public:
       ::orteaf::internal::runtime::mps::platform::wrapper::MpsGraph_t graph,
       DeviceType device, SlowOps *slow_ops)>;
 
+private:
+  friend GraphLease;
+
+public:
   MpsGraphManager() = default;
   MpsGraphManager(const MpsGraphManager &) = delete;
   MpsGraphManager &operator=(const MpsGraphManager &) = delete;
@@ -144,6 +148,8 @@ public:
 #endif
 
 private:
+  using Base::acquireExisting;
+
   void validateKey(const GraphKey &key) const;
   void destroyResource(MpsGraphResource &resource);
 

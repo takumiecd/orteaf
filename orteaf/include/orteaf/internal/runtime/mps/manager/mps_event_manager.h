@@ -43,6 +43,10 @@ public:
       ::orteaf::internal::runtime::base::SharedLease<EventHandle, EventType,
                                                      MpsEventManager>;
 
+private:
+  friend EventLease;
+
+public:
   MpsEventManager() = default;
   MpsEventManager(const MpsEventManager &) = delete;
   MpsEventManager &operator=(const MpsEventManager &) = delete;
@@ -70,6 +74,8 @@ public:
 #endif
 
 private:
+  using Base::acquireExisting;
+
   void destroyResource(EventType &resource);
 
   DeviceType device_{nullptr};

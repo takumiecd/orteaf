@@ -23,14 +23,12 @@ void MpsCommandQueueManager::initialize(DeviceType device, SlowOps *ops,
   device_ = device;
   ops_ = ops;
 
-  // Initialize and pre-create resources (lazy creation is also supported, but
-  // this matches previous implementation of pre-creation if capacity > 0)
+  // Initialize and pre-create resources
   Base::setupPool(capacity, [&](CommandQueueType &payload) {
     auto queue = ops_->createCommandQueue(device_);
     if (queue) {
       payload = queue;
     }
-    // Always return true to add to freelist (in_use defaults to false)
     return true;
   });
 }
@@ -39,7 +37,6 @@ void MpsCommandQueueManager::shutdown() {
   if (!Base::isInitialized()) {
     return;
   }
-  // Cleanup all resources
   Base::teardownPool([this](CommandQueueType &payload) {
     if (payload != nullptr) {
       destroyResource(payload);
@@ -57,88 +54,76 @@ void MpsCommandQueueManager::growCapacity(std::size_t additional) {
   });
 }
 
-MpsCommandQueueManager::CommandQueueLease MpsCommandQueueManager::acquire() {
-  auto handle = Base::acquireFresh([this](CommandQueueType &payload) {
-    // If already pre-created during initialize/growCapacity, skip creation
-    if (payload != nullptr) {
-      return true;
-    }
-    if (!ops_)
-      return false;
-    auto queue = ops_->createCommandQueue(device_);
-    if (!queue)
-      return false;
-    payload = queue;
-    return true;
-  });
+// =============================================================================
+// Acquire / Release
+// =============================================================================
 
+MpsCommandQueueManager::CommandQueueLease MpsCommandQueueManager::acquire() {
+  ensureInitialized();
+
+  auto createFn = [this](CommandQueueType &queue) {
+    if (!queue) {
+      if (!ops_) {
+        return false;
+      }
+      queue = ops_->createCommandQueue(device_);
+      if (!queue) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  auto handle = Base::acquireFresh(createFn);
   if (!handle.isValid()) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
         "Failed to create MPS command queue");
   }
 
-  return CommandQueueLease{this, handle,
-                           Base::getControlBlockChecked(handle).payload()};
+  return CommandQueueLease{handle, this};
 }
 
 void MpsCommandQueueManager::release(CommandQueueLease &lease) noexcept {
-  if (!lease) {
-    return;
+  if (lease.isValid()) {
+    Base::releaseForReuse(lease.handle());
+    lease.invalidate();
   }
-  auto handle = lease.handle();
-  lease.invalidate();
-  if (!Base::isValidHandle(handle)) {
-    return;
-  }
-  Base::releaseForReuse(handle);
 }
 
 // =============================================================================
-// Weak Reference Support
+// Locking API
 // =============================================================================
 
-MpsCommandQueueManager::CommandQueueWeakLease
-MpsCommandQueueManager::acquireWeak(const CommandQueueLease &lease) {
-  if (!lease) {
-    return CommandQueueWeakLease{};
+MpsCommandQueueManager::ScopedLock
+MpsCommandQueueManager::lock(const CommandQueueLease &lease) {
+  if (!lease.isValid()) {
+    return ScopedLock{}; // Invalid lock
   }
-  Base::acquireWeakRef(lease.handle());
-  return CommandQueueWeakLease{this, lease.handle()};
+  auto &cb = Base::getControlBlockChecked(lease.handle());
+  auto mutex_lock = cb.lock(); // Blocking lock
+  return ScopedLock{std::move(mutex_lock), cb.payload()};
 }
 
-MpsCommandQueueManager::CommandQueueWeakLease
-MpsCommandQueueManager::acquireWeak(CommandQueueHandle handle) {
-  if (!Base::isValidHandle(handle)) {
-    return CommandQueueWeakLease{};
+MpsCommandQueueManager::ScopedLock
+MpsCommandQueueManager::tryLock(const CommandQueueLease &lease) {
+  if (!lease.isValid()) {
+    return ScopedLock{}; // Invalid lock
   }
-  Base::acquireWeakRef(handle);
-  return CommandQueueWeakLease{this, handle};
+  auto &cb = Base::getControlBlockChecked(lease.handle());
+  auto mutex_lock = cb.tryLock(); // Non-blocking
+  if (mutex_lock.owns_lock()) {
+    return ScopedLock{std::move(mutex_lock), cb.payload()};
+  }
+  return ScopedLock{}; // Failed to acquire
 }
 
-void MpsCommandQueueManager::release(CommandQueueWeakLease &lease) noexcept {
-  if (!lease) {
-    return;
-  }
-  Base::releaseWeakRef(lease.handle());
-  lease.invalidate();
-}
-
-MpsCommandQueueManager::CommandQueueLease
-MpsCommandQueueManager::tryPromote(const CommandQueueWeakLease &weakLease) {
-  if (!weakLease) {
-    return CommandQueueLease{};
-  }
-  auto promotedHandle = Base::tryPromoteWeak(weakLease.handle());
-  if (!promotedHandle.isValid()) {
-    return CommandQueueLease{};
-  }
-  auto &cb = Base::getControlBlock(promotedHandle);
-  return CommandQueueLease{this, promotedHandle, cb.payload()};
-}
+// =============================================================================
+// Internal
+// =============================================================================
 
 void MpsCommandQueueManager::destroyResource(CommandQueueType &resource) {
-  if (resource != nullptr) {
+  if (resource) {
     if (ops_) {
       ops_->destroyCommandQueue(resource);
     }

@@ -91,6 +91,12 @@ public:
   using BufferLease =
       ::orteaf::internal::runtime::base::SharedLease<BufferHandle, Buffer *,
                                                      MpsBufferManagerT>;
+
+private:
+  // Friend for Lease copy constructor access
+  friend BufferLease;
+
+public:
   using DeviceType = typename Traits::DeviceType;
   using Pool = MpsBufferPoolT<ResourceT>;
   using LaunchParams = typename Pool::LaunchParams;
@@ -309,6 +315,8 @@ public:
 #endif
 
 private:
+  using Base::acquireExisting;
+
   Buffer allocateBuffer(std::size_t size, std::size_t alignment,
                         LaunchParams &params) {
     if (size == 0) {
