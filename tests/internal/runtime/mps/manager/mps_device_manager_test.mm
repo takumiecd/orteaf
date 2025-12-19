@@ -640,8 +640,8 @@ TYPED_TEST(MpsDeviceManagerTypedTest,
   // Assert: HeapManagers initialized with configured capacity
   for (std::uint32_t index = 0; index < static_cast<std::uint32_t>(count);
        ++index) {
-    const auto id = base::DeviceHandle{index};
-    auto *heap_manager = manager.heapManager(id);
+    const auto handle = base::DeviceHandle{index};
+    auto *heap_manager = manager.heapManager(handle);
     EXPECT_NE(heap_manager, nullptr);
     EXPECT_EQ(heap_manager->capacity(), kCapacity);
   }
@@ -780,12 +780,14 @@ TYPED_TEST(MpsDeviceManagerTypedTest, DirectAccessReturnsValidPointers) {
   manager.initialize(this->getOps());
 
   // Act & Assert: All accessors return valid pointers
-  const auto device = manager.acquire(base::DeviceHandle{0});
+  auto device = manager.acquire(base::DeviceHandle{0});
   if constexpr (TypeParam::is_mock) {
     EXPECT_EQ(device.pointer(), device0);
   } else {
     EXPECT_TRUE(device);
   }
+
+  device.release();
 
   auto *queue_manager = manager.commandQueueManager(base::DeviceHandle{0});
   EXPECT_NE(queue_manager, nullptr);

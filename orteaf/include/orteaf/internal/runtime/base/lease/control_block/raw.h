@@ -56,9 +56,6 @@ public:
                                  bool>
   bool acquire(CreateFn &&createFn) noexcept {
     bool success = slot_.create(std::forward<CreateFn>(createFn));
-    if (success) {
-      weak_count_.fetch_add(1, std::memory_order_relaxed);
-    }
     return success;
   }
 
@@ -66,10 +63,7 @@ public:
   /// @note Does NOT increment generation - resource stays valid in cache
   /// @return always true for raw resources
   bool release() noexcept {
-    if (weak_count_.fetch_sub(1, std::memory_order_relaxed) == 1) {
-      return true;
-    }
-    return false;
+    return weak_count_ == 0;
   }
 
   /// @brief Release and destroy the resource
@@ -82,20 +76,14 @@ public:
     if constexpr (SlotT::has_generation) {
       slot_.incrementGeneration();
     }
-    if (destroyed) {
-      weak_count_.fetch_sub(1, std::memory_order_relaxed);
-      if (weak_count_ == 0) {
-        return true;
-      }
-    }
-    return false;
+    return destroyed && canShutdown();
   }
 
   /// @brief Acquire a weak reference to the resource
-  void acquireWeakRef() noexcept { weak_count_.fetch_add(1, std::memory_order_relaxed); }
+  void acquireWeak() noexcept { weak_count_.fetch_add(1, std::memory_order_relaxed); }
 
   /// @brief Release a weak reference to the resource
-  bool releaseWeakRef() noexcept { return weak_count_.fetch_sub(1, std::memory_order_relaxed) == 1; }
+  bool releaseWeak() noexcept { return weak_count_.fetch_sub(1, std::memory_order_relaxed) == 1; }
 
   /// @brief Check if teardown is allowed
   /// @note Raw resources are "always weak" - teardown is always allowed
