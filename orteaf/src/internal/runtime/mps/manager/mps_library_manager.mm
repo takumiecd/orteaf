@@ -40,10 +40,9 @@ void MpsLibraryManager::shutdown() {
   }
 
   // Destroy all created resources
-  teardownPool([this](auto &cb, auto) {
-    // Check if resource was created (payload has valid library)
-    if (cb.payload().library != nullptr) {
-      destroyResource(cb.payload());
+  teardownPool([this](MpsLibraryResource &payload) {
+    if (payload.library != nullptr) {
+      destroyResource(payload);
     }
   });
 
@@ -60,8 +59,8 @@ MpsLibraryManager::acquire(const LibraryKey &key) {
   // Check cache first
   if (auto it = key_to_index_.find(key); it != key_to_index_.end()) {
     auto handle = static_cast<LibraryHandle>(it->second);
-    return LibraryLease{this, handle,
-                        getControlBlock(handle).payload().library};
+    auto &cb = Base::acquireExisting(handle); // Increment weak reference count
+    return LibraryLease{this, handle, cb.payload().library};
   }
 
   // Acquire new slot and create resource
@@ -87,7 +86,7 @@ MpsLibraryManager::acquire(const LibraryKey &key) {
 MpsLibraryManager::LibraryLease
 MpsLibraryManager::acquire(LibraryHandle handle) {
   ensureInitialized();
-  auto &cb = getControlBlockChecked(handle);
+  auto &cb = Base::acquireExisting(handle); // Increment weak reference count
   return LibraryLease{this, handle, cb.payload().library};
 }
 
@@ -95,8 +94,8 @@ void MpsLibraryManager::release(LibraryLease &lease) noexcept {
   if (!lease) {
     return;
   }
-  // RawLease: no ref counting, just invalidate
-  // Resource stays in cache until shutdown
+  // Decrement weak reference count (resource stays in cache until shutdown)
+  Base::releaseForReuse(lease.handle());
   lease.invalidate();
 }
 

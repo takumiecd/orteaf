@@ -14,7 +14,7 @@ namespace orteaf::internal::runtime::base {
 /// support
 /// @details Like std::shared_ptr with std::weak_ptr support. Reference counted
 /// with separate strong and weak counts.
-/// isAlive() returns true when count > 0.
+/// canTeardown() returns true when count == 0.
 template <typename SlotT>
   requires SlotConcept<SlotT>
 class WeakSharedControlBlock {
@@ -69,35 +69,54 @@ public:
   }
 
   /// @brief Release a strong reference (for reuse)
-  /// @return true if this was the last strong reference
+  /// @return true if this was the last strong reference, false otherwise.
+  /// @note Generation is incremented when last strong ref released (weak refs
+  /// don't block).
   bool release() noexcept {
     if (strong_count_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+      // Last strong reference released - increment generation immediately
+      // (weak references don't prevent generation increment)
       if constexpr (SlotT::has_generation) {
         slot_.incrementGeneration();
       }
-      return true;
+      if (weak_count_.load(std::memory_order_acquire) == 0) {
+        return true;
+      }
     }
     return false;
   }
 
   /// @brief Release and destroy the resource (non-reusable)
   /// @tparam DestroyFn Callable that takes Payload&
-  /// @return true if last reference and destroyed, false otherwise
+  /// @return true if this was the last strong reference and destroyed.
+  /// @note Generation is incremented when last strong ref released (weak refs
+  /// don't block).
   template <typename DestroyFn>
     requires std::invocable<DestroyFn, Payload &>
   bool releaseAndDestroy(DestroyFn &&destroyFn) {
     if (strong_count_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-      bool destroyed = slot_.destroy(std::forward<DestroyFn>(destroyFn));
+      // Last strong reference - destroy the resource
+      slot_.destroy(std::forward<DestroyFn>(destroyFn));
+
+      // Increment generation immediately when last strong is released
+      // (weak references don't prevent generation increment)
       if constexpr (SlotT::has_generation) {
         slot_.incrementGeneration();
       }
-      return destroyed;
+      if (weak_count_.load(std::memory_order_acquire) == 0) {
+        return true;
+      }
     }
     return false;
   }
 
-  /// @brief Check if resource is currently acquired
-  bool isAlive() const noexcept { return count() > 0; }
+  /// @brief Check if teardown is allowed
+  /// @return true if no strong references (count == 0)
+  bool canTeardown() const noexcept { return count() == 0; }
+
+  /// @brief Check if shutdown is allowed
+  /// @return true if strong count 0 AND weak count 0
+  bool canShutdown() const noexcept { return count() == 0 && weakCount() == 0; }
 
   // =========================================================================
   // Shared-specific API (SharedControlBlockConcept)
@@ -118,15 +137,23 @@ public:
   }
 
   /// @brief Release a weak reference
-  /// @return true if this was the last reference (strong and weak both zero)
+  /// @return true if this was the last weak reference AND strong count is zero.
+  /// @note Generation is NOT updated here - it's updated when strong ref is
+  /// released.
   bool releaseWeak() noexcept {
-    const auto prev = weak_count_.fetch_sub(1, std::memory_order_acq_rel);
-    return prev == 1 && strong_count_.load(std::memory_order_acquire) == 0;
+    weak_count_.fetch_sub(1, std::memory_order_acq_rel);
+    return weak_count_.load(std::memory_order_acquire) == 0 &&
+           strong_count_.load(std::memory_order_acquire) == 0;
   }
 
   /// @brief Try to promote weak reference to strong
-  /// @return true if successfully promoted (strong count was > 0)
+  /// @return true if successfully promoted (resource is created and strong
+  /// count > 0)
   bool tryPromote() noexcept {
+    // Can only promote if resource has been created
+    if (!slot_.isCreated()) {
+      return false;
+    }
     std::uint32_t current = strong_count_.load(std::memory_order_acquire);
     while (current > 0) {
       if (strong_count_.compare_exchange_weak(current, current + 1,

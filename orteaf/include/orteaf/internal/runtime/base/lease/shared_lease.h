@@ -120,7 +120,10 @@ private:
 
   void copyFrom(const SharedLease &other) {
     if (other.manager_) {
-      *this = other.manager_->acquire(other.handle_);
+      manager_ = other.manager_;
+      handle_ = other.handle_;
+      resource_ = other.resource_;
+      manager_->acquireExisting(handle_);
     }
   }
 

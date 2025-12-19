@@ -35,7 +35,7 @@ void MpsHeapManager::initialize(
 
 void MpsHeapManager::shutdown() {
   Base::teardownPool(
-      [this](ControlBlock &cb, HeapHandle) { destroyResource(cb.payload()); });
+      [this](MpsHeapResource &payload) { destroyResource(payload); });
   key_to_index_.clear();
   device_ = nullptr;
   device_handle_ = {};
@@ -82,7 +82,7 @@ void MpsHeapManager::release(HeapLease &lease) noexcept {
   if (!lease) {
     return;
   }
-  Base::releaseToFreelist(lease.handle());
+  Base::releaseForReuse(lease.handle());
   lease.invalidate();
 }
 

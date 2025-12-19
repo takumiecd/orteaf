@@ -1,6 +1,8 @@
 #pragma once
 
+#include <atomic>
 #include <concepts>
+#include <iostream>
 #include <utility>
 
 #include <orteaf/internal/runtime/base/lease/category.h>
@@ -10,21 +12,36 @@ namespace orteaf::internal::runtime::base {
 
 /// @brief Raw control block - no reference counting
 /// @details Used for resources that don't need lifecycle management.
-/// isAlive() simply returns isCreated() since Raw resources have no
-/// acquisition semantics.
+/// canTeardown() always returns true since Raw resources have no
+/// strong reference semantics (they are "always weak").
 template <typename SlotT>
   requires SlotConcept<SlotT>
 class RawControlBlock {
+  // Raw pattern uses cache semantics - generation doesn't make sense
+  static_assert(!SlotT::has_generation,
+                "RawControlBlock cannot use slots with generation tracking");
+
 public:
   using Category = lease_category::Raw;
   using Slot = SlotT;
   using Payload = typename SlotT::Payload;
 
   RawControlBlock() = default;
-  RawControlBlock(const RawControlBlock &) = default;
-  RawControlBlock &operator=(const RawControlBlock &) = default;
-  RawControlBlock(RawControlBlock &&) = default;
-  RawControlBlock &operator=(RawControlBlock &&) = default;
+  RawControlBlock(const RawControlBlock &) = delete;
+  RawControlBlock &operator=(const RawControlBlock &) = delete;
+
+  RawControlBlock(RawControlBlock &&other) noexcept
+      : weak_count_(other.weak_count_.load(std::memory_order_relaxed)),
+        slot_(std::move(other.slot_)) {}
+
+  RawControlBlock &operator=(RawControlBlock &&other) noexcept {
+    if (this != &other) {
+      weak_count_.store(other.weak_count_.load(std::memory_order_relaxed),
+                        std::memory_order_relaxed);
+      slot_ = std::move(other.slot_);
+    }
+    return *this;
+  }
 
   // =========================================================================
   // Lifecycle API
@@ -38,16 +55,15 @@ public:
              std::convertible_to<std::invoke_result_t<CreateFn, Payload &>,
                                  bool>
   bool acquire(CreateFn &&createFn) noexcept {
-    return slot_.create(std::forward<CreateFn>(createFn));
+    bool success = slot_.create(std::forward<CreateFn>(createFn));
+    return success;
   }
 
-  /// @brief Release and prepare for reuse (no-op for raw)
+  /// @brief Release and prepare for reuse (cache pattern)
+  /// @note Does NOT increment generation - resource stays valid in cache
   /// @return always true for raw resources
   bool release() noexcept {
-    if constexpr (SlotT::has_generation) {
-      slot_.incrementGeneration();
-    }
-    return true;
+    return weak_count_ == 0;
   }
 
   /// @brief Release and destroy the resource
@@ -60,11 +76,25 @@ public:
     if constexpr (SlotT::has_generation) {
       slot_.incrementGeneration();
     }
-    return destroyed;
+    return destroyed && canShutdown();
   }
 
-  /// @brief Check if resource is alive (for Raw, this means created)
-  bool isAlive() const noexcept { return slot_.isCreated(); }
+  /// @brief Acquire a weak reference to the resource
+  void acquireWeak() noexcept { weak_count_.fetch_add(1, std::memory_order_relaxed); }
+
+  /// @brief Release a weak reference to the resource
+  bool releaseWeak() noexcept { return weak_count_.fetch_sub(1, std::memory_order_relaxed) == 1; }
+
+  /// @brief Check if teardown is allowed
+  /// @note Raw resources are "always weak" - teardown is always allowed
+  /// @return Always true for Raw (no strong reference blocking)
+  bool canTeardown() const noexcept { return true; }
+
+  /// @brief Check if shutdown is allowed
+  /// @note Returns true only when no references exist (for safety)
+  bool canShutdown() const noexcept {
+    std::cout << "weak_count_ = " << weak_count_ << std::endl;
+    return weak_count_ == 0; }
 
   // =========================================================================
   // Payload Access
@@ -103,6 +133,7 @@ public:
   }
 
 private:
+  std::atomic<std::uint32_t> weak_count_{0};
   SlotT slot_{};
 };
 

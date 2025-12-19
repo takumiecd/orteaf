@@ -33,10 +33,9 @@ void MpsFenceManager::shutdown() {
   if (!Base::isInitialized()) {
     return;
   }
-  Base::teardownPool([this](FenceControlBlock &cb, FenceHandle) {
-    // Check if resource was created (payload is valid)
-    if (cb.payload() != nullptr) {
-      destroyResource(cb.payload());
+  Base::teardownPool([this](FenceType &payload) {
+    if (payload != nullptr) {
+      destroyResource(payload);
     }
   });
   device_ = nullptr;

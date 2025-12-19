@@ -82,8 +82,7 @@ struct MpsHeapResource {
 // BaseManagerCore Types (RawControlBlock with initialization tracking)
 // =============================================================================
 
-using HeapSlot =
-    ::orteaf::internal::runtime::base::GenerationalSlot<MpsHeapResource>;
+using HeapSlot = ::orteaf::internal::runtime::base::RawSlot<MpsHeapResource>;
 using HeapControlBlock =
     ::orteaf::internal::runtime::base::RawControlBlock<HeapSlot>;
 
@@ -137,12 +136,13 @@ public:
   BufferManager *bufferManager(const HeapLease &lease);
   BufferManager *bufferManager(const HeapDescriptorKey &key);
 
-  // Growth chunk size
+  // Expose base methods
   using Base::growthChunkSize;
   using Base::setGrowthChunkSize;
 
   // Expose base methods
   using Base::capacity;
+  using Base::isAlive;
   using Base::isInitialized;
 
 #if ORTEAF_ENABLE_TEST

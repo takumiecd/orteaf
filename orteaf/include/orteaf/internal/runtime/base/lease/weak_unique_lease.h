@@ -20,7 +20,7 @@ public:
   using ResourceType = ResourceT;
   using ManagerType = ManagerT;
   using CompatibleCategory =
-      ::orteaf::internal::base::lease_category::WeakUnique;
+      ::orteaf::internal::runtime::base::lease_category::WeakUnique;
 
   WeakUniqueLease() noexcept = default;
 
@@ -58,9 +58,9 @@ public:
 
   /// @brief Try to promote to a strong unique lease
   /// @return A valid UniqueLease if successful, invalid otherwise
-  auto lock() const {
+  auto lock() {
     if (manager_) {
-      return manager_->tryPromote(handle_);
+      return manager_->tryPromote(*this);
     }
     return typename ManagerT::UniqueLease{};
   }
@@ -69,7 +69,7 @@ public:
 
   void release() noexcept {
     if (manager_) {
-      manager_->releaseWeak(*this);
+      manager_->release(*this);
       manager_ = nullptr;
     }
   }

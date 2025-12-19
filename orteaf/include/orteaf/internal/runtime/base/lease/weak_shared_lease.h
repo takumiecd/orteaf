@@ -21,7 +21,7 @@ public:
   using ResourceType = ResourceT;
   using ManagerType = ManagerT;
   using CompatibleCategory =
-      ::orteaf::internal::base::lease_category::WeakShared;
+      ::orteaf::internal::runtime::base::lease_category::WeakShared;
 
   WeakSharedLease() noexcept = default;
 
@@ -67,9 +67,9 @@ public:
 
   /// @brief Try to promote to a strong shared lease
   /// @return A valid SharedLease if successful, invalid otherwise
-  auto lock() const {
+  auto lock() {
     if (manager_) {
-      return manager_->tryPromote(handle_);
+      return manager_->tryPromote(*this);
     }
     return typename ManagerT::SharedLease{};
   }
@@ -78,7 +78,7 @@ public:
 
   void release() noexcept {
     if (manager_) {
-      manager_->releaseWeak(*this);
+      manager_->release(*this);
       manager_ = nullptr;
     }
   }

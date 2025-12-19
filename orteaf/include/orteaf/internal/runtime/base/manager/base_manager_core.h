@@ -72,21 +72,41 @@ protected:
     }
   }
 
+  /// @brief Validate that capacity expansion won't exceed handle range
+  /// @throws InvalidArgument if would exceed maximum handle range
+  void validateCapacityExpansion(std::size_t additionalCount) const {
+    const std::size_t current_capacity = control_blocks_.size();
+    const std::size_t max_index =
+        static_cast<std::size_t>(Handle::invalid_index());
+    if (current_capacity > max_index ||
+        additionalCount > (max_index - current_capacity)) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+          std::string(managerName()) +
+              " capacity exceeds maximum handle range");
+    }
+  }
+
   // =========================================================================
   // Setup / Teardown
   // =========================================================================
 
   /// @brief Setup pool with capacity, calling createFn for each control block
-  /// @tparam CreateFn Callable: bool(ControlBlock&, size_t index) - returns
-  /// true to add to freelist
+  /// @tparam CreateFn Callable: bool(Payload&) - passed to Slot::create()
   /// @param capacity Number of control blocks to create
-  /// @param createFn Factory function called for each control block
+  /// @param createFn Factory function passed to Slot::create() for each block
   template <typename CreateFn>
+    requires std::invocable<CreateFn, typename ControlBlock::Payload &> &&
+             std::convertible_to<
+                 std::invoke_result_t<CreateFn,
+                                      typename ControlBlock::Payload &>,
+                 bool>
   void setupPool(std::size_t capacity, CreateFn &&createFn) {
     ensureNotInitialized();
     control_blocks_.resize(capacity);
     for (std::size_t i = 0; i < capacity; ++i) {
-      if (createFn(control_blocks_[i], i)) {
+      // Use Slot's create() for proper lifecycle tracking
+      if (control_blocks_[i].create(std::forward<CreateFn>(createFn))) {
         freelist_.push_back(static_cast<IndexType>(i));
       }
     }
@@ -114,38 +134,87 @@ protected:
     initialized_ = true;
   }
 
-  /// @brief Expand pool by adding more control blocks
+  /// @brief Expand pool by adding more control blocks with resource creation
+  /// @tparam CreateFn Callable: bool(Payload&) - returns true on success
   /// @param additionalCount Number of control blocks to add
-  /// @param addToFreelist If true, add new handles to freelist
+  /// @param createFn Factory function to create resources
   /// @return The starting index of new control blocks
-  std::size_t expandPool(std::size_t additionalCount,
-                         bool addToFreelist = false) {
+  /// @throws InvalidArgument if capacity would exceed maximum handle index
+  template <typename CreateFn>
+    requires std::invocable<CreateFn, typename ControlBlock::Payload &> &&
+             std::convertible_to<
+                 std::invoke_result_t<CreateFn,
+                                      typename ControlBlock::Payload &>,
+                 bool>
+  std::size_t expandPool(std::size_t additionalCount, CreateFn &&createFn) {
     ensureInitialized();
+    if (additionalCount == 0) {
+      return control_blocks_.size();
+    }
+    validateCapacityExpansion(additionalCount);
     std::size_t oldSize = control_blocks_.size();
     control_blocks_.resize(oldSize + additionalCount);
-    if (addToFreelist) {
-      for (std::size_t i = oldSize; i < oldSize + additionalCount; ++i) {
+    for (std::size_t i = oldSize; i < oldSize + additionalCount; ++i) {
+      if (control_blocks_[i].create(std::forward<CreateFn>(createFn))) {
         freelist_.push_back(static_cast<IndexType>(i));
       }
     }
     return oldSize;
   }
 
+  /// @brief Expand pool by adding more control blocks (no resource creation)
+  /// @param additionalCount Number of control blocks to add
+  /// @return The starting index of new control blocks
+  /// @throws InvalidArgument if capacity would exceed maximum handle index
+  std::size_t expandPool(std::size_t additionalCount) {
+    ensureInitialized();
+    if (additionalCount == 0) {
+      return control_blocks_.size();
+    }
+    validateCapacityExpansion(additionalCount);
+    std::size_t oldSize = control_blocks_.size();
+    control_blocks_.resize(oldSize + additionalCount);
+    for (std::size_t i = oldSize; i < oldSize + additionalCount; ++i) {
+      freelist_.push_back(static_cast<IndexType>(i));
+    }
+    return oldSize;
+  }
+
+  /// @brief Check if all control blocks are safe to shutdown
+  /// @note Iterates over all blocks and calls canShutdown(). Returns true if
+  /// all are safe.
+  bool checkCanShutdown() const noexcept {
+    for (const auto &cb : control_blocks_) {
+      if (!cb.canShutdown()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   /// @brief Teardown pool, calling destroyFn for each control block
-  /// @tparam DestroyFn Callable: void(ControlBlock&, Handle)
-  /// @note Safe to call when not initialized (no-op)
-  template <typename DestroyFn> void teardownPool(DestroyFn &&destroyFn) {
+  /// @tparam DestroyFn Callable: void(Payload&) - passed to Slot::destroy()
+  /// @note Safe to call when not initialized (no-op). Aborts if shutdown is not
+  /// allowed.
+  template <typename DestroyFn>
+    requires std::invocable<DestroyFn, typename ControlBlock::Payload &>
+  void teardownPool(DestroyFn &&destroyFn) {
     if (!initialized_) {
       return;
     }
+
+    // Safety Check: Can we shutdown?
+    // Based on user decision: If any Strong OR Weak reference exists, abort.
+    if (!checkCanShutdown()) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+          std::string(managerName()) +
+              ": shutdown aborted due to active references (Strong or Weak)");
+    }
+
     for (std::size_t i = 0; i < control_blocks_.size(); ++i) {
-      // Reconstruct handle for destruction callback using current generation
-      Handle h{static_cast<typename Handle::index_type>(i)};
-      if constexpr (Handle::has_generation) {
-        h.generation = static_cast<typename Handle::generation_type>(
-            control_blocks_[i].generation());
-      }
-      destroyFn(control_blocks_[i], h);
+      // Use Slot's destroy() for proper lifecycle tracking
+      control_blocks_[i].destroy(std::forward<DestroyFn>(destroyFn));
     }
     control_blocks_.clear();
     freelist_.clear();
@@ -154,6 +223,18 @@ protected:
 
   /// @brief Teardown pool without custom destroy logic
   void teardownPool() {
+    if (!initialized_) {
+      return;
+    }
+
+    // Safety Check: Can we shutdown?
+    if (!checkCanShutdown()) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+          std::string(managerName()) +
+              ": shutdown aborted due to active references (Strong or Weak)");
+    }
+
     control_blocks_.clear();
     freelist_.clear();
     initialized_ = false;
@@ -216,7 +297,7 @@ protected:
   Handle allocate(std::size_t growthSize = 1) {
     ensureInitialized();
     if (freelist_.empty()) {
-      expandPool(growthSize, /*addToFreelist=*/true);
+      expandPool(growthSize);
     }
     IndexType idx = freelist_.back();
     freelist_.pop_back();
@@ -305,8 +386,9 @@ protected:
   /// @brief Acquire an existing resource by handle (no-op create)
   /// @param h Handle to the resource
   /// @return Reference to the control block
+  /// @note If createFn is invoked (resource not created), throws error
   ControlBlock &acquireExisting(Handle h) {
-    return acquireExisting(h, [](auto &) { return true; });
+    return acquireExisting(h, [](auto &) { return false; });
   }
 
   // =========================================================================
@@ -341,14 +423,49 @@ protected:
     }
   }
 
-  /// @deprecated Use releaseForReuse() instead
-  void releaseToFreelist(Handle h) { releaseForReuse(h); }
+  // =========================================================================
+  // Weak Reference Support (for ControlBlocks with weak ref capability)
+  // =========================================================================
 
-  /// @deprecated Use releaseForReuse() instead
-  void releaseShared(Handle h) { releaseForReuse(h); }
+  /// @brief Acquire a weak reference to a handle
+  /// @param h Handle to acquire weak reference for
+  /// @note Only valid for ControlBlocks that support weak references
+  void acquireWeakRef(Handle h) noexcept {
+    if (!isValidHandle(h)) {
+      return;
+    }
+    control_blocks_[static_cast<std::size_t>(h.index)].acquireWeak();
+  }
 
-  /// @deprecated Use releaseForReuse() instead
-  void releaseUnique(Handle h) { releaseForReuse(h); }
+  /// @brief Release a weak reference
+  /// @param h Handle to release weak reference for
+  /// @return true if this was the last reference (slot returned to freelist)
+  bool releaseWeakRef(Handle h) noexcept {
+    if (!isValidHandle(h)) {
+      return false;
+    }
+    return control_blocks_[static_cast<std::size_t>(h.index)].releaseWeak();
+  }
+
+  /// @brief Try to promote a weak reference to a strong reference
+  /// @param h Handle to promote
+  /// @return Valid handle if promotion succeeded, invalid handle otherwise
+  Handle tryPromoteWeak(Handle h) noexcept {
+    if (!isValidHandle(h)) {
+      return Handle{Handle::invalid_index()};
+    }
+    auto &cb = control_blocks_[static_cast<std::size_t>(h.index)];
+    if (!cb.tryPromote()) {
+      return Handle{Handle::invalid_index()};
+    }
+    // Return handle with current generation if applicable
+    Handle result{h.index};
+    if constexpr (Handle::has_generation) {
+      result.generation =
+          static_cast<typename Handle::generation_type>(cb.generation());
+    }
+    return result;
+  }
 
   // =========================================================================
   // ControlBlock Accessors
@@ -417,6 +534,17 @@ protected:
       }
     }
     return true;
+  }
+
+  /// @brief Check if resource at handle is alive (valid handle + created)
+  /// @details Returns true if:
+  ///   1. Handle is valid (index in range, generation matches if applicable)
+  ///   2. Resource at that slot has been created
+  bool isAlive(Handle h) const noexcept {
+    if (!isValidHandle(h)) {
+      return false;
+    }
+    return control_blocks_[static_cast<std::size_t>(h.index)].isCreated();
   }
 
   // =========================================================================

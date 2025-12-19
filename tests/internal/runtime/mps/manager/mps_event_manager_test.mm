@@ -489,7 +489,7 @@ TYPED_TEST(MpsEventManagerTypedTest, DebugStateReflectsEventState) {
   // Assert
   // Assert
   const auto &snapshot = manager.controlBlockForTest(handle.index);
-  EXPECT_TRUE(snapshot.isAlive());
+  EXPECT_TRUE(snapshot.isCreated());
   // Generation check removed as BaseManagerCore + Slot does not use generations
 
   // Cleanup

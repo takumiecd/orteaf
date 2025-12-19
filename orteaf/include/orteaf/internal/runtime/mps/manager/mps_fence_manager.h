@@ -43,6 +43,10 @@ public:
       ::orteaf::internal::runtime::base::SharedLease<FenceHandle, FenceType,
                                                      MpsFenceManager>;
 
+private:
+  friend FenceLease;
+
+public:
   MpsFenceManager() = default;
   MpsFenceManager(const MpsFenceManager &) = delete;
   MpsFenceManager &operator=(const MpsFenceManager &) = delete;
@@ -60,6 +64,7 @@ public:
 
   // Expose capacity
   using Base::capacity;
+  using Base::isAlive;
   using Base::isInitialized;
 
 #if ORTEAF_ENABLE_TEST
@@ -69,6 +74,8 @@ public:
 #endif
 
 private:
+  using Base::acquireExisting;
+
   void destroyResource(FenceType &resource);
 
   DeviceType device_{nullptr};

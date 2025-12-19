@@ -12,7 +12,7 @@ namespace orteaf::internal::runtime::base {
 /// @brief Unique control block - single ownership with in_use flag
 /// @details Only one lease can hold this resource at a time.
 /// Uses atomic CAS for thread-safe acquisition.
-/// isAlive() returns the in_use state.
+/// canTeardown() returns !in_use.
 template <typename SlotT>
   requires SlotConcept<SlotT>
 class UniqueControlBlock {
@@ -104,9 +104,17 @@ public:
     return false;
   }
 
-  /// @brief Check if resource is currently acquired
-  bool isAlive() const noexcept {
-    return in_use_.load(std::memory_order_acquire);
+  /// @brief Check if teardown is allowed
+  /// @return true if not in use (no strong reference blocking)
+  bool canTeardown() const noexcept {
+    return !in_use_.load(std::memory_order_acquire);
+  }
+
+  /// @brief Check if shutdown is allowed
+  /// @note For UniqueControlBlock, shutdown is allowed if not in use (same as
+  /// teardown)
+  bool canShutdown() const noexcept {
+    return !in_use_.load(std::memory_order_acquire);
   }
 
   // =========================================================================

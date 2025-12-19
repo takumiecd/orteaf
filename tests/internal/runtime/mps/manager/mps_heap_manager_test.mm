@@ -239,9 +239,8 @@ TYPED_TEST(MpsHeapManagerTypedTest, GetOrCreateCachesByDescriptor) {
   // Assert: Same handle returned (cached)
   EXPECT_EQ(first.handle(), second.handle());
 
-  // Assert: count reflects both leases (RawControlBlock uses isAlive() only)
-  const auto &snapshot = manager.controlBlockForTest(first.handle().index);
-  EXPECT_TRUE(snapshot.isAlive());
+  // Assert
+  EXPECT_TRUE(manager.isAlive(first.handle()));
 
   // Cleanup
   first.release();

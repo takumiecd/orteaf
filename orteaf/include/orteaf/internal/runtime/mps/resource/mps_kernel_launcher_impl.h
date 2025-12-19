@@ -302,7 +302,7 @@ public:
           ::orteaf::internal::runtime::mps::api::MpsRuntimeApi,
       typename Binder>
   ::orteaf::internal::runtime::mps::platform::wrapper::MpsCommandBuffer_t
-  dispatchOneShot(const ::orteaf::internal::runtime::mps::manager::
+  dispatchOneShot(::orteaf::internal::runtime::mps::manager::
                       MpsCommandQueueManager::CommandQueueLease &queue_lease,
                   ::orteaf::internal::base::DeviceHandle device,
                   std::size_t pipeline_index,
@@ -319,7 +319,14 @@ public:
     const auto &entry = device_pipelines_[entry_idx];
     if (!entry.initialized || pipeline_index >= entry.pipelines.size())
       return nullptr;
-    auto *command_buffer = FastOps::createCommandBuffer(queue_lease.pointer());
+
+    // Acquire lock on command queue for safe access
+    auto queue_lock = queue_lease.tryLock();
+    if (!queue_lock) {
+      return nullptr; // Failed to acquire lock
+    }
+
+    auto *command_buffer = FastOps::createCommandBuffer(*queue_lock);
     auto *encoder = FastOps::createComputeCommandEncoder(command_buffer);
     FastOps::setPipelineState(encoder,
                               entry.pipelines[pipeline_index].pointer());
@@ -332,6 +339,7 @@ public:
     FastOps::endEncoding(encoder);
     FastOps::commit(command_buffer);
     return command_buffer;
+    // queue_lock released here (RAII)
   }
 
   /**
@@ -345,7 +353,7 @@ public:
           ::orteaf::internal::runtime::mps::api::MpsRuntimeApi,
       typename Binder>
   ::orteaf::internal::runtime::mps::platform::wrapper::MpsCommandBuffer_t
-  dispatchOneShot(const ::orteaf::internal::runtime::mps::manager::
+  dispatchOneShot(::orteaf::internal::runtime::mps::manager::
                       MpsCommandQueueManager::CommandQueueLease &queue_lease,
                   ::orteaf::internal::base::DeviceHandle device,
                   std::string_view library, std::string_view function,

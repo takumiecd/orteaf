@@ -91,6 +91,12 @@ public:
   using BufferLease =
       ::orteaf::internal::runtime::base::SharedLease<BufferHandle, Buffer *,
                                                      MpsBufferManagerT>;
+
+private:
+  // Friend for Lease copy constructor access
+  friend BufferLease;
+
+public:
   using DeviceType = typename Traits::DeviceType;
   using Pool = MpsBufferPoolT<ResourceT>;
   using LaunchParams = typename Pool::LaunchParams;
@@ -202,9 +208,9 @@ public:
   // Shutdown (explicit params version)
   // =========================================================================
   void shutdown(LaunchParams &params) {
-    Base::teardownPool([this, &params](ControlBlock &cb, BufferHandle) {
-      if (cb.isAlive()) {
-        deallocateBuffer(cb.payload().buffer, params);
+    Base::teardownPool([this, &params](MpsBufferResource &resource) {
+      if (resource.buffer.valid()) {
+        deallocateBuffer(resource.buffer, params);
       }
     });
 
@@ -299,6 +305,7 @@ public:
 
   // Expose base methods
   using Base::capacity;
+  using Base::isAlive;
   using Base::isInitialized;
 
 #if ORTEAF_ENABLE_TEST
@@ -308,6 +315,8 @@ public:
 #endif
 
 private:
+  using Base::acquireExisting;
+
   Buffer allocateBuffer(std::size_t size, std::size_t alignment,
                         LaunchParams &params) {
     if (size == 0) {
