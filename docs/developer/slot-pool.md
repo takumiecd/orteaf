@@ -64,6 +64,8 @@
 - pool は寿命管理をしない（再利用の器に徹する）。
 - 寿命判断は control block に集約する。
 - 解放の最終判定は pool が行う。
+- isCreated は manager 側が意味づけと更新を行う（pool は保持のみ）。
+- in_use は control block 側で管理し、pool は関知しない。
 
 ## SlotPool のメソッド案
 - 取得: `acquire(request, context)` または `tryAcquire(request, context)`
