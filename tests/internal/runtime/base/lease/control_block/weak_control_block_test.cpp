@@ -26,7 +26,7 @@ TEST(WeakControlBlock, BindPayloadStoresHandlePtrAndPool) {
   WeakCB cb;
   const PayloadHandle handle{1, 2};
 
-  cb.bindPayload(handle, &payload, &pool);
+  EXPECT_TRUE(cb.tryBindPayload(handle, &payload, &pool));
 
   EXPECT_TRUE(cb.hasPayload());
   EXPECT_EQ(cb.payloadHandle(), handle);
@@ -47,19 +47,29 @@ TEST(WeakControlBlock, WeakCountIncrementsAndDecrements) {
   EXPECT_EQ(cb.weakCount(), 0u);
 }
 
-TEST(WeakControlBlock, ClearPayloadResetsPointers) {
+TEST(WeakControlBlock, TryBindPayloadFailsWhenWeakReferencesRemain) {
+  DummyPool pool{};
+  DummyPayload payload{};
+  WeakCB cb;
+  const PayloadHandle handle{1, 2};
+
+  cb.acquireWeak();
+  EXPECT_FALSE(cb.tryBindPayload(handle, &payload, &pool));
+  EXPECT_FALSE(cb.hasPayload());
+
+  EXPECT_TRUE(cb.releaseWeak());
+  EXPECT_TRUE(cb.tryBindPayload(handle, &payload, &pool));
+  EXPECT_TRUE(cb.hasPayload());
+}
+
+TEST(WeakControlBlock, TryBindPayloadFailsWhenAlreadyBound) {
   DummyPool pool{};
   DummyPayload payload{};
   WeakCB cb;
   const PayloadHandle handle{3, 4};
 
-  cb.bindPayload(handle, &payload, &pool);
-  cb.clearPayload();
-
-  EXPECT_FALSE(cb.hasPayload());
-  EXPECT_FALSE(cb.payloadHandle().isValid());
-  EXPECT_EQ(cb.payloadPtr(), nullptr);
-  EXPECT_EQ(cb.payloadPool(), nullptr);
+  EXPECT_TRUE(cb.tryBindPayload(handle, &payload, &pool));
+  EXPECT_FALSE(cb.tryBindPayload(handle, &payload, &pool));
 }
 
 } // namespace

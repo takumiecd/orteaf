@@ -15,6 +15,14 @@ struct DummyPayload {
 
 struct DummyPool {
   int marker{0};
+  std::size_t release_calls{0};
+  PayloadHandle last_handle{PayloadHandle::invalid()};
+
+  bool release(PayloadHandle handle) {
+    ++release_calls;
+    last_handle = handle;
+    return true;
+  }
 };
 
 using SharedCB = ::orteaf::internal::runtime::base::SharedControlBlock<
@@ -26,7 +34,7 @@ TEST(SharedControlBlock, BindPayloadStoresHandlePtrAndPool) {
   SharedCB cb;
   const PayloadHandle handle{1, 2};
 
-  cb.bindPayload(handle, &payload, &pool);
+  EXPECT_TRUE(cb.tryBindPayload(handle, &payload, &pool));
 
   EXPECT_TRUE(cb.hasPayload());
   EXPECT_EQ(cb.payloadHandle(), handle);
@@ -47,19 +55,61 @@ TEST(SharedControlBlock, StrongCountIncrementsAndReleaseSignalsLast) {
   EXPECT_EQ(cb.count(), 0u);
 }
 
-TEST(SharedControlBlock, ClearPayloadResetsPointers) {
+TEST(SharedControlBlock, ReleaseCallsPoolOnLastStrongRef) {
+  DummyPool pool{};
+  DummyPayload payload{};
+  SharedCB cb;
+  const PayloadHandle handle{1, 2};
+
+  EXPECT_TRUE(cb.tryBindPayload(handle, &payload, &pool));
+  cb.acquire();
+  cb.acquire();
+
+  EXPECT_FALSE(cb.release());
+  EXPECT_EQ(pool.release_calls, 0u);
+
+  EXPECT_TRUE(cb.release());
+  EXPECT_EQ(pool.release_calls, 1u);
+  EXPECT_EQ(pool.last_handle, handle);
+  EXPECT_FALSE(cb.hasPayload());
+}
+
+TEST(SharedControlBlock, ReleaseSkipsPoolWhenNull) {
+  DummyPool pool{};
+  DummyPayload payload{};
+  SharedCB cb;
+  const PayloadHandle handle{1, 2};
+
+  EXPECT_TRUE(cb.tryBindPayload(handle, &payload, nullptr));
+  cb.acquire();
+
+  EXPECT_TRUE(cb.release());
+  EXPECT_EQ(pool.release_calls, 0u);
+}
+
+TEST(SharedControlBlock, TryBindPayloadFailsWhenReferencesRemain) {
+  DummyPool pool{};
+  DummyPayload payload{};
+  SharedCB cb;
+  const PayloadHandle handle{5, 6};
+
+  cb.acquire();
+  EXPECT_FALSE(cb.tryBindPayload(handle, &payload, &pool));
+  EXPECT_FALSE(cb.hasPayload());
+
+  EXPECT_TRUE(cb.release());
+  EXPECT_TRUE(cb.tryBindPayload(handle, &payload, &pool));
+  EXPECT_TRUE(cb.hasPayload());
+}
+
+TEST(SharedControlBlock, TryBindPayloadFailsWhenAlreadyBound) {
   DummyPool pool{};
   DummyPayload payload{};
   SharedCB cb;
   const PayloadHandle handle{3, 4};
 
-  cb.bindPayload(handle, &payload, &pool);
-  cb.clearPayload();
-
-  EXPECT_FALSE(cb.hasPayload());
-  EXPECT_FALSE(cb.payloadHandle().isValid());
-  EXPECT_EQ(cb.payloadPtr(), nullptr);
-  EXPECT_EQ(cb.payloadPool(), nullptr);
+  EXPECT_TRUE(cb.tryBindPayload(handle, &payload, &pool));
+  EXPECT_FALSE(cb.tryBindPayload(handle, &payload, &pool));
 }
 
 } // namespace
