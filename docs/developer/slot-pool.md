@@ -111,7 +111,6 @@
   - `capacity`
 - Request
   - `handle`（index 指定）
-  - `payload_ptr`（外部で用意）
 - Context
   - 空
 
