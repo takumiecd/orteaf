@@ -62,6 +62,14 @@ TEST(WeakSharedControlBlock, StrongAndWeakCountsBehave) {
   EXPECT_EQ(cb.weakCount(), 0u);
 }
 
+TEST(WeakSharedControlBlock, ReleaseWeakDoesNotUnderflow) {
+  WeakSharedCB cb;
+
+  EXPECT_EQ(cb.weakCount(), 0u);
+  EXPECT_FALSE(cb.releaseWeak());
+  EXPECT_EQ(cb.weakCount(), 0u);
+}
+
 TEST(WeakSharedControlBlock, ReleaseCallsPoolOnLastStrongRef) {
   DummyPool pool{};
   DummyPayload payload{};
@@ -79,6 +87,14 @@ TEST(WeakSharedControlBlock, ReleaseCallsPoolOnLastStrongRef) {
   EXPECT_EQ(pool.release_calls, 1u);
   EXPECT_EQ(pool.last_handle, handle);
   EXPECT_FALSE(cb.hasPayload());
+}
+
+TEST(WeakSharedControlBlock, ReleaseDoesNotUnderflow) {
+  WeakSharedCB cb;
+
+  EXPECT_EQ(cb.count(), 0u);
+  EXPECT_FALSE(cb.release());
+  EXPECT_EQ(cb.count(), 0u);
 }
 
 TEST(WeakSharedControlBlock, ReleaseSkipsPoolWhenNull) {
@@ -116,7 +132,6 @@ TEST(WeakSharedControlBlock, TryBindPayloadFailsWhenReferencesRemain) {
   EXPECT_FALSE(cb.hasPayload());
 
   EXPECT_TRUE(cb.release());
-  EXPECT_FALSE(cb.releaseWeak());
   EXPECT_TRUE(cb.releaseWeak());
   EXPECT_TRUE(cb.tryBindPayload(handle, &payload, &pool));
   EXPECT_TRUE(cb.hasPayload());

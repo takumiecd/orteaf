@@ -55,6 +55,14 @@ TEST(SharedControlBlock, StrongCountIncrementsAndReleaseSignalsLast) {
   EXPECT_EQ(cb.count(), 0u);
 }
 
+TEST(SharedControlBlock, ReleaseDoesNotUnderflow) {
+  SharedCB cb;
+
+  EXPECT_EQ(cb.count(), 0u);
+  EXPECT_FALSE(cb.release());
+  EXPECT_EQ(cb.count(), 0u);
+}
+
 TEST(SharedControlBlock, ReleaseCallsPoolOnLastStrongRef) {
   DummyPool pool{};
   DummyPayload payload{};

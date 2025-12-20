@@ -54,9 +54,17 @@ public:
   }
 
   bool release() noexcept {
-    if (strong_count_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-      tryReleasePayload();
-      return true;
+    auto current = strong_count_.load(std::memory_order_acquire);
+    while (current > 0) {
+      if (strong_count_.compare_exchange_weak(current, current - 1,
+                                              std::memory_order_acq_rel,
+                                              std::memory_order_relaxed)) {
+        if (current == 1) {
+          tryReleasePayload();
+          return true;
+        }
+        return false;
+      }
     }
     return false;
   }
@@ -71,7 +79,15 @@ public:
   }
 
   bool releaseWeak() noexcept {
-    return weak_count_.fetch_sub(1, std::memory_order_acq_rel) == 1;
+    auto current = weak_count_.load(std::memory_order_acquire);
+    while (current > 0) {
+      if (weak_count_.compare_exchange_weak(current, current - 1,
+                                            std::memory_order_acq_rel,
+                                            std::memory_order_relaxed)) {
+        return current == 1;
+      }
+    }
+    return false;
   }
 
   std::uint32_t weakCount() const noexcept {
@@ -172,12 +188,20 @@ public:
   }
 
   bool release() noexcept {
-    if (strong_count_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-      if constexpr (SlotT::has_generation) {
-        slot_.incrementGeneration();
-      }
-      if (weak_count_.load(std::memory_order_acquire) == 0) {
-        return true;
+    auto current = strong_count_.load(std::memory_order_acquire);
+    while (current > 0) {
+      if (strong_count_.compare_exchange_weak(current, current - 1,
+                                              std::memory_order_acq_rel,
+                                              std::memory_order_relaxed)) {
+        if (current == 1) {
+          if constexpr (SlotT::has_generation) {
+            slot_.incrementGeneration();
+          }
+          if (weak_count_.load(std::memory_order_acquire) == 0) {
+            return true;
+          }
+        }
+        return false;
       }
     }
     return false;
@@ -210,9 +234,16 @@ public:
   }
 
   bool releaseWeak() noexcept {
-    weak_count_.fetch_sub(1, std::memory_order_acq_rel);
-    return weak_count_.load(std::memory_order_acquire) == 0 &&
-           strong_count_.load(std::memory_order_acquire) == 0;
+    auto current = weak_count_.load(std::memory_order_acquire);
+    while (current > 0) {
+      if (weak_count_.compare_exchange_weak(current, current - 1,
+                                            std::memory_order_acq_rel,
+                                            std::memory_order_relaxed)) {
+        return current == 1 &&
+               strong_count_.load(std::memory_order_acquire) == 0;
+      }
+    }
+    return false;
   }
 
   bool tryPromote() noexcept {

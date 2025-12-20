@@ -47,6 +47,14 @@ TEST(WeakControlBlock, WeakCountIncrementsAndDecrements) {
   EXPECT_EQ(cb.weakCount(), 0u);
 }
 
+TEST(WeakControlBlock, ReleaseWeakDoesNotUnderflow) {
+  WeakCB cb;
+
+  EXPECT_EQ(cb.weakCount(), 0u);
+  EXPECT_FALSE(cb.releaseWeak());
+  EXPECT_EQ(cb.weakCount(), 0u);
+}
+
 TEST(WeakControlBlock, TryBindPayloadFailsWhenWeakReferencesRemain) {
   DummyPool pool{};
   DummyPayload payload{};

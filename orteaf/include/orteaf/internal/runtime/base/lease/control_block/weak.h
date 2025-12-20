@@ -52,7 +52,15 @@ public:
   }
 
   bool releaseWeak() noexcept {
-    return weak_count_.fetch_sub(1, std::memory_order_acq_rel) == 1;
+    auto current = weak_count_.load(std::memory_order_acquire);
+    while (current > 0) {
+      if (weak_count_.compare_exchange_weak(current, current - 1,
+                                            std::memory_order_acq_rel,
+                                            std::memory_order_relaxed)) {
+        return current == 1;
+      }
+    }
+    return false;
   }
 
   std::uint32_t weakCount() const noexcept {
