@@ -22,6 +22,15 @@ struct DummyTraits {
   struct Config {
     std::size_t capacity{0};
   };
+
+  static bool create(Payload &payload, const Request &, const Context &) {
+    payload.value = 42;
+    return true;
+  }
+
+  static void destroy(Payload &payload, const Request &, const Context &) {
+    payload.value = 0;
+  }
 };
 
 using Pool = ::orteaf::internal::runtime::base::pool::SlotPool<DummyTraits>;
@@ -99,6 +108,64 @@ TEST(SlotPool, ReleaseRejectsStaleGeneration) {
 
   EXPECT_TRUE(pool.release(stale));
   EXPECT_FALSE(pool.release(stale));
+}
+
+TEST(SlotPool, EmplaceUsesTraitsCreateAndSetsCreated) {
+  auto pool = makePool(1);
+  DummyTraits::Request req{};
+  DummyTraits::Context ctx{};
+
+  auto slot = pool.acquire(req, ctx);
+  EXPECT_TRUE(pool.emplace(slot.handle, req, ctx));
+  EXPECT_TRUE(pool.isCreated(slot.handle));
+  EXPECT_EQ(pool.get(slot.handle)->value, 42);
+}
+
+TEST(SlotPool, EmplaceLambdaOverridesTraitsCreate) {
+  auto pool = makePool(1);
+  DummyTraits::Request req{};
+  DummyTraits::Context ctx{};
+
+  auto slot = pool.acquire(req, ctx);
+  EXPECT_TRUE(pool.emplace(slot.handle, req, ctx,
+                           [](DummyPayload &payload,
+                              const DummyTraits::Request &,
+                              const DummyTraits::Context &) {
+                             payload.value = 7;
+                             return true;
+                           }));
+  EXPECT_TRUE(pool.isCreated(slot.handle));
+  EXPECT_EQ(pool.get(slot.handle)->value, 7);
+}
+
+TEST(SlotPool, DestroyUsesTraitsDestroyAndClearsCreated) {
+  auto pool = makePool(1);
+  DummyTraits::Request req{};
+  DummyTraits::Context ctx{};
+
+  auto slot = pool.acquire(req, ctx);
+  EXPECT_TRUE(pool.emplace(slot.handle, req, ctx));
+  EXPECT_TRUE(pool.destroy(slot.handle, req, ctx));
+  EXPECT_FALSE(pool.isCreated(slot.handle));
+  EXPECT_EQ(pool.get(slot.handle)->value, 0);
+}
+
+TEST(SlotPool, DestroyLambdaOverridesTraitsDestroy) {
+  auto pool = makePool(1);
+  DummyTraits::Request req{};
+  DummyTraits::Context ctx{};
+
+  auto slot = pool.acquire(req, ctx);
+  EXPECT_TRUE(pool.emplace(slot.handle, req, ctx));
+  EXPECT_TRUE(pool.destroy(slot.handle, req, ctx,
+                           [](DummyPayload &payload,
+                              const DummyTraits::Request &,
+                              const DummyTraits::Context &) {
+                             payload.value = -1;
+                             return true;
+                           }));
+  EXPECT_FALSE(pool.isCreated(slot.handle));
+  EXPECT_EQ(pool.get(slot.handle)->value, -1);
 }
 
 TEST(SlotPool, GetReturnsNullForInvalidHandle) {

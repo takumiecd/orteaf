@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <type_traits>
+#include <utility>
 
 #include "orteaf/internal/base/heap_vector.h"
 #include "orteaf/internal/diagnostics/error/error.h"
@@ -122,6 +123,72 @@ public:
       return;
     }
     created_[static_cast<std::size_t>(handle.index)] = created ? 1 : 0;
+  }
+
+  bool emplace(Handle handle, const Request &request, const Context &context) {
+    if (!isValid(handle) || isCreated(handle)) {
+      return false;
+    }
+    auto &payload = payloads_[static_cast<std::size_t>(handle.index)];
+    const bool created = Traits::create(payload, request, context);
+    if (created) {
+      setCreated(handle, true);
+    }
+    return created;
+  }
+
+  template <typename CreateFn>
+    requires std::invocable<CreateFn, Payload &, const Request &,
+                             const Context &> &&
+             std::convertible_to<
+                 std::invoke_result_t<CreateFn, Payload &, const Request &,
+                                      const Context &>,
+                 bool>
+  bool emplace(Handle handle, const Request &request, const Context &context,
+               CreateFn &&createFn) {
+    if (!isValid(handle) || isCreated(handle)) {
+      return false;
+    }
+    auto &payload = payloads_[static_cast<std::size_t>(handle.index)];
+    const bool created =
+        std::forward<CreateFn>(createFn)(payload, request, context);
+    if (created) {
+      setCreated(handle, true);
+    }
+    return created;
+  }
+
+  bool destroy(Handle handle, const Request &request, const Context &context) {
+    if (!isValid(handle) || !isCreated(handle)) {
+      return false;
+    }
+    auto &payload = payloads_[static_cast<std::size_t>(handle.index)];
+    Traits::destroy(payload, request, context);
+    setCreated(handle, false);
+    return true;
+  }
+
+  template <typename DestroyFn>
+    requires std::invocable<DestroyFn, Payload &, const Request &,
+                             const Context &>
+  bool destroy(Handle handle, const Request &request, const Context &context,
+               DestroyFn &&destroyFn) {
+    if (!isValid(handle) || !isCreated(handle)) {
+      return false;
+    }
+    auto &payload = payloads_[static_cast<std::size_t>(handle.index)];
+    if constexpr (std::convertible_to<
+                      std::invoke_result_t<DestroyFn, Payload &, const Request &,
+                                           const Context &>,
+                      bool>) {
+      if (!std::forward<DestroyFn>(destroyFn)(payload, request, context)) {
+        return false;
+      }
+    } else {
+      std::forward<DestroyFn>(destroyFn)(payload, request, context);
+    }
+    setCreated(handle, false);
+    return true;
   }
 
 private:
