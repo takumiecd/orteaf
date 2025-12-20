@@ -74,6 +74,10 @@
   - freelist に戻す（pool が安全チェックを行う）
 - 参照: `get(handle)` / `payload(handle)`
   - handle から payload ptr を返す
+- 生成/破棄:
+  - `emplace(handle, request, context)`（Traits::create を呼ぶ）
+  - `destroy(handle, request, context)`（Traits::destroy を呼ぶ）
+  - 必要ならラムダ版で上書きできる
 
 ## 最小 Manager の構成案
 - manager は以下を所有する:
@@ -91,6 +95,39 @@
 - 失敗時の後始末:
   - payload_pool の取得に失敗 → 即失敗
   - control_block_pool の取得に失敗 → payload を pool に返す
+
+## pool 不要ケース（weak only / system lifetime）
+- 再利用が不要なケースでは `FixedSlotStore` を用意する。
+- `FixedSlotStore` は **配列に収めるだけ** で、freelist による再利用をしない。
+- `FixedSlotStore` は `SlotPool` と同じメソッド形状を持つ:
+  - `initialize(config)`（配列確保）
+  - `acquire(request, context)`（外部で指定された slot に bind）
+  - `release(handle)`（no-op または無効化のみ）
+  - `get(handle)`（配列から直接参照）
+- manager は pool 実装を差し替えるだけで共通化できる。
+
+### FixedSlotStore の型（暫定）
+- Config
+  - `capacity`
+- Request
+  - `handle`（index 指定）
+  - `payload_ptr`（外部で用意）
+- Context
+  - 空
+
+### SlotPool の型（暫定）
+- Config
+  - `capacity`
+- Request
+  - 空（将来拡張用に残す）
+- Context
+  - 空
+
+## FixedSlotStore の生成方針
+- payload は **pool 内で構築**する（コピー/ムーブ回避）。
+- `Request` に `handle` を含めて index 依存の生成を可能にする。
+- `Traits::create/destroy` を基本にし、特殊ケースはラムダで上書き可能にする。
+  - `emplace(handle, request, context, create_fn)` の形を想定。
 
 ## 依存関係（概念）
 ```mermaid
