@@ -35,11 +35,41 @@ struct DummyTraits {
   }
 };
 
+struct DestroyOnReleaseTraits {
+  using Payload = DummyPayload;
+  using Handle = StoreHandle;
+  struct Request {
+    Handle handle{};
+  };
+  struct Context {};
+  struct Config {
+    std::size_t capacity{0};
+  };
+  static constexpr bool destroy_on_release = true;
+
+  static bool create(Payload &payload, const Request &, const Context &) {
+    payload.value = 55;
+    return true;
+  }
+
+  static void destroy(Payload &payload, const Request &, const Context &) {
+    payload.value = -5;
+  }
+};
+
 using Store = ::orteaf::internal::runtime::base::pool::FixedSlotStore<DummyTraits>;
+using DestroyOnReleaseStore =
+    ::orteaf::internal::runtime::base::pool::FixedSlotStore<DestroyOnReleaseTraits>;
 
 Store makeStore(std::size_t capacity) {
   Store store;
   store.initialize(typename DummyTraits::Config{capacity});
+  return store;
+}
+
+DestroyOnReleaseStore makeDestroyOnReleaseStore(std::size_t capacity) {
+  DestroyOnReleaseStore store;
+  store.initialize(typename DestroyOnReleaseTraits::Config{capacity});
   return store;
 }
 
@@ -114,6 +144,25 @@ TEST(FixedSlotStore, DestroyLambdaOverridesTraitsDestroy) {
                             }));
   EXPECT_FALSE(store.isCreated(req.handle));
   EXPECT_EQ(store.get(req.handle), nullptr);
+}
+
+TEST(FixedSlotStore, ReleaseDestroysWhenConfigured) {
+  auto store = makeDestroyOnReleaseStore(1);
+  DestroyOnReleaseTraits::Context ctx{};
+  DestroyOnReleaseTraits::Request req{StoreHandle{0, 0}};
+
+  EXPECT_TRUE(store.emplace(req.handle, req, ctx));
+  EXPECT_TRUE(store.release(req.handle, req, ctx));
+  EXPECT_FALSE(store.isCreated(req.handle));
+  EXPECT_EQ(store.get(req.handle), nullptr);
+}
+
+TEST(FixedSlotStore, ReleaseFailsWhenNotCreatedInDestroyMode) {
+  auto store = makeDestroyOnReleaseStore(1);
+  DestroyOnReleaseTraits::Context ctx{};
+  DestroyOnReleaseTraits::Request req{StoreHandle{0, 0}};
+
+  EXPECT_FALSE(store.release(req.handle, req, ctx));
 }
 
 } // namespace

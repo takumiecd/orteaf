@@ -33,11 +33,39 @@ struct DummyTraits {
   }
 };
 
+struct DestroyOnReleaseTraits {
+  using Payload = DummyPayload;
+  using Handle = SlotHandle;
+  struct Request {};
+  struct Context {};
+  struct Config {
+    std::size_t capacity{0};
+  };
+  static constexpr bool destroy_on_release = true;
+
+  static bool create(Payload &payload, const Request &, const Context &) {
+    payload.value = 9;
+    return true;
+  }
+
+  static void destroy(Payload &payload, const Request &, const Context &) {
+    payload.value = -1;
+  }
+};
+
 using Pool = ::orteaf::internal::runtime::base::pool::SlotPool<DummyTraits>;
+using DestroyOnReleasePool =
+    ::orteaf::internal::runtime::base::pool::SlotPool<DestroyOnReleaseTraits>;
 
 Pool makePool(std::size_t capacity) {
   Pool pool;
   pool.initialize(typename DummyTraits::Config{capacity});
+  return pool;
+}
+
+DestroyOnReleasePool makeDestroyOnReleasePool(std::size_t capacity) {
+  DestroyOnReleasePool pool;
+  pool.initialize(typename DestroyOnReleaseTraits::Config{capacity});
   return pool;
 }
 
@@ -178,6 +206,27 @@ TEST(SlotPool, GetReturnsNullForInvalidHandle) {
 
   EXPECT_TRUE(pool.release(stale));
   EXPECT_EQ(pool.get(stale), nullptr);
+}
+
+TEST(SlotPool, ReleaseDestroysWhenConfigured) {
+  auto pool = makeDestroyOnReleasePool(1);
+  DestroyOnReleaseTraits::Request req{};
+  DestroyOnReleaseTraits::Context ctx{};
+
+  auto slot = pool.acquire(req, ctx);
+  EXPECT_TRUE(pool.emplace(slot.handle, req, ctx));
+  EXPECT_TRUE(pool.release(slot.handle, req, ctx));
+  EXPECT_FALSE(pool.isCreated(slot.handle));
+  EXPECT_EQ(pool.get(slot.handle)->value, -1);
+}
+
+TEST(SlotPool, ReleaseFailsWhenNotCreatedInDestroyMode) {
+  auto pool = makeDestroyOnReleasePool(1);
+  DestroyOnReleaseTraits::Request req{};
+  DestroyOnReleaseTraits::Context ctx{};
+
+  auto slot = pool.acquire(req, ctx);
+  EXPECT_FALSE(pool.release(slot.handle, req, ctx));
 }
 
 } // namespace

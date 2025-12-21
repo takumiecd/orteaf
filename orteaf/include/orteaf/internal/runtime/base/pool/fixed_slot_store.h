@@ -124,7 +124,42 @@ public:
    * This method is provided for API symmetry with SlotPool. It only validates
    * the handle and returns whether it is in range (and generation matches).
    */
-  bool release(Handle handle) noexcept { return isValid(handle); }
+  bool release(Handle handle) noexcept {
+    if constexpr (destroy_on_release_) {
+      static_assert(std::is_default_constructible_v<Request>,
+                    "FixedSlotStore::release(handle) requires "
+                    "default-constructible Request when destroy_on_release is "
+                    "enabled");
+      static_assert(std::is_default_constructible_v<Context>,
+                    "FixedSlotStore::release(handle) requires "
+                    "default-constructible Context when destroy_on_release is "
+                    "enabled");
+      return release(handle, Request{}, Context{});
+    }
+    return isValid(handle);
+  }
+
+  /**
+   * @brief Releases a slot and applies destroy policy if enabled.
+   *
+   * When Traits::destroy_on_release is true, release destroys the payload
+   * (if created). No freelist reuse is performed.
+   */
+  bool release(Handle handle, const Request &request,
+               const Context &context) noexcept {
+    if (!isValid(handle)) {
+      return false;
+    }
+    if constexpr (destroy_on_release_) {
+      if (!isCreated(handle)) {
+        return false;
+      }
+      if (!destroy(handle, request, context)) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   /**
    * @brief Returns a pointer to the payload if valid and created.
@@ -282,6 +317,12 @@ private:
   using generation_storage_t =
       std::conditional_t<Handle::has_generation, typename Handle::generation_type,
                          std::uint8_t>;
+  static constexpr bool destroy_on_release_ = [] {
+    if constexpr (requires { Traits::destroy_on_release; }) {
+      return static_cast<bool>(Traits::destroy_on_release);
+    }
+    return false;
+  }();
 
   void setCreated(Handle handle, bool created) noexcept {
     if (!isValid(handle)) {

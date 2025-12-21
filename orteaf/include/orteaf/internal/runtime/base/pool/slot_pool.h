@@ -134,6 +134,10 @@ public:
     }
     const index_type idx = freelist_.back();
     freelist_.resize(freelist_.size() - 1);
+    if (created_[static_cast<std::size_t>(idx)] != 0) {
+      freelist_.pushBack(idx);
+      return SlotRef{Handle::invalid(), nullptr};
+    }
     return SlotRef{makeHandle(idx), &payloads_[idx]};
   }
 
@@ -148,15 +152,43 @@ public:
    * @return True if the handle was valid and release occurred.
    */
   bool release(Handle handle) noexcept {
+    if constexpr (destroy_on_release_) {
+      static_assert(std::is_default_constructible_v<Request>,
+                    "SlotPool::release(handle) requires default-constructible "
+                    "Request when destroy_on_release is enabled");
+      static_assert(std::is_default_constructible_v<Context>,
+                    "SlotPool::release(handle) requires default-constructible "
+                    "Context when destroy_on_release is enabled");
+      return release(handle, Request{}, Context{});
+    }
+    return releaseImpl(handle);
+  }
+
+  /**
+   * @brief Releases a slot and applies destroy policy if enabled.
+   *
+   * When Traits::destroy_on_release is true, release destroys the payload
+   * (if created) before returning the slot to the freelist.
+   *
+   * @param handle Slot handle to release.
+   * @param request Request details for destroy (if used by Traits).
+   * @param context Context details for destroy (if used by Traits).
+   * @return True if the handle was valid and release occurred.
+   */
+  bool release(Handle handle, const Request &request,
+               const Context &context) noexcept {
     if (!isValid(handle)) {
       return false;
     }
-    const std::size_t idx = static_cast<std::size_t>(handle.index);
-    if constexpr (Handle::has_generation) {
-      ++generations_[idx];
+    if constexpr (destroy_on_release_) {
+      if (!isCreated(handle)) {
+        return false;
+      }
+      if (!destroy(handle, request, context)) {
+        return false;
+      }
     }
-    freelist_.pushBack(static_cast<index_type>(idx));
-    return true;
+    return releaseImpl(handle);
   }
 
   /**
@@ -316,6 +348,24 @@ private:
   using generation_storage_t =
       std::conditional_t<Handle::has_generation, typename Handle::generation_type,
                          std::uint8_t>;
+  static constexpr bool destroy_on_release_ = [] {
+    if constexpr (requires { Traits::destroy_on_release; }) {
+      return static_cast<bool>(Traits::destroy_on_release);
+    }
+    return false;
+  }();
+
+  bool releaseImpl(Handle handle) noexcept {
+    if (!isValid(handle)) {
+      return false;
+    }
+    const std::size_t idx = static_cast<std::size_t>(handle.index);
+    if constexpr (Handle::has_generation) {
+      ++generations_[idx];
+    }
+    freelist_.pushBack(static_cast<index_type>(idx));
+    return true;
+  }
 
   void setCreated(Handle handle, bool created) noexcept {
     if (!isValid(handle)) {
