@@ -9,6 +9,7 @@
 - **Pool**
   - handle 管理、generation、isCreated の安全確認
   - スロット再利用（freelist）
+  - 生成/破棄の方針は Traits に従う（pool 内で完結）
   - 寿命判断は行わない
 - **Control Block**
   - 参照カウントと寿命判断
@@ -42,6 +43,17 @@
 3. control block に payload 情報を格納。
 4. lease は control block への参照を保持して返る。
 
+## isCreated と生成/破棄方針
+- isCreated は payload の中身が「構築済みか」を示す。
+- pool の Traits が生成/破棄の方針を持つ:
+  - `destroy_on_release = true` の場合、release で destroy し isCreated を false に戻す。
+  - `destroy_on_release = false` の場合、release では destroy せず isCreated を維持する。
+- acquire の挙動も Traits に従う:
+  - `destroy_on_release = true` を前提とする pool では、isCreated=false のときだけ create を許可し、
+    isCreated=true ならエラー扱いとする（毎回生成のモード）。
+  - `destroy_on_release = false` を前提とする pool では、isCreated=false なら create、
+    isCreated=true なら再利用する（再利用モード）。
+
 ## 利用フロー（概要）
 - lease -> control block -> payload ptr で直接アクセス。
 
@@ -57,21 +69,21 @@
 1. control block の ref count を減算。
 2. 0 になったら payload pool に `tryRelease(handle)` を要求。
 3. pool は generation / isCreated / 範囲チェックを行い、
-   OK なら再利用に戻す。
+   OK なら再利用に戻す（Traits に従い destroy を行う）。
 4. control block 自身も同様に pool に返す。
 
 ## 不変条件
 - pool は寿命管理をしない（再利用の器に徹する）。
 - 寿命判断は control block に集約する。
 - 解放の最終判定は pool が行う。
-- isCreated は manager 側が意味づけと更新を行う（pool は保持のみ）。
+- isCreated の更新は pool が Traits に従って行う。
 - in_use は control block 側で管理し、pool は関知しない。
 
 ## SlotPool のメソッド案
 - 取得: `acquire(request, context)` または `tryAcquire(request, context)`
   - index / generation / payload_ptr を返す小さな構造体を返却
 - 返却: `release(handle)` または `tryRelease(handle)`
-  - freelist に戻す（pool が安全チェックを行う）
+  - freelist に戻す（pool が安全チェックと destroy 方針を適用）
 - 参照: `get(handle)` / `payload(handle)`
   - handle から payload ptr を返す
 - 生成/破棄:
