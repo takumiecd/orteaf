@@ -217,7 +217,9 @@ TEST(SlotPool, ReleaseDestroysWhenConfigured) {
   EXPECT_TRUE(pool.emplace(slot.handle, req, ctx));
   EXPECT_TRUE(pool.release(slot.handle, req, ctx));
   EXPECT_FALSE(pool.isCreated(slot.handle));
-  EXPECT_EQ(pool.get(slot.handle)->value, -1);
+  auto reacquired = pool.acquire(req, ctx);
+  EXPECT_TRUE(reacquired.valid());
+  EXPECT_EQ(reacquired.payload_ptr->value, -1);
 }
 
 TEST(SlotPool, ReleaseFailsWhenNotCreatedInDestroyMode) {
