@@ -158,10 +158,15 @@ private:
    * Pool::release returns true, the payload binding is cleared.
    */
   void tryReleasePayload() noexcept {
-    if (payload_pool_ != nullptr && payload_handle_.isValid()) {
-      if (payload_pool_->release(payload_handle_)) {
-        clearPayload();
-      }
+    if (!payload_handle_.isValid()) {
+      return;
+    }
+    if (payload_pool_ == nullptr) {
+      clearPayload();
+      return;
+    }
+    if (payload_pool_->release(payload_handle_)) {
+      clearPayload();
     }
   }
 

@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <cstdio>
 
 #include <orteaf/internal/runtime/base/lease/category.h>
 
@@ -37,8 +38,23 @@ public:
   WeakControlBlock() = default;
   WeakControlBlock(const WeakControlBlock &) = delete;
   WeakControlBlock &operator=(const WeakControlBlock &) = delete;
-  WeakControlBlock(WeakControlBlock &&) = default;
-  WeakControlBlock &operator=(WeakControlBlock &&) = default;
+  WeakControlBlock(WeakControlBlock &&other) noexcept {
+    weak_count_.store(other.weak_count_.load(std::memory_order_relaxed),
+                      std::memory_order_relaxed);
+    payload_handle_ = other.payload_handle_;
+    payload_ptr_ = other.payload_ptr_;
+    payload_pool_ = other.payload_pool_;
+  }
+  WeakControlBlock &operator=(WeakControlBlock &&other) noexcept {
+    if (this != &other) {
+      weak_count_.store(other.weak_count_.load(std::memory_order_relaxed),
+                        std::memory_order_relaxed);
+      payload_handle_ = other.payload_handle_;
+      payload_ptr_ = other.payload_ptr_;
+      payload_pool_ = other.payload_pool_;
+    }
+    return *this;
+  }
   ~WeakControlBlock() = default;
 
   /**
@@ -48,6 +64,7 @@ public:
    * weak reference count is zero.
    */
   bool canBindPayload() const noexcept {
+    printf("canBindPayload: %p %d\n", payload_ptr_, weakCount());
     return payload_ptr_ == nullptr && weakCount() == 0;
   }
 
@@ -111,7 +128,11 @@ public:
       if (weak_count_.compare_exchange_weak(current, current - 1,
                                             std::memory_order_acq_rel,
                                             std::memory_order_relaxed)) {
-        return current == 1;
+        if (current == 1) {
+          clearPayload();
+          return true;
+        }
+        return false;
       }
     }
     return false;

@@ -153,7 +153,13 @@ public:
       if (weak_count_.compare_exchange_weak(current, current - 1,
                                             std::memory_order_acq_rel,
                                             std::memory_order_relaxed)) {
-        return current == 1;
+        if (current == 1) {
+          if (canShutdown()) {
+            clearPayload();
+          }
+          return true;
+        }
+        return false;
       }
     }
     return false;
@@ -206,10 +212,15 @@ private:
    * Pool::release returns true, the payload binding is cleared.
    */
   void tryReleasePayload() noexcept {
-    if (payload_pool_ != nullptr && payload_handle_.isValid()) {
-      if (payload_pool_->release(payload_handle_)) {
-        clearPayload();
-      }
+    if (!payload_handle_.isValid()) {
+      return;
+    }
+    if (payload_pool_ == nullptr) {
+      clearPayload();
+      return;
+    }
+    if (payload_pool_->release(payload_handle_)) {
+      clearPayload();
     }
   }
 
