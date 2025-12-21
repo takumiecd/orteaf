@@ -76,21 +76,25 @@ public:
    * @throws OrteafErrc::InvalidArgument if capacity exceeds handle range.
    */
   void initialize(const Config &config) {
-    const std::size_t capacity = config.capacity;
-    if (capacity > static_cast<std::size_t>(Handle::invalid_index())) {
-      ::orteaf::internal::diagnostics::error::throwError(
-          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-          "SlotPool capacity exceeds handle range");
-    }
+    shutdown();
+    grow(config);
+  }
 
-    payloads_.resize(capacity);
-    generations_.resize(capacity, 0);
-    created_.resize(capacity, 0);
-    freelist_.clear();
-    freelist_.reserve(capacity);
-    for (std::size_t i = 0; i < capacity; ++i) {
-      freelist_.pushBack(static_cast<index_type>(capacity - 1 - i));
-    }
+  /**
+   * @brief Initializes storage and creates payloads for all slots.
+   *
+   * This method resets the internal state, grows storage to capacity, and
+   * creates payloads for all slots using Traits::create.
+   *
+   * @param config Configuration containing capacity.
+   * @param request Request details forwarded to Traits::create.
+   * @param context Context details forwarded to Traits::create.
+   * @return True if all payloads were created successfully.
+   */
+  bool initializeAndCreate(const Config &config, const Request &request,
+                           const Context &context) {
+    shutdown();
+    return growAndCreate(config, request, context);
   }
 
   /**
@@ -101,6 +105,56 @@ public:
    * @brief Returns the number of slots currently available in the freelist.
    */
   std::size_t available() const noexcept { return freelist_.size(); }
+
+  /**
+   * @brief Releases all storage and resets internal state.
+   */
+  void shutdown() noexcept {
+    payloads_.clear();
+    generations_.clear();
+    created_.clear();
+    freelist_.clear();
+  }
+
+  /**
+   * @brief Grows storage to the specified capacity without creating payloads.
+   *
+   * New slots are appended to the freelist in "not created" state.
+   *
+   * @param config Configuration containing the new capacity.
+   * @throws OrteafErrc::InvalidArgument if capacity exceeds handle range.
+   */
+  void grow(const Config &config) {
+    growStorage(config);
+  }
+
+  /**
+   * @brief Grows storage and creates payloads for new slots.
+   *
+   * New slots are created using Traits::create and remain available for
+   * acquire (created=true). Returns false if any create fails.
+   *
+   * @param config Configuration containing the new capacity.
+   * @param request Request details forwarded to Traits::create.
+   * @param context Context details forwarded to Traits::create.
+   * @return True if all new payloads were created successfully.
+   * @throws OrteafErrc::InvalidArgument if capacity exceeds handle range.
+   */
+  bool growAndCreate(const Config &config, const Request &request,
+                     const Context &context) {
+    const std::size_t old_capacity = growStorage(config);
+    const std::size_t new_capacity = payloads_.size();
+    bool all_created = true;
+    for (std::size_t idx = old_capacity; idx < new_capacity; ++idx) {
+      Request slot_request = request;
+      setHandleIfPresent(slot_request, makeHandle(static_cast<index_type>(idx)));
+      if (!emplace(makeHandle(static_cast<index_type>(idx)), slot_request,
+                   context)) {
+        all_created = false;
+      }
+    }
+    return all_created;
+  }
 
   /**
    * @brief Acquires a created slot or throws if none are available.
@@ -399,6 +453,33 @@ private:
     }
     return false;
   }();
+
+  static void setHandleIfPresent(Request &request, Handle handle) noexcept {
+    if constexpr (requires { request.handle = handle; }) {
+      request.handle = handle;
+    }
+  }
+
+  std::size_t growStorage(const Config &config) {
+    const std::size_t capacity = config.capacity;
+    if (capacity > static_cast<std::size_t>(Handle::invalid_index())) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+          "SlotPool capacity exceeds handle range");
+    }
+    const std::size_t old_capacity = payloads_.size();
+    if (capacity <= old_capacity) {
+      return old_capacity;
+    }
+    payloads_.resize(capacity);
+    generations_.resize(capacity, 0);
+    created_.resize(capacity, 0);
+    freelist_.reserve(capacity);
+    for (std::size_t i = capacity; i > old_capacity; --i) {
+      freelist_.pushBack(static_cast<index_type>(i - 1));
+    }
+    return old_capacity;
+  }
 
   bool releaseImpl(Handle handle) noexcept {
     if (!isValid(handle)) {

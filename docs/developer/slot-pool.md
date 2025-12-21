@@ -86,6 +86,13 @@
   - 未作成の slot を返す（isCreated=false のみ）
 - 取得: `acquire(request, context)` または `tryAcquire(request, context)`
   - 作成済み slot を返す（isCreated=true のみ）
+- 初期化/終了: `initialize(config)` / `shutdown()`
+  - `initialize` は内部で `shutdown` と `grow` を行う
+- 初期化+作成: `initializeAndCreate(config, request, context)`
+  - `initialize` 後に全 slot を作成する
+- 拡張: `grow(config)` / `growAndCreate(config, request, context)`
+  - `grow` は未作成 slot を追加する
+  - `growAndCreate` は新規 slot を create し、作成済みとして追加する
 - 返却: `release(handle)` または `tryRelease(handle)`
   - freelist に戻す（pool が安全チェックと destroy 方針を適用）
 - 参照: `get(handle)` / `payload(handle)`

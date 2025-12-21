@@ -264,4 +264,47 @@ TEST(SlotPool, ReleaseFailsWhenNotCreatedInDestroyMode) {
   EXPECT_FALSE(pool.release(slot.handle, req, ctx));
 }
 
+TEST(SlotPool, GrowAddsUncreatedSlots) {
+  auto pool = makePool(1);
+  DummyTraits::Request req{};
+  DummyTraits::Context ctx{};
+
+  pool.grow(typename DummyTraits::Config{3});
+
+  EXPECT_EQ(pool.capacity(), 3u);
+  EXPECT_EQ(pool.available(), 3u);
+
+  auto ref = pool.reserve(req, ctx);
+  EXPECT_TRUE(ref.valid());
+  EXPECT_FALSE(pool.isCreated(ref.handle));
+}
+
+TEST(SlotPool, GrowAndCreateCreatesNewSlots) {
+  auto pool = makePool(1);
+  DummyTraits::Request req{};
+  DummyTraits::Context ctx{};
+
+  auto reserved = pool.reserve(req, ctx);
+  EXPECT_TRUE(pool.emplace(reserved.handle, req, ctx));
+  EXPECT_TRUE(pool.release(reserved.handle));
+
+  EXPECT_TRUE(pool.growAndCreate(typename DummyTraits::Config{3}, req, ctx));
+  EXPECT_FALSE(pool.tryReserve(req, ctx).valid());
+
+  auto ref = pool.acquire(req, ctx);
+  EXPECT_TRUE(ref.valid());
+}
+
+TEST(SlotPool, InitializeAndCreateCreatesAllSlots) {
+  Pool pool;
+  DummyTraits::Request req{};
+  DummyTraits::Context ctx{};
+
+  EXPECT_TRUE(pool.initializeAndCreate(typename DummyTraits::Config{2}, req, ctx));
+  EXPECT_EQ(pool.capacity(), 2u);
+  EXPECT_EQ(pool.available(), 2u);
+  EXPECT_FALSE(pool.tryReserve(req, ctx).valid());
+  EXPECT_TRUE(pool.tryAcquire(req, ctx).valid());
+}
+
 } // namespace

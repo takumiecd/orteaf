@@ -165,4 +165,42 @@ TEST(FixedSlotStore, ReleaseFailsWhenNotCreatedInDestroyMode) {
   EXPECT_FALSE(store.release(req.handle, req, ctx));
 }
 
+TEST(FixedSlotStore, GrowAddsUncreatedSlots) {
+  auto store = makeStore(1);
+  DummyTraits::Context ctx{};
+  DummyTraits::Request req{StoreHandle{1, 0}};
+
+  store.grow(typename DummyTraits::Config{3});
+
+  EXPECT_EQ(store.capacity(), 3u);
+  EXPECT_FALSE(store.isCreated(req.handle));
+  EXPECT_EQ(store.get(req.handle), nullptr);
+}
+
+TEST(FixedSlotStore, GrowAndCreateCreatesNewSlots) {
+  auto store = makeStore(1);
+  DummyTraits::Context ctx{};
+  DummyTraits::Request req{StoreHandle{0, 0}};
+
+  EXPECT_TRUE(store.growAndCreate(typename DummyTraits::Config{2}, req, ctx));
+
+  DummyTraits::Request req_new{StoreHandle{1, 0}};
+  auto ref = store.acquire(req_new, ctx);
+  EXPECT_TRUE(ref.valid());
+  EXPECT_EQ(ref.payload_ptr->value, 123);
+}
+
+TEST(FixedSlotStore, InitializeAndCreateCreatesAllSlots) {
+  DestroyOnReleaseStore store;
+  DestroyOnReleaseTraits::Context ctx{};
+  DestroyOnReleaseTraits::Request req{StoreHandle{0, 0}};
+
+  EXPECT_TRUE(store.initializeAndCreate(typename DestroyOnReleaseTraits::Config{2},
+                                        req, ctx));
+  DestroyOnReleaseTraits::Request req_new{StoreHandle{1, 0}};
+  auto ref = store.acquire(req_new, ctx);
+  EXPECT_TRUE(ref.valid());
+  EXPECT_EQ(ref.payload_ptr->value, 55);
+}
+
 } // namespace
