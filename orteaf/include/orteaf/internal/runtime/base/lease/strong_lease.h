@@ -209,6 +209,20 @@ public:
   }
 
   /**
+   * @brief Get the strong reference count from control block.
+   * @return The strong reference count, or 0 if invalid.
+   *
+   * Only available if ControlBlockT has a `count()` method.
+   * Useful for testing and debugging reference counting behavior.
+   */
+  auto count() const noexcept
+      -> decltype(std::declval<const ControlBlockT *>()->count())
+    requires requires(const ControlBlockT *cb) { cb->count(); }
+  {
+    return control_block_ ? control_block_->count() : 0;
+  }
+
+  /**
    * @brief Check if this lease is valid (owns a reference).
    * @return true if valid, false if invalid/empty.
    *

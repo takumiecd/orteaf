@@ -242,6 +242,20 @@ public:
   }
 
   /**
+   * @brief Get the weak reference count from control block.
+   * @return The weak reference count, or 0 if invalid.
+   *
+   * Only available if ControlBlockT has a `weakCount()` method.
+   * Useful for testing and debugging reference counting behavior.
+   */
+  auto weakCount() const noexcept
+      -> decltype(std::declval<const ControlBlockT *>()->weakCount())
+    requires requires(const ControlBlockT *cb) { cb->weakCount(); }
+  {
+    return control_block_ ? control_block_->weakCount() : 0;
+  }
+
+  /**
    * @brief Check if this lease is valid (holds a weak reference).
    * @return true if valid, false if invalid/empty.
    *
