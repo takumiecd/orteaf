@@ -268,7 +268,7 @@ public:
     auto fence_lease = RuntimeApi::acquireFence(device);
     FastOps::updateFence(encoder, *fence_lease.payloadPtr());
     return ::orteaf::internal::runtime::mps::resource::MpsFenceTicket(
-        queue_lease.handle(), command_buffer, std::move(fence_lease));
+        queue_lease.payloadHandle(), command_buffer, std::move(fence_lease));
   }
 
   /** @brief Acquire/update a fence and track/replace the ticket in a fence
@@ -321,25 +321,24 @@ public:
       return nullptr;
 
     // Acquire lock on command queue for safe access
-    auto queue_lock = queue_lease.tryLock();
-    if (!queue_lock) {
-      return nullptr; // Failed to acquire lock
+    auto *queue_ptr = queue_lease.payloadPtr();
+    if (!queue_ptr || !*queue_ptr) {
+      return nullptr; // Invalid queue
     }
 
-    auto *command_buffer = FastOps::createCommandBuffer(*queue_lock);
+    auto *command_buffer = FastOps::createCommandBuffer(*queue_ptr);
     auto *encoder = FastOps::createComputeCommandEncoder(command_buffer);
     FastOps::setPipelineState(encoder,
                               entry.pipelines[pipeline_index].pointer());
     static_cast<Binder &&>(binder)(encoder);
     FastOps::setThreadgroups(encoder, threadgroups, threads_per_threadgroup);
-    if (fence_token && queue_lease.handle().isValid()) {
+    if (fence_token && queue_lease.payloadHandle().isValid()) {
       updateFenceAndTrack<FastOps, RuntimeApi>(device, queue_lease, encoder,
                                                command_buffer, *fence_token);
     }
     FastOps::endEncoding(encoder);
     FastOps::commit(command_buffer);
     return command_buffer;
-    // queue_lock released here (RAII)
   }
 
   /**

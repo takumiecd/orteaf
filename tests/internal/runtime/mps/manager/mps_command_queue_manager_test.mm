@@ -75,53 +75,22 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, GrowthChunkSizeRejectsZero) {
               [&] { manager.setGrowthChunkSize(0); });
 }
 
-TYPED_TEST(MpsCommandQueueManagerTypedTest,
-           GrowthChunkSizeReflectedInDebugState) {
-  if constexpr (!TypeParam::is_mock) {
-    GTEST_SKIP() << "Mock-only test";
-    return;
-  }
-  auto &manager = this->manager();
-
-  // Arrange
-  manager.setGrowthChunkSize(3);
-  const auto device = this->adapter().device();
-  this->adapter().expectCreateCommandQueues({makeQueue(0x510)});
-
-  // Act
-  manager.initialize(device, this->getOps(), 1);
-  auto lease = manager.acquire();
-
-  // Assert
-  EXPECT_EQ(manager.growthChunkSize(), 3u);
-
-  // Cleanup
-  manager.release(lease);
-  this->adapter().expectDestroyCommandQueues({makeQueue(0x510)});
-  manager.shutdown();
-}
-
 // =============================================================================
 // Initialization Tests
 // =============================================================================
 
-TYPED_TEST(MpsCommandQueueManagerTypedTest,
-           InitializeCreatesConfiguredNumberOfResources) {
+TYPED_TEST(MpsCommandQueueManagerTypedTest, InitializeSetsCapacity) {
   auto &manager = this->manager();
-
-  // Arrange
-  this->adapter().expectCreateCommandQueues({makeQueue(0x1), makeQueue(0x2)});
   const auto device = this->adapter().device();
 
-  // Act
+  // Act (no createCommandQueue expected - lazy creation)
   manager.initialize(device, this->getOps(), 2);
 
   // Assert
   EXPECT_EQ(manager.capacity(), 2u);
+  EXPECT_TRUE(manager.isInitialized());
 
   // Cleanup
-  this->adapter().expectDestroyCommandQueuesInOrder(
-      {makeQueue(0x1), makeQueue(0x2)});
   manager.shutdown();
 }
 
@@ -144,19 +113,13 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, CapacityReflectsPoolSize) {
   // Before init
   EXPECT_EQ(manager.capacity(), 0u);
 
-  // Arrange
-  this->adapter().expectCreateCommandQueues(
-      {makeQueue(0x301), makeQueue(0x302), makeQueue(0x303)});
-
-  // Act
+  // Act (lazy creation - no createCommandQueue expected until acquire)
   manager.initialize(device, this->getOps(), 3);
 
   // Assert
   EXPECT_EQ(manager.capacity(), 3u);
 
   // Cleanup
-  this->adapter().expectDestroyCommandQueues(
-      {makeQueue(0x301), makeQueue(0x302), makeQueue(0x303)});
   manager.shutdown();
   EXPECT_EQ(manager.capacity(), 0u);
 }
@@ -174,393 +137,238 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, AcquireFailsBeforeInitialization) {
 }
 
 TYPED_TEST(MpsCommandQueueManagerTypedTest,
-           AcquireReturnsDistinctIdsWithinCapacity) {
+           AcquireCreatesQueueAndReturnsLease) {
   auto &manager = this->manager();
   const auto device = this->adapter().device();
 
   // Arrange
-  this->adapter().expectCreateCommandQueues(
-      {makeQueue(0x100), makeQueue(0x200)});
   manager.initialize(device, this->getOps(), 2);
 
-  // Act
-  auto id0 = manager.acquire();
-  auto id1 = manager.acquire();
+  // Expect queue creation on acquire (lazy creation)
+  this->adapter().expectCreateCommandQueues({makeQueue(0x100)});
 
-  // Assert
-  EXPECT_NE(id0.handle(), id1.handle());
-}
+  {
+    // Act
+    auto lease = manager.acquire();
 
-TYPED_TEST(MpsCommandQueueManagerTypedTest, AcquireGrowsPoolWhenFreelistEmpty) {
-  auto &manager = this->manager();
-  const auto device = this->adapter().device();
-
-  // Arrange
-  manager.setGrowthChunkSize(1);
-  this->adapter().expectCreateCommandQueues({makeQueue(0x300)});
-  manager.initialize(device, this->getOps(), 1);
-
-  // Act: First acquire uses existing
-  auto first = manager.acquire();
-
-  // Arrange: Expect growth
-  this->adapter().expectCreateCommandQueues({makeQueue(0x301)});
-
-  // Act: Second acquire triggers growth
-  auto second = manager.acquire();
-
-  // Assert
-  EXPECT_NE(first.handle(), second.handle());
-}
-
-TYPED_TEST(MpsCommandQueueManagerTypedTest,
-           SetGrowthChunkSizeRejectsExcessiveValue) {
-  auto &manager = this->manager();
-
-  // Act & Assert: SIZE_MAX exceeds Handle's max index range
-  ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
-    manager.setGrowthChunkSize(std::numeric_limits<std::size_t>::max());
-  });
-}
-
-// =============================================================================
-// Release Tests
-// =============================================================================
-
-TYPED_TEST(MpsCommandQueueManagerTypedTest, ReleaseFailsBeforeInitialization) {
-  auto &manager = this->manager();
-
-  // Act & Assert
-  ExpectError(diag_error::OrteafErrc::InvalidState,
-              [&] { (void)manager.acquire(); });
-}
-
-TYPED_TEST(MpsCommandQueueManagerTypedTest, ReleaseRejectsNonAcquiredId) {
-  auto &manager = this->manager();
-  const auto device = this->adapter().device();
-
-  // Arrange
-  this->adapter().expectCreateCommandQueues({makeQueue(0x700)});
-  manager.initialize(device, this->getOps(), 1);
-
-  // Act: Move lease and release both
-  auto lease = manager.acquire();
-  auto moved = std::move(lease);
-
-  // Assert: Release moved-from is benign
-  manager.release(lease);
-  manager.release(moved);
-}
-
-TYPED_TEST(MpsCommandQueueManagerTypedTest, ReleaseRequiresCompletedWork) {
-  auto &manager = this->manager();
-  const auto device = this->adapter().device();
-
-  // Arrange
-  this->adapter().expectCreateCommandQueues({makeQueue(0x710)});
-  manager.initialize(device, this->getOps(), 1);
-
-  // Act & Assert: Release via Lease
-  auto lease = manager.acquire();
-  lease.release();
-}
-
-TYPED_TEST(MpsCommandQueueManagerTypedTest,
-           ReleaseMakesHandleStaleAndRecyclesState) {
-  auto &manager = this->manager();
-  const auto device = this->adapter().device();
-
-  // Arrange
-  manager.setGrowthChunkSize(1);
-  this->adapter().expectCreateCommandQueues({makeQueue(0x720)});
-  manager.initialize(device, this->getOps(), 1);
-
-  // Act
-  auto lease = manager.acquire();
-  auto old_handle = lease.handle();
-  manager.release(lease);
-
-  this->adapter().expectCreateCommandQueues({});
-  auto recycled = manager.acquire();
-
-  // Assert: For non-generational handles, same slot is reused (same index)
-  // With generation, handles would differ; without generation, index is same
-  EXPECT_EQ(recycled.handle().index, old_handle.index);
-}
-
-// =============================================================================
-// Capacity Management Tests
-// =============================================================================
-
-TYPED_TEST(MpsCommandQueueManagerTypedTest, GrowCapacityAddsAdditionalQueues) {
-  auto &manager = this->manager();
-  const auto device = this->adapter().device();
-
-  // Arrange
-  this->adapter().expectCreateCommandQueues({makeQueue(0x350)});
-  manager.initialize(device, this->getOps(), 1);
-  EXPECT_EQ(manager.capacity(), 1u);
-
-  // Act
-  this->adapter().expectCreateCommandQueues(
-      {makeQueue(0x360), makeQueue(0x370)});
-  manager.growCapacity(2);
-
-  // Assert
-  EXPECT_EQ(manager.capacity(), 3u);
-
-  // Act: Zero growth is no-op
-  manager.growCapacity(0);
-  EXPECT_EQ(manager.capacity(), 3u);
-
-  // Act: Verify all can be acquired
-  auto id0 = manager.acquire();
-  auto id1 = manager.acquire();
-  auto id2 = manager.acquire();
-  EXPECT_NE(id0.handle(), id1.handle());
-  EXPECT_NE(id1.handle(), id2.handle());
-  EXPECT_NE(id0.handle(), id2.handle());
+    // Assert
+    EXPECT_NE(lease.payloadPtr(), nullptr);
+    EXPECT_NE(*lease.payloadPtr(), nullptr);
+  } // lease released here
 
   // Cleanup
-  id0.release();
-  id1.release();
-  id2.release();
+  this->adapter().expectDestroyCommandQueues({makeQueue(0x100)});
+  manager.shutdown();
+}
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest, AcquireGrowsPoolWhenNeeded) {
+  printf("AcquireGrowsPoolWhenNeeded 0\n");
+  auto &manager = this->manager();
+  const auto device = this->adapter().device();
+  printf("AcquireGrowsPoolWhenNeeded\n");
+  // Arrange - start with capacity 1
+  manager.setGrowthChunkSize(1);
+  manager.initialize(device, this->getOps(), 1);
+
+  printf("AcquireGrowsPoolWhenNeeded 1\n");
+
+  // Expect both queue creations upfront (mock requires all expectations set
+  // together)
+  this->adapter().expectCreateCommandQueues(
+      {makeQueue(0x300), makeQueue(0x301)});
+
+  {
+    printf("AcquireGrowsPoolWhenNeeded 2\n");
+    // First acquire creates first queue
+    auto first = manager.acquire();
+
+    // Second acquire triggers growth and creates second queue
+    auto second = manager.acquire();
+
+    printf("AcquireGrowsPoolWhenNeeded 3\n");
+
+    // Assert
+    EXPECT_NE(first.payloadHandle(), second.payloadHandle());
+  } // leases released here
+
+  printf("AcquireGrowsPoolWhenNeeded 4\n");
+
+  // Cleanup
   this->adapter().expectDestroyCommandQueues(
-      {makeQueue(0x350), makeQueue(0x360), makeQueue(0x370)});
+      {makeQueue(0x300), makeQueue(0x301)});
+
   manager.shutdown();
 }
 
 // =============================================================================
-// Debug State Tests
+// Acquire by Handle Tests
 // =============================================================================
 
-TYPED_TEST(MpsCommandQueueManagerTypedTest, HazardCountersDefaultToZero) {
+TYPED_TEST(MpsCommandQueueManagerTypedTest, AcquireByHandleReturnsLease) {
   auto &manager = this->manager();
   const auto device = this->adapter().device();
 
   // Arrange
-  this->adapter().expectCreateCommandQueues({makeQueue(0x900)});
+  manager.initialize(device, this->getOps(), 1);
+  this->adapter().expectCreateCommandQueues({makeQueue(0x400)});
+
+  mps_rt::MpsCommandQueueManager::CommandQueueHandle handle{};
+  {
+    auto original = manager.acquire();
+    handle = original.payloadHandle();
+
+    // Act: Acquire by handle creates new control block but same payload
+    auto byHandle = manager.acquire(handle);
+
+    // Assert: Same payload handle
+    EXPECT_EQ(byHandle.payloadHandle(), handle);
+    // payloadPtr may differ because different control blocks point to same slot
+  } // leases released here
+
+  // Cleanup
+  this->adapter().expectDestroyCommandQueues({makeQueue(0x400)});
+  manager.shutdown();
+}
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest, AcquireByInvalidHandleFails) {
+  auto &manager = this->manager();
+  const auto device = this->adapter().device();
+
+  // Arrange
   manager.initialize(device, this->getOps(), 1);
 
   // Act & Assert
-  auto lease = manager.acquire();
-  lease.release();
+  using Handle = mps_rt::MpsCommandQueueManager::CommandQueueHandle;
+  ExpectError(diag_error::OrteafErrc::InvalidArgument,
+              [&] { (void)manager.acquire(Handle::invalid()); });
+
+  // Cleanup
+  manager.shutdown();
 }
 
-TYPED_TEST(MpsCommandQueueManagerTypedTest,
-           HazardCountersCanBeUpdatedAndResetOnRelease) {
+// =============================================================================
+// Weak Lease Tests
+// =============================================================================
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest, LeaseDestructionAllowsShutdown) {
   auto &manager = this->manager();
   const auto device = this->adapter().device();
 
   // Arrange
-  this->adapter().expectCreateCommandQueues({makeQueue(0x910)});
+  manager.initialize(device, this->getOps(), 1);
+  this->adapter().expectCreateCommandQueues({makeQueue(0x500)});
+
+  // Act: Lease goes out of scope
+  {
+    auto lease = manager.acquire();
+    EXPECT_NE(lease.payloadPtr(), nullptr);
+  } // lease released here
+
+  // Assert: Can still shutdown (weak lease released before shutdown)
+  this->adapter().expectDestroyCommandQueues({makeQueue(0x500)});
+  manager.shutdown();
+}
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest, LeaseCopyIncrementsWeakCount) {
+  auto &manager = this->manager();
+  const auto device = this->adapter().device();
+
+  // Arrange
+  manager.initialize(device, this->getOps(), 1);
+  this->adapter().expectCreateCommandQueues({makeQueue(0x510)});
+
+  {
+    // Act
+    auto lease1 = manager.acquire();
+    auto initial_count = lease1.weakCount();
+    auto lease2 = lease1; // Copy
+
+    // Assert
+    EXPECT_EQ(lease2.weakCount(), initial_count + 1);
+  } // leases released here
+
+  // Cleanup
+  this->adapter().expectDestroyCommandQueues({makeQueue(0x510)});
+  manager.shutdown();
+}
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest, LeaseMoveDoesNotChangeWeakCount) {
+  auto &manager = this->manager();
+  const auto device = this->adapter().device();
+
+  // Arrange
+  manager.initialize(device, this->getOps(), 1);
+  this->adapter().expectCreateCommandQueues({makeQueue(0x520)});
+
+  {
+    // Act
+    auto lease1 = manager.acquire();
+    auto initial_count = lease1.weakCount();
+    auto lease2 = std::move(lease1); // Move
+
+    // Assert
+    EXPECT_EQ(lease2.weakCount(), initial_count);
+  } // lease2 released here
+
+  // Cleanup
+  this->adapter().expectDestroyCommandQueues({makeQueue(0x520)});
+  manager.shutdown();
+}
+
+// =============================================================================
+// isAlive Tests
+// =============================================================================
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest, IsAliveReturnsTrueForValidHandle) {
+  auto &manager = this->manager();
+  const auto device = this->adapter().device();
+
+  // Arrange
+  manager.initialize(device, this->getOps(), 1);
+  this->adapter().expectCreateCommandQueues({makeQueue(0x700)});
+
+  mps_rt::MpsCommandQueueManager::CommandQueueHandle handle{};
+  {
+    auto lease = manager.acquire();
+    handle = lease.payloadHandle();
+
+    // Assert
+    EXPECT_TRUE(manager.isAlive(handle));
+  } // lease released here
+
+  // Cleanup
+  this->adapter().expectDestroyCommandQueues({makeQueue(0x700)});
+  manager.shutdown();
+}
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest,
+           IsAliveReturnsFalseForInvalidHandle) {
+  auto &manager = this->manager();
+  const auto device = this->adapter().device();
+
+  // Arrange
   manager.initialize(device, this->getOps(), 1);
 
-  // Act: Acquire, release, reacquire
-  auto lease = manager.acquire();
-  lease.release();
-  auto recycled = manager.acquire();
-  recycled.release();
+  // Assert
+  using Handle = mps_rt::MpsCommandQueueManager::CommandQueueHandle;
+  EXPECT_FALSE(manager.isAlive(Handle::invalid()));
+
+  // Cleanup
+  manager.shutdown();
 }
 
 #if ORTEAF_ENABLE_TEST
-TYPED_TEST(MpsCommandQueueManagerTypedTest, DebugStateReflectsSetterUpdates) {
+TYPED_TEST(MpsCommandQueueManagerTypedTest, ControlBlockPoolCapacityForTest) {
   auto &manager = this->manager();
   const auto device = this->adapter().device();
 
   // Arrange
-  this->adapter().expectCreateCommandQueues({makeQueue(0x920)});
   manager.initialize(device, this->getOps(), 1);
 
-  // Act
-  auto lease = manager.acquire();
-  const auto handle = lease.handle();
-  lease.release();
+  // Assert
+  EXPECT_GE(manager.controlBlockPoolCapacityForTest(), 1u);
 
-  // Assert: Resource is not in use (canTeardown = true)
-  const auto &cb = manager.controlBlockForTest(handle.index);
-  EXPECT_TRUE(cb.canTeardown());
+  // Cleanup
+  manager.shutdown();
 }
 #endif
-
-// =============================================================================
-// Shared Ownership Tests
-// =============================================================================
-
-TYPED_TEST(MpsCommandQueueManagerTypedTest,
-           LeasesCanBeCopiedAndShareOwnership) {
-  auto &manager = this->manager();
-  const auto device = this->adapter().device();
-
-  // Arrange
-  this->adapter().expectCreateCommandQueues({makeQueue(0xB00)});
-  manager.initialize(device, this->getOps(), 1);
-
-  // Act
-  auto lease1 = manager.acquire();
-  auto lease2 = lease1; // Copy
-
-  // Assert
-  EXPECT_TRUE(lease1.isValid());
-  EXPECT_TRUE(lease2.isValid());
-  EXPECT_EQ(lease1.handle(), lease2.handle());
-
-  // Cleanup: Release both. Expect destroy ONLY after second release.
-  lease1.release();
-  // Resource should still be alive (lease2 holds it)
-  // We can't easily check "alive" without internal access, but we can verify no
-  // destroy call yet.
-
-  this->adapter().expectDestroyCommandQueues({makeQueue(0xB00)});
-  lease2.release(); // Now expect destroy (triggered by shutdown or here if we
-                    // tracked strictly)
-  manager.shutdown();
-}
-
-TYPED_TEST(MpsCommandQueueManagerTypedTest,
-           ResourceDestroyedWhenAllLeasesGone) {
-  auto &manager = this->manager();
-  const auto device = this->adapter().device();
-
-  // Arrange
-  this->adapter().expectCreateCommandQueues({makeQueue(0xB10)});
-  manager.initialize(device, this->getOps(), 1);
-
-  // Act
-  auto lease1 = manager.acquire();
-  auto lease2 = lease1;
-
-  // Release logic check
-  lease1.release();
-
-  // Clean up remaining
-  this->adapter().expectDestroyCommandQueues({makeQueue(0xB10)});
-  lease2.release();
-  manager.shutdown();
-}
-
-// =============================================================================
-// Locking Tests
-// =============================================================================
-
-TYPED_TEST(MpsCommandQueueManagerTypedTest, TryLockAcquiresExplicitLock) {
-  auto &manager = this->manager();
-  const auto device = this->adapter().device();
-
-  // Arrange
-  this->adapter().expectCreateCommandQueues({makeQueue(0xC00)});
-  manager.initialize(device, this->getOps(), 1);
-  auto lease = manager.acquire();
-
-  // Act: tryLock returns ScopedLock with RAII unlocking
-  auto lock = manager.tryLock(lease);
-
-  // Assert
-  EXPECT_TRUE(lock); // Lock acquired
-
-  // Cleanup (lock releases automatically via RAII)
-  lease.release();
-  this->adapter().expectDestroyCommandQueues({makeQueue(0xC00)});
-  manager.shutdown();
-}
-
-TYPED_TEST(MpsCommandQueueManagerTypedTest, TryLockFailsIfAlreadyLocked) {
-  auto &manager = this->manager();
-  const auto device = this->adapter().device();
-
-  // Arrange
-  this->adapter().expectCreateCommandQueues({makeQueue(0xC10)});
-  manager.initialize(device, this->getOps(), 1);
-  auto lease = manager.acquire();
-
-  // Act: First lock succeeds, second fails while first is held
-  auto firstLock = manager.tryLock(lease);
-  auto secondLock = manager.tryLock(lease); // Fails because mutex is held
-
-  // Assert
-  EXPECT_TRUE(firstLock);
-  EXPECT_FALSE(secondLock); // Already locked
-
-  // Cleanup (firstLock releases automatically via RAII)
-  lease.release();
-  this->adapter().expectDestroyCommandQueues({makeQueue(0xC10)});
-  manager.shutdown();
-}
-
-TYPED_TEST(MpsCommandQueueManagerTypedTest, ScopedLockUnlockOnDestruction) {
-  auto &manager = this->manager();
-  const auto device = this->adapter().device();
-
-  // Arrange
-  this->adapter().expectCreateCommandQueues({makeQueue(0xC20)});
-  manager.initialize(device, this->getOps(), 1);
-  auto lease = manager.acquire();
-
-  // Act & Assert
-  {
-    auto lock = lease.tryLock(); // Returns ScopedLock with mutex lock
-    ASSERT_TRUE(lock);           // Check if lock acquired
-
-    // While locked, another tryLock should fail
-    auto lock2 = lease.tryLock();
-    EXPECT_FALSE(lock2);
-  }
-  // lock destroyed here -> mutex unlocked via RAII
-
-  // Assert: Can lock again after ScopedLock is destroyed
-  {
-    auto lock3 = lease.tryLock();
-    EXPECT_TRUE(lock3);
-  }
-
-  // Cleanup
-  lease.release();
-  this->adapter().expectDestroyCommandQueues({makeQueue(0xC20)});
-  manager.shutdown();
-}
-
-TYPED_TEST(MpsCommandQueueManagerTypedTest, ScopedLockProvidesPayloadAccess) {
-  auto &manager = this->manager();
-  const auto device = this->adapter().device();
-
-  // Arrange
-  this->adapter().expectCreateCommandQueues({makeQueue(0xC30)});
-  manager.initialize(device, this->getOps(), 1);
-  auto lease = manager.acquire();
-
-  // Act: Lock and access via ScopedLock
-  auto lock = lease.tryLock();
-  ASSERT_TRUE(lock);
-
-  // Access payload through ScopedLock
-  auto &payload = *lock;
-  EXPECT_NE(payload, nullptr);
-
-  // Cleanup
-  lease.release();
-  this->adapter().expectDestroyCommandQueues({makeQueue(0xC30)});
-  manager.shutdown();
-}
-
-TYPED_TEST(MpsCommandQueueManagerTypedTest, BlockingLockWorks) {
-  auto &manager = this->manager();
-  const auto device = this->adapter().device();
-
-  // Arrange
-  this->adapter().expectCreateCommandQueues({makeQueue(0xC40)});
-  manager.initialize(device, this->getOps(), 1);
-  auto lease = manager.acquire();
-
-  // Act: Use blocking lock()
-  auto lock = lease.lock(); // Blocking lock
-  ASSERT_TRUE(lock);
-
-  // Access payload
-  auto &payload = *lock;
-  EXPECT_NE(payload, nullptr);
-
-  // Cleanup
-  lease.release();
-  this->adapter().expectDestroyCommandQueues({makeQueue(0xC40)});
-  manager.shutdown();
-}

@@ -1,8 +1,10 @@
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "orteaf/internal/runtime/mps/platform/wrapper/mps_compute_command_encoder.h"
 #include "orteaf/internal/runtime/mps/resource/mps_fence_token.h"
 #include "orteaf/internal/runtime/mps/resource/mps_kernel_launcher_impl.h"
+#include "tests/internal/runtime/mps/manager/testing/backend_mock.h"
 
 namespace base = orteaf::internal::base;
 
@@ -58,6 +60,40 @@ public:
   static inline base::DeviceHandle last_device{};
   static inline std::string last_library{};
   static inline std::string last_function{};
+};
+
+} // namespace
+
+namespace {
+
+struct TestCommandQueueLease {
+  using Manager =
+      ::orteaf::internal::runtime::mps::manager::MpsCommandQueueManager;
+  using MockOps = ::orteaf::tests::runtime::mps::MpsBackendOpsMock;
+  using Queue =
+      ::orteaf::internal::runtime::mps::platform::wrapper::MpsCommandQueue_t;
+  using Device =
+      ::orteaf::internal::runtime::mps::platform::wrapper::MpsDevice_t;
+
+  explicit TestCommandQueueLease(Queue queue_value)
+      : device(reinterpret_cast<Device>(0x1)), queue(queue_value) {
+    EXPECT_CALL(ops, createCommandQueue(device))
+        .WillOnce(::testing::Return(queue));
+    EXPECT_CALL(ops, destroyCommandQueue(queue)).Times(1);
+    manager.initialize(device, &ops, 1);
+    lease = manager.acquire();
+  }
+
+  ~TestCommandQueueLease() {
+    lease.release();
+    manager.shutdown();
+  }
+
+  ::testing::NiceMock<MockOps> ops;
+  Manager manager;
+  Device device{nullptr};
+  Queue queue{nullptr};
+  Manager::CommandQueueLease lease{};
 };
 
 } // namespace
@@ -403,9 +439,8 @@ TEST(MpsKernelLauncherImplTest, DispatchOneShotByIndex) {
   ::orteaf::internal::runtime::mps::platform::wrapper::MpsCommandQueue_t queue =
       reinterpret_cast<::orteaf::internal::runtime::mps::platform::wrapper::
                            MpsCommandQueue_t>(0x40);
-  auto queue_lease =
-      ::orteaf::internal::runtime::mps::manager::MpsCommandQueueManager::
-          CommandQueueLease::makeForTest(base::CommandQueueHandle{123}, queue);
+  TestCommandQueueLease queue_helper(queue);
+  auto &queue_lease = queue_helper.lease;
   ::orteaf::internal::runtime::mps::platform::wrapper::MPSSize_t tg{7, 8, 9};
   ::orteaf::internal::runtime::mps::platform::wrapper::MPSSize_t tptg{1, 2, 3};
 
@@ -451,9 +486,8 @@ TEST(MpsKernelLauncherImplTest, DispatchOneShotByNameMissingReturnsNullptr) {
   ::orteaf::internal::runtime::mps::platform::wrapper::MpsCommandQueue_t queue =
       reinterpret_cast<::orteaf::internal::runtime::mps::platform::wrapper::
                            MpsCommandQueue_t>(0x40);
-  auto queue_lease =
-      ::orteaf::internal::runtime::mps::manager::MpsCommandQueueManager::
-          CommandQueueLease::makeForTest(base::CommandQueueHandle{123}, queue);
+  TestCommandQueueLease queue_helper(queue);
+  auto &queue_lease = queue_helper.lease;
   ::orteaf::internal::runtime::mps::platform::wrapper::MPSSize_t tg{1, 1, 1};
   ::orteaf::internal::runtime::mps::platform::wrapper::MPSSize_t tptg{1, 1, 1};
 
@@ -470,11 +504,10 @@ TEST(MpsKernelLauncherImplTest, UpdateFenceReplacesTicketForSameQueue) {
   const base::DeviceHandle device{0};
   impl.initialize<DummyPrivateOps>(device);
 
-  auto queue_lease = ::orteaf::internal::runtime::mps::manager::
-      MpsCommandQueueManager::CommandQueueLease::makeForTest(
-          base::CommandQueueHandle{42},
-          reinterpret_cast<::orteaf::internal::runtime::mps::platform::wrapper::
-                               MpsCommandQueue_t>(0x41));
+  TestCommandQueueLease queue_helper(
+      reinterpret_cast<::orteaf::internal::runtime::mps::platform::wrapper::
+                           MpsCommandQueue_t>(0x41));
+  auto &queue_lease = queue_helper.lease;
   ::orteaf::internal::runtime::mps::resource::MpsFenceToken token{};
 
   auto *encoder = MockComputeFastOps::fake_encoder;
@@ -511,11 +544,8 @@ TEST(MpsKernelLauncherImplTest, DispatchOneShotAddsFenceTicketWhenProvided) {
   ::orteaf::internal::runtime::mps::platform::wrapper::MPSSize_t tg{1, 1, 1};
   ::orteaf::internal::runtime::mps::platform::wrapper::MPSSize_t tptg{1, 1, 1};
 
-  auto queue_lease = ::orteaf::internal::runtime::mps::manager::
-      MpsCommandQueueManager::CommandQueueLease::makeForTest(
-          base::CommandQueueHandle{99},
-          reinterpret_cast<::orteaf::internal::runtime::mps::platform::wrapper::
-                               MpsCommandQueue_t>(0x40));
+  TestCommandQueueLease queue_helper(queue);
+  auto &queue_lease = queue_helper.lease;
   ::orteaf::internal::runtime::mps::resource::MpsFenceToken token{};
 
   MockComputeFastOps::last_encoder_for_fence_update = nullptr;
@@ -528,7 +558,7 @@ TEST(MpsKernelLauncherImplTest, DispatchOneShotAddsFenceTicketWhenProvided) {
 
   EXPECT_EQ(command_buffer, MockComputeFastOps::fake_buffer);
   ASSERT_EQ(token.size(), 1u);
-  EXPECT_EQ(token[0].commandQueueHandle(), queue_lease.handle());
+  EXPECT_EQ(token[0].commandQueueHandle(), queue_lease.payloadHandle());
   EXPECT_EQ(token[0].commandBuffer(), MockComputeFastOps::fake_buffer);
   EXPECT_TRUE(token[0].hasFence());
   EXPECT_EQ(MockComputeFastOps::last_encoder_for_fence_update,
@@ -542,7 +572,6 @@ TEST(MpsKernelLauncherImplTest, UpdateFenceReturnsTicketAndEncodesUpdate) {
   const base::DeviceHandle device{0};
   impl.initialize<DummyPrivateOps>(device);
 
-  base::CommandQueueHandle queue_handle{1};
   auto *encoder = MockComputeFastOps::fake_encoder;
   auto *command_buffer = MockComputeFastOps::fake_buffer;
 
@@ -550,19 +579,18 @@ TEST(MpsKernelLauncherImplTest, UpdateFenceReturnsTicketAndEncodesUpdate) {
   MockComputeFastOps::last_fence_updated = reinterpret_cast<
       ::orteaf::internal::runtime::mps::platform::wrapper::MpsFence_t>(0xdead);
 
+  TestCommandQueueLease queue_helper(
+      reinterpret_cast<::orteaf::internal::runtime::mps::platform::wrapper::
+                           MpsCommandQueue_t>(0x50));
+  auto &queue_lease = queue_helper.lease;
+
   auto ticket = impl.updateFence<MockComputeFastOps, DummyPrivateOps>(
-      device,
-      ::orteaf::internal::runtime::mps::manager::MpsCommandQueueManager::
-          CommandQueueLease::makeForTest(
-              queue_handle,
-              reinterpret_cast<::orteaf::internal::runtime::mps::platform::
-                                   wrapper::MpsCommandQueue_t>(0x50)),
-      encoder, command_buffer);
+      device, queue_lease, encoder, command_buffer);
 
   EXPECT_EQ(MockComputeFastOps::last_encoder_for_fence_update, encoder);
   EXPECT_EQ(MockComputeFastOps::last_fence_updated,
             nullptr); // DummyPrivateOps returns null fence
-  EXPECT_EQ(ticket.commandQueueHandle(), queue_handle);
+  EXPECT_EQ(ticket.commandQueueHandle(), queue_lease.payloadHandle());
   EXPECT_EQ(ticket.commandBuffer(), command_buffer);
   EXPECT_TRUE(ticket.hasFence());
   EXPECT_EQ(*ticket.fenceHandle().payloadPtr(), nullptr);

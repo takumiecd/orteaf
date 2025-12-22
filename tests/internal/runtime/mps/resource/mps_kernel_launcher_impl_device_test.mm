@@ -50,10 +50,11 @@ TEST(MpsKernelLauncherImplDeviceTest, DispatchOneShotExecutesEmbeddedIdentity) {
   auto *device_handle =
       ::orteaf::internal::runtime::mps::platform::wrapper::getDevice(0);
   ASSERT_NE(device_handle, nullptr);
-  auto *queue =
-      ::orteaf::internal::runtime::mps::platform::wrapper::createCommandQueue(
-          device_handle);
-  ASSERT_NE(queue, nullptr);
+  ::orteaf::internal::runtime::mps::platform::MpsSlowOpsImpl slow_ops{};
+  ::orteaf::internal::runtime::mps::manager::MpsCommandQueueManager
+      queue_manager{};
+  queue_manager.initialize(device_handle, &slow_ops, 1);
+  auto queue_lease = queue_manager.acquire();
 
   // Create a shared heap and buffer.
   auto *desc = ::orteaf::internal::runtime::mps::platform::wrapper::
@@ -88,10 +89,6 @@ TEST(MpsKernelLauncherImplDeviceTest, DispatchOneShotExecutesEmbeddedIdentity) {
                                                                     1};
   ::orteaf::internal::runtime::mps::platform::wrapper::MPSSize_t tptg{1, 1, 1};
 
-  auto queue_lease =
-      ::orteaf::internal::runtime::mps::manager::MpsCommandQueueManager::
-          CommandQueueLease::makeForTest(base::CommandQueueHandle{0}, queue);
-
   {
     mps_rt::resource::MpsKernelLauncherImpl<1> impl({
         {"embed_test_library", "orteaf_embed_test_identity"},
@@ -121,12 +118,13 @@ TEST(MpsKernelLauncherImplDeviceTest, DispatchOneShotExecutesEmbeddedIdentity) {
         command_buffer);
   } // impl destroyed here, releases all leases
 
+  queue_lease.release();
+  queue_manager.shutdown();
+
   ::orteaf::internal::runtime::mps::platform::wrapper::destroyBuffer(buffer);
   ::orteaf::internal::runtime::mps::platform::wrapper::destroyHeap(heap);
   ::orteaf::internal::runtime::mps::platform::wrapper::destroyHeapDescriptor(
       desc);
-  ::orteaf::internal::runtime::mps::platform::wrapper::destroyCommandQueue(
-      queue);
   ::orteaf::internal::runtime::mps::platform::wrapper::deviceRelease(
       device_handle);
 
