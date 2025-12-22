@@ -222,7 +222,7 @@ public:
           MpsComputeCommandEncoder_t encoder,
       ::orteaf::internal::runtime::mps::manager::MpsFenceManager::FenceLease
           &fence) const {
-    FastOps::updateFence(encoder, fence.pointer());
+    FastOps::updateFence(encoder, *fence.payloadPtr());
   }
 
   /** @brief Encode a fence wait on the encoder using an existing fence lease.
@@ -233,7 +233,7 @@ public:
                         MpsComputeCommandEncoder_t encoder,
                     const ::orteaf::internal::runtime::mps::manager::
                         MpsFenceManager::FenceLease &fence) const {
-    FastOps::waitForFence(encoder, fence.pointer());
+    FastOps::waitForFence(encoder, *fence.payloadPtr());
   }
 
   /** @brief Encode waits for all fences stored in a fence token. */
@@ -246,7 +246,7 @@ public:
                    &token) const {
     for (const auto &ticket : token) {
       if (ticket.hasFence()) {
-        FastOps::waitForFence(encoder, ticket.fenceHandle().pointer());
+        FastOps::waitForFence(encoder, *ticket.fenceHandle().payloadPtr());
       }
     }
   }
@@ -266,7 +266,7 @@ public:
       ::orteaf::internal::runtime::mps::platform::wrapper::MpsCommandBuffer_t
           command_buffer) const {
     auto fence_lease = RuntimeApi::acquireFence(device);
-    FastOps::updateFence(encoder, fence_lease.pointer());
+    FastOps::updateFence(encoder, *fence_lease.payloadPtr());
     return ::orteaf::internal::runtime::mps::resource::MpsFenceTicket(
         queue_lease.handle(), command_buffer, std::move(fence_lease));
   }

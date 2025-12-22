@@ -565,5 +565,5 @@ TEST(MpsKernelLauncherImplTest, UpdateFenceReturnsTicketAndEncodesUpdate) {
   EXPECT_EQ(ticket.commandQueueHandle(), queue_handle);
   EXPECT_EQ(ticket.commandBuffer(), command_buffer);
   EXPECT_TRUE(ticket.hasFence());
-  EXPECT_EQ(ticket.fenceHandle().pointer(), nullptr);
+  EXPECT_EQ(*ticket.fenceHandle().payloadPtr(), nullptr);
 }

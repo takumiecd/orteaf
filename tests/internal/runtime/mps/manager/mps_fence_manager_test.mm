@@ -169,7 +169,7 @@ TYPED_TEST(MpsFenceManagerTypedTest, AcquireReturnsValidLease) {
 
   // Assert
   EXPECT_TRUE(lease);
-  EXPECT_NE(lease.pointer(), nullptr);
+  EXPECT_NE(lease.payloadPtr(), nullptr);
   EXPECT_TRUE(lease.handle().isValid());
 
   // Cleanup
@@ -179,7 +179,6 @@ TYPED_TEST(MpsFenceManagerTypedTest, AcquireReturnsValidLease) {
   }
   manager.shutdown();
 }
-
 
 // =============================================================================
 // Release Tests
