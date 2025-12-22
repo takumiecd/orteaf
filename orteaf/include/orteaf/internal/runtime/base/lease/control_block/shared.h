@@ -43,8 +43,23 @@ public:
   SharedControlBlock() = default;
   SharedControlBlock(const SharedControlBlock &) = delete;
   SharedControlBlock &operator=(const SharedControlBlock &) = delete;
-  SharedControlBlock(SharedControlBlock &&) = default;
-  SharedControlBlock &operator=(SharedControlBlock &&) = default;
+  SharedControlBlock(SharedControlBlock &&other) noexcept {
+    strong_count_.store(other.strong_count_.load(std::memory_order_relaxed),
+                        std::memory_order_relaxed);
+    payload_handle_ = other.payload_handle_;
+    payload_ptr_ = other.payload_ptr_;
+    payload_pool_ = other.payload_pool_;
+  }
+  SharedControlBlock &operator=(SharedControlBlock &&other) noexcept {
+    if (this != &other) {
+      strong_count_.store(other.strong_count_.load(std::memory_order_relaxed),
+                          std::memory_order_relaxed);
+      payload_handle_ = other.payload_handle_;
+      payload_ptr_ = other.payload_ptr_;
+      payload_pool_ = other.payload_pool_;
+    }
+    return *this;
+  }
   ~SharedControlBlock() = default;
 
   /**

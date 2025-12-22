@@ -41,8 +41,27 @@ public:
   WeakSharedControlBlock() = default;
   WeakSharedControlBlock(const WeakSharedControlBlock &) = delete;
   WeakSharedControlBlock &operator=(const WeakSharedControlBlock &) = delete;
-  WeakSharedControlBlock(WeakSharedControlBlock &&) = default;
-  WeakSharedControlBlock &operator=(WeakSharedControlBlock &&) = default;
+  WeakSharedControlBlock(WeakSharedControlBlock &&other) noexcept {
+    strong_count_.store(other.strong_count_.load(std::memory_order_relaxed),
+                        std::memory_order_relaxed);
+    weak_count_.store(other.weak_count_.load(std::memory_order_relaxed),
+                      std::memory_order_relaxed);
+    payload_handle_ = other.payload_handle_;
+    payload_ptr_ = other.payload_ptr_;
+    payload_pool_ = other.payload_pool_;
+  }
+  WeakSharedControlBlock &operator=(WeakSharedControlBlock &&other) noexcept {
+    if (this != &other) {
+      strong_count_.store(other.strong_count_.load(std::memory_order_relaxed),
+                          std::memory_order_relaxed);
+      weak_count_.store(other.weak_count_.load(std::memory_order_relaxed),
+                        std::memory_order_relaxed);
+      payload_handle_ = other.payload_handle_;
+      payload_ptr_ = other.payload_ptr_;
+      payload_pool_ = other.payload_pool_;
+    }
+    return *this;
+  }
   ~WeakSharedControlBlock() = default;
 
   /**
