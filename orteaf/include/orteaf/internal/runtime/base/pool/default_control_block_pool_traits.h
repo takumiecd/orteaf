@@ -51,6 +51,7 @@ struct DefaultControlBlockPoolTraits {
   /// @brief 初期化時の設定
   struct Config {
     std::size_t capacity{0};
+    std::size_t block_size{0};
   };
 
   /**
