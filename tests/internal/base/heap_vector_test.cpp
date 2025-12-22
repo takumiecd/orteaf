@@ -86,6 +86,8 @@ TEST(HeapVectorTest, PushAndEmplaceIncreaseSize) {
     vec.emplaceBack(3);
 
     ASSERT_EQ(vec.size(), 3u);
+    EXPECT_EQ(vec.front(), 1);
+    EXPECT_EQ(vec.back(), 3);
     EXPECT_EQ(vec[0], 1);
     EXPECT_EQ(vec[1], 2);
     EXPECT_EQ(vec[2], 3);
@@ -105,6 +107,53 @@ TEST(HeapVectorTest, ReserveAndResizeManageCapacity) {
     vec.resize(4, 9);
     EXPECT_EQ(vec.size(), 4u);
     EXPECT_EQ(vec[3], 9);
+}
+
+/** @test HeapVectorTest.AtThrowsOnOutOfRange
+ *  @brief Confirms at() throws when index is out of bounds.
+ */
+TEST(HeapVectorTest, AtThrowsOnOutOfRange) {
+    HeapVector<int> vec;
+    vec.resize(2, 3);
+    EXPECT_THROW(vec.at(2), std::out_of_range);
+    EXPECT_EQ(vec.at(0), 3);
+}
+
+/** @test HeapVectorTest.PopBackReducesSize
+ *  @brief Validates popBack removes the last element safely.
+ */
+TEST(HeapVectorTest, PopBackReducesSize) {
+    HeapVector<int> vec;
+    vec.pushBack(10);
+    vec.pushBack(20);
+    vec.popBack();
+    EXPECT_EQ(vec.size(), 1u);
+    EXPECT_EQ(vec.back(), 10);
+    vec.popBack();
+    EXPECT_TRUE(vec.empty());
+}
+
+/** @test HeapVectorTest.IteratorsSpanAllElements
+ *  @brief Ensures iterator and const_iterator cover all elements.
+ */
+TEST(HeapVectorTest, IteratorsSpanAllElements) {
+    HeapVector<int> vec;
+    vec.pushBack(1);
+    vec.pushBack(2);
+    vec.pushBack(3);
+
+    int sum = 0;
+    for (auto it = vec.begin(); it != vec.end(); ++it) {
+        sum += *it;
+    }
+    EXPECT_EQ(sum, 6);
+
+    const HeapVector<int> &cvec = vec;
+    int csum = 0;
+    for (auto it = cvec.cbegin(); it != cvec.cend(); ++it) {
+        csum += *it;
+    }
+    EXPECT_EQ(csum, 6);
 }
 
 /** @test HeapVectorTest.ShrinkToFitReleasesExtraCapacity

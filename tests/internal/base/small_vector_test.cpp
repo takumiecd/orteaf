@@ -13,6 +13,7 @@
 #include <cstddef>
 #include <stdexcept>
 #include <utility>
+#include <vector>
 
 namespace orteaf::internal::base {
 namespace {
@@ -137,6 +138,96 @@ TEST(SmallVectorTest, ResizeAndClearAdjustSize) {
 
     vec.clear();
     EXPECT_TRUE(vec.empty());
+}
+
+/** @test SmallVectorTest.AtThrowsOnOutOfRange
+ *  @brief Confirms at() throws when index is out of bounds.
+ */
+TEST(SmallVectorTest, AtThrowsOnOutOfRange) {
+    SmallVector<int, 2> vec;
+    vec.pushBack(1);
+    EXPECT_THROW(vec.at(1), std::out_of_range);
+    EXPECT_EQ(vec.at(0), 1);
+}
+
+/** @test SmallVectorTest.ReserveAndShrinkToFit
+ *  @brief Validates reserve grows capacity and shrinkToFit releases unused space.
+ */
+TEST(SmallVectorTest, ReserveAndShrinkToFit) {
+    SmallVector<int, 2> vec;
+    const int* inline_ptr = vec.data();
+    vec.reserve(8);
+    EXPECT_GE(vec.capacity(), 8u);
+    vec.resize(3, 7);
+    EXPECT_NE(vec.data(), inline_ptr);
+    vec.shrinkToFit();
+    EXPECT_EQ(vec.size(), 3u);
+    EXPECT_LE(vec.capacity(), 3u);
+}
+
+/** @test SmallVectorTest.InsertEraseEmplace
+ *  @brief Exercises insert/emplace/erase operations and ordering.
+ */
+TEST(SmallVectorTest, InsertEraseEmplace) {
+    SmallVector<int, 2> vec;
+    vec.pushBack(1);
+    vec.pushBack(3);
+
+    vec.insert(vec.begin() + 1, 2);
+    ASSERT_EQ(vec.size(), 3u);
+    EXPECT_EQ(vec[0], 1);
+    EXPECT_EQ(vec[1], 2);
+    EXPECT_EQ(vec[2], 3);
+
+    vec.emplace(vec.begin() + 3, 4);
+    EXPECT_EQ(vec.back(), 4);
+
+    vec.erase(vec.begin() + 1);
+    ASSERT_EQ(vec.size(), 3u);
+    EXPECT_EQ(vec[0], 1);
+    EXPECT_EQ(vec[1], 3);
+    EXPECT_EQ(vec[2], 4);
+
+    vec.insert(vec.begin(), 2, 9);
+    ASSERT_EQ(vec.size(), 5u);
+    EXPECT_EQ(vec[0], 9);
+    EXPECT_EQ(vec[1], 9);
+
+    vec.erase(vec.begin(), vec.begin() + 2);
+    ASSERT_EQ(vec.size(), 3u);
+    EXPECT_EQ(vec[0], 1);
+}
+
+/** @test SmallVectorTest.RangeInsertMaintainsOrder
+ *  @brief Ensures range insert preserves element order.
+ */
+TEST(SmallVectorTest, RangeInsertMaintainsOrder) {
+    SmallVector<int, 2> vec;
+    vec.pushBack(1);
+    vec.pushBack(4);
+    std::vector<int> values{2, 3};
+
+    vec.insert(vec.begin() + 1, values.begin(), values.end());
+    ASSERT_EQ(vec.size(), 4u);
+    EXPECT_EQ(vec[0], 1);
+    EXPECT_EQ(vec[1], 2);
+    EXPECT_EQ(vec[2], 3);
+    EXPECT_EQ(vec[3], 4);
+}
+
+/** @test SmallVectorTest.ConstIteration
+ *  @brief Verifies const iteration covers all elements.
+ */
+TEST(SmallVectorTest, ConstIteration) {
+    SmallVector<int, 2> vec;
+    vec.pushBack(2);
+    vec.pushBack(4);
+    const SmallVector<int, 2>& cvec = vec;
+    int sum = 0;
+    for (auto it = cvec.cbegin(); it != cvec.cend(); ++it) {
+        sum += *it;
+    }
+    EXPECT_EQ(sum, 6);
 }
 
 /** @test SmallVectorTest.SwapAndMovePreserveElements

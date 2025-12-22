@@ -2,10 +2,18 @@
 
 #include <cstddef>
 #include <new>
+#include <stdexcept>
 #include <type_traits>
 
 namespace orteaf::internal::base {
 
+/**
+ * @brief Minimal vector-like container backed by a single heap allocation.
+ *
+ * HeapVector is a light-weight alternative to std::vector intended for
+ * internal use. It provides contiguous storage and a subset of the std::vector
+ * API while keeping implementation small and explicit.
+ */
 template <typename T>
 class HeapVector {
 public:
@@ -101,16 +109,26 @@ public:
         ::operator delete(data_);
     }
 
+    /// @brief Append a copy of value (copy-constructible only).
     void pushBack(const T& value) requires std::is_copy_constructible_v<T> { emplaceBack(value); }
     void pushBack(const T& value) requires (!std::is_copy_constructible_v<T>) = delete;
+    /// @brief Append a moved value.
     void pushBack(T&& value) { emplaceBack(static_cast<T&&>(value)); }
 
+    /// @brief Append an element constructed in-place.
     template <typename... Args>
     T& emplaceBack(Args&&... args) {
         ensureCapacityFor(size_ + 1);
         new (data_ + size_) T(static_cast<Args&&>(args)...);
         ++size_;
         return back();
+    }
+
+    /// @brief Remove the last element if present.
+    void popBack() {
+        if (size_ == 0) return;
+        data_[size_ - 1].~T();
+        --size_;
     }
 
     void reserve(std::size_t new_capacity) {
@@ -157,11 +175,13 @@ public:
     }
     void resize(std::size_t, const T&) requires (!std::is_copy_constructible_v<T>) = delete;
 
+    /// @brief Destroy all elements without releasing capacity.
     void clear() {
         destroyElements();
         size_ = 0;
     }
 
+    /// @brief Shrink capacity to size.
     void shrinkToFit() {
         if (size_ == capacity_) return;
         if (size_ == 0) {
@@ -174,25 +194,55 @@ public:
         reallocate(size_);
     }
 
+    /// @brief Returns pointer to contiguous storage.
     T* data() noexcept { return data_; }
+    /// @brief Returns pointer to contiguous storage.
     const T* data() const noexcept { return data_; }
 
+    /// @brief Returns the number of elements.
     std::size_t size() const noexcept { return size_; }
+    /// @brief Returns the current capacity.
     std::size_t capacity() const noexcept { return capacity_; }
+    /// @brief Returns true if empty.
     bool empty() const noexcept { return size_ == 0; }
 
+    /// @brief Unchecked element access.
     T& operator[](std::size_t idx) noexcept { return data_[idx]; }
+    /// @brief Unchecked element access.
     const T& operator[](std::size_t idx) const noexcept { return data_[idx]; }
 
+    /// @brief Bounds-checked element access.
+    T& at(std::size_t idx) {
+        if (idx >= size_) throw std::out_of_range("HeapVector::at");
+        return data_[idx];
+    }
+    /// @brief Bounds-checked element access.
+    const T& at(std::size_t idx) const {
+        if (idx >= size_) throw std::out_of_range("HeapVector::at");
+        return data_[idx];
+    }
+
+    /// @brief Access the first element.
     T& front() noexcept { return data_[0]; }
+    /// @brief Access the first element.
     const T& front() const noexcept { return data_[0]; }
+    /// @brief Access the last element.
     T& back() noexcept { return data_[size_ - 1]; }
+    /// @brief Access the last element.
     const T& back() const noexcept { return data_[size_ - 1]; }
 
+    /// @brief Returns iterator to the first element.
     T* begin() noexcept { return data_; }
+    /// @brief Returns iterator to the first element.
     const T* begin() const noexcept { return data_; }
+    /// @brief Returns iterator to one past the last element.
     T* end() noexcept { return data_ + size_; }
+    /// @brief Returns iterator to one past the last element.
     const T* end() const noexcept { return data_ + size_; }
+    /// @brief Returns const iterator to the first element.
+    const T* cbegin() const noexcept { return data_; }
+    /// @brief Returns const iterator to one past the last element.
+    const T* cend() const noexcept { return data_ + size_; }
 
 private:
     T* data_;
