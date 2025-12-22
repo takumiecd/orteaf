@@ -28,7 +28,8 @@ void MpsDeviceManager::initialize(SlowOps *slow_ops) {
   payload_pool_.initializeAndCreate(DevicePayloadPoolTraits::Config{capacity},
                                     payload_request, payload_context);
 
-  control_block_pool_.initialize(DeviceControlBlockPoolTraits::Config{capacity});
+  control_block_pool_.initialize(
+      DeviceControlBlockPoolTraits::Config{capacity});
   initialized_ = true;
 }
 
@@ -36,21 +37,23 @@ void MpsDeviceManager::shutdown() {
   if (!initialized_) {
     return;
   }
-  if (control_block_pool_.available() != control_block_pool_.capacity()) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-        "MPS device manager shutdown aborted due to active leases");
+  // Check canShutdown on all created control blocks
+  for (std::size_t idx = 0; idx < control_block_pool_.capacity(); ++idx) {
+    const DeviceControlBlockPoolTraits::Handle handle{
+        static_cast<std::uint32_t>(idx)};
+    if (control_block_pool_.isCreated(handle)) {
+      const auto *cb = control_block_pool_.get(handle);
+      if (cb != nullptr && !cb->canShutdown()) {
+        ::orteaf::internal::diagnostics::error::throwError(
+            ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+            "MPS device manager shutdown aborted due to active leases");
+      }
+    }
   }
 
   const DevicePayloadPoolTraits::Request payload_request{};
   const auto payload_context = makePayloadContext();
-  for (std::size_t idx = 0; idx < payload_pool_.capacity(); ++idx) {
-    const DeviceHandle handle{static_cast<std::uint32_t>(idx)};
-    if (payload_pool_.isCreated(handle)) {
-      payload_pool_.destroy(handle, payload_request, payload_context);
-    }
-  }
-  payload_pool_.shutdown();
+  payload_pool_.shutdown(payload_request, payload_context);
   control_block_pool_.shutdown();
   ops_ = nullptr;
   initialized_ = false;
