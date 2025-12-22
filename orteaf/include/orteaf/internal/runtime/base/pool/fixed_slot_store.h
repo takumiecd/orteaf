@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "orteaf/internal/base/block_vector.h"
 #include "orteaf/internal/base/heap_vector.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 
@@ -434,7 +435,7 @@ private:
     created_[static_cast<std::size_t>(handle.index)] = created ? 1 : 0;
   }
 
-  ::orteaf::internal::base::HeapVector<Payload> payloads_{};
+  ::orteaf::internal::base::BlockVector<Payload> payloads_{};
   ::orteaf::internal::base::HeapVector<generation_storage_t> generations_{};
   ::orteaf::internal::base::HeapVector<std::uint8_t> created_{};
 };
