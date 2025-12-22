@@ -134,18 +134,15 @@ public:
    * 一つでもcanShutdown() == falseのCBがあれば例外をスロー
    */
   void checkCanShutdownOrThrow() const {
-    for (std::size_t idx = 0; idx < control_block_pool_.capacity(); ++idx) {
-      const ControlBlockHandle handle{static_cast<std::uint32_t>(idx)};
-      if (control_block_pool_.isCreated(handle)) {
-        const auto *cb = control_block_pool_.get(handle);
-        if (cb != nullptr && !cb->canShutdown()) {
-          ::orteaf::internal::diagnostics::error::throwError(
-              ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-              std::string(managerName()) +
-                  " shutdown aborted due to active leases");
-        }
-      }
-    }
+    control_block_pool_.forEachCreated(
+        [&](std::size_t, const ControlBlock &cb) {
+          if (!cb.canShutdown()) {
+            ::orteaf::internal::diagnostics::error::throwError(
+                ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+                std::string(managerName()) +
+                    " shutdown aborted due to active leases");
+          }
+        });
   }
 
   /**
