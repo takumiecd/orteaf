@@ -64,9 +64,9 @@ DestroyOnReleasePool makeDestroyOnReleasePool(std::size_t capacity) {
   return pool;
 }
 
-TEST(SlotPool, InitializeSetsCapacityAndAvailable) {
+TEST(SlotPool, InitializeSetsSizeAndAvailable) {
   auto pool = makePool(3);
-  EXPECT_EQ(pool.capacity(), 3u);
+  EXPECT_EQ(pool.size(), 3u);
   EXPECT_EQ(pool.available(), 3u);
 }
 
@@ -266,7 +266,7 @@ TEST(SlotPool, GrowAddsUncreatedSlots) {
 
   pool.configure(typename Pool::Config{3, 3});
 
-  EXPECT_EQ(pool.capacity(), 3u);
+  EXPECT_EQ(pool.size(), 3u);
   EXPECT_EQ(pool.available(), 3u);
 
   auto ref = pool.reserve(req, ctx);
@@ -285,7 +285,7 @@ TEST(SlotPool, GrowAndCreateCreatesNewSlots) {
 
   const std::size_t old_capacity =
       pool.configure(typename Pool::Config{3, 3});
-  EXPECT_TRUE(pool.createRange(old_capacity, pool.capacity(), req, ctx));
+  EXPECT_TRUE(pool.createRange(old_capacity, pool.size(), req, ctx));
   EXPECT_FALSE(pool.tryReserve(req, ctx).valid());
 
   auto ref = pool.acquire(req, ctx);
@@ -323,10 +323,25 @@ TEST(SlotPool, InitializeAndCreateCreatesAllSlots) {
 
   pool.configure(typename Pool::Config{2, 2});
   EXPECT_TRUE(pool.createAll(req, ctx));
-  EXPECT_EQ(pool.capacity(), 2u);
+  EXPECT_EQ(pool.size(), 2u);
   EXPECT_EQ(pool.available(), 2u);
   EXPECT_FALSE(pool.tryReserve(req, ctx).valid());
   EXPECT_TRUE(pool.tryAcquire(req, ctx).valid());
+}
+
+TEST(SlotPool, ReserveDoesNotChangeSize) {
+  Pool pool;
+  pool.reserve(4);
+  EXPECT_EQ(pool.size(), 0u);
+  EXPECT_GE(pool.capacity(), 4u);
+}
+
+TEST(SlotPool, ResizeGrowsSlots) {
+  Pool pool;
+  const std::size_t old_size = pool.resize(3);
+  EXPECT_EQ(old_size, 0u);
+  EXPECT_EQ(pool.size(), 3u);
+  EXPECT_EQ(pool.available(), 3u);
 }
 
 } // namespace

@@ -166,7 +166,7 @@ TEST(FixedSlotStore, GrowAddsUncreatedSlots) {
 
   store.configure(typename Store::Config{3, 3});
 
-  EXPECT_EQ(store.capacity(), 3u);
+  EXPECT_EQ(store.size(), 3u);
   EXPECT_FALSE(store.isCreated(req.handle));
   EXPECT_EQ(store.get(req.handle), nullptr);
 }
@@ -178,12 +178,26 @@ TEST(FixedSlotStore, GrowAndCreateCreatesNewSlots) {
 
   const std::size_t old_capacity =
       store.configure(typename Store::Config{2, 2});
-  EXPECT_TRUE(store.createRange(old_capacity, store.capacity(), req, ctx));
+  EXPECT_TRUE(store.createRange(old_capacity, store.size(), req, ctx));
 
   DummyTraits::Request req_new{StoreHandle{1, 0}};
   auto ref = store.acquire(req_new, ctx);
   EXPECT_TRUE(ref.valid());
   EXPECT_EQ(ref.payload_ptr->value, 123);
+}
+
+TEST(FixedSlotStore, ReserveDoesNotChangeSize) {
+  Store store;
+  store.reserve(5);
+  EXPECT_EQ(store.size(), 0u);
+  EXPECT_GE(store.capacity(), 5u);
+}
+
+TEST(FixedSlotStore, ResizeGrowsSlots) {
+  Store store;
+  const std::size_t old_size = store.resize(4);
+  EXPECT_EQ(old_size, 0u);
+  EXPECT_EQ(store.size(), 4u);
 }
 
 TEST(FixedSlotStore, InitializeAndCreateCreatesAllSlots) {

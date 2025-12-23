@@ -41,7 +41,7 @@ public:
   using Context = typename Traits::Context;
 
   struct Config {
-    std::size_t capacity{0};
+    std::size_t size{0};
     std::size_t block_size{0};
   };
 
@@ -76,22 +76,43 @@ public:
    *
    * This method does not reset existing state. Call shutdown() first when
    * reinitialization is required. Configuration changes are restricted to
-   * capacity growth and a fixed block size.
+   * size growth and a fixed block size.
    *
-   * @param config Configuration containing capacity and block size.
-   * @return The previous capacity before applying the configuration.
-   * @throws OrteafErrc::InvalidArgument if capacity exceeds handle range.
+   * @param config Configuration containing size and block size.
+   * @return The previous size before applying the configuration.
+   * @throws OrteafErrc::InvalidArgument if size exceeds handle range.
    */
   std::size_t configure(const Config &config) { return applyConfig(config); }
 
   /**
    * @brief Returns the number of slots in the pool.
    */
-  std::size_t capacity() const noexcept { return payloads_.size(); }
+  std::size_t size() const noexcept { return payloads_.size(); }
+  /**
+   * @brief Returns the reserved storage capacity in slots.
+   */
+  std::size_t capacity() const noexcept { return payloads_.capacity(); }
+  /**
+   * @brief Returns the payload block size in use.
+   */
+  std::size_t blockSize() const noexcept { return payloads_.blockSize(); }
   /**
    * @brief Returns the number of slots currently available in the freelist.
    */
   std::size_t available() const noexcept { return freelist_.size(); }
+
+  /**
+   * @brief Reserves storage for at least new_capacity slots.
+   */
+  void reserve(std::size_t new_capacity) { reserveStorage(new_capacity); }
+
+  /**
+   * @brief Resizes the pool to new_size slots, growing only.
+   *
+   * @return The previous size before resizing.
+   * @throws OrteafErrc::InvalidArgument if new_size is smaller than current.
+   */
+  std::size_t resize(std::size_t new_size) { return resizeStorage(new_size); }
 
   /**
    * @brief Destroys all created payloads and releases storage.
@@ -106,7 +127,7 @@ public:
   void shutdown(const Request &request = {},
                 const Context &context = {}) noexcept {
     // Destroy all created payloads before clearing storage
-    for (std::size_t idx = 0; idx < payloads_.size(); ++idx) {
+    for (std::size_t idx = 0; idx < size(); ++idx) {
       if (created_[idx] != 0) {
         Handle handle = makeHandle(static_cast<index_type>(idx));
         destroy(handle, request, context);
@@ -126,7 +147,7 @@ public:
    * @return True if all payloads were created successfully.
    */
   bool createAll(const Request &request, const Context &context) {
-    return createRange(0, payloads_.size(), request, context);
+    return createRange(0, size(), request, context);
   }
 
   /**
@@ -141,7 +162,7 @@ public:
    */
   bool createRange(std::size_t start, std::size_t end,
                    const Request &request, const Context &context) {
-    if (start > end || end > payloads_.size()) {
+    if (start > end || end > size()) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
           "SlotPool create range is out of bounds");
@@ -325,7 +346,7 @@ public:
   template <typename Func>
     requires std::invocable<Func, std::size_t, const Payload &>
   void forEachCreated(Func &&func) const {
-    const std::size_t count = payloads_.size();
+    const std::size_t count = size();
     for (std::size_t idx = 0; idx < count; ++idx) {
       if (created_[idx] != 0) {
         std::forward<Func>(func)(idx, payloads_[idx]);
@@ -340,7 +361,7 @@ public:
    */
   bool isValid(Handle handle) const noexcept {
     const auto idx = static_cast<std::size_t>(handle.index);
-    if (idx >= payloads_.size()) {
+    if (idx >= size()) {
       return false;
     }
     if constexpr (Handle::has_generation) {
@@ -480,39 +501,60 @@ private:
   }
 
   std::size_t applyConfig(const Config &config) {
-    const std::size_t capacity = config.capacity;
-    if (capacity > static_cast<std::size_t>(Handle::invalid_index())) {
+    const std::size_t desired_size = config.size;
+    if (desired_size > static_cast<std::size_t>(Handle::invalid_index())) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-          "SlotPool capacity exceeds handle range");
+          "SlotPool size exceeds handle range");
     }
     const std::size_t desired_block_size = config.block_size;
-    if (desired_block_size == 0 && capacity != 0) {
-      ::orteaf::internal::diagnostics::error::throwError(
-          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-          "SlotPool requires non-zero block size when capacity > 0");
-    }
     if (desired_block_size == 0) {
-      if (payloads_.blockSize() != 0) {
+      if (desired_size != 0 && payloads_.blockSize() == 0) {
         ::orteaf::internal::diagnostics::error::throwError(
             ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-            "SlotPool block size cannot be reset to zero");
+            "SlotPool requires non-zero block size when size > 0");
       }
     } else if (payloads_.blockSize() != desired_block_size) {
       payloads_.resizeBlocks(desired_block_size);
     }
-    const std::size_t old_capacity = payloads_.size();
-    if (capacity <= old_capacity) {
-      return old_capacity;
+    return resizeStorage(desired_size);
+  }
+
+  void reserveStorage(std::size_t new_capacity) {
+    if (new_capacity > static_cast<std::size_t>(Handle::invalid_index())) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+          "SlotPool capacity exceeds handle range");
     }
-    payloads_.resize(capacity);
-    generations_.resize(capacity, 0);
-    created_.resize(capacity, 0);
-    freelist_.reserve(capacity);
-    for (std::size_t i = capacity; i > old_capacity; --i) {
+    payloads_.reserve(new_capacity);
+    generations_.reserve(new_capacity);
+    created_.reserve(new_capacity);
+    freelist_.reserve(new_capacity);
+  }
+
+  std::size_t resizeStorage(std::size_t new_size) {
+    const std::size_t old_size = size();
+    if (new_size < old_size) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+          "SlotPool size cannot shrink without shutdown");
+    }
+    if (new_size > static_cast<std::size_t>(Handle::invalid_index())) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+          "SlotPool size exceeds handle range");
+    }
+    if (new_size == old_size) {
+      return old_size;
+    }
+    payloads_.resize(new_size);
+    generations_.resize(new_size, 0);
+    created_.resize(new_size, 0);
+    freelist_.reserve(new_size);
+    for (std::size_t i = new_size; i > old_size; --i) {
       freelist_.pushBack(static_cast<index_type>(i - 1));
     }
-    return old_capacity;
+    return old_size;
   }
 
   bool releaseImpl(Handle handle) noexcept {
