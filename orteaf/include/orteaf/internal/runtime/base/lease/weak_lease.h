@@ -77,6 +77,25 @@ public:
   WeakLease() noexcept = default;
 
   /**
+   * @brief Construct from StrongLease to create weak reference.
+   * @param strong The strong lease to create weak reference from.
+   *
+   * If `strong` is valid, creates a weak reference to the same resource.
+   * Requires that ControlBlockT has an `acquireWeak()` method.
+   * Does not affect the strong reference count.
+   */
+  explicit WeakLease(const StrongLeaseType &strong) noexcept
+    requires requires(ControlBlockT *cb) { cb->acquireWeak(); }
+  {
+    if (strong.control_block_ != nullptr) {
+      control_block_ = strong.control_block_;
+      pool_ = strong.pool_;
+      handle_ = strong.handle_;
+      control_block_->acquireWeak();
+    }
+  }
+
+  /**
    * @brief Copy constructor incrementing weak reference count.
    * @param other The lease to copy from.
    *

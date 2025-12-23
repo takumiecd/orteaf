@@ -112,4 +112,40 @@ TEST(StrongWeakLease, ReturnControlBlockToPoolWhenCountsZero) {
   EXPECT_TRUE(pool.last_handle.isValid());
 }
 
+TEST(WeakLease, ConstructFromStrongLease) {
+  ControlBlock control_block;
+  DummyPool pool;
+  ControlBlockHandle handle{0, 0};
+
+  auto strong = DummyManager::makeStrong(&control_block, &pool, handle);
+  EXPECT_EQ(control_block.count(), 1u);
+  EXPECT_EQ(control_block.weakCount(), 0u);
+
+  DummyManager::WeakLease weak(strong);
+  EXPECT_EQ(control_block.count(), 1u);
+  EXPECT_EQ(control_block.weakCount(), 1u);
+  EXPECT_TRUE(weak);
+}
+
+TEST(WeakLease, ConstructFromInvalidStrongLease) {
+  DummyManager::StrongLease strong;
+  EXPECT_FALSE(strong);
+
+  DummyManager::WeakLease weak(strong);
+  EXPECT_FALSE(weak);
+}
+
+TEST(WeakLease, ConstructedFromStrongCanPromote) {
+  ControlBlock control_block;
+  DummyPool pool;
+  ControlBlockHandle handle{0, 0};
+
+  auto strong = DummyManager::makeStrong(&control_block, &pool, handle);
+  DummyManager::WeakLease weak(strong);
+
+  auto promoted = weak.lock();
+  EXPECT_TRUE(promoted);
+  EXPECT_EQ(control_block.count(), 2u);
+}
+
 } // namespace

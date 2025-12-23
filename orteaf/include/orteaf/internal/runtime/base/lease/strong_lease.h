@@ -215,9 +215,10 @@ public:
    * Only available if ControlBlockT has a `count()` method.
    * Useful for testing and debugging reference counting behavior.
    */
-  auto count() const noexcept
-      -> decltype(std::declval<const ControlBlockT *>()->count())
-    requires requires(const ControlBlockT *cb) { cb->count(); }
+  std::uint32_t count() const noexcept
+    requires requires(const ControlBlockT *cb) { 
+      { cb->count() } -> std::convertible_to<std::uint32_t>; 
+    }
   {
     return control_block_ ? control_block_->count() : 0;
   }
