@@ -71,6 +71,12 @@ public:
 
   static constexpr const char *managerName() { return Traits::Name; }
 
+  struct Config {
+    std::size_t control_block_capacity{0};
+    std::size_t control_block_block_size{0};
+    std::size_t growth_chunk_size{1};
+  };
+
   // ===========================================================================
   // Lifecycle
   // ===========================================================================
@@ -112,20 +118,13 @@ public:
   // ===========================================================================
 
   /**
-   * @brief ControlBlock Pool を初期化
+   * @brief Core設定を適用
    *
-   * @param capacity 初期容量
+   * @param config Core全体の設定
    */
-  void initializeControlBlockPool(std::size_t capacity) {
-    typename ControlBlockPoolTraits::Request request{};
-    typename ControlBlockPoolTraits::Context context{};
-    if (!control_block_pool_.initializeAndCreate(
-            typename ControlBlockPoolTraits::Config{capacity}, request,
-            context)) {
-      ::orteaf::internal::diagnostics::error::throwError(
-          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-          std::string(managerName()) + " failed to initialize control blocks");
-    }
+  void configure(const Config &config) {
+    applyControlBlockConfig(config);
+    setGrowthChunkSize(config.growth_chunk_size);
   }
 
   /**
@@ -149,12 +148,21 @@ public:
    * @brief ControlBlock Pool を growth_chunk_size_ 分拡張
    */
   void growControlBlockPool() {
+    if (control_block_block_size_ == 0) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+          std::string(managerName()) + " control block size is not set");
+    }
     const std::size_t desired =
         control_block_pool_.capacity() + growth_chunk_size_;
     typename ControlBlockPoolTraits::Request request{};
     typename ControlBlockPoolTraits::Context context{};
-    control_block_pool_.growAndCreate(
-        typename ControlBlockPoolTraits::Config{desired}, request, context);
+    const std::size_t old_capacity =
+        control_block_pool_.configure(typename ControlBlockPool::Config{
+            desired, control_block_block_size_});
+    control_block_pool_.createRange(old_capacity,
+                                    control_block_pool_.capacity(), request,
+                                    context);
   }
 
   /**
@@ -264,8 +272,37 @@ public:
 #endif
 
 private:
+  void applyControlBlockConfig(const Config &config) {
+    const std::size_t capacity = config.control_block_capacity;
+    const std::size_t block_size = config.control_block_block_size;
+    if (block_size == 0) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+          std::string(managerName()) + " control block size must be > 0");
+    }
+    if (control_block_block_size_ != 0 &&
+        control_block_block_size_ != block_size) {
+      checkCanShutdownOrThrow();
+      control_block_pool_.shutdown();
+    }
+    control_block_block_size_ = block_size;
+    typename ControlBlockPoolTraits::Request request{};
+    typename ControlBlockPoolTraits::Context context{};
+    const std::size_t old_capacity =
+        control_block_pool_.configure(typename ControlBlockPool::Config{
+            capacity, block_size});
+    if (!control_block_pool_.createRange(old_capacity,
+                                         control_block_pool_.capacity(),
+                                         request, context)) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+          std::string(managerName()) + " failed to initialize control blocks");
+    }
+  }
+
   bool initialized_{false};
   std::size_t growth_chunk_size_{1};
+  std::size_t control_block_block_size_{0};
   PayloadPool payload_pool_{};
   ControlBlockPool control_block_pool_{};
 };
