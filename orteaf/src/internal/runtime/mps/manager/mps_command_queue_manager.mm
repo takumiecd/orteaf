@@ -6,33 +6,55 @@
 
 namespace orteaf::internal::runtime::mps::manager {
 
-void MpsCommandQueueManager::initialize(DeviceType device, SlowOps *ops,
-                                        std::size_t capacity) {
+void MpsCommandQueueManager::configure(const Config &config) {
   shutdown();
-  if (device == nullptr) {
+  if (config.device == nullptr) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
         "MPS command queue manager requires a valid device");
   }
-  if (ops == nullptr) {
+  if (config.ops == nullptr) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
         "MPS command queue manager requires valid ops");
   }
-  if (capacity >
+  if (config.capacity >
       static_cast<std::size_t>(CommandQueueHandle::invalid_index())) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
         "MPS command queue manager capacity exceeds maximum handle range");
   }
-  device_ = device;
-  ops_ = ops;
+  if (config.capacity != 0 && config.payload_block_size == 0) {
+    ::orteaf::internal::diagnostics::error::throwError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+        "MPS command queue manager requires non-zero payload block size");
+  }
+  if (config.control_block_block_size == 0) {
+    ::orteaf::internal::diagnostics::error::throwError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+        "MPS command queue manager requires non-zero control block size");
+  }
+  if (config.payload_growth_chunk_size == 0) {
+    ::orteaf::internal::diagnostics::error::throwError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+        "MPS command queue manager requires non-zero payload growth chunk size");
+  }
+  if (config.control_block_growth_chunk_size == 0) {
+    ::orteaf::internal::diagnostics::error::throwError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+        "MPS command queue manager requires non-zero control block growth chunk size");
+  }
+  device_ = config.device;
+  ops_ = config.ops;
+  payload_block_size_ = config.payload_block_size;
+  payload_growth_chunk_size_ = config.payload_growth_chunk_size;
 
-  const CommandQueuePayloadPoolTraits::Request request{};
-  const CommandQueuePayloadPoolTraits::Context context{device_, ops_};
-  core_.payloadPool().initializeAndCreate(
-      CommandQueuePayloadPoolTraits::Config{capacity}, request, context);
-  core_.initializeControlBlockPool(capacity);
+  core_.payloadPool().configure(CommandQueuePayloadPool::Config{
+      config.capacity, config.payload_block_size});
+  core_.configure(MpsCommandQueueManager::Core::Config{
+      /*control_block_capacity=*/config.capacity,
+      /*control_block_block_size=*/config.control_block_block_size,
+      /*growth_chunk_size=*/config.control_block_growth_chunk_size});
   core_.setInitialized(true);
 }
 
@@ -63,8 +85,9 @@ MpsCommandQueueManager::CommandQueueLease MpsCommandQueueManager::acquire() {
     auto reserved = core_.payloadPool().tryReserve(request, context);
     if (!reserved.valid()) {
       const auto desired =
-          core_.payloadPool().capacity() + core_.growthChunkSize();
-      core_.payloadPool().grow(CommandQueuePayloadPoolTraits::Config{desired});
+          core_.payloadPool().capacity() + payload_growth_chunk_size_;
+      core_.payloadPool().configure(
+          CommandQueuePayloadPool::Config{desired, payload_block_size_});
       reserved = core_.payloadPool().tryReserve(request, context);
     }
     if (!reserved.valid()) {

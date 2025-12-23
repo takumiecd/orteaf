@@ -36,10 +36,6 @@ struct CommandQueuePayloadPoolTraits {
     SlowOps *ops{nullptr};
   };
 
-  struct Config {
-    std::size_t capacity{0};
-  };
-
   static bool create(Payload &payload, const Request &,
                      const Context &context) {
     if (context.ops == nullptr || context.device == nullptr) {
@@ -117,6 +113,16 @@ private:
   friend CommandQueueLease;
 
 public:
+  struct Config {
+    DeviceType device{nullptr};
+    SlowOps *ops{nullptr};
+    std::size_t capacity{0};
+    std::size_t payload_block_size{0};
+    std::size_t control_block_block_size{1};
+    std::size_t payload_growth_chunk_size{1};
+    std::size_t control_block_growth_chunk_size{1};
+  };
+
   // ===========================================================================
   // Lifecycle
   // ===========================================================================
@@ -128,7 +134,7 @@ public:
   MpsCommandQueueManager &operator=(MpsCommandQueueManager &&) = default;
   ~MpsCommandQueueManager() = default;
 
-  void initialize(DeviceType device, SlowOps *ops, std::size_t capacity);
+  void configure(const Config &config);
   void shutdown();
 
   // ===========================================================================
@@ -158,11 +164,11 @@ public:
   // Configuration
   // ===========================================================================
 
-  std::size_t growthChunkSize() const noexcept {
-    return core_.growthChunkSize();
+  std::size_t payloadGrowthChunkSize() const noexcept {
+    return payload_growth_chunk_size_;
   }
-  void setGrowthChunkSize(std::size_t chunk_size) {
-    core_.setGrowthChunkSize(chunk_size);
+  std::size_t controlBlockGrowthChunkSize() const noexcept {
+    return core_.growthChunkSize();
   }
 
 #if ORTEAF_ENABLE_TEST
@@ -178,6 +184,8 @@ private:
   Core core_{};
   DeviceType device_{nullptr};
   SlowOps *ops_{nullptr};
+  std::size_t payload_block_size_{0};
+  std::size_t payload_growth_chunk_size_{1};
 };
 
 } // namespace orteaf::internal::runtime::mps::manager
