@@ -80,30 +80,12 @@ MpsCommandQueueManager::CommandQueueLease MpsCommandQueueManager::acquire() {
   const CommandQueuePayloadPoolTraits::Request request{};
   const CommandQueuePayloadPoolTraits::Context context{device_, ops_};
 
-  auto payload_ref = core_.payloadPool().tryAcquire(request, context);
+  auto payload_ref = core_.acquirePayloadOrGrowAndCreate(
+      payload_growth_chunk_size_, request, context);
   if (!payload_ref.valid()) {
-    auto reserved = core_.payloadPool().tryReserve(request, context);
-    if (!reserved.valid()) {
-      const auto desired =
-          core_.payloadPool().capacity() + payload_growth_chunk_size_;
-      core_.payloadPool().configure(
-          CommandQueuePayloadPool::Config{desired, payload_block_size_});
-      reserved = core_.payloadPool().tryReserve(request, context);
-    }
-    if (!reserved.valid()) {
-      ::orteaf::internal::diagnostics::error::throwError(
-          ::orteaf::internal::diagnostics::error::OrteafErrc::OutOfRange,
-          "MPS command queue manager has no available slots");
-    }
-    CommandQueuePayloadPoolTraits::Request create_request{reserved.handle};
-    if (!core_.payloadPool().emplace(reserved.handle, create_request,
-                                     context)) {
-      core_.payloadPool().release(reserved.handle);
-      ::orteaf::internal::diagnostics::error::throwError(
-          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-          "Failed to create MPS command queue");
-    }
-    payload_ref = reserved;
+    ::orteaf::internal::diagnostics::error::throwError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::OutOfRange,
+        "MPS command queue manager has no available slots");
   }
 
   auto cb_ref = core_.acquireControlBlock();

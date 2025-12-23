@@ -154,7 +154,7 @@ public:
 
   bool isInitialized() const noexcept { return core_.isInitialized(); }
   std::size_t capacity() const noexcept {
-    return core_.payloadPool().capacity();
+    return core_.payloadPool().size();
   }
   bool isAlive(CommandQueueHandle handle) const noexcept {
     return core_.isAlive(handle);
@@ -176,7 +176,7 @@ public:
     return core_.controlBlockPoolCapacityForTest();
   }
   std::size_t payloadPoolCapacityForTest() const noexcept {
-    return core_.payloadPool().capacity();
+    return core_.payloadPool().size();
   }
 #endif
 
