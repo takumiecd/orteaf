@@ -16,8 +16,8 @@ namespace orteaf::internal::runtime::base::pool {
  *
  * FixedSlotStore provides a pool-like API but does not reuse slots via a
  * freelist. Slots are addressed directly by handle index, and
- * acquire/tryAcquire simply validate that the requested slot is already
- * created.
+ * tryAcquireCreated/tryReserveUncreated simply validate that the requested slot
+ * is already created.
  *
  * This is useful for payloads whose lifetime is tied to external systems
  * (device objects, global buffers, etc.) where pool reuse is unnecessary or
@@ -150,8 +150,8 @@ public:
    * @return True if all payloads were created successfully.
    * @throws OrteafErrc::InvalidArgument if range is invalid.
    */
-  bool createRange(std::size_t start, std::size_t end,
-                   const Request &request, const Context &context) {
+  bool createRange(std::size_t start, std::size_t end, const Request &request,
+                   const Context &context) {
     if (start > end || end > size()) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
@@ -171,15 +171,18 @@ public:
   }
 
   /**
-   * @brief Acquires a slot by handle, or throws if the slot is not created.
+   * @brief Acquires a created slot by scanning the store.
    *
-   * acquire expects the Request to carry the target handle. The returned
-   * SlotRef is valid only if that handle is valid and already created.
+   * This method searches for the first slot that is created and returns a
+   * reference to it.
    *
-   * @throws OrteafErrc::OutOfRange if the slot is unavailable.
+   * @param request Request details (unused for acquisition search).
+   * @param context Context details (unused for acquisition search).
+   * @return SlotRef with a valid handle and payload pointer.
+   * @throws OrteafErrc::OutOfRange if no created slots are available.
    */
-  SlotRef acquire(const Request &request, const Context &context) {
-    SlotRef ref = tryAcquire(request, context);
+  SlotRef acquireCreated(const Request &request, const Context &context) {
+    SlotRef ref = tryAcquireCreated(request, context);
     if (!ref.valid()) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::OutOfRange,
@@ -189,16 +192,51 @@ public:
   }
 
   /**
-   * @brief Attempts to acquire a slot by handle without throwing.
+   * @brief Attempts to acquire a created slot by scanning the store.
    *
    * @return SlotRef with invalid handle and null pointer if not available.
    */
-  SlotRef tryAcquire(const Request &request, const Context &) noexcept {
-    Handle handle = request.handle;
-    if (!isValid(handle) || !isCreated(handle)) {
-      return SlotRef{Handle::invalid(), nullptr};
+  SlotRef tryAcquireCreated(const Request &, const Context &) noexcept {
+    for (std::size_t idx = 0; idx < size(); ++idx) {
+      if (created_[idx] != 0) {
+        Handle handle = makeHandle(static_cast<index_type>(idx));
+        return SlotRef{handle, &payloads_[idx]};
+      }
     }
-    return SlotRef{handle, &payloads_[static_cast<std::size_t>(handle.index)]};
+    return SlotRef{Handle::invalid(), nullptr};
+  }
+
+  /**
+   * @brief Reserves an uncreated slot by scanning the store.
+   *
+   * @param request Request details (unused for reservation search).
+   * @param context Context details (unused for reservation search).
+   * @return SlotRef with a valid handle and payload pointer.
+   * @throws OrteafErrc::OutOfRange if no uncreated slots are available.
+   */
+  SlotRef reserveUncreated(const Request &request, const Context &context) {
+    SlotRef ref = tryReserveUncreated(request, context);
+    if (!ref.valid()) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::OutOfRange,
+          "FixedSlotStore slot is not available");
+    }
+    return ref;
+  }
+
+  /**
+   * @brief Attempts to reserve an uncreated slot by scanning the store.
+   *
+   * @return SlotRef with invalid handle and null pointer if none available.
+   */
+  SlotRef tryReserveUncreated(const Request &, const Context &) noexcept {
+    for (std::size_t idx = 0; idx < size(); ++idx) {
+      if (created_[idx] == 0) {
+        Handle handle = makeHandle(static_cast<index_type>(idx));
+        return SlotRef{handle, &payloads_[idx]};
+      }
+    }
+    return SlotRef{Handle::invalid(), nullptr};
   }
 
   /**

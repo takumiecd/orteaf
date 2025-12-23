@@ -72,7 +72,7 @@ TEST(FixedSlotStore, AcquireThrowsWhenNotCreated) {
   DummyTraits::Context ctx{};
   DummyTraits::Request req{StoreHandle{0, 0}};
 
-  EXPECT_THROW(store.acquire(req, ctx), std::system_error);
+  EXPECT_THROW(store.acquireCreated(req, ctx), std::system_error);
 }
 
 TEST(FixedSlotStore, TryAcquireInvalidWhenNotCreated) {
@@ -80,7 +80,7 @@ TEST(FixedSlotStore, TryAcquireInvalidWhenNotCreated) {
   DummyTraits::Context ctx{};
   DummyTraits::Request req{StoreHandle{0, 0}};
 
-  auto ref = store.tryAcquire(req, ctx);
+  auto ref = store.tryAcquireCreated(req, ctx);
   EXPECT_FALSE(ref.valid());
 }
 
@@ -91,7 +91,7 @@ TEST(FixedSlotStore, EmplaceAndAcquireReturnPayload) {
 
   EXPECT_TRUE(store.emplace(req.handle, req, ctx));
 
-  auto ref = store.acquire(req, ctx);
+  auto ref = store.acquireCreated(req, ctx);
   EXPECT_TRUE(ref.valid());
   EXPECT_EQ(ref.payload_ptr->value, 123);
   EXPECT_EQ(store.get(req.handle)->value, 123);
@@ -181,7 +181,7 @@ TEST(FixedSlotStore, GrowAndCreateCreatesNewSlots) {
   EXPECT_TRUE(store.createRange(old_capacity, store.size(), req, ctx));
 
   DummyTraits::Request req_new{StoreHandle{1, 0}};
-  auto ref = store.acquire(req_new, ctx);
+  auto ref = store.acquireCreated(req_new, ctx);
   EXPECT_TRUE(ref.valid());
   EXPECT_EQ(ref.payload_ptr->value, 123);
 }
@@ -208,7 +208,7 @@ TEST(FixedSlotStore, InitializeAndCreateCreatesAllSlots) {
   store.configure(typename DestroyOnReleaseStore::Config{2, 2});
   EXPECT_TRUE(store.createAll(req, ctx));
   DestroyOnReleaseTraits::Request req_new{StoreHandle{1, 0}};
-  auto ref = store.acquire(req_new, ctx);
+  auto ref = store.acquireCreated(req_new, ctx);
   EXPECT_TRUE(ref.valid());
   EXPECT_EQ(ref.payload_ptr->value, 55);
 }

@@ -22,8 +22,8 @@ namespace orteaf::internal::runtime::base::pool {
  *
  * Creation and destruction of payloads is separated from slot acquisition. This
  * allows the pool to manage storage reuse independently of object lifetime.
- * - reserve/tryReserve: reserve an uncreated slot for initialization.
- * - acquire/tryAcquire: acquire an already-created slot for reuse.
+ * - reserve/tryReserveUncreated: reserve an uncreated slot for initialization.
+ * - acquire/tryAcquireCreated: acquire an already-created slot for reuse.
  * - emplace/destroy: create/destroy the payload for a specific handle.
  *
  * The pool does not interpret Request/Context beyond passing them to Traits.
@@ -160,8 +160,8 @@ public:
    * @return True if all payloads were created successfully.
    * @throws OrteafErrc::InvalidArgument if range is invalid.
    */
-  bool createRange(std::size_t start, std::size_t end,
-                   const Request &request, const Context &context) {
+  bool createRange(std::size_t start, std::size_t end, const Request &request,
+                   const Context &context) {
     if (start > end || end > size()) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
@@ -183,16 +183,16 @@ public:
   /**
    * @brief Acquires a created slot or throws if none are available.
    *
-   * acquire returns only slots with isCreated=true. It does not create
-   * payloads itself.
+   * tryAcquireCreated returns only slots with isCreated=true. It does not
+   * create payloads itself.
    *
    * @param request Allocation/request details passed through for symmetry.
    * @param context Context information (backend/device, etc.).
    * @return SlotRef with a valid handle and payload pointer.
    * @throws OrteafErrc::OutOfRange if the freelist is empty.
    */
-  SlotRef acquire(const Request &request, const Context &context) {
-    SlotRef ref = tryAcquire(request, context);
+  SlotRef acquireCreated(const Request &request, const Context &context) {
+    SlotRef ref = tryAcquireCreated(request, context);
     if (!ref.valid()) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::OutOfRange,
@@ -206,7 +206,7 @@ public:
    *
    * @return SlotRef with invalid handle and null pointer if no slots available.
    */
-  SlotRef tryAcquire(const Request &, const Context &) noexcept {
+  SlotRef tryAcquireCreated(const Request &, const Context &) noexcept {
     if (freelist_.empty()) {
       return SlotRef{Handle::invalid(), nullptr};
     }
@@ -225,16 +225,16 @@ public:
   /**
    * @brief Reserves an uncreated slot or throws if none are available.
    *
-   * reserve returns only slots with isCreated=false. It does not create
-   * payloads itself. Use emplace to initialize the payload.
+   * tryReserveUncreated returns only slots with isCreated=false. It does not
+   * create payloads itself. Use emplace to initialize the payload.
    *
    * @param request Allocation/request details passed through for symmetry.
    * @param context Context information (backend/device, etc.).
    * @return SlotRef with a valid handle and payload pointer.
    * @throws OrteafErrc::OutOfRange if no uncreated slots are available.
    */
-  SlotRef reserve(const Request &request, const Context &context) {
-    SlotRef ref = tryReserve(request, context);
+  SlotRef reserveUncreated(const Request &request, const Context &context) {
+    SlotRef ref = tryReserveUncreated(request, context);
     if (!ref.valid()) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::OutOfRange,
@@ -248,7 +248,7 @@ public:
    *
    * @return SlotRef with invalid handle and null pointer if none available.
    */
-  SlotRef tryReserve(const Request &, const Context &) noexcept {
+  SlotRef tryReserveUncreated(const Request &, const Context &) noexcept {
     if (freelist_.empty()) {
       return SlotRef{Handle::invalid(), nullptr};
     }

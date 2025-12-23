@@ -75,7 +75,7 @@ TEST(SlotPool, ReserveReturnsValidSlotRefAndPayloadPtr) {
   DummyTraits::Request req{};
   DummyTraits::Context ctx{};
 
-  auto ref = pool.reserve(req, ctx);
+  auto ref = pool.reserveUncreated(req, ctx);
   EXPECT_TRUE(ref.valid());
   EXPECT_TRUE(ref.handle.isValid());
   EXPECT_NE(ref.payload_ptr, nullptr);
@@ -88,8 +88,8 @@ TEST(SlotPool, TryReserveReturnsInvalidWhenEmpty) {
   DummyTraits::Request req{};
   DummyTraits::Context ctx{};
 
-  auto first = pool.tryReserve(req, ctx);
-  auto second = pool.tryReserve(req, ctx);
+  auto first = pool.tryReserveUncreated(req, ctx);
+  auto second = pool.tryReserveUncreated(req, ctx);
 
   EXPECT_TRUE(first.valid());
   EXPECT_FALSE(second.valid());
@@ -101,8 +101,8 @@ TEST(SlotPool, ReserveThrowsWhenEmpty) {
   DummyTraits::Request req{};
   DummyTraits::Context ctx{};
 
-  (void)pool.reserve(req, ctx);
-  EXPECT_THROW(pool.reserve(req, ctx), std::system_error);
+  (void)pool.reserveUncreated(req, ctx);
+  EXPECT_THROW(pool.reserveUncreated(req, ctx), std::system_error);
 }
 
 TEST(SlotPool, TryAcquireReturnsInvalidWhenNoCreated) {
@@ -110,7 +110,7 @@ TEST(SlotPool, TryAcquireReturnsInvalidWhenNoCreated) {
   DummyTraits::Request req{};
   DummyTraits::Context ctx{};
 
-  auto ref = pool.tryAcquire(req, ctx);
+  auto ref = pool.tryAcquireCreated(req, ctx);
   EXPECT_FALSE(ref.valid());
 }
 
@@ -119,7 +119,7 @@ TEST(SlotPool, AcquireThrowsWhenNoCreated) {
   DummyTraits::Request req{};
   DummyTraits::Context ctx{};
 
-  EXPECT_THROW(pool.acquire(req, ctx), std::system_error);
+  EXPECT_THROW(pool.acquireCreated(req, ctx), std::system_error);
 }
 
 TEST(SlotPool, AcquireReturnsCreatedSlotAfterRelease) {
@@ -127,11 +127,11 @@ TEST(SlotPool, AcquireReturnsCreatedSlotAfterRelease) {
   DummyTraits::Request req{};
   DummyTraits::Context ctx{};
 
-  auto reserved = pool.reserve(req, ctx);
+  auto reserved = pool.reserveUncreated(req, ctx);
   EXPECT_TRUE(pool.emplace(reserved.handle, req, ctx));
   EXPECT_TRUE(pool.release(reserved.handle));
 
-  auto ref = pool.acquire(req, ctx);
+  auto ref = pool.acquireCreated(req, ctx);
   EXPECT_TRUE(ref.valid());
 }
 
@@ -140,13 +140,13 @@ TEST(SlotPool, ReleaseReturnsSlotToFreelistAndIncrementsGeneration) {
   DummyTraits::Request req{};
   DummyTraits::Context ctx{};
 
-  auto first = pool.reserve(req, ctx);
+  auto first = pool.reserveUncreated(req, ctx);
   auto handle = first.handle;
   EXPECT_TRUE(pool.emplace(handle, req, ctx));
 
   EXPECT_TRUE(pool.release(handle));
 
-  auto second = pool.acquire(req, ctx);
+  auto second = pool.acquireCreated(req, ctx);
   EXPECT_EQ(second.handle.index, handle.index);
   EXPECT_EQ(static_cast<std::size_t>(second.handle.generation),
             static_cast<std::size_t>(handle.generation) + 1u);
@@ -157,7 +157,7 @@ TEST(SlotPool, ReleaseRejectsStaleGeneration) {
   DummyTraits::Request req{};
   DummyTraits::Context ctx{};
 
-  auto first = pool.reserve(req, ctx);
+  auto first = pool.reserveUncreated(req, ctx);
   auto stale = first.handle;
   EXPECT_TRUE(pool.emplace(stale, req, ctx));
 
@@ -170,7 +170,7 @@ TEST(SlotPool, EmplaceUsesTraitsCreateAndSetsCreated) {
   DummyTraits::Request req{};
   DummyTraits::Context ctx{};
 
-  auto slot = pool.reserve(req, ctx);
+  auto slot = pool.reserveUncreated(req, ctx);
   EXPECT_TRUE(pool.emplace(slot.handle, req, ctx));
   EXPECT_TRUE(pool.isCreated(slot.handle));
   EXPECT_EQ(pool.get(slot.handle)->value, 42);
@@ -181,14 +181,14 @@ TEST(SlotPool, EmplaceLambdaOverridesTraitsCreate) {
   DummyTraits::Request req{};
   DummyTraits::Context ctx{};
 
-  auto slot = pool.reserve(req, ctx);
-  EXPECT_TRUE(pool.emplace(slot.handle, req, ctx,
-                           [](DummyPayload &payload,
-                              const DummyTraits::Request &,
-                              const DummyTraits::Context &) {
-                             payload.value = 7;
-                             return true;
-                           }));
+  auto slot = pool.reserveUncreated(req, ctx);
+  EXPECT_TRUE(
+      pool.emplace(slot.handle, req, ctx,
+                   [](DummyPayload &payload, const DummyTraits::Request &,
+                      const DummyTraits::Context &) {
+                     payload.value = 7;
+                     return true;
+                   }));
   EXPECT_TRUE(pool.isCreated(slot.handle));
   EXPECT_EQ(pool.get(slot.handle)->value, 7);
 }
@@ -198,7 +198,7 @@ TEST(SlotPool, DestroyUsesTraitsDestroyAndClearsCreated) {
   DummyTraits::Request req{};
   DummyTraits::Context ctx{};
 
-  auto slot = pool.reserve(req, ctx);
+  auto slot = pool.reserveUncreated(req, ctx);
   EXPECT_TRUE(pool.emplace(slot.handle, req, ctx));
   EXPECT_TRUE(pool.destroy(slot.handle, req, ctx));
   EXPECT_FALSE(pool.isCreated(slot.handle));
@@ -210,15 +210,15 @@ TEST(SlotPool, DestroyLambdaOverridesTraitsDestroy) {
   DummyTraits::Request req{};
   DummyTraits::Context ctx{};
 
-  auto slot = pool.reserve(req, ctx);
+  auto slot = pool.reserveUncreated(req, ctx);
   EXPECT_TRUE(pool.emplace(slot.handle, req, ctx));
-  EXPECT_TRUE(pool.destroy(slot.handle, req, ctx,
-                           [](DummyPayload &payload,
-                              const DummyTraits::Request &,
-                              const DummyTraits::Context &) {
-                             payload.value = -1;
-                             return true;
-                           }));
+  EXPECT_TRUE(
+      pool.destroy(slot.handle, req, ctx,
+                   [](DummyPayload &payload, const DummyTraits::Request &,
+                      const DummyTraits::Context &) {
+                     payload.value = -1;
+                     return true;
+                   }));
   EXPECT_FALSE(pool.isCreated(slot.handle));
   EXPECT_EQ(pool.get(slot.handle)->value, -1);
 }
@@ -228,7 +228,7 @@ TEST(SlotPool, GetReturnsNullForInvalidHandle) {
   DummyTraits::Request req{};
   DummyTraits::Context ctx{};
 
-  auto ref = pool.reserve(req, ctx);
+  auto ref = pool.reserveUncreated(req, ctx);
   auto stale = ref.handle;
   EXPECT_TRUE(pool.emplace(stale, req, ctx));
 
@@ -241,11 +241,11 @@ TEST(SlotPool, ReleaseDestroysWhenConfigured) {
   DestroyOnReleaseTraits::Request req{};
   DestroyOnReleaseTraits::Context ctx{};
 
-  auto slot = pool.reserve(req, ctx);
+  auto slot = pool.reserveUncreated(req, ctx);
   EXPECT_TRUE(pool.emplace(slot.handle, req, ctx));
   EXPECT_TRUE(pool.release(slot.handle, req, ctx));
   EXPECT_FALSE(pool.isCreated(slot.handle));
-  auto re_reserved = pool.reserve(req, ctx);
+  auto re_reserved = pool.reserveUncreated(req, ctx);
   EXPECT_TRUE(re_reserved.valid());
   EXPECT_EQ(re_reserved.payload_ptr->value, -1);
 }
@@ -255,7 +255,7 @@ TEST(SlotPool, ReleaseFailsWhenNotCreatedInDestroyMode) {
   DestroyOnReleaseTraits::Request req{};
   DestroyOnReleaseTraits::Context ctx{};
 
-  auto slot = pool.reserve(req, ctx);
+  auto slot = pool.reserveUncreated(req, ctx);
   EXPECT_FALSE(pool.release(slot.handle, req, ctx));
 }
 
@@ -269,7 +269,7 @@ TEST(SlotPool, GrowAddsUncreatedSlots) {
   EXPECT_EQ(pool.size(), 3u);
   EXPECT_EQ(pool.available(), 3u);
 
-  auto ref = pool.reserve(req, ctx);
+  auto ref = pool.reserveUncreated(req, ctx);
   EXPECT_TRUE(ref.valid());
   EXPECT_FALSE(pool.isCreated(ref.handle));
 }
@@ -279,16 +279,15 @@ TEST(SlotPool, GrowAndCreateCreatesNewSlots) {
   DummyTraits::Request req{};
   DummyTraits::Context ctx{};
 
-  auto reserved = pool.reserve(req, ctx);
+  auto reserved = pool.reserveUncreated(req, ctx);
   EXPECT_TRUE(pool.emplace(reserved.handle, req, ctx));
   EXPECT_TRUE(pool.release(reserved.handle));
 
-  const std::size_t old_capacity =
-      pool.configure(typename Pool::Config{3, 3});
+  const std::size_t old_capacity = pool.configure(typename Pool::Config{3, 3});
   EXPECT_TRUE(pool.createRange(old_capacity, pool.size(), req, ctx));
-  EXPECT_FALSE(pool.tryReserve(req, ctx).valid());
+  EXPECT_FALSE(pool.tryReserveUncreated(req, ctx).valid());
 
-  auto ref = pool.acquire(req, ctx);
+  auto ref = pool.acquireCreated(req, ctx);
   EXPECT_TRUE(ref.valid());
 }
 
@@ -297,10 +296,10 @@ TEST(SlotPool, ForEachCreatedVisitsOnlyCreatedSlots) {
   DummyTraits::Request req{};
   DummyTraits::Context ctx{};
 
-  auto first = pool.reserve(req, ctx);
+  auto first = pool.reserveUncreated(req, ctx);
   EXPECT_TRUE(pool.emplace(first.handle, req, ctx));
 
-  auto second = pool.reserve(req, ctx);
+  auto second = pool.reserveUncreated(req, ctx);
   EXPECT_TRUE(pool.emplace(second.handle, req, ctx));
   EXPECT_TRUE(pool.release(second.handle));
 
@@ -325,8 +324,8 @@ TEST(SlotPool, InitializeAndCreateCreatesAllSlots) {
   EXPECT_TRUE(pool.createAll(req, ctx));
   EXPECT_EQ(pool.size(), 2u);
   EXPECT_EQ(pool.available(), 2u);
-  EXPECT_FALSE(pool.tryReserve(req, ctx).valid());
-  EXPECT_TRUE(pool.tryAcquire(req, ctx).valid());
+  EXPECT_FALSE(pool.tryReserveUncreated(req, ctx).valid());
+  EXPECT_TRUE(pool.tryAcquireCreated(req, ctx).valid());
 }
 
 TEST(SlotPool, ReserveDoesNotChangeSize) {
