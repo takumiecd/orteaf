@@ -154,14 +154,12 @@ public:
           std::string(managerName()) + " control block size is not set");
     }
     const std::size_t desired =
-        control_block_pool_.capacity() + growth_chunk_size_;
+        control_block_pool_.size() + growth_chunk_size_;
     typename ControlBlockPoolTraits::Request request{};
     typename ControlBlockPoolTraits::Context context{};
-    const std::size_t old_capacity =
-        control_block_pool_.configure(typename ControlBlockPool::Config{
-            desired, control_block_block_size_});
+    const std::size_t old_capacity = control_block_pool_.resize(desired);
     control_block_pool_.createRange(old_capacity,
-                                    control_block_pool_.capacity(), request,
+                                    control_block_pool_.size(), request,
                                     context);
   }
 
@@ -242,6 +240,46 @@ public:
   PayloadPool &payloadPool() noexcept { return payload_pool_; }
   const PayloadPool &payloadPool() const noexcept { return payload_pool_; }
 
+  /**
+   * @brief Payload Pool を指定量だけ拡張
+   *
+   * @param grow_by 追加で確保するスロット数
+   * @return 拡張後の容量
+   */
+  std::size_t growPayloadPoolBy(std::size_t grow_by) {
+    if (grow_by == 0) {
+      return payload_pool_.size();
+    }
+    const std::size_t desired = payload_pool_.size() + grow_by;
+    payload_pool_.resize(desired);
+    return desired;
+  }
+
+  /**
+   * @brief Payload Pool を拡張し、新規領域を作成済みにする
+   *
+   * @param grow_by 追加で確保するスロット数
+   * @param request Payload作成に渡すリクエスト
+   * @param context Payload作成に渡すコンテキスト
+   * @return 作成が成功した場合はtrue
+   */
+  template <typename Request, typename Context>
+  bool growPayloadPoolByAndCreate(std::size_t grow_by, const Request &request,
+                                  const Context &context)
+    requires requires(PayloadPool &pool, std::size_t start, std::size_t end,
+                      const Request &req, const Context &ctx) {
+      { pool.createRange(start, end, req, ctx) } -> std::convertible_to<bool>;
+    }
+  {
+    const std::size_t old_size = payload_pool_.size();
+    const std::size_t new_size = growPayloadPoolBy(grow_by);
+    if (new_size == old_size) {
+      return true;
+    }
+    return payload_pool_.createRange(old_size, payload_pool_.size(), request,
+                                     context);
+  }
+
   // ===========================================================================
   // isAlive Helper
   // ===========================================================================
@@ -263,7 +301,7 @@ public:
   // ===========================================================================
 
   std::size_t controlBlockPoolCapacityForTest() const noexcept {
-    return control_block_pool_.capacity();
+    return control_block_pool_.size();
   }
 
   std::size_t controlBlockPoolAvailableForTest() const noexcept {
@@ -292,7 +330,7 @@ private:
         control_block_pool_.configure(typename ControlBlockPool::Config{
             capacity, block_size});
     if (!control_block_pool_.createRange(old_capacity,
-                                         control_block_pool_.capacity(),
+                                         control_block_pool_.size(),
                                          request, context)) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
