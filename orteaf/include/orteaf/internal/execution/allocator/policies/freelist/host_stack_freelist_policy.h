@@ -8,7 +8,7 @@
 #include <orteaf/internal/diagnostics/error/error_macros.h>
 #include <orteaf/internal/execution/allocator/buffer_resource.h>
 #include <orteaf/internal/execution/allocator/policies/policy_config.h>
-#include <orteaf/internal/execution/base/backend_traits.h>
+#include <orteaf/internal/execution/base/execution_traits.h>
 
 namespace orteaf::internal::execution::allocator::policies {
 

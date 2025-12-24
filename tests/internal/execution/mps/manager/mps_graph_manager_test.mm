@@ -5,7 +5,7 @@
 #include <vector>
 
 #include <orteaf/internal/execution/mps/manager/mps_graph_manager.h>
-#include <tests/internal/execution/mps/manager/testing/backend_mock.h>
+#include <tests/internal/execution/mps/manager/testing/execution_mock.h>
 #include <tests/internal/testing/error_assert.h>
 
 namespace mps_wrapper = orteaf::internal::execution::mps::platform::wrapper;
@@ -42,7 +42,7 @@ protected:
   void TearDown() override { manager_.shutdown(); }
 
   mps_rt::MpsGraphManager manager_{};
-  ::testing::NiceMock<orteaf::tests::execution::mps::MpsBackendOpsMock> mock_{};
+  ::testing::NiceMock<orteaf::tests::execution::mps::MpsExecutionOpsMock> mock_{};
   mps_wrapper::MpsDevice_t device_{nullptr};
 };
 

@@ -80,7 +80,7 @@ Architecture detectMpsArchitecture(std::string_view metal_family,
     if (localIndexOf(arch) == 0) {
       continue;
     }
-    if (backendOf(arch) != execution::Execution::Mps) {
+    if (executionOf(arch) != execution::Execution::Mps) {
       continue;
     }
 
@@ -109,8 +109,8 @@ Architecture detectMpsArchitectureForDeviceId(
     ::orteaf::internal::base::DeviceHandle device_id) {
 #if ORTEAF_ENABLE_MPS
   const std::uint32_t device_index = static_cast<std::uint32_t>(device_id);
-  const auto backend_unavailable = diagnostics::error::makeErrorCode(
-      diagnostics::error::OrteafErrc::BackendUnavailable);
+  const auto execution_unavailable = diagnostics::error::makeErrorCode(
+      diagnostics::error::OrteafErrc::ExecutionUnavailable);
 
   try {
     int count =
@@ -139,7 +139,7 @@ Architecture detectMpsArchitectureForDeviceId(
     }
     return detectMpsArchitecture(metal_family, vendor);
   } catch (const std::system_error &err) {
-    if (err.code() == backend_unavailable) {
+    if (err.code() == execution_unavailable) {
       return Architecture::MpsGeneric;
     }
     throw;

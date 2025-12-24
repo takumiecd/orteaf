@@ -81,7 +81,7 @@ inline orteaf::internal::diagnostics::error::OrteafErrc mapRuntimeErrc(cudaError
         case cudaErrorContextIsDestroyed:
             return OrteafErrc::InvalidState;
         
-        // Backend unavailable (environment/driver/initialization)
+        // Execution unavailable (environment/driver/initialization)
         case cudaErrorInitializationError:
         case cudaErrorNoDevice:
         case cudaErrorInsufficientDriver:
@@ -89,7 +89,7 @@ inline orteaf::internal::diagnostics::error::OrteafErrc mapRuntimeErrc(cudaError
 #if defined(cudaErrorDeviceUnavailable)
         case cudaErrorDeviceUnavailable:
 #endif
-            return OrteafErrc::BackendUnavailable;
+            return OrteafErrc::ExecutionUnavailable;
         
         // Asynchronous operation not yet completed (not a failure, but "not ready yet")
         case cudaErrorNotReady:
@@ -240,12 +240,12 @@ inline orteaf::internal::diagnostics::error::OrteafErrc mapDriverErrc(CUresult e
         case CUDA_SUCCESS:
             return OrteafErrc::Success;
         
-        // Backend unavailable (environment/driver/initialization)
+        // Execution unavailable (environment/driver/initialization)
         case CUDA_ERROR_DEINITIALIZED:
         case CUDA_ERROR_NOT_INITIALIZED:
         case CUDA_ERROR_NO_DEVICE:
         case CUDA_ERROR_DEVICE_UNAVAILABLE:
-            return OrteafErrc::BackendUnavailable;
+            return OrteafErrc::ExecutionUnavailable;
         
         // Memory errors
         case CUDA_ERROR_OUT_OF_MEMORY:

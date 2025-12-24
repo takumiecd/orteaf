@@ -17,7 +17,7 @@ TEST(ArchitectureBasic, GenericLocalIndexIsZero) {
     EXPECT_TRUE(arch::isGeneric(arch::Architecture::CpuGeneric));
 }
 
-TEST(ArchitectureBasic, LocalIndicesIncrementPerBackend) {
+TEST(ArchitectureBasic, LocalIndicesIncrementPerExecution) {
     EXPECT_EQ(arch::localIndexOf(arch::Architecture::CudaSm80), 1);
     EXPECT_EQ(arch::localIndexOf(arch::Architecture::CudaSm86), 2);
     EXPECT_EQ(arch::localIndexOf(arch::Architecture::CudaSm90), 3);
@@ -26,10 +26,10 @@ TEST(ArchitectureBasic, LocalIndicesIncrementPerBackend) {
     EXPECT_EQ(arch::localIndexOf(arch::Architecture::MpsM4), 3);
 }
 
-TEST(ArchitectureMetadata, BackendAssociationMatches) {
-    EXPECT_EQ(arch::backendOf(arch::Architecture::CudaSm80), execution::Execution::Cuda);
-    EXPECT_EQ(arch::backendOf(arch::Architecture::MpsM3), execution::Execution::Mps);
-    EXPECT_EQ(arch::backendOf(arch::Architecture::CpuZen4), execution::Execution::Cpu);
+TEST(ArchitectureMetadata, ExecutionAssociationMatches) {
+    EXPECT_EQ(arch::executionOf(arch::Architecture::CudaSm80), execution::Execution::Cuda);
+    EXPECT_EQ(arch::executionOf(arch::Architecture::MpsM3), execution::Execution::Mps);
+    EXPECT_EQ(arch::executionOf(arch::Architecture::CpuZen4), execution::Execution::Cpu);
 }
 
 TEST(ArchitectureMetadata, IdAndDisplayNameMatchYaml) {
@@ -42,17 +42,17 @@ TEST(ArchitectureMetadata, IdAndDisplayNameMatchYaml) {
     EXPECT_EQ(arch::displayNameOf(arch::Architecture::CpuSkylake), std::string_view("Skylake AVX512"));
 }
 
-TEST(ArchitectureLookup, BackendCountsIncludeGeneric) {
-    auto verify_backend = [](execution::Execution backend_id) {
-        const auto count = arch::countForBackend(backend_id);
-        const auto span = arch::architecturesOf(backend_id);
+TEST(ArchitectureLookup, ExecutionCountsIncludeGeneric) {
+    auto verify_execution = [](execution::Execution execution_id) {
+        const auto count = arch::countForExecution(execution_id);
+        const auto span = arch::architecturesOf(execution_id);
         EXPECT_EQ(count, span.size());
         ASSERT_GE(count, 1u);
         EXPECT_TRUE(arch::isGeneric(span.front()));
     };
-    verify_backend(execution::Execution::Cuda);
-    verify_backend(execution::Execution::Mps);
-    verify_backend(execution::Execution::Cpu);
+    verify_execution(execution::Execution::Cuda);
+    verify_execution(execution::Execution::Mps);
+    verify_execution(execution::Execution::Cpu);
 }
 
 TEST(ArchitectureLookup, ArchitecturesOfReturnsContiguousSpan) {
@@ -68,8 +68,8 @@ TEST(ArchitectureLookup, ArchitecturesOfReturnsContiguousSpan) {
     EXPECT_NE(std::find(cpu_archs.begin(), cpu_archs.end(), arch::Architecture::CpuIntelCometLake), cpu_archs.end());
 }
 
-TEST(ArchitectureLookup, FromBackendAndLocalIndexRoundsTrip) {
-    const auto arch_id = arch::fromBackendAndLocalIndex(execution::Execution::Cuda, 3);
+TEST(ArchitectureLookup, FromExecutionAndLocalIndexRoundsTrip) {
+    const auto arch_id = arch::fromExecutionAndLocalIndex(execution::Execution::Cuda, 3);
     EXPECT_EQ(arch_id, arch::Architecture::CudaSm90);
     EXPECT_TRUE(arch::hasLocalIndex(execution::Execution::Cuda, 3));
     EXPECT_FALSE(arch::hasLocalIndex(execution::Execution::Cuda, 5));

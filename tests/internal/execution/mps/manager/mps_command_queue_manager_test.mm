@@ -9,7 +9,7 @@
 #include <orteaf/internal/execution/mps/manager/mps_command_queue_manager.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_command_queue.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_event.h>
-#include <tests/internal/execution/mps/manager/testing/backend_ops_provider.h>
+#include <tests/internal/execution/mps/manager/testing/execution_ops_provider.h>
 #include <tests/internal/execution/mps/manager/testing/manager_test_fixture.h>
 #include <tests/internal/testing/error_assert.h>
 
@@ -40,10 +40,10 @@ protected:
 };
 
 #if ORTEAF_ENABLE_MPS
-using ProviderTypes = ::testing::Types<testing_mps::MockBackendOpsProvider,
-                                       testing_mps::RealBackendOpsProvider>;
+using ProviderTypes = ::testing::Types<testing_mps::MockExecutionOpsProvider,
+                                       testing_mps::RealExecutionOpsProvider>;
 #else
-using ProviderTypes = ::testing::Types<testing_mps::MockBackendOpsProvider>;
+using ProviderTypes = ::testing::Types<testing_mps::MockExecutionOpsProvider>;
 #endif
 
 } // namespace

@@ -8,7 +8,7 @@
 #include <orteaf/internal/diagnostics/error/error_macros.h>
 #include <orteaf/internal/execution/allocator/buffer_resource.h>
 #include <orteaf/internal/execution/allocator/policies/policy_config.h>
-#include <orteaf/internal/execution/base/backend_traits.h>
+#include <orteaf/internal/execution/base/execution_traits.h>
 
 namespace orteaf::internal::execution::allocator::policies {
 
@@ -28,7 +28,7 @@ public:
   using BufferResource =
       ::orteaf::internal::execution::allocator::BufferResource<B>;
   using LaunchParams =
-      typename ::orteaf::internal::execution::base::BackendTraits<
+      typename ::orteaf::internal::execution::base::ExecutionTraits<
           B>::KernelLaunchParams;
 
   struct Config : PolicyConfig<Resource> {

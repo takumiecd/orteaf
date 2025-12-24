@@ -3,7 +3,7 @@ schema_version: "1.0"
 architectures:
   - id: "Sm80"
     display_name: "CUDA SM80"
-    backend: "Cuda"
+    execution: "Cuda"
     metadata:
       description: "Ampere 世代 GPU (A100 など) 向け最適化"
       detect:
@@ -12,7 +12,7 @@ architectures:
 
   - id: "Sm86"
     display_name: "CUDA SM86"
-    backend: "Cuda"
+    execution: "Cuda"
     metadata:
       description: "Ampere 世代 GPU (RTX 30 シリーズ) 向け最適化"
       detect:
@@ -21,7 +21,7 @@ architectures:
 
   - id: "Sm90"
     display_name: "CUDA SM90"
-    backend: "Cuda"
+    execution: "Cuda"
     metadata:
       description: "Hopper 世代 GPU (H100 など) 向け最適化"
       detect:
@@ -30,7 +30,7 @@ architectures:
 
   - id: "M2"
     display_name: "Apple M2 GPU"
-    backend: "Mps"
+    execution: "Mps"
     metadata:
       description: "Apple Silicon M2 世代 GPU 向け最適化"
       detect:
@@ -39,7 +39,7 @@ architectures:
 
   - id: "M3"
     display_name: "Apple M3 GPU"
-    backend: "Mps"
+    execution: "Mps"
     metadata:
       description: "Apple Silicon M3 世代 GPU 向け最適化"
       detect:
@@ -48,7 +48,7 @@ architectures:
 
   - id: "M4"
     display_name: "Apple M4 GPU"
-    backend: "Mps"
+    execution: "Mps"
     metadata:
       description: "Apple Silicon M4 世代 GPU 向け最適化"
       detect:
@@ -57,7 +57,7 @@ architectures:
 
   - id: "Zen4"
     display_name: "Zen 4 AVX512"
-    backend: "Cpu"
+    execution: "Cpu"
     metadata:
       description: "Zen 4 / AVX-512 対応 CPU 向け最適化"
       detect:
@@ -67,7 +67,7 @@ architectures:
 
   - id: "Skylake"
     display_name: "Skylake AVX512"
-    backend: "Cpu"
+    execution: "Cpu"
     metadata:
       description: "Intel Skylake-X / AVX-512 対応 CPU 向け最適化"
       detect:
@@ -78,7 +78,7 @@ architectures:
 
   - id: "AppleM4Pro"
     display_name: "Apple M4 Pro"
-    backend: "Cpu"
+    execution: "Cpu"
     metadata:
       description: "Apple Silicon M4 Pro アーキテクチャ (Avalanche/Blizzard) 向け最適化"
       detect:
@@ -87,7 +87,7 @@ architectures:
 
   - id: "IntelCometLake"
     display_name: "Intel Comet Lake"
-    backend: "Cpu"
+    execution: "Cpu"
     metadata:
       description: "Comet Lake ファミリ (Core i9-10850K など) 向けの AVX2 最適化"
       detect:

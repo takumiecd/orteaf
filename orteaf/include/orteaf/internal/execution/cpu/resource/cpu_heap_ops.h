@@ -7,7 +7,7 @@
 
 namespace orteaf::internal::execution::cpu::resource {
 
-// Low-level heap operations for CPU backend.
+// Low-level heap operations for CPU execution.
 // Used by HierarchicalSlotAllocator for VA reservation and mapping.
 struct CpuHeapOps {
     using BufferView = ::orteaf::internal::execution::cpu::resource::CpuBufferView;

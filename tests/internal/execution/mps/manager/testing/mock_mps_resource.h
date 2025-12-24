@@ -9,7 +9,7 @@
 #include <orteaf/internal/base/handle.h>
 #include <orteaf/internal/base/heap_vector.h>
 #include <orteaf/internal/execution/allocator/buffer_resource.h>
-#include <orteaf/internal/execution/base/backend_traits.h>
+#include <orteaf/internal/execution/base/execution_traits.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_buffer.h>
 #include <orteaf/internal/execution/mps/resource/mps_buffer_view.h>
 #include <orteaf/internal/execution/mps/resource/mps_reuse_token.h>
@@ -31,7 +31,7 @@ public:
       ::orteaf::internal::execution::Execution::Mps>;
   using FenceToken = ::orteaf::internal::execution::mps::resource::MpsFenceToken;
   using ReuseToken = ::orteaf::internal::execution::mps::resource::MpsReuseToken;
-  using LaunchParams = ::orteaf::internal::execution::base::BackendTraits<
+  using LaunchParams = ::orteaf::internal::execution::base::ExecutionTraits<
       ::orteaf::internal::execution::Execution::Mps>::KernelLaunchParams;
   using MpsBuffer_t =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsBuffer_t;
@@ -47,7 +47,7 @@ public:
   };
 
   static constexpr ::orteaf::internal::execution::Execution
-  backend_type_static() noexcept {
+  execution_type_static() noexcept {
     return ::orteaf::internal::execution::Execution::Mps;
   }
 

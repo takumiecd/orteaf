@@ -7,7 +7,7 @@
 #include "tests/internal/execution/allocator/testing/mock_resource.h"
 
 namespace policies = ::orteaf::internal::execution::allocator::policies;
-using Backend = ::orteaf::internal::execution::Execution;
+using Execution = ::orteaf::internal::execution::Execution;
 using ::orteaf::internal::execution::allocator::testing::MockCpuResource;
 
 namespace {

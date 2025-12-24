@@ -4,7 +4,7 @@
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_compute_command_encoder.h"
 #include "orteaf/internal/execution/mps/resource/mps_fence_token.h"
 #include "orteaf/internal/execution/mps/resource/mps_kernel_launcher_impl.h"
-#include "tests/internal/execution/mps/manager/testing/backend_mock.h"
+#include "tests/internal/execution/mps/manager/testing/execution_mock.h"
 
 namespace base = orteaf::internal::base;
 
@@ -69,7 +69,7 @@ namespace {
 struct TestCommandQueueLease {
   using Manager =
       ::orteaf::internal::execution::mps::manager::MpsCommandQueueManager;
-  using MockOps = ::orteaf::tests::execution::mps::MpsBackendOpsMock;
+  using MockOps = ::orteaf::tests::execution::mps::MpsExecutionOpsMock;
   using Queue =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandQueue_t;
   using Device =

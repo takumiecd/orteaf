@@ -4,7 +4,7 @@
 
 namespace orteaf::internal::execution::cpu::resource {
 
-// Chunk-level view for CPU backend. Represents a reserved region (pointer +
+// Chunk-level view for CPU execution. Represents a reserved region (pointer +
 // size) before it is turned into a BufferView for user-facing code.
 struct CpuHeapRegion {
     CpuHeapRegion() = default;

@@ -25,8 +25,8 @@ inline std::string OrteafErrorCategory::message(int condition) const {
             return "invalid argument";
         case OrteafErrc::InvalidState:
             return "invalid state";
-        case OrteafErrc::BackendUnavailable:
-            return "backend unavailable";
+        case OrteafErrc::ExecutionUnavailable:
+            return "execution unavailable";
         case OrteafErrc::OutOfMemory:
             return "out of memory";
         case OrteafErrc::OperationFailed:

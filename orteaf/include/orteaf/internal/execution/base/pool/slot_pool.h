@@ -187,7 +187,7 @@ public:
    * create payloads itself.
    *
    * @param request Allocation/request details passed through for symmetry.
-   * @param context Context information (backend/device, etc.).
+   * @param context Context information (execution/device, etc.).
    * @return SlotRef with a valid handle and payload pointer.
    * @throws OrteafErrc::OutOfRange if the freelist is empty.
    */
@@ -229,7 +229,7 @@ public:
    * create payloads itself. Use emplace to initialize the payload.
    *
    * @param request Allocation/request details passed through for symmetry.
-   * @param context Context information (backend/device, etc.).
+   * @param context Context information (execution/device, etc.).
    * @return SlotRef with a valid handle and payload pointer.
    * @throws OrteafErrc::OutOfRange if no uncreated slots are available.
    */

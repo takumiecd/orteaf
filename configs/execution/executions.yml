@@ -1,6 +1,6 @@
 schema_version: "1.0"
 
-backends:
+executions:
   - id: "Cuda"
     display_name: "CUDA"
     module_path: "@orteaf/internal/execution/cuda"

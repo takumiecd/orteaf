@@ -15,19 +15,19 @@ using ::testing::NiceMock;
 
 namespace {
 
-struct CpuBackendOpsMock {
+struct CpuExecutionOpsMock {
   MOCK_METHOD(architecture::Architecture, detectArchitecture, ());
 };
 
-using CpuBackendOpsMockRegistry = test::StaticMockRegistry<CpuBackendOpsMock>;
+using CpuExecutionOpsMockRegistry = test::StaticMockRegistry<CpuExecutionOpsMock>;
 
-struct CpuBackendOpsMockAdapter {
+struct CpuExecutionOpsMockAdapter {
   static architecture::Architecture detectArchitecture() {
-    return CpuBackendOpsMockRegistry::get().detectArchitecture();
+    return CpuExecutionOpsMockRegistry::get().detectArchitecture();
   }
 };
 
-using MockCpuDeviceManager = cpu_rt::CpuDeviceManager<CpuBackendOpsMockAdapter>;
+using MockCpuDeviceManager = cpu_rt::CpuDeviceManager<CpuExecutionOpsMockAdapter>;
 
 } // namespace
 
@@ -37,15 +37,15 @@ protected:
 
   void TearDown() override {
     manager_.shutdown();
-    CpuBackendOpsMockRegistry::unbind(mock_);
+    CpuExecutionOpsMockRegistry::unbind(mock_);
   }
 
-  NiceMock<CpuBackendOpsMock> mock_;
-  CpuBackendOpsMockRegistry::Guard guard_;
+  NiceMock<CpuExecutionOpsMock> mock_;
+  CpuExecutionOpsMockRegistry::Guard guard_;
   MockCpuDeviceManager manager_;
 };
 
-TEST_F(CpuDeviceManagerMockTest, InitializesWithBackendArch) {
+TEST_F(CpuDeviceManagerMockTest, InitializesWithExecutionArch) {
   EXPECT_EQ(manager_.getDeviceCount(), 0u);
 
   EXPECT_CALL(mock_, detectArchitecture())

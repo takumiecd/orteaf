@@ -20,8 +20,8 @@ TEST(CudaCheckError, MapRuntimeErrcMapsCorrectly) {
     EXPECT_EQ(cuda::mapRuntimeErrc(cudaSuccess), diag::OrteafErrc::Success);
     EXPECT_EQ(cuda::mapRuntimeErrc(cudaErrorMemoryAllocation), diag::OrteafErrc::OutOfMemory);
     EXPECT_EQ(cuda::mapRuntimeErrc(cudaErrorInvalidValue), diag::OrteafErrc::InvalidParameter);
-    EXPECT_EQ(cuda::mapRuntimeErrc(cudaErrorInitializationError), diag::OrteafErrc::BackendUnavailable);
-    EXPECT_EQ(cuda::mapRuntimeErrc(cudaErrorInitializationError), diag::OrteafErrc::BackendUnavailable);
+    EXPECT_EQ(cuda::mapRuntimeErrc(cudaErrorInitializationError), diag::OrteafErrc::ExecutionUnavailable);
+    EXPECT_EQ(cuda::mapRuntimeErrc(cudaErrorInitializationError), diag::OrteafErrc::ExecutionUnavailable);
     EXPECT_EQ(cuda::mapRuntimeErrc(cudaErrorUnknown), diag::OrteafErrc::Unknown);
 }
 
@@ -30,8 +30,8 @@ TEST(CudaCheckError, MapRuntimeErrcMapsCorrectly) {
  */
 TEST(CudaCheckError, MapDriverErrcMapsCorrectly) {
     EXPECT_EQ(cuda::mapDriverErrc(CUDA_SUCCESS), diag::OrteafErrc::Success);
-    EXPECT_EQ(cuda::mapDriverErrc(CUDA_ERROR_DEINITIALIZED), diag::OrteafErrc::BackendUnavailable);
-    EXPECT_EQ(cuda::mapDriverErrc(CUDA_ERROR_NOT_INITIALIZED), diag::OrteafErrc::BackendUnavailable);
+    EXPECT_EQ(cuda::mapDriverErrc(CUDA_ERROR_DEINITIALIZED), diag::OrteafErrc::ExecutionUnavailable);
+    EXPECT_EQ(cuda::mapDriverErrc(CUDA_ERROR_NOT_INITIALIZED), diag::OrteafErrc::ExecutionUnavailable);
     EXPECT_EQ(cuda::mapDriverErrc(CUDA_ERROR_OUT_OF_MEMORY), diag::OrteafErrc::OutOfMemory);
     EXPECT_EQ(cuda::mapDriverErrc(CUDA_ERROR_INVALID_VALUE), diag::OrteafErrc::InvalidParameter);
     EXPECT_EQ(cuda::mapDriverErrc(CUDA_ERROR_INVALID_CONTEXT), diag::OrteafErrc::InvalidState);

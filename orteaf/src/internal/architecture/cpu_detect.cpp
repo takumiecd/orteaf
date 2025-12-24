@@ -316,7 +316,7 @@ Architecture detectCpuArchitecture() {
         if (localIndexOf(arch) == 0) {
             continue; // skip generic, reserve as fallback
         }
-        if (backendOf(arch) != execution::Execution::Cpu) {
+        if (executionOf(arch) != execution::Execution::Cpu) {
             continue;
         }
         if (!matchesDetectSpec(index, info)) {

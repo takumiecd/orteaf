@@ -7,7 +7,7 @@
 
 namespace orteaf::internal::execution::cpu {
 
-// CPU backend resource for direct allocation.
+// CPU execution resource for direct allocation.
 // For low-level heap operations (reserve/map/unmap), use CpuHeapOps.
 class CpuResource {
 public:

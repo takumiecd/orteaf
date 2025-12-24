@@ -21,7 +21,7 @@ enum class OrteafErrc {
     Unknown = 1,              ///< 原因不明のエラー
     InvalidArgument = 2,      ///< 上位APIの引数不正（ユーザー入力：Tensor演算など）
     InvalidState = 3,         ///< オブジェクト状態が不正
-    BackendUnavailable = 4,   ///< バックエンドが利用不可
+    ExecutionUnavailable = 4,   ///< バックエンドが利用不可
     OutOfMemory = 5,          ///< メモリ確保に失敗
     OperationFailed = 6,      ///< その他の操作失敗
     

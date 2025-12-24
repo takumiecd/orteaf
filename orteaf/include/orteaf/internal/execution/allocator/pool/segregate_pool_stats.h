@@ -8,25 +8,25 @@
 
 namespace orteaf::internal::execution::allocator::pool {
 
-template <::orteaf::internal::execution::Execution BackendType>
+template <::orteaf::internal::execution::Execution ExecutionType>
 class SegregatePoolStats {
 private:
-  // Determine statistics level based on backend type
+  // Determine statistics level based on execution type
   static constexpr int StatsLevel = []() {
-    if constexpr (BackendType == ::orteaf::internal::execution::Execution::Cpu) {
+    if constexpr (ExecutionType == ::orteaf::internal::execution::Execution::Cpu) {
 #ifdef ORTEAF_STATS_LEVEL_CPU_VALUE
       return ORTEAF_STATS_LEVEL_CPU_VALUE;
 #else
       return 0;
 #endif
-    } else if constexpr (BackendType ==
+    } else if constexpr (ExecutionType ==
                          ::orteaf::internal::execution::Execution::Mps) {
 #ifdef ORTEAF_STATS_LEVEL_MPS_VALUE
       return ORTEAF_STATS_LEVEL_MPS_VALUE;
 #else
       return 0;
 #endif
-    } else if constexpr (BackendType ==
+    } else if constexpr (ExecutionType ==
                          ::orteaf::internal::execution::Execution::Cuda) {
 #ifdef ORTEAF_STATS_LEVEL_CUDA_VALUE
       return ORTEAF_STATS_LEVEL_CUDA_VALUE;

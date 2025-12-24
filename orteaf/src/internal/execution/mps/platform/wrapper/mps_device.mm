@@ -27,7 +27,7 @@ MpsDevice_t getDevice() {
   id<MTLDevice> device = MTLCreateSystemDefaultDevice();
   if (device == nil) {
     using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable,
+    throwError(OrteafErrc::ExecutionUnavailable,
                "getDevice: no default Metal device available");
   }
   return (MpsDevice_t)opaqueFromObjcRetained(device);
@@ -40,7 +40,7 @@ MpsDevice_t getDevice(MPSInt_t device_id) {
   NSArray<id<MTLDevice>> *devices = MTLCopyAllDevices();
   if (devices == nil) {
     using namespace orteaf::internal::diagnostics::error;
-    throwError(OrteafErrc::BackendUnavailable,
+    throwError(OrteafErrc::ExecutionUnavailable,
                "getDevice: no Metal devices available");
   }
   if (device_id < 0) {

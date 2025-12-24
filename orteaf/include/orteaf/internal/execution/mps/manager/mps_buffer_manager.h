@@ -233,10 +233,10 @@ public:
     res_cfg.usage = config.usage;
     res_cfg.library_manager = config.library_manager;
 
-    Resource backend_resource{};
-    backend_resource.initialize(res_cfg);
+    Resource execution_resource{};
+    execution_resource.initialize(res_cfg);
     segregate_pool_.~SegregatePool();
-    new (&segregate_pool_) SegregatePool(std::move(backend_resource));
+    new (&segregate_pool_) SegregatePool(std::move(execution_resource));
 
     typename SegregatePool::Config pool_cfg{};
     pool_cfg.chunk_size = config.chunk_size;

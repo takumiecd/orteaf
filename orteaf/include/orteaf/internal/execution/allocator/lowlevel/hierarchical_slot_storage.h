@@ -10,7 +10,7 @@
 #include "orteaf/internal/base/math_utils.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include "orteaf/internal/diagnostics/error/error_macros.h"
-#include "orteaf/internal/execution/base/backend_traits.h"
+#include "orteaf/internal/execution/base/execution_traits.h"
 
 namespace orteaf::internal::execution::allocator::policies {
 
@@ -21,9 +21,9 @@ template <class HeapOps, ::orteaf::internal::execution::Execution B>
 class HierarchicalSlotStorage {
 public:
   using BufferView =
-      typename ::orteaf::internal::execution::base::BackendTraits<B>::BufferView;
+      typename ::orteaf::internal::execution::base::ExecutionTraits<B>::BufferView;
   using HeapRegion =
-      typename ::orteaf::internal::execution::base::BackendTraits<B>::HeapRegion;
+      typename ::orteaf::internal::execution::base::ExecutionTraits<B>::HeapRegion;
 
   static constexpr uint32_t kNoParent = UINT32_MAX;
   static constexpr uint32_t kInvalidLayer = UINT32_MAX;

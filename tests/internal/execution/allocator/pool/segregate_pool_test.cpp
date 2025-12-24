@@ -42,11 +42,11 @@ struct MockResource {
   };
   struct LaunchParams {};
 
-  static constexpr Execution backend_type_static() noexcept {
+  static constexpr Execution execution_type_static() noexcept {
     return Execution::Cpu;
   }
-  constexpr Execution backend_type() const noexcept {
-    return backend_type_static();
+  constexpr Execution execution_type() const noexcept {
+    return execution_type_static();
   }
 
   struct Config {

@@ -12,7 +12,7 @@
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_device.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_fence.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_heap.h>
-#include <tests/internal/execution/mps/manager/testing/backend_mock_expectations.h>
+#include <tests/internal/execution/mps/manager/testing/execution_mock_expectations.h>
 
 namespace orteaf::tests::execution::mps::testing {
 
@@ -39,7 +39,7 @@ public:
           matcher = ::testing::_) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
-      BackendMockExpectations::expectCreateCommandQueues(mock, handles,
+      ExecutionMockExpectations::expectCreateCommandQueues(mock, handles,
                                                          matcher);
     }
   }
@@ -53,7 +53,7 @@ public:
           matcher = ::testing::_) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
-      BackendMockExpectations::expectCreateEvents(mock, handles, matcher);
+      ExecutionMockExpectations::expectCreateEvents(mock, handles, matcher);
     }
   }
 
@@ -66,7 +66,7 @@ public:
           matcher = ::testing::_) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
-      BackendMockExpectations::expectCreateFences(mock, handles, matcher);
+      ExecutionMockExpectations::expectCreateFences(mock, handles, matcher);
     }
   }
 
@@ -80,7 +80,7 @@ public:
           matcher = ::testing::_) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
-      BackendMockExpectations::expectCreateLibraries(mock, expectations,
+      ExecutionMockExpectations::expectCreateLibraries(mock, expectations,
                                                      matcher);
     }
   }
@@ -95,7 +95,7 @@ public:
           matcher = ::testing::_) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
-      BackendMockExpectations::expectCreateFunctions(mock, expectations,
+      ExecutionMockExpectations::expectCreateFunctions(mock, expectations,
                                                      matcher);
     }
   }
@@ -111,7 +111,7 @@ public:
           matcher = ::testing::_) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
-      BackendMockExpectations::expectCreateComputePipelineStates(
+      ExecutionMockExpectations::expectCreateComputePipelineStates(
           mock, expectations, matcher);
     }
   }
@@ -122,7 +122,7 @@ public:
           handles) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
-      BackendMockExpectations::expectDestroyCommandQueues(mock, handles);
+      ExecutionMockExpectations::expectDestroyCommandQueues(mock, handles);
     }
   }
 
@@ -132,7 +132,7 @@ public:
           handles) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
-      BackendMockExpectations::expectDestroyEvents(mock, handles);
+      ExecutionMockExpectations::expectDestroyEvents(mock, handles);
     }
   }
 
@@ -142,7 +142,7 @@ public:
           handles) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
-      BackendMockExpectations::expectDestroyFences(mock, handles);
+      ExecutionMockExpectations::expectDestroyFences(mock, handles);
     }
   }
 
@@ -152,7 +152,7 @@ public:
           handles) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
-      BackendMockExpectations::expectDestroyLibraries(mock, handles);
+      ExecutionMockExpectations::expectDestroyLibraries(mock, handles);
     }
   }
 
@@ -162,7 +162,7 @@ public:
           handles) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
-      BackendMockExpectations::expectDestroyFunctions(mock, handles);
+      ExecutionMockExpectations::expectDestroyFunctions(mock, handles);
     }
   }
 
@@ -172,7 +172,7 @@ public:
           handles) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
-      BackendMockExpectations::expectDestroyComputePipelineStates(mock,
+      ExecutionMockExpectations::expectDestroyComputePipelineStates(mock,
                                                                   handles);
     }
   }
@@ -189,7 +189,7 @@ public:
           descriptor_matcher = ::testing::_) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
-      BackendMockExpectations::expectCreateHeaps(mock, handles, device_matcher,
+      ExecutionMockExpectations::expectCreateHeaps(mock, handles, device_matcher,
                                                  descriptor_matcher);
     }
   }
@@ -200,7 +200,7 @@ public:
           handles) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
-      BackendMockExpectations::expectDestroyHeaps(mock, handles);
+      ExecutionMockExpectations::expectDestroyHeaps(mock, handles);
     }
   }
 
@@ -215,7 +215,7 @@ public:
           device_matcher = ::testing::_) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
-      BackendMockExpectations::expectCreateHeapsInOrder(mock, expectations,
+      ExecutionMockExpectations::expectCreateHeapsInOrder(mock, expectations,
                                                         device_matcher);
     }
   }
@@ -226,7 +226,7 @@ public:
           handles) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
-      BackendMockExpectations::expectCreateHeapDescriptors(mock, handles);
+      ExecutionMockExpectations::expectCreateHeapDescriptors(mock, handles);
     }
   }
 
@@ -236,7 +236,7 @@ public:
           handles) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
-      BackendMockExpectations::expectDestroyHeapDescriptors(mock, handles);
+      ExecutionMockExpectations::expectDestroyHeapDescriptors(mock, handles);
     }
   }
 
@@ -328,7 +328,7 @@ public:
           handles) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
-      BackendMockExpectations::expectDestroyCommandQueuesInOrder(mock, handles);
+      ExecutionMockExpectations::expectDestroyCommandQueuesInOrder(mock, handles);
     }
   }
 
@@ -338,14 +338,14 @@ public:
           handles) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
-      BackendMockExpectations::expectDestroyEventsInOrder(mock, handles);
+      ExecutionMockExpectations::expectDestroyEventsInOrder(mock, handles);
     }
   }
 
   void expectGetDeviceCount(int count) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
-      BackendMockExpectations::expectGetDeviceCount(mock, count);
+      ExecutionMockExpectations::expectGetDeviceCount(mock, count);
     }
   }
 
@@ -356,7 +356,7 @@ public:
           expectations) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
-      BackendMockExpectations::expectGetDevices(mock, expectations);
+      ExecutionMockExpectations::expectGetDevices(mock, expectations);
     }
   }
 
@@ -367,7 +367,7 @@ public:
           expectations) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
-      BackendMockExpectations::expectDetectArchitectures(mock, expectations);
+      ExecutionMockExpectations::expectDetectArchitectures(mock, expectations);
     }
   }
 
@@ -377,7 +377,7 @@ public:
           devices) {
     if constexpr (Provider::is_mock) {
       auto &mock = Provider::mock(*context_);
-      BackendMockExpectations::expectReleaseDevices(mock, devices);
+      ExecutionMockExpectations::expectReleaseDevices(mock, devices);
     }
   }
 
@@ -398,8 +398,8 @@ private:
   void acquireDeviceOrSkip() {
     auto *ops = Provider::getOps(*context_);
     if constexpr (Provider::is_mock) {
-      BackendMockExpectations::expectGetDeviceCount(*ops, 1);
-      BackendMockExpectations::expectGetDevices(*ops,
+      ExecutionMockExpectations::expectGetDeviceCount(*ops, 1);
+      ExecutionMockExpectations::expectGetDevices(*ops,
                                                 {{0, mockDeviceHandle()}});
     }
     const int count = ops->getDeviceCount();

@@ -113,7 +113,7 @@ bool LooksLikeIdentifier(std::string_view value) {
     return true;
 }
 
-struct BackendDefinition {
+struct ExecutionDefinition {
     std::string id;
     std::string display_name;
     std::string module_path;
@@ -122,7 +122,7 @@ struct BackendDefinition {
 
 struct ParsedConfig {
     std::string schema_version;
-    std::vector<BackendDefinition> backends;
+    std::vector<ExecutionDefinition> executions;
 };
 
 ParsedConfig ParseConfig(const fs::path& yaml_path) {
@@ -136,7 +136,7 @@ ParsedConfig ParseConfig(const fs::path& yaml_path) {
     }
 
     if (!root || !root.IsMap()) {
-        Fail("Root of backend YAML must be a mapping");
+        Fail("Root of execution YAML must be a mapping");
     }
 
     const auto schema_node = root["schema_version"];
@@ -147,38 +147,38 @@ ParsedConfig ParseConfig(const fs::path& yaml_path) {
     ParsedConfig parsed;
     parsed.schema_version = schema_node.as<std::string>();
 
-    const auto backends_node = root["backends"];
-    if (!backends_node || !backends_node.IsSequence()) {
-        Fail("Missing required sequence key 'backends'");
+    const auto executions_node = root["executions"];
+    if (!executions_node || !executions_node.IsSequence()) {
+        Fail("Missing required sequence key 'executions'");
     }
 
-    parsed.backends.reserve(backends_node.size());
+    parsed.executions.reserve(executions_node.size());
     std::unordered_set<std::string> seen_ids;
 
-    for (std::size_t index = 0; index < backends_node.size(); ++index) {
-        const auto& node = backends_node[index];
+    for (std::size_t index = 0; index < executions_node.size(); ++index) {
+        const auto& node = executions_node[index];
         if (!node.IsMap()) {
             std::ostringstream oss;
-            oss << "Each backend entry must be a mapping (index " << index << ")";
+            oss << "Each execution entry must be a mapping (index " << index << ")";
             Fail(oss.str());
         }
-        const std::string context = "backends[" + std::to_string(index) + "]";
+        const std::string context = "executions[" + std::to_string(index) + "]";
 
-        BackendDefinition backend;
-        backend.id = ReadRequiredString(node, "id", context);
-        if (!LooksLikeIdentifier(backend.id)) {
+        ExecutionDefinition execution;
+        execution.id = ReadRequiredString(node, "id", context);
+        if (!LooksLikeIdentifier(execution.id)) {
             std::ostringstream oss;
-            oss << "Backend id '" << backend.id << "' is not a valid identifier (" << context << ")";
+            oss << "Execution id '" << execution.id << "' is not a valid identifier (" << context << ")";
             Fail(oss.str());
         }
-        if (!seen_ids.insert(backend.id).second) {
+        if (!seen_ids.insert(execution.id).second) {
             std::ostringstream oss;
-            oss << "Duplicate backend id '" << backend.id << "'";
+            oss << "Duplicate execution id '" << execution.id << "'";
             Fail(oss.str());
         }
 
-        backend.display_name = ReadRequiredString(node, "display_name", context);
-        backend.module_path = ReadRequiredString(node, "module_path", context);
+        execution.display_name = ReadRequiredString(node, "display_name", context);
+        execution.module_path = ReadRequiredString(node, "module_path", context);
 
         const auto metadata_node = node["metadata"];
         if (metadata_node) {
@@ -192,19 +192,19 @@ ParsedConfig ParseConfig(const fs::path& yaml_path) {
             const auto description =
                 ReadOptionalString(metadata_node, "description", metadata_context);
             if (description) {
-                backend.description = *description;
+                execution.description = *description;
             }
         }
 
-        parsed.backends.push_back(std::move(backend));
+        parsed.executions.push_back(std::move(execution));
     }
 
     return parsed;
 }
 
 struct GeneratedData {
-    std::string backend_def;
-    std::string backend_tables_header;
+    std::string execution_def;
+    std::string execution_tables_header;
 };
 
 GeneratedData GenerateOutputs(const ParsedConfig& config) {
@@ -213,13 +213,13 @@ GeneratedData GenerateOutputs(const ParsedConfig& config) {
     {
         std::ostringstream def_stream;
         def_stream << "// Auto-generated. Do not edit.\n";
-        for (const auto& backend : config.backends) {
-            def_stream << "BACKEND(" << backend.id << ", \""
-                       << EscapeStringLiteral(backend.display_name) << "\", \""
-                       << EscapeStringLiteral(backend.module_path) << "\", \""
-                       << EscapeStringLiteral(backend.description) << "\")\n";
+        for (const auto& execution : config.executions) {
+            def_stream << "EXECUTION(" << execution.id << ", \""
+                       << EscapeStringLiteral(execution.display_name) << "\", \""
+                       << EscapeStringLiteral(execution.module_path) << "\", \""
+                       << EscapeStringLiteral(execution.description) << "\")\n";
         }
-        generated.backend_def = def_stream.str();
+        generated.execution_def = def_stream.str();
     }
 
     {
@@ -230,25 +230,25 @@ GeneratedData GenerateOutputs(const ParsedConfig& config) {
         header_stream << "#include <cstddef>\n";
         header_stream << "#include <string_view>\n\n";
         header_stream << "namespace orteaf::generated::execution_tables {\n";
-        header_stream << "inline constexpr std::size_t kBackendCount = " << config.backends.size() << ";\n\n";
+        header_stream << "inline constexpr std::size_t kExecutionCount = " << config.executions.size() << ";\n\n";
 
         auto emit_string_array = [&](const std::string_view name, auto getter) {
-            header_stream << "inline constexpr std::array<std::string_view, kBackendCount> " << name << " = {\n";
-            for (const auto& backend : config.backends) {
-                header_stream << "    \"" << getter(backend) << "\",\n";
+            header_stream << "inline constexpr std::array<std::string_view, kExecutionCount> " << name << " = {\n";
+            for (const auto& execution : config.executions) {
+                header_stream << "    \"" << getter(execution) << "\",\n";
             }
             header_stream << "};\n\n";
         };
 
-        emit_string_array("kBackendDisplayNames",
-                          [](const BackendDefinition& backend) { return EscapeStringLiteral(backend.display_name); });
-        emit_string_array("kBackendModulePaths",
-                          [](const BackendDefinition& backend) { return EscapeStringLiteral(backend.module_path); });
-        emit_string_array("kBackendDescriptions",
-                          [](const BackendDefinition& backend) { return EscapeStringLiteral(backend.description); });
+        emit_string_array("kExecutionDisplayNames",
+                          [](const ExecutionDefinition& execution) { return EscapeStringLiteral(execution.display_name); });
+        emit_string_array("kExecutionModulePaths",
+                          [](const ExecutionDefinition& execution) { return EscapeStringLiteral(execution.module_path); });
+        emit_string_array("kExecutionDescriptions",
+                          [](const ExecutionDefinition& execution) { return EscapeStringLiteral(execution.description); });
 
         header_stream << "}  // namespace orteaf::generated::execution_tables\n";
-        generated.backend_tables_header = header_stream.str();
+        generated.execution_tables_header = header_stream.str();
     }
 
     return generated;
@@ -271,7 +271,7 @@ void WriteFile(const fs::path& path, const std::string& content) {
 
 int main(int argc, char** argv) try {
     if (argc != 3) {
-        std::cerr << "Usage: gen_backends <backends.yml> <output_dir>\n";
+        std::cerr << "Usage: gen_executions <executions.yml> <output_dir>\n";
         return 1;
     }
 
@@ -292,11 +292,11 @@ int main(int argc, char** argv) try {
         return 1;
     }
 
-    WriteFile(output_dir / "execution.def", generated.backend_def);
-    WriteFile(output_dir / "execution_tables.h", generated.backend_tables_header);
+    WriteFile(output_dir / "execution.def", generated.execution_def);
+    WriteFile(output_dir / "execution_tables.h", generated.execution_tables_header);
 
     return 0;
 } catch (const std::exception& e) {
-    std::cerr << "gen_backends error: " << e.what() << "\n";
+    std::cerr << "gen_executions error: " << e.what() << "\n";
     return 1;
 }

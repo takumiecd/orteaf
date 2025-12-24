@@ -9,8 +9,8 @@
 ```text
 orteaf/
 ├── include/orteaf/internal/execution/
-│   ├── manager/            # ランタイムマネージャ群（各 backend サブディレクトリ）
-│   ├── allocator/          # ランタイム共通アロケータ（Backend 別特殊化をここに集約）
+│   ├── manager/            # ランタイムマネージャ群（各 execution サブディレクトリ）
+│   ├── allocator/          # ランタイム共通アロケータ（Execution 別特殊化をここに集約）
 │   ├── context/            # Runtime Context / CurrentState 相当の公開インターフェース
 │   └── ops/                # 便利機能（wait/signal 等）――マネージャ完成後に追加
 └── src/internal/execution/
@@ -37,7 +37,7 @@ orteaf/
 
 ## バックエンドごとの必須マネージャ
 
-| Backend | Device | Context | Stream | Event | 補足 |
+| Execution | Device | Context | Stream | Event | 補足 |
 | --- | --- | --- | --- | --- | --- |
 | CPU  | ✅ 必須 | 省略可（現状は不要） | 省略可 | 省略可 | 単一デバイスでシリアル実行を想定。 |
 | CUDA | ✅ 必須 | ✅ 必須 | ✅ 必須 | ✅ 必須 | 既存 `bitsai` の 4 マネージャを分割して配置。 |

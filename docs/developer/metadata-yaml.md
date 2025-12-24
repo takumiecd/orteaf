@@ -1,6 +1,6 @@
 # Metadata YAML & Code Generation Guide
 
-The files under `configs/` define five catalogs (dtypes, ops, backends, architectures,
+The files under `configs/` define five catalogs (dtypes, ops, executions, architectures,
 devices). Each catalog has a dedicated generator in `tools/codegen` that produces
 constexpr tables in `build/generated/orteaf/**`, which are then consumed by the
 public headers in `orteaf/include/orteaf/internal/**`.
@@ -94,21 +94,21 @@ ops:
 
 The generator validates every section (inputs, dtype rules, shape kinds, etc.) and
 flattens the data into `ops_tables.h`. When adding or removing ops, update any
-backend kernels that rely on the affected IDs.
+execution kernels that rely on the affected IDs.
 
 ---
 
-## Backends
+## Executions
 
-- **YAML**: `configs/backend/backends.yml`
-- **Generator**: `tools/codegen/gen_backends.cpp` (`generate_backends`)
+- **YAML**: `configs/execution/executions.yml`
+- **Generator**: `tools/codegen/gen_executions.cpp` (`generate_executions`)
 - **Public header**: `orteaf/include/orteaf/internal/execution/execution.h`
-- **Tests**: `tests/internal/backend/backend_tables_test.cpp`
+- **Tests**: `tests/internal/execution/execution_tables_test.cpp`
 
 ```yaml
 schema_version: "1.0"
 
-backends:
+executions:
   - id: "Cuda"
     display_name: "CUDA"
     module_path: "@orteaf/internal/execution/cuda"
@@ -116,8 +116,8 @@ backends:
       description: "NVIDIA CUDA implementation"
 ```
 
-Backend IDs are referenced by both the architecture and device catalogs, so keep
-them stable. `module_path` determines where dispatcher code looks for the backend
+Execution IDs are referenced by both the architecture and device catalogs, so keep
+them stable. `module_path` determines where dispatcher code looks for the execution
 implementation.
 
 ---
@@ -135,13 +135,13 @@ schema_version: "1.0"
 architectures:
   - id: "Sm90"
     display_name: "CUDA SM90"
-    backend: "Cuda"
+    execution: "Cuda"
     metadata:
       description: "Optimized kernels for Hopper GPUs"
 ```
 
 Do not list the `Generic` architecture in YAML; the generator injects it and
-assigns local index `0` for each backend. The remaining entries appear in the
+assigns local index `0` for each execution. The remaining entries appear in the
 order they are written, so keep the list sorted if that matters for humans.
 
 ---
@@ -159,7 +159,7 @@ schema_version: "1.0"
 devices:
   - id: "CudaH100Pcie80GB"
     display_name: "H100 PCIe (80GB)"
-    backend: "Cuda"            # -> backends.yml
+    execution: "Cuda"            # -> executions.yml
     architecture: "Sm90"       # -> architectures.yml
     memory:
       max_bytes: 85899345920
@@ -174,8 +174,8 @@ devices:
 
 Validation checks ensure that:
 
-1. All referenced backend / architecture / dtype / op IDs exist.
-2. The architecture belongs to the same backend as the device.
+1. All referenced execution / architecture / dtype / op IDs exist.
+2. The architecture belongs to the same execution as the device.
 3. Lists avoid duplicate IDs.
 
 Supported dtypes/ops are stored as flat arrays plus offsets, so order them the

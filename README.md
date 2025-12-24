@@ -38,7 +38,7 @@ ninja
 
 ### Enabling or Disabling CUDA and MPS
 
-You can control which backends are enabled at build time through CMake options.
+You can control which executions are enabled at build time through CMake options.
 
 ```bash
 cmake -G Ninja .. -DENABLE_CUDA=ON -DENABLE_MPS=OFF

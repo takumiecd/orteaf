@@ -27,10 +27,10 @@
 
 namespace orteaf::internal::execution::base {
 
-template <::orteaf::internal::execution::Execution B> struct BackendTraits;
+template <::orteaf::internal::execution::Execution B> struct ExecutionTraits;
 
 // CPU
-template <> struct BackendTraits<::orteaf::internal::execution::Execution::Cpu> {
+template <> struct ExecutionTraits<::orteaf::internal::execution::Execution::Cpu> {
   using BufferView = ::orteaf::internal::execution::cpu::resource::CpuBufferView;
   using HeapRegion = ::orteaf::internal::execution::cpu::resource::CpuHeapRegion;
   using Stream = void *; // placeholder; adjust when stream type is defined
@@ -47,7 +47,7 @@ template <> struct BackendTraits<::orteaf::internal::execution::Execution::Cpu> 
 
 // CUDA
 #if ORTEAF_ENABLE_CUDA
-template <> struct BackendTraits<::orteaf::internal::execution::Execution::Cuda> {
+template <> struct ExecutionTraits<::orteaf::internal::execution::Execution::Cuda> {
   using BufferView =
       ::orteaf::internal::execution::cuda::resource::CudaBufferView;
   using HeapRegion = ::orteaf::internal::execution::cuda::resource::
@@ -70,7 +70,7 @@ template <> struct BackendTraits<::orteaf::internal::execution::Execution::Cuda>
 
 // MPS
 #if ORTEAF_ENABLE_MPS
-template <> struct BackendTraits<::orteaf::internal::execution::Execution::Mps> {
+template <> struct ExecutionTraits<::orteaf::internal::execution::Execution::Mps> {
   using BufferView = ::orteaf::internal::execution::mps::resource::MpsBufferView;
   using HeapRegion = ::orteaf::internal::execution::mps::resource::MpsHeapRegion;
   using Context = int; // placeholder until context abstraction exists

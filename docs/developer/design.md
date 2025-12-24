@@ -40,7 +40,7 @@ orteaf/
 - `ModuleImpl` / `Layer` 実装：標準レイヤや Model の実相。
 
 ### Internal 層
-- `Runtime`：Internal の中核。Backend ごとに異なる形をとり、それぞれのデバイスが最大限のパフォーマンスを発揮できるように柔軟性を確保している。
+- `Runtime`：Internal の中核。Execution ごとに異なる形をとり、それぞれのデバイスが最大限のパフォーマンスを発揮できるように柔軟性を確保している。
 -  `MemSafe`：Runtime で提供されるapiを用いて、メモリをさらに柔軟に、そして安全に使うことの出来る層。
 - `Dispatcher`：Runtime が提供するコンテキストと KernelRegister を使い、OPS から呼ばれる演算実体を選択する。
 - `Diagnostics`（`error/`, `log/`）：共通のエラー情報 (`OrteafError`)、致命的エラー (`fatal_error`) と例外ラッパーを提供し、統一的に throw / ログ / 統計連携を扱う。

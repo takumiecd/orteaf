@@ -19,7 +19,7 @@
 
 namespace orteaf::tests::execution::mps {
 
-struct MpsBackendOpsMock
+struct MpsExecutionOpsMock
     : public orteaf::internal::execution::mps::platform::MpsSlowOps {
   MOCK_METHOD(int, getDeviceCount, (), (override));
   MOCK_METHOD(::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t,
@@ -191,7 +191,7 @@ struct MpsBackendOpsMock
               (override));
 };
 
-// Note: MpsBackendOpsMockAdapter is removed as we are moving to instance-based
-// mocks. Tests should instantiate MpsBackendOpsMock directly.
+// Note: MpsExecutionOpsMockAdapter is removed as we are moving to instance-based
+// mocks. Tests should instantiate MpsExecutionOpsMock directly.
 
 } // namespace orteaf::tests::execution::mps

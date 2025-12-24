@@ -4,7 +4,7 @@
 #include <gtest/gtest.h>
 
 #include "orteaf/internal/execution/execution.h"
-#include "orteaf/internal/execution/base/backend_traits.h"
+#include "orteaf/internal/execution/base/execution_traits.h"
 #include "tests/internal/execution/allocator/testing/mock_resource.h"
 #include "tests/internal/testing/error_assert.h"
 
@@ -15,7 +15,7 @@ using ::testing::Return;
 namespace allocator = ::orteaf::internal::execution::allocator;
 namespace policies = ::orteaf::internal::execution::allocator::policies;
 using Execution = ::orteaf::internal::execution::Execution;
-using Traits = ::orteaf::internal::execution::base::BackendTraits<Execution::Cpu>;
+using Traits = ::orteaf::internal::execution::base::ExecutionTraits<Execution::Cpu>;
 using BufferView = Traits::BufferView;
 using HeapRegion = Traits::HeapRegion;
 using ::orteaf::internal::execution::allocator::testing::MockCpuHeapOps;

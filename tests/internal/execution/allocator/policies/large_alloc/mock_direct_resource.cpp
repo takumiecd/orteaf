@@ -14,7 +14,7 @@ using ::testing::Return;
 
 namespace allocator = ::orteaf::internal::execution::allocator;
 namespace policies = ::orteaf::internal::execution::allocator::policies;
-using Backend = ::orteaf::internal::execution::Execution;
+using Execution = ::orteaf::internal::execution::Execution;
 using ::orteaf::internal::execution::allocator::testing::MockCpuResource;
 using ::orteaf::internal::execution::allocator::testing::MockCpuResourceImpl;
 

@@ -15,11 +15,11 @@ TEST(DiagnosticsError, ErrorCodeCategoryBasics) {
 }
 
 TEST(DiagnosticsError, OrteafErrorCapturesCodeAndMessage) {
-    auto err = diag::makeError(diag::OrteafErrc::BackendUnavailable, "cuda backend disabled");
-    EXPECT_EQ(diag::OrteafErrc::BackendUnavailable, err.errc());
+    auto err = diag::makeError(diag::OrteafErrc::ExecutionUnavailable, "cuda execution disabled");
+    EXPECT_EQ(diag::OrteafErrc::ExecutionUnavailable, err.errc());
     EXPECT_EQ(&diag::orteafErrorCategory(), &err.code().category());
     const auto describe = err.describe();
-    EXPECT_NE(std::string::npos, describe.find("cuda backend disabled"));
+    EXPECT_NE(std::string::npos, describe.find("cuda execution disabled"));
 }
 
 TEST(DiagnosticsError, ThrowErrorHelperThrowsOrteafError) {
@@ -58,11 +58,11 @@ TEST(DiagnosticsError, CaptureResultPropagatesValue) {
 
 TEST(DiagnosticsError, CaptureResultPropagatesOrteafError) {
     auto result = diag::captureResult([]() -> int {
-        diag::throwError(diag::OrteafErrc::BackendUnavailable, "backend down");
+        diag::throwError(diag::OrteafErrc::ExecutionUnavailable, "execution down");
         return 0;
     });
     EXPECT_TRUE(result.has_error());
-    EXPECT_EQ(diag::OrteafErrc::BackendUnavailable, result.error().errc());
+    EXPECT_EQ(diag::OrteafErrc::ExecutionUnavailable, result.error().errc());
 }
 
 TEST(DiagnosticsError, CaptureResultMapsStdExceptionToUnknown) {

@@ -54,7 +54,7 @@ Architecture detectCudaArchitecture(int compute_capability,
     if (localIndexOf(arch) == 0) {
       continue;
     }
-    if (backendOf(arch) != execution::Execution::Cuda) {
+    if (executionOf(arch) != execution::Execution::Cuda) {
       continue;
     }
 
@@ -85,8 +85,8 @@ Architecture detectCudaArchitectureForDeviceId(
   using diagnostics::error::OrteafErrc;
 
   const std::uint32_t device_index = static_cast<std::uint32_t>(device_id);
-  const auto backend_unavailable =
-      diagnostics::error::makeErrorCode(OrteafErrc::BackendUnavailable);
+  const auto execution_unavailable =
+      diagnostics::error::makeErrorCode(OrteafErrc::ExecutionUnavailable);
 
   try {
     int count = execution::cuda::platform::wrapper::getDeviceCount();
@@ -107,7 +107,7 @@ Architecture detectCudaArchitectureForDeviceId(
     }
     return detectCudaArchitecture(cc_value, vendor);
   } catch (const std::system_error &err) {
-    if (err.code() == backend_unavailable) {
+    if (err.code() == execution_unavailable) {
       // CUDA driver not ready on this environment; pretend it's generic.
       return Architecture::CudaGeneric;
     }

@@ -25,12 +25,12 @@ namespace orteaf::internal::execution::allocator::resource::mps {
 // buffers at offset 0.
 class MpsResource {
 public:
-  static constexpr auto BackendType = ::orteaf::internal::execution::Execution::Mps;
+  static constexpr auto ExecutionType = ::orteaf::internal::execution::Execution::Mps;
   using BufferView = ::orteaf::internal::execution::mps::resource::MpsBufferView;
   using BufferBlock =
-      ::orteaf::internal::execution::allocator::BufferBlock<BackendType>;
+      ::orteaf::internal::execution::allocator::BufferBlock<ExecutionType>;
   using BufferResource =
-      ::orteaf::internal::execution::allocator::BufferResource<BackendType>;
+      ::orteaf::internal::execution::allocator::BufferResource<ExecutionType>;
   using FenceToken = ::orteaf::internal::execution::mps::resource::MpsFenceToken;
   using ReuseToken = ::orteaf::internal::execution::mps::resource::MpsReuseToken;
   using MpsBuffer_t =
@@ -41,12 +41,12 @@ public:
         CommandQueueLease command_queue;
   };
 
-  static constexpr ::orteaf::internal::execution::Execution backend_type_static() {
-    return BackendType;
+  static constexpr ::orteaf::internal::execution::Execution execution_type_static() {
+    return ExecutionType;
   }
 
-  constexpr ::orteaf::internal::execution::Execution backend_type() const noexcept {
-    return backend_type_static();
+  constexpr ::orteaf::internal::execution::Execution execution_type() const noexcept {
+    return execution_type_static();
   }
 
   struct Config {

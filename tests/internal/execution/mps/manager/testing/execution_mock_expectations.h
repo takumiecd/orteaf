@@ -19,7 +19,7 @@
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_function.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_heap.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_library.h>
-#include <tests/internal/execution/mps/manager/testing/backend_mock.h>
+#include <tests/internal/execution/mps/manager/testing/execution_mock.h>
 
 namespace orteaf::tests::execution::mps {
 
@@ -29,14 +29,14 @@ namespace orteaf::tests::execution::mps {
  * Each helper mirrors a SlowOps entry point so tests stay concise
  * while remaining explicit about expected call counts and return values.
  */
-struct BackendMockExpectations {
-  static void expectGetDeviceCount(MpsBackendOpsMock &mock, int value) {
+struct ExecutionMockExpectations {
+  static void expectGetDeviceCount(MpsExecutionOpsMock &mock, int value) {
     EXPECT_CALL(mock, getDeviceCount())
         .WillRepeatedly(::testing::Return(value));
   }
 
   static void expectGetDevices(
-      MpsBackendOpsMock &mock,
+      MpsExecutionOpsMock &mock,
       std::initializer_list<std::pair<
           ::orteaf::internal::execution::mps::platform::wrapper::MPSInt_t,
           ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t>>
@@ -47,7 +47,7 @@ struct BackendMockExpectations {
   }
 
   static void expectReleaseDevices(
-      MpsBackendOpsMock &mock,
+      MpsExecutionOpsMock &mock,
       std::initializer_list<
           ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t>
           devices) {
@@ -61,7 +61,7 @@ struct BackendMockExpectations {
   }
 
   static void expectDetectArchitectures(
-      MpsBackendOpsMock &mock,
+      MpsExecutionOpsMock &mock,
       std::initializer_list<
           std::pair<::orteaf::internal::base::DeviceHandle,
                     ::orteaf::internal::architecture::Architecture>>
@@ -73,7 +73,7 @@ struct BackendMockExpectations {
   }
 
   static void expectCreateCommandQueues(
-      MpsBackendOpsMock &mock,
+      MpsExecutionOpsMock &mock,
       std::initializer_list<::orteaf::internal::execution::mps::platform::
                                 wrapper::MpsCommandQueue_t>
           handles,
@@ -105,7 +105,7 @@ struct BackendMockExpectations {
   }
 
   static void expectDestroyCommandQueues(
-      MpsBackendOpsMock &mock,
+      MpsExecutionOpsMock &mock,
       std::initializer_list<::orteaf::internal::execution::mps::platform::
                                 wrapper::MpsCommandQueue_t>
           handles) {
@@ -119,7 +119,7 @@ struct BackendMockExpectations {
   }
 
   static void expectDestroyCommandQueuesInOrder(
-      MpsBackendOpsMock &mock,
+      MpsExecutionOpsMock &mock,
       std::initializer_list<::orteaf::internal::execution::mps::platform::
                                 wrapper::MpsCommandQueue_t>
           handles) {
@@ -134,7 +134,7 @@ struct BackendMockExpectations {
   }
 
   static void expectCreateEvents(
-      MpsBackendOpsMock &mock,
+      MpsExecutionOpsMock &mock,
       std::initializer_list<
           ::orteaf::internal::execution::mps::platform::wrapper::MpsEvent_t>
           handles,
@@ -166,7 +166,7 @@ struct BackendMockExpectations {
   }
 
   static void expectDestroyEvents(
-      MpsBackendOpsMock &mock,
+      MpsExecutionOpsMock &mock,
       std::initializer_list<
           ::orteaf::internal::execution::mps::platform::wrapper::MpsEvent_t>
           handles) {
@@ -180,7 +180,7 @@ struct BackendMockExpectations {
   }
 
   static void expectDestroyEventsInOrder(
-      MpsBackendOpsMock &mock,
+      MpsExecutionOpsMock &mock,
       std::initializer_list<
           ::orteaf::internal::execution::mps::platform::wrapper::MpsEvent_t>
           handles) {
@@ -195,7 +195,7 @@ struct BackendMockExpectations {
   }
 
   static void expectCreateFences(
-      MpsBackendOpsMock &mock,
+      MpsExecutionOpsMock &mock,
       std::initializer_list<
           ::orteaf::internal::execution::mps::platform::wrapper::MpsFence_t>
           handles,
@@ -227,7 +227,7 @@ struct BackendMockExpectations {
   }
 
   static void expectDestroyFences(
-      MpsBackendOpsMock &mock,
+      MpsExecutionOpsMock &mock,
       std::initializer_list<
           ::orteaf::internal::execution::mps::platform::wrapper::MpsFence_t>
           handles) {
@@ -241,7 +241,7 @@ struct BackendMockExpectations {
   }
 
   static void expectCreateLibraries(
-      MpsBackendOpsMock &mock,
+      MpsExecutionOpsMock &mock,
       std::initializer_list<std::pair<
           std::string,
           ::orteaf::internal::execution::mps::platform::wrapper::MpsLibrary_t>>
@@ -285,7 +285,7 @@ struct BackendMockExpectations {
   }
 
   static void expectDestroyLibraries(
-      MpsBackendOpsMock &mock,
+      MpsExecutionOpsMock &mock,
       std::initializer_list<
           ::orteaf::internal::execution::mps::platform::wrapper::MpsLibrary_t>
           handles) {
@@ -299,7 +299,7 @@ struct BackendMockExpectations {
   }
 
   static void expectCreateFunctions(
-      MpsBackendOpsMock &mock,
+      MpsExecutionOpsMock &mock,
       std::initializer_list<std::pair<
           std::string,
           ::orteaf::internal::execution::mps::platform::wrapper::MpsFunction_t>>
@@ -342,7 +342,7 @@ struct BackendMockExpectations {
   }
 
   static void expectDestroyFunctions(
-      MpsBackendOpsMock &mock,
+      MpsExecutionOpsMock &mock,
       std::initializer_list<
           ::orteaf::internal::execution::mps::platform::wrapper::MpsFunction_t>
           handles) {
@@ -356,7 +356,7 @@ struct BackendMockExpectations {
   }
 
   static void expectCreateComputePipelineStates(
-      MpsBackendOpsMock &mock,
+      MpsExecutionOpsMock &mock,
       std::initializer_list<std::pair<
           ::orteaf::internal::execution::mps::platform::wrapper::MpsFunction_t,
           ::orteaf::internal::execution::mps::platform::wrapper::
@@ -405,7 +405,7 @@ struct BackendMockExpectations {
   }
 
   static void expectDestroyComputePipelineStates(
-      MpsBackendOpsMock &mock,
+      MpsExecutionOpsMock &mock,
       std::initializer_list<::orteaf::internal::execution::mps::platform::
                                 wrapper::MpsComputePipelineState_t>
           handles) {
@@ -419,7 +419,7 @@ struct BackendMockExpectations {
   }
 
   static void expectCreateHeaps(
-      MpsBackendOpsMock &mock,
+      MpsExecutionOpsMock &mock,
       std::initializer_list<
           ::orteaf::internal::execution::mps::platform::wrapper::MpsHeap_t>
           handles,
@@ -457,7 +457,7 @@ struct BackendMockExpectations {
   }
 
   static void expectCreateHeapsInOrder(
-      MpsBackendOpsMock &mock,
+      MpsExecutionOpsMock &mock,
       std::initializer_list<std::pair<
           ::orteaf::internal::execution::mps::platform::wrapper::
               MpsHeapDescriptor_t,
@@ -478,7 +478,7 @@ struct BackendMockExpectations {
   }
 
   static void expectDestroyHeaps(
-      MpsBackendOpsMock &mock,
+      MpsExecutionOpsMock &mock,
       std::initializer_list<
           ::orteaf::internal::execution::mps::platform::wrapper::MpsHeap_t>
           handles) {
@@ -492,7 +492,7 @@ struct BackendMockExpectations {
   }
 
   static void expectCreateHeapDescriptors(
-      MpsBackendOpsMock &mock,
+      MpsExecutionOpsMock &mock,
       std::initializer_list<::orteaf::internal::execution::mps::platform::
                                 wrapper::MpsHeapDescriptor_t>
           handles) {
@@ -519,7 +519,7 @@ struct BackendMockExpectations {
   }
 
   static void expectDestroyHeapDescriptors(
-      MpsBackendOpsMock &mock,
+      MpsExecutionOpsMock &mock,
       std::initializer_list<::orteaf::internal::execution::mps::platform::
                                 wrapper::MpsHeapDescriptor_t>
           handles) {

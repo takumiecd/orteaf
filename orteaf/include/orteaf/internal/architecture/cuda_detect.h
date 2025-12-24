@@ -12,7 +12,7 @@ namespace orteaf::internal::architecture {
  * @brief Select the CUDA architecture that matches the provided compute capability.
  *
  * The generated architecture metadata keeps compute capability hints per entry, so the
- * detector walks each CUDA backend row and returns the first match that shares the requested
+ * detector walks each CUDA execution row and returns the first match that shares the requested
  * capability and (optionally) vendor. Undefined capabilities (negative values) skip the check,
  * allowing the generic architecture to be returned instead.
  *

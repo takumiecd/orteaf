@@ -15,7 +15,7 @@ namespace orteaf::internal::device {
 
 /// @brief Enumerates logical devices declared in `configs/device/devices.yml`.
 ///
-/// Each entry captures backend, architecture, dtype/ops support, memory limits, and
+/// Each entry captures execution, architecture, dtype/ops support, memory limits, and
 /// arbitrary capability metadata. Runtime code can use this table to drive kernel
 /// selection or capability checks.
 enum class Device : std::uint16_t {
@@ -77,16 +77,16 @@ struct Capability {
     std::string_view value;
 };
 
-/// @brief Return the backend this device belongs to.
-constexpr execution::Execution backendOf(Device device) {
-    return execution::fromIndex(tables::kDeviceBackendIndices[toIndex(device)]);
+/// @brief Return the execution this device belongs to.
+constexpr execution::Execution executionOf(Device device) {
+    return execution::fromIndex(tables::kDeviceExecutionIndices[toIndex(device)]);
 }
 
 /// @brief Return the architecture associated with the device.
 constexpr architecture::Architecture architectureOf(Device device) {
-    const auto backend_id = backendOf(device);
+    const auto execution_id = executionOf(device);
     const auto local_index = tables::kDeviceArchitectureLocalIndices[toIndex(device)];
-    return architecture::fromBackendAndLocalIndex(backend_id, local_index);
+    return architecture::fromExecutionAndLocalIndex(execution_id, local_index);
 }
 
 /// @brief Return true if the device uses the Generic architecture (local index 0).

@@ -18,7 +18,7 @@ namespace orteaf::internal::execution::mps::platform::metal_kernel_embed {
  *
  * `.metal` sources placed under `orteaf/src/extension/kernel/mps/impl` are
  * compiled via `xcrun metal`/`metallib`, embedded into the binary, and exposed
- * through this registry.  These helpers allow backends to construct
+ * through this registry.  These helpers allow executions to construct
  * `MTLLibrary` / `MTLFunction` objects without touching the filesystem, which
  * is convenient for tests and for distributing self-contained binaries.
  *

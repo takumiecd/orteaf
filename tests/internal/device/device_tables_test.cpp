@@ -25,12 +25,12 @@ TEST(DeviceBasic, GenericDevicesHaveLocalIndexZero) {
     EXPECT_FALSE(device::isGeneric(device::Device::CudaH100Pcie80GB));
 }
 
-TEST(DeviceMetadata, BackendAndArchitectureMatchYaml) {
-    EXPECT_EQ(device::backendOf(device::Device::CudaH100Pcie80GB), execution::Execution::Cuda);
+TEST(DeviceMetadata, ExecutionAndArchitectureMatchYaml) {
+    EXPECT_EQ(device::executionOf(device::Device::CudaH100Pcie80GB), execution::Execution::Cuda);
     EXPECT_EQ(device::architectureOf(device::Device::CudaH100Pcie80GB),
               arch::Architecture::CudaSm90);
 
-    EXPECT_EQ(device::backendOf(device::Device::MpsM3Max40c), execution::Execution::Mps);
+    EXPECT_EQ(device::executionOf(device::Device::MpsM3Max40c), execution::Execution::Mps);
     EXPECT_EQ(device::architectureOf(device::Device::MpsM3Max40c),
               arch::Architecture::MpsM3);
 }

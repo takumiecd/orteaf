@@ -8,21 +8,21 @@
 #include <orteaf/internal/execution/allocator/size_class_utils.h>
 
 namespace orteaf::internal::execution::allocator::pool {
-template <typename BackendResource, typename FastFreePolicy,
+template <typename ExecutionResource, typename FastFreePolicy,
           typename ThreadingPolicy, typename LargeAllocPolicy,
           typename ChunkLocatorPolicy, typename ReuseLocatorPolicy,
           typename FreeListPolicy>
 class SegregatePool {
 public:
-  static constexpr auto BackendType = BackendResource::backend_type_static();
-  using BufferResource = typename BackendResource::BufferResource;
+  static constexpr auto ExecutionType = ExecutionResource::execution_type_static();
+  using BufferResource = typename ExecutionResource::BufferResource;
   using BufferBlock =
-      ::orteaf::internal::execution::allocator::BufferBlock<BackendType>;
-  using LaunchParams = typename BackendResource::LaunchParams;
-  using Stats = SegregatePoolStats<BackendType>;
+      ::orteaf::internal::execution::allocator::BufferBlock<ExecutionType>;
+  using LaunchParams = typename ExecutionResource::LaunchParams;
+  using Stats = SegregatePoolStats<ExecutionType>;
 
   SegregatePool() = default;
-  explicit SegregatePool(BackendResource resource)
+  explicit SegregatePool(ExecutionResource resource)
       : resource_(std::move(resource)) {}
   SegregatePool(const SegregatePool &) = delete;
   SegregatePool &operator=(const SegregatePool &) = delete;
@@ -59,8 +59,8 @@ public:
   ~SegregatePool() = default;
 
   struct Config {
-    typename FastFreePolicy::template Config<BackendResource> fast_free{};
-    typename ThreadingPolicy::template Config<BackendResource> threading{};
+    typename FastFreePolicy::template Config<ExecutionResource> fast_free{};
+    typename ThreadingPolicy::template Config<ExecutionResource> threading{};
     typename LargeAllocPolicy::Config large_alloc{};
     typename ChunkLocatorPolicy::Config chunk_locator{};
     typename ReuseLocatorPolicy::Config reuse{};
@@ -96,8 +96,8 @@ public:
   ReuseLocatorPolicy &reuse_policy() { return reuse_policy_; }
   FreeListPolicy &free_list_policy() { return free_list_policy_; }
 
-  BackendResource *resource() { return &resource_; }
-  const BackendResource *resource() const { return &resource_; }
+  ExecutionResource *resource() { return &resource_; }
+  const ExecutionResource *resource() const { return &resource_; }
 
   std::size_t min_block_size() const { return min_block_size_; }
   std::size_t max_block_size() const { return max_block_size_; }
@@ -220,7 +220,7 @@ private:
 
   std::size_t chunk_size_{0};
 
-  BackendResource resource_;
+  ExecutionResource resource_;
   FastFreePolicy fast_free_policy_;
   ThreadingPolicy threading_policy_;
   LargeAllocPolicy large_alloc_policy_;

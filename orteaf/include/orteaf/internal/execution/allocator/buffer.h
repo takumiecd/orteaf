@@ -8,7 +8,7 @@
 
 namespace orteaf::internal::execution::allocator {
 
-// Type-erased wrapper around backend-specific BufferResource.
+// Type-erased wrapper around execution-specific BufferResource.
 class Buffer {
   using CpuResource = BufferResource<::orteaf::internal::execution::Execution::Cpu>;
 #if ORTEAF_ENABLE_CUDA
@@ -42,11 +42,11 @@ public:
   template <::orteaf::internal::execution::Execution B>
   explicit Buffer(BufferResource<B> res, std::size_t size_bytes = 0,
                   std::size_t alignment_bytes = 0)
-      : backend_(B), resource_(std::move(res)), size_(size_bytes),
+      : execution_(B), resource_(std::move(res)), size_(size_bytes),
         alignment_(alignment_bytes) {}
 
-  ::orteaf::internal::execution::Execution backend() const noexcept {
-    return backend_;
+  ::orteaf::internal::execution::Execution execution() const noexcept {
+    return execution_;
   }
   std::size_t size() const noexcept { return size_; }
   std::size_t alignment() const noexcept { return alignment_; }
@@ -59,18 +59,18 @@ public:
   BufferResource<B> &asResource() {
     auto *r = std::get_if<BufferResource<B>>(&resource_);
     static BufferResource<B> empty{};
-    return (r && backend_ == B) ? *r : empty;
+    return (r && execution_ == B) ? *r : empty;
   }
 
   template <::orteaf::internal::execution::Execution B>
   const BufferResource<B> &asResource() const {
     const auto *r = std::get_if<BufferResource<B>>(&resource_);
     static const BufferResource<B> empty{};
-    return (r && backend_ == B) ? *r : empty;
+    return (r && execution_ == B) ? *r : empty;
   }
 
 private:
-  ::orteaf::internal::execution::Execution backend_{
+  ::orteaf::internal::execution::Execution execution_{
       ::orteaf::internal::execution::Execution::Cpu};
   ResourceVariant resource_{};
   std::size_t size_{0};

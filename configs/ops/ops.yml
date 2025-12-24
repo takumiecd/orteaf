@@ -209,9 +209,9 @@ ops:
     shape_inference:
       kind: "custom"
       function: "QuantizeShapeRule"
-      description: "Consults backend-specific quantization layout"
+      description: "Consults execution-specific quantization layout"
     metadata:
-      description: "Delegates quantization specifics to a backend-provided rule"
-      tags: ["quantization", "backend-specific"]
+      description: "Delegates quantization specifics to a execution-provided rule"
+      tags: ["quantization", "execution-specific"]
       commutative: false
       differentiable: false

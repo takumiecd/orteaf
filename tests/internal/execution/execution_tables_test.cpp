@@ -6,16 +6,16 @@
 
 namespace execution = orteaf::internal::execution;
 
-TEST(BackendTablesTest, BasicEnumerationProperties) {
-    EXPECT_EQ(execution::kBackendCount, execution::allBackends().size());
+TEST(ExecutionTablesTest, BasicEnumerationProperties) {
+    EXPECT_EQ(execution::kExecutionCount, execution::allExecutions().size());
     EXPECT_TRUE(execution::isValidIndex(0));
-    EXPECT_FALSE(execution::isValidIndex(execution::kBackendCount));
+    EXPECT_FALSE(execution::isValidIndex(execution::kExecutionCount));
 
-    EXPECT_EQ(execution::fromIndex(0), execution::allBackends().front());
+    EXPECT_EQ(execution::fromIndex(0), execution::allExecutions().front());
     EXPECT_EQ(execution::idOf(execution::fromIndex(0)), std::string_view("Cuda"));
 }
 
-TEST(BackendTablesTest, MetadataMatchesCatalog) {
+TEST(ExecutionTablesTest, MetadataMatchesCatalog) {
     constexpr auto cuda = execution::Execution::Cuda;
     EXPECT_EQ(execution::displayNameOf(cuda), "CUDA");
     EXPECT_EQ(execution::modulePathOf(cuda), "@orteaf/internal/execution/cuda");

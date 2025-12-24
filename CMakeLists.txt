@@ -6,7 +6,7 @@ option(ENABLE_CUDA "Enable CUDA runtime" OFF)
 option(ENABLE_MPS "Enable Metal (MPS) runtime" OFF)
 option(ENABLE_TEST "Enable internal test instrumentation code" OFF)
 
-# Set languages based on enabled backends
+# Set languages based on enabled executions
 set(LANGUAGES CXX)
 if(ENABLE_CUDA)
     list(APPEND LANGUAGES CUDA)
@@ -103,15 +103,15 @@ add_custom_command(
     OUTPUT
         ${EXECUTION_GEN_DIR}/execution.def
         ${EXECUTION_GEN_DIR}/execution_tables.h
-    COMMAND $<TARGET_FILE:gen_backends> ${CMAKE_CURRENT_SOURCE_DIR}/configs/backend/backends.yml ${EXECUTION_GEN_DIR}
+    COMMAND $<TARGET_FILE:gen_executions> ${CMAKE_CURRENT_SOURCE_DIR}/configs/execution/executions.yml ${EXECUTION_GEN_DIR}
     DEPENDS
-        ${CMAKE_CURRENT_SOURCE_DIR}/configs/backend/backends.yml
-        gen_backends
-    COMMENT "Generating backend metadata"
+        ${CMAKE_CURRENT_SOURCE_DIR}/configs/execution/executions.yml
+        gen_executions
+    COMMENT "Generating execution metadata"
     VERBATIM
 )
 
-add_custom_target(generate_backends
+add_custom_target(generate_executions
     DEPENDS
         ${EXECUTION_GEN_DIR}/execution.def
         ${EXECUTION_GEN_DIR}/execution_tables.h
@@ -123,11 +123,11 @@ add_custom_command(
         ${ARCHITECTURE_GEN_DIR}/architecture_tables.h
     COMMAND $<TARGET_FILE:gen_architectures>
             ${CMAKE_CURRENT_SOURCE_DIR}/configs/architecture/architectures.yml
-            ${CMAKE_CURRENT_SOURCE_DIR}/configs/backend/backends.yml
+            ${CMAKE_CURRENT_SOURCE_DIR}/configs/execution/executions.yml
             ${ARCHITECTURE_GEN_DIR}
     DEPENDS
         ${CMAKE_CURRENT_SOURCE_DIR}/configs/architecture/architectures.yml
-        ${CMAKE_CURRENT_SOURCE_DIR}/configs/backend/backends.yml
+        ${CMAKE_CURRENT_SOURCE_DIR}/configs/execution/executions.yml
         gen_architectures
     COMMENT "Generating architecture metadata"
     VERBATIM
@@ -145,14 +145,14 @@ add_custom_command(
         ${DEVICE_GEN_DIR}/device_tables.h
     COMMAND $<TARGET_FILE:gen_devices>
             ${CMAKE_CURRENT_SOURCE_DIR}/configs/device/devices.yml
-            ${CMAKE_CURRENT_SOURCE_DIR}/configs/backend/backends.yml
+            ${CMAKE_CURRENT_SOURCE_DIR}/configs/execution/executions.yml
             ${CMAKE_CURRENT_SOURCE_DIR}/configs/architecture/architectures.yml
             ${CMAKE_CURRENT_SOURCE_DIR}/configs/dtype/dtypes.yml
             ${CMAKE_CURRENT_SOURCE_DIR}/configs/ops/ops.yml
             ${DEVICE_GEN_DIR}
     DEPENDS
         ${CMAKE_CURRENT_SOURCE_DIR}/configs/device/devices.yml
-        ${CMAKE_CURRENT_SOURCE_DIR}/configs/backend/backends.yml
+        ${CMAKE_CURRENT_SOURCE_DIR}/configs/execution/executions.yml
         ${CMAKE_CURRENT_SOURCE_DIR}/configs/architecture/architectures.yml
         ${CMAKE_CURRENT_SOURCE_DIR}/configs/dtype/dtypes.yml
         ${CMAKE_CURRENT_SOURCE_DIR}/configs/ops/ops.yml
@@ -167,12 +167,12 @@ add_custom_target(generate_devices
         ${DEVICE_GEN_DIR}/device_tables.h
 )
 
-# Warn if CPU backend is disabled (unusual)
+# Warn if CPU execution is disabled (unusual)
 if(NOT ENABLE_CPU)
     message(WARNING 
-        "CPU backend is disabled. "
+        "CPU execution is disabled. "
         "This is unusual and may cause compatibility issues. "
-        "Most code expects CPU backend to be available."
+        "Most code expects CPU execution to be available."
     )
 endif()
 
@@ -290,7 +290,7 @@ set(_orteaf_log_categories CORE TENSOR CUDA MPS IO)
 set(_orteaf_stats_categories CPU CUDA MPS CORE)
 
 message(STATUS "========== ORTEAF Configuration ==========")
-message(STATUS "Backends: CPU=${ENABLE_CPU}  CUDA=${ENABLE_CUDA}  MPS=${ENABLE_MPS}")
+message(STATUS "Executions: CPU=${ENABLE_CPU}  CUDA=${ENABLE_CUDA}  MPS=${ENABLE_MPS}")
 message(STATUS "Instrumentation: ENABLE_TEST=${ENABLE_TEST}")
 message(STATUS "Statistics levels:")
 message(STATUS "  Global: ${ORTEAF_STATS_LEVEL} (numeric ${ORTEAF_STATS_LEVEL_GLOBAL_VALUE_NUMERIC})")
@@ -305,7 +305,7 @@ endforeach()
 message(STATUS "==========================================")
 
 add_subdirectory(orteaf)
-add_dependencies(orteaf generate_backends generate_ops generate_dtypes generate_architectures generate_devices)
+add_dependencies(orteaf generate_executions generate_ops generate_dtypes generate_architectures generate_devices)
 
 if(TARGET orteaf)
     if(ORTEAF_CUDA_EMBED_SOURCE)
@@ -334,6 +334,6 @@ endif()
 if(ENABLE_TEST)
     add_subdirectory(tests)
     if(TARGET orteaf_tests)
-        add_dependencies(orteaf_tests generate_backends generate_ops generate_dtypes generate_architectures generate_devices)
+        add_dependencies(orteaf_tests generate_executions generate_ops generate_dtypes generate_architectures generate_devices)
     endif()
 endif()

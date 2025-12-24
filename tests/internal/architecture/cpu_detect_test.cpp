@@ -20,9 +20,9 @@ TEST(CpuDetect, ManualEnvironmentCheck) {
     EXPECT_STREQ(expected_env, architecture::idOf(arch).data());
 }
 
-TEST(CpuDetect, ReportsCpuBackendArchitecture) {
+TEST(CpuDetect, ReportsCpuExecutionArchitecture) {
     const auto arch = architecture::detectCpuArchitecture();
-    EXPECT_EQ(architecture::backendOf(arch), execution::Execution::Cpu);
+    EXPECT_EQ(architecture::executionOf(arch), execution::Execution::Cpu);
     EXPECT_GE(static_cast<std::uint16_t>(arch), 0);
 }
 

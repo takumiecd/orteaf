@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-#include <tests/internal/execution/mps/manager/testing/backend_ops_provider.h>
+#include <tests/internal/execution/mps/manager/testing/execution_ops_provider.h>
 #include <tests/internal/execution/mps/manager/testing/manager_adapter.h>
 
 namespace orteaf::tests::execution::mps::testing {
@@ -17,7 +17,7 @@ protected:
   using Adapter = ManagerAdapter<Manager, Provider>;
   using Context = typename Provider::Context;
 
-  // static_assert(::orteaf::internal::execution::mps::platform::MpsRuntimeBackendOps<SlowOps>);
+  // static_assert(::orteaf::internal::execution::mps::platform::MpsRuntimeExecutionOps<SlowOps>);
 
   void SetUp() override {
     adapter_.bind(manager_, context_);

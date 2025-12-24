@@ -32,7 +32,7 @@ struct FakeResource {
     explicit ReuseToken(FenceToken &&) {}
   };
 
-  static constexpr Execution backend_type_static() noexcept {
+  static constexpr Execution execution_type_static() noexcept {
     return Execution::Cpu;
   }
 

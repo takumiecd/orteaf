@@ -193,57 +193,57 @@ std::vector<std::string> ReadStringList(const YAML::Node& node, std::string_view
     return values;
 }
 
-struct BackendCatalog {
+struct ExecutionCatalog {
     std::vector<std::string> ids;
     std::unordered_map<std::string, std::size_t> index_by_id;
 };
 
-BackendCatalog ParseBackendCatalog(const fs::path& backend_yaml_path) {
+ExecutionCatalog ParseExecutionCatalog(const fs::path& execution_yaml_path) {
     YAML::Node root;
     try {
-        root = YAML::LoadFile(backend_yaml_path.string());
+        root = YAML::LoadFile(execution_yaml_path.string());
     } catch (const std::exception& e) {
         std::ostringstream oss;
-        oss << "Failed to load backend YAML '" << backend_yaml_path << "': " << e.what();
+        oss << "Failed to load execution YAML '" << execution_yaml_path << "': " << e.what();
         Fail(oss.str());
     }
 
     if (!root || !root.IsMap()) {
-        Fail("Backend YAML root must be a mapping");
+        Fail("Execution YAML root must be a mapping");
     }
 
-    const auto backends_node = root["backends"];
-    if (!backends_node || !backends_node.IsSequence()) {
-        Fail("Backend YAML must contain a sequence 'backends'");
+    const auto executions_node = root["executions"];
+    if (!executions_node || !executions_node.IsSequence()) {
+        Fail("Execution YAML must contain a sequence 'executions'");
     }
 
-    BackendCatalog catalog;
-    catalog.ids.reserve(backends_node.size());
+    ExecutionCatalog catalog;
+    catalog.ids.reserve(executions_node.size());
 
-    for (std::size_t i = 0; i < backends_node.size(); ++i) {
-        const auto& node = backends_node[i];
+    for (std::size_t i = 0; i < executions_node.size(); ++i) {
+        const auto& node = executions_node[i];
         if (!node.IsMap()) {
             std::ostringstream oss;
-            oss << "Each backend entry must be a mapping (index " << i << ")";
+            oss << "Each execution entry must be a mapping (index " << i << ")";
             Fail(oss.str());
         }
-        const std::string context = "backends[" + std::to_string(i) + "]";
+        const std::string context = "executions[" + std::to_string(i) + "]";
         const std::string id = ReadRequiredString(node, "id", context);
         if (!LooksLikeIdentifier(id)) {
             std::ostringstream oss;
-            oss << "Backend id '" << id << "' is not a valid identifier (" << context << ")";
+            oss << "Execution id '" << id << "' is not a valid identifier (" << context << ")";
             Fail(oss.str());
         }
         if (!catalog.index_by_id.emplace(id, catalog.ids.size()).second) {
             std::ostringstream oss;
-            oss << "Duplicate backend id '" << id << "'";
+            oss << "Duplicate execution id '" << id << "'";
             Fail(oss.str());
         }
         catalog.ids.push_back(id);
     }
 
     if (catalog.ids.empty()) {
-        Fail("At least one backend must be defined");
+        Fail("At least one execution must be defined");
     }
 
     return catalog;
@@ -254,7 +254,7 @@ struct ArchitectureCatalog {
 };
 
 ArchitectureCatalog ParseArchitectureCatalog(const fs::path& architecture_yaml_path,
-                                             const BackendCatalog& backends) {
+                                             const ExecutionCatalog& executions) {
     YAML::Node root;
     try {
         root = YAML::LoadFile(architecture_yaml_path.string());
@@ -275,8 +275,8 @@ ArchitectureCatalog ParseArchitectureCatalog(const fs::path& architecture_yaml_p
 
     ArchitectureCatalog catalog;
 
-    for (const auto& backend_id : backends.ids) {
-        catalog.local_index[backend_id]["Generic"] = 0;
+    for (const auto& execution_id : executions.ids) {
+        catalog.local_index[execution_id]["Generic"] = 0;
     }
 
     const auto architectures_node = root["architectures"];
@@ -285,8 +285,8 @@ ArchitectureCatalog ParseArchitectureCatalog(const fs::path& architecture_yaml_p
     }
 
     std::unordered_map<std::string, std::uint16_t> next_local_index;
-    for (const auto& backend_id : backends.ids) {
-        next_local_index[backend_id] = 1;  // 0 reserved for Generic
+    for (const auto& execution_id : executions.ids) {
+        next_local_index[execution_id] = 1;  // 0 reserved for Generic
     }
 
     for (std::size_t i = 0; i < architectures_node.size(); ++i) {
@@ -305,20 +305,20 @@ ArchitectureCatalog ParseArchitectureCatalog(const fs::path& architecture_yaml_p
             Fail(oss.str());
         }
 
-        const std::string backend_id = ReadRequiredString(node, "backend", context);
-        const auto backend_it = catalog.local_index.find(backend_id);
-        if (backend_it == catalog.local_index.end()) {
+        const std::string execution_id = ReadRequiredString(node, "execution", context);
+        const auto execution_it = catalog.local_index.find(execution_id);
+        if (execution_it == catalog.local_index.end()) {
             std::ostringstream oss;
-            oss << "Architecture '" << id << "' references unknown backend '" << backend_id << "'";
+            oss << "Architecture '" << id << "' references unknown execution '" << execution_id << "'";
             Fail(oss.str());
         }
 
-        if (!backend_it->second.emplace(id, next_local_index[backend_id]).second) {
+        if (!execution_it->second.emplace(id, next_local_index[execution_id]).second) {
             std::ostringstream oss;
-            oss << "Duplicate architecture id '" << id << "' for backend '" << backend_id << "'";
+            oss << "Duplicate architecture id '" << id << "' for execution '" << execution_id << "'";
             Fail(oss.str());
         }
-        ++next_local_index[backend_id];
+        ++next_local_index[execution_id];
     }
 
     return catalog;
@@ -426,7 +426,7 @@ struct CapabilityEntry {
 struct DeviceDefinition {
     std::string id;
     std::string display_name;
-    std::size_t backend_index;
+    std::size_t execution_index;
     std::uint16_t architecture_local_index;
     std::uint64_t memory_max_bytes;
     std::uint64_t memory_shared_bytes;
@@ -447,7 +447,7 @@ std::uint16_t ToUint16Index(const std::string& value, std::size_t index, std::st
 
 std::vector<DeviceDefinition> ParseDeviceConfig(
     const fs::path& device_yaml_path,
-    const BackendCatalog& backends,
+    const ExecutionCatalog& executions,
     const ArchitectureCatalog& architectures,
     const DTypeCatalog& dtypes,
     const OpCatalog& ops) {
@@ -503,27 +503,27 @@ std::vector<DeviceDefinition> ParseDeviceConfig(
 
         device.display_name = ReadRequiredString(node, "display_name", context);
 
-        const std::string backend_id = ReadRequiredString(node, "backend", context);
-        const auto backend_it = backends.index_by_id.find(backend_id);
-        if (backend_it == backends.index_by_id.end()) {
+        const std::string execution_id = ReadRequiredString(node, "execution", context);
+        const auto execution_it = executions.index_by_id.find(execution_id);
+        if (execution_it == executions.index_by_id.end()) {
             std::ostringstream oss;
-            oss << "Device '" << device.id << "' references unknown backend '" << backend_id << "'";
+            oss << "Device '" << device.id << "' references unknown execution '" << execution_id << "'";
             Fail(oss.str());
         }
-        device.backend_index = backend_it->second;
+        device.execution_index = execution_it->second;
 
         const std::string architecture_id = ReadRequiredString(node, "architecture", context);
-        const auto arch_backend_it = architectures.local_index.find(backend_id);
-        if (arch_backend_it == architectures.local_index.end()) {
+        const auto arch_execution_it = architectures.local_index.find(execution_id);
+        if (arch_execution_it == architectures.local_index.end()) {
             std::ostringstream oss;
-            oss << "No architecture catalog found for backend '" << backend_id << "'";
+            oss << "No architecture catalog found for execution '" << execution_id << "'";
             Fail(oss.str());
         }
-        const auto arch_it = arch_backend_it->second.find(architecture_id);
-        if (arch_it == arch_backend_it->second.end()) {
+        const auto arch_it = arch_execution_it->second.find(architecture_id);
+        if (arch_it == arch_execution_it->second.end()) {
             std::ostringstream oss;
             oss << "Device '" << device.id << "' references unknown architecture '" << architecture_id
-                << "' for backend '" << backend_id << "'";
+                << "' for execution '" << execution_id << "'";
             Fail(oss.str());
         }
         device.architecture_local_index = arch_it->second;
@@ -695,10 +695,10 @@ GeneratedData GenerateOutputs(const std::vector<DeviceDefinition>& devices) {
         header_stream << "inline constexpr std::size_t kDeviceOpEntryCount = " << op_entries.size() << ";\n";
         header_stream << "inline constexpr std::size_t kDeviceCapabilityEntryCount = " << capability_entries.size() << ";\n\n";
 
-        // Backend indices
-        header_stream << "inline constexpr std::array<std::uint16_t, kDeviceCount> kDeviceBackendIndices = {\n";
+        // Execution indices
+        header_stream << "inline constexpr std::array<std::uint16_t, kDeviceCount> kDeviceExecutionIndices = {\n";
         for (const auto& device : devices) {
-            header_stream << "    " << device.backend_index << ",\n";
+            header_stream << "    " << device.execution_index << ",\n";
         }
         header_stream << "};\n\n";
 
@@ -784,24 +784,24 @@ void WriteFile(const fs::path& path, const std::string& content) {
 
 int main(int argc, char** argv) {
     if (argc != 7) {
-        std::cerr << "Usage: gen_devices <devices.yml> <backends.yml> <architectures.yml> "
+        std::cerr << "Usage: gen_devices <devices.yml> <executions.yml> <architectures.yml> "
                      "<dtypes.yml> <ops.yml> <output_dir>\n";
         return 1;
     }
 
     const fs::path devices_yaml = argv[1];
-    const fs::path backends_yaml = argv[2];
+    const fs::path executions_yaml = argv[2];
     const fs::path architectures_yaml = argv[3];
     const fs::path dtypes_yaml = argv[4];
     const fs::path ops_yaml = argv[5];
     const fs::path output_dir = argv[6];
 
     try {
-        const auto backends = ParseBackendCatalog(backends_yaml);
-        const auto architectures = ParseArchitectureCatalog(architectures_yaml, backends);
+        const auto executions = ParseExecutionCatalog(executions_yaml);
+        const auto architectures = ParseArchitectureCatalog(architectures_yaml, executions);
         const auto dtype_catalog = ParseDTypeCatalog(dtypes_yaml);
         const auto op_catalog = ParseOpCatalog(ops_yaml);
-        const auto devices = ParseDeviceConfig(devices_yaml, backends, architectures,
+        const auto devices = ParseDeviceConfig(devices_yaml, executions, architectures,
                                                dtype_catalog, op_catalog);
 
         const auto generated = GenerateOutputs(devices);

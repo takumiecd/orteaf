@@ -3,7 +3,7 @@
 #include "orteaf/internal/architecture/architecture.h"
 #include "orteaf/internal/base/handle.h"
 #include "orteaf/internal/diagnostics/error/error.h"
-#include "orteaf/internal/execution/cpu/platform/cpu_backend_ops.h"
+#include "orteaf/internal/execution/cpu/platform/cpu_execution_ops.h"
 
 namespace orteaf::internal::execution::cpu::manager {
 
@@ -16,14 +16,14 @@ namespace orteaf::internal::execution::cpu::manager {
  * `Architecture` metadata and an `is_alive` flag, driven by the lightweight
  * detector in `orteaf/internal/architecture/cpu_detect.h`.
  */
-template <class BackendOps =
-              ::orteaf::internal::execution::cpu::platform::CpuBackendOps>
+template <class ExecutionOps =
+              ::orteaf::internal::execution::cpu::platform::CpuExecutionOps>
 struct CpuDeviceManager {
   void initializeDevices() {
     if (initialized_) {
       return;
     }
-    state_.arch = BackendOps::detectArchitecture();
+    state_.arch = ExecutionOps::detectArchitecture();
     state_.is_alive = true;
     initialized_ = true;
   }

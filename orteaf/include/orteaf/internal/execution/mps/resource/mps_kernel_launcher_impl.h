@@ -108,7 +108,7 @@ public:
 #endif
 
   // Convenience: create a command buffer from a command queue without exposing
-  // backend wrapper details to launcher users.
+  // execution wrapper details to launcher users.
   template <
       typename FastOps = ::orteaf::internal::execution::mps::platform::MpsFastOps>
   ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandBuffer_t
