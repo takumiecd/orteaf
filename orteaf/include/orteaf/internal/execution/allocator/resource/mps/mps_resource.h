@@ -31,6 +31,7 @@ public:
       ::orteaf::internal::execution::allocator::BufferBlock<ExecutionType>;
   using BufferResource =
       ::orteaf::internal::execution::allocator::BufferResource<ExecutionType>;
+
   using FenceToken = ::orteaf::internal::execution::mps::resource::MpsFenceToken;
   using ReuseToken = ::orteaf::internal::execution::mps::resource::MpsReuseToken;
   using MpsBuffer_t =

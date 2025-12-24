@@ -28,8 +28,7 @@ public:
   using BufferResource =
       ::orteaf::internal::execution::allocator::BufferResource<B>;
   using LaunchParams =
-      typename ::orteaf::internal::execution::base::ExecutionTraits<
-          B>::KernelLaunchParams;
+      typename ::orteaf::internal::execution::base::ExecutionTraits<B>::KernelLaunchParams;
 
   struct Config : PolicyConfig<Resource> {
     // サイズクラスの情報は SegregatePool が管理するため、
