@@ -21,7 +21,7 @@
 namespace orteaf::internal::execution::cuda::platform::wrapper {
 
 /**
- * @copydoc orteaf::internal::backend::cuda::getDeviceCount
+ * @copydoc orteaf::internal::execution::cuda::getDeviceCount
  */
 int getDeviceCount() {
     int device_count;
@@ -30,7 +30,7 @@ int getDeviceCount() {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::getDevice
+ * @copydoc orteaf::internal::execution::cuda::getDevice
  */
 CudaDevice_t getDevice(uint32_t device_id) {
     int device_count = getDeviceCount();
@@ -44,7 +44,7 @@ CudaDevice_t getDevice(uint32_t device_id) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::getComputeCapability
+ * @copydoc orteaf::internal::execution::cuda::getComputeCapability
  */
 ComputeCapability getComputeCapability(CudaDevice_t device) {
     CUdevice objc_device = cuDeviceFromOpaque(device);
@@ -55,14 +55,14 @@ ComputeCapability getComputeCapability(CudaDevice_t device) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::getSmCount
+ * @copydoc orteaf::internal::execution::cuda::getSmCount
  */
 int getSmCount(ComputeCapability capability) {
     return capability.major * 10 + capability.minor;
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::getDeviceName
+ * @copydoc orteaf::internal::execution::cuda::getDeviceName
  */
 std::string getDeviceName(CudaDevice_t device) {
     CUdevice objc_device = cuDeviceFromOpaque(device);
@@ -72,7 +72,7 @@ std::string getDeviceName(CudaDevice_t device) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::getDeviceVendor
+ * @copydoc orteaf::internal::execution::cuda::getDeviceVendor
  */
 std::string getDeviceVendor(CudaDevice_t device) {
     (void)device;

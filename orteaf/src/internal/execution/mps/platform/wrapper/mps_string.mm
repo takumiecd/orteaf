@@ -14,7 +14,7 @@
 namespace orteaf::internal::execution::mps::platform::wrapper {
 
 /**
- * @copydoc orteaf::internal::backend::mps::toNsString
+ * @copydoc orteaf::internal::execution::mps::toNsString
  */
 MpsString_t toNsString(std::string_view view) {
   if (view.empty()) {

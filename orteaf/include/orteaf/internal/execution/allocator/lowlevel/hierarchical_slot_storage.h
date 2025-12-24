@@ -5,7 +5,7 @@
 #include <mutex>
 #include <vector>
 
-#include "orteaf/internal/backend/backend.h"
+#include "orteaf/internal/execution/execution.h"
 #include "orteaf/internal/base/heap_vector.h"
 #include "orteaf/internal/base/math_utils.h"
 #include "orteaf/internal/diagnostics/error/error.h"
@@ -17,7 +17,7 @@ namespace orteaf::internal::execution::allocator::policies {
 /**
  * @brief 階層的スロットの状態管理用ストレージ
  */
-template <class HeapOps, ::orteaf::internal::backend::Backend B>
+template <class HeapOps, ::orteaf::internal::execution::Execution B>
 class HierarchicalSlotStorage {
 public:
   using BufferView =

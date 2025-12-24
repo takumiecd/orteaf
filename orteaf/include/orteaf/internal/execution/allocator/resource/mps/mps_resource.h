@@ -25,7 +25,7 @@ namespace orteaf::internal::execution::allocator::resource::mps {
 // buffers at offset 0.
 class MpsResource {
 public:
-  static constexpr auto BackendType = ::orteaf::internal::backend::Backend::Mps;
+  static constexpr auto BackendType = ::orteaf::internal::execution::Execution::Mps;
   using BufferView = ::orteaf::internal::execution::mps::resource::MpsBufferView;
   using BufferBlock =
       ::orteaf::internal::execution::allocator::BufferBlock<BackendType>;
@@ -41,11 +41,11 @@ public:
         CommandQueueLease command_queue;
   };
 
-  static constexpr ::orteaf::internal::backend::Backend backend_type_static() {
+  static constexpr ::orteaf::internal::execution::Execution backend_type_static() {
     return BackendType;
   }
 
-  constexpr ::orteaf::internal::backend::Backend backend_type() const noexcept {
+  constexpr ::orteaf::internal::execution::Execution backend_type() const noexcept {
     return backend_type_static();
   }
 

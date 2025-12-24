@@ -18,7 +18,7 @@
 namespace orteaf::internal::execution::mps::platform::wrapper {
 
 /**
- * @copydoc orteaf::internal::backend::mps::createLibrary
+ * @copydoc orteaf::internal::execution::mps::createLibrary
  */
 [[nodiscard]] MpsLibrary_t createLibrary(MpsDevice_t device, MpsString_t name,
                                          MpsError_t *error) {
@@ -79,7 +79,7 @@ namespace orteaf::internal::execution::mps::platform::wrapper {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::createLibraryWithSource
+ * @copydoc orteaf::internal::execution::mps::createLibraryWithSource
  */
 [[nodiscard]] MpsLibrary_t
 createLibraryWithSource(MpsDevice_t device, MpsString_t source,
@@ -135,7 +135,7 @@ createLibraryWithSource(MpsDevice_t device, MpsString_t source,
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::destroyLibrary
+ * @copydoc orteaf::internal::execution::mps::destroyLibrary
  */
 void destroyLibrary(MpsLibrary_t library) {
   if (library == nullptr)
@@ -144,7 +144,7 @@ void destroyLibrary(MpsLibrary_t library) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::createLibraryWithData
+ * @copydoc orteaf::internal::execution::mps::createLibraryWithData
  */
 [[nodiscard]] MpsLibrary_t createLibraryWithData(MpsDevice_t device,
                                                  const void *data,

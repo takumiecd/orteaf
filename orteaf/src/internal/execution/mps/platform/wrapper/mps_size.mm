@@ -14,7 +14,7 @@
 namespace orteaf::internal::execution::mps::platform::wrapper {
 
 /**
- * @copydoc orteaf::internal::backend::mps::makeSize
+ * @copydoc orteaf::internal::execution::mps::makeSize
  */
 MPSSize_t makeSize(MPSInt_t width, MPSInt_t height, MPSInt_t depth) {
     MPSSize_t size{};

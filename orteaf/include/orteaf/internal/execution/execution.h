@@ -6,13 +6,13 @@
 #include <span>
 #include <string_view>
 
-namespace orteaf::internal::backend {
+namespace orteaf::internal::execution {
 
 /// @brief Enumerates the available backends (CPU / CUDA / MPS).
 ///
 /// The ordering matches `configs/backend/backends.yml`, so these values can be used
 /// as direct indices into the generated metadata tables.
-enum class Backend : std::uint16_t {
+enum class Execution : std::uint16_t {
 #define BACKEND(ID, DISPLAY_NAME, MODULE_PATH, DESCRIPTION) ID,
 #include <orteaf/backend/backend.def>
 #undef BACKEND
@@ -20,17 +20,17 @@ enum class Backend : std::uint16_t {
 };
 
 /// @brief Convert a backend to its generated-table index.
-constexpr std::size_t toIndex(Backend backend) {
-    return static_cast<std::size_t>(backend);
+constexpr std::size_t toIndex(Execution execution) {
+    return static_cast<std::size_t>(execution);
 }
 
-inline constexpr std::size_t kBackendCount = static_cast<std::size_t>(Backend::Count);
+inline constexpr std::size_t kBackendCount = static_cast<std::size_t>(Execution::Count);
 
-}  // namespace orteaf::internal::backend
+}  // namespace orteaf::internal::execution
 
 #include <orteaf/backend/backend_tables.h>
 
-namespace orteaf::internal::backend {
+namespace orteaf::internal::execution {
 
 namespace tables = ::orteaf::generated::backend_tables;
 
@@ -43,8 +43,8 @@ inline constexpr std::array<std::string_view, kBackendCount> kBackendIds = {
 #undef BACKEND
 };
 
-inline constexpr std::array<Backend, kBackendCount> kAllBackends = {
-#define BACKEND(ID, DISPLAY_NAME, MODULE_PATH, DESCRIPTION) Backend::ID,
+inline constexpr std::array<Execution, kBackendCount> kAllBackends = {
+#define BACKEND(ID, DISPLAY_NAME, MODULE_PATH, DESCRIPTION) Execution::ID,
 #include <orteaf/backend/backend.def>
 #undef BACKEND
 };
@@ -55,30 +55,30 @@ constexpr bool isValidIndex(std::size_t index) {
 }
 
 /// @brief Convert an index back into the enum value.
-constexpr Backend fromIndex(std::size_t index) {
-    return static_cast<Backend>(index);
+constexpr Execution fromIndex(std::size_t index) {
+    return static_cast<Execution>(index);
 }
 
 /// @brief Return the YAML identifier (e.g. `"Cuda"`).
-constexpr std::string_view idOf(Backend backend) {
-    return kBackendIds[toIndex(backend)];
+constexpr std::string_view idOf(Execution execution) {
+    return kBackendIds[toIndex(execution)];
 }
 
 /// @brief Return the display name.
-inline constexpr std::string_view displayNameOf(Backend backend) {
-    return tables::kBackendDisplayNames[toIndex(backend)];
+inline constexpr std::string_view displayNameOf(Execution execution) {
+    return tables::kBackendDisplayNames[toIndex(execution)];
 }
 
-inline constexpr std::string_view modulePathOf(Backend backend) {
-    return tables::kBackendModulePaths[toIndex(backend)];
+inline constexpr std::string_view modulePathOf(Execution execution) {
+    return tables::kBackendModulePaths[toIndex(execution)];
 }
 
-inline constexpr std::string_view descriptionOf(Backend backend) {
-    return tables::kBackendDescriptions[toIndex(backend)];
+inline constexpr std::string_view descriptionOf(Execution execution) {
+    return tables::kBackendDescriptions[toIndex(execution)];
 }
 
-inline constexpr std::span<const Backend> allBackends() {
-    return std::span<const Backend>(kAllBackends.data(), kAllBackends.size());
+inline constexpr std::span<const Execution> allBackends() {
+    return std::span<const Execution>(kAllBackends.data(), kAllBackends.size());
 }
 
-}  // namespace orteaf::internal::backend
+}  // namespace orteaf::internal::execution

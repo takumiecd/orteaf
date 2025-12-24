@@ -25,7 +25,7 @@ Architecture detectMpsArchitecture(std::string_view metal_family, std::string_vi
 /**
  * @brief Enumerate MPS devices and detect the architecture for the requested `DeviceHandle`.
  *
- * When MPS is enabled, the helper queries `backend::mps` for the device count, grabs the Metal
+ * When MPS is enabled, the helper queries `execution::mps` for the device count, grabs the Metal
  * family and vendor strings for the requested device, and delegates to `detectMpsArchitecture`.
  * Invalid device IDs or disabled MPS support fall back to `Architecture::MpsGeneric`.
  *

@@ -6,7 +6,7 @@
 #include <vector>
 
 namespace device = orteaf::internal::device;
-namespace backend = orteaf::internal::backend;
+namespace execution = orteaf::internal::execution;
 namespace arch = orteaf::internal::architecture;
 namespace dtype = orteaf::internal;
 namespace ops = orteaf::internal::ops;
@@ -26,11 +26,11 @@ TEST(DeviceBasic, GenericDevicesHaveLocalIndexZero) {
 }
 
 TEST(DeviceMetadata, BackendAndArchitectureMatchYaml) {
-    EXPECT_EQ(device::backendOf(device::Device::CudaH100Pcie80GB), backend::Backend::Cuda);
+    EXPECT_EQ(device::backendOf(device::Device::CudaH100Pcie80GB), execution::Execution::Cuda);
     EXPECT_EQ(device::architectureOf(device::Device::CudaH100Pcie80GB),
               arch::Architecture::CudaSm90);
 
-    EXPECT_EQ(device::backendOf(device::Device::MpsM3Max40c), backend::Backend::Mps);
+    EXPECT_EQ(device::backendOf(device::Device::MpsM3Max40c), execution::Execution::Mps);
     EXPECT_EQ(device::architectureOf(device::Device::MpsM3Max40c),
               arch::Architecture::MpsM3);
 }

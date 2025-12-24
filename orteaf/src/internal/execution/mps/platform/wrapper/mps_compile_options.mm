@@ -16,7 +16,7 @@
 namespace orteaf::internal::execution::mps::platform::wrapper {
 
 /**
- * @copydoc orteaf::internal::backend::mps::createCompileOptions
+ * @copydoc orteaf::internal::execution::mps::createCompileOptions
  */
 MpsCompileOptions_t createCompileOptions() {
   MTLCompileOptions *options = [[MTLCompileOptions alloc] init];
@@ -24,7 +24,7 @@ MpsCompileOptions_t createCompileOptions() {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::destroyCompileOptions
+ * @copydoc orteaf::internal::execution::mps::destroyCompileOptions
  */
 void destroyCompileOptions(MpsCompileOptions_t options) {
   if (options == nullptr)
@@ -33,7 +33,7 @@ void destroyCompileOptions(MpsCompileOptions_t options) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::setCompileOptionsMathMode
+ * @copydoc orteaf::internal::execution::mps::setCompileOptionsMathMode
  */
 void setCompileOptionsMathMode(MpsCompileOptions_t options,
                                bool fast_math_enabled) {
@@ -54,7 +54,7 @@ void setCompileOptionsMathMode(MpsCompileOptions_t options,
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::setCompileOptionsPreserveInvariance
+ * @copydoc orteaf::internal::execution::mps::setCompileOptionsPreserveInvariance
  */
 void setCompileOptionsPreserveInvariance(MpsCompileOptions_t options,
                                          bool preserve_invariance) {
@@ -71,7 +71,7 @@ void setCompileOptionsPreserveInvariance(MpsCompileOptions_t options,
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::setCompileOptionsPreprocessorMacros
+ * @copydoc orteaf::internal::execution::mps::setCompileOptionsPreprocessorMacros
  */
 void setCompileOptionsPreprocessorMacros(MpsCompileOptions_t options,
                                          void *macros_dictionary) {

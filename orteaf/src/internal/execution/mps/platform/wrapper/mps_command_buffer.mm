@@ -20,7 +20,7 @@ namespace orteaf::internal::execution::mps::platform::wrapper {
 using orteaf::internal::execution::mps::platform::wrapper::AutoreleasePool;
 
 /**
- * @copydoc orteaf::internal::backend::mps::createCommandBuffer
+ * @copydoc orteaf::internal::execution::mps::createCommandBuffer
  */
 MpsCommandBuffer_t createCommandBuffer(MpsCommandQueue_t command_queue) {
   if (command_queue == nullptr) {
@@ -36,7 +36,7 @@ MpsCommandBuffer_t createCommandBuffer(MpsCommandQueue_t command_queue) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::destroyCommandBuffer
+ * @copydoc orteaf::internal::execution::mps::destroyCommandBuffer
  */
 void destroyCommandBuffer(MpsCommandBuffer_t command_buffer) {
   if (command_buffer == nullptr)
@@ -46,7 +46,7 @@ void destroyCommandBuffer(MpsCommandBuffer_t command_buffer) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::encodeSignalEvent
+ * @copydoc orteaf::internal::execution::mps::encodeSignalEvent
  */
 void encodeSignalEvent(MpsCommandBuffer_t command_buffer, MpsEvent_t event,
                        uint32_t value) {
@@ -68,7 +68,7 @@ void encodeSignalEvent(MpsCommandBuffer_t command_buffer, MpsEvent_t event,
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::encodeWait
+ * @copydoc orteaf::internal::execution::mps::encodeWait
  */
 void encodeWait(MpsCommandBuffer_t command_buffer, MpsEvent_t event,
                 uint32_t value) {
@@ -89,7 +89,7 @@ void encodeWait(MpsCommandBuffer_t command_buffer, MpsEvent_t event,
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::commit
+ * @copydoc orteaf::internal::execution::mps::commit
  */
 void commit(MpsCommandBuffer_t command_buffer) {
   if (command_buffer == nullptr) {
@@ -103,7 +103,7 @@ void commit(MpsCommandBuffer_t command_buffer) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::isCompleted
+ * @copydoc orteaf::internal::execution::mps::isCompleted
  */
 bool isCompleted(MpsCommandBuffer_t command_buffer) {
   if (command_buffer == nullptr) {
@@ -117,7 +117,7 @@ bool isCompleted(MpsCommandBuffer_t command_buffer) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::waitUntilCompleted
+ * @copydoc orteaf::internal::execution::mps::waitUntilCompleted
  */
 void waitUntilCompleted(MpsCommandBuffer_t command_buffer) {
   if (command_buffer == nullptr) {

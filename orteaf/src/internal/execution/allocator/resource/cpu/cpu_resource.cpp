@@ -3,7 +3,7 @@
 #include "orteaf/internal/execution/cpu/platform/wrapper/cpu_alloc.h"
 #include "orteaf/internal/diagnostics/error/error_macros.h"
 
-namespace orteaf::internal::backend::cpu {
+namespace orteaf::internal::execution::cpu {
 namespace cpu = ::orteaf::internal::execution::cpu::platform::wrapper;
 
 void CpuResource::initialize(const Config& /*config*/) noexcept {
@@ -38,4 +38,4 @@ CpuResource::BufferView CpuResource::makeView(BufferView base, std::size_t offse
     return BufferView{base.raw(), offset, size};
 }
 
-}  // namespace orteaf::internal::backend::cpu
+}  // namespace orteaf::internal::execution::cpu

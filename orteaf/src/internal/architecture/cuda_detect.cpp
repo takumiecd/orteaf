@@ -1,6 +1,6 @@
 #include "orteaf/internal/architecture/cuda_detect.h"
 
-#include "orteaf/internal/backend/backend.h"
+#include "orteaf/internal/execution/execution.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include "orteaf/internal/execution/cuda/platform/wrapper/cuda_device.h"
 
@@ -54,7 +54,7 @@ Architecture detectCudaArchitecture(int compute_capability,
     if (localIndexOf(arch) == 0) {
       continue;
     }
-    if (backendOf(arch) != backend::Backend::Cuda) {
+    if (backendOf(arch) != execution::Execution::Cuda) {
       continue;
     }
 

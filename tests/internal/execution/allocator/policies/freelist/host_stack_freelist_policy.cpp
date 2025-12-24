@@ -3,10 +3,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "orteaf/internal/backend/backend.h"
+#include "orteaf/internal/execution/execution.h"
 #include "tests/internal/execution/allocator/testing/mock_resource.h"
 
-using ::orteaf::internal::backend::Backend;
+using ::orteaf::internal::execution::Execution;
 using ::orteaf::internal::base::BufferViewHandle;
 using ::orteaf::internal::execution::allocator::testing::MockCpuResource;
 using ::orteaf::internal::execution::allocator::testing::MockCpuResourceImpl;

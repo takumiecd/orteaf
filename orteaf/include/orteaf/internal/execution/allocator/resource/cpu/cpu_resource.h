@@ -5,7 +5,7 @@
 #include "orteaf/internal/execution/cpu/resource/cpu_buffer_view.h"
 #include "orteaf/internal/execution/cpu/resource/cpu_tokens.h"
 
-namespace orteaf::internal::backend::cpu {
+namespace orteaf::internal::execution::cpu {
 
 // CPU backend resource for direct allocation.
 // For low-level heap operations (reserve/map/unmap), use CpuHeapOps.
@@ -29,4 +29,4 @@ public:
     static BufferView makeView(BufferView base, std::size_t offset, std::size_t size);
 };
 
-}  // namespace orteaf::internal::backend::cpu
+}  // namespace orteaf::internal::execution::cpu

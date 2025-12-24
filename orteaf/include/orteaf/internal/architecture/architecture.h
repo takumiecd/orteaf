@@ -6,7 +6,7 @@
 #include <span>
 #include <string_view>
 
-#include <orteaf/internal/backend/backend.h>
+#include <orteaf/internal/execution/execution.h>
 
 namespace orteaf::internal::architecture {
 
@@ -39,7 +39,7 @@ namespace tables = ::orteaf::generated::architecture_tables;
 
 static_assert(kArchitectureCount == tables::kArchitectureCount,
               "Architecture enum size must match generated table size");
-static_assert(backend::kBackendCount == tables::kBackendCount,
+static_assert(execution::kBackendCount == tables::kBackendCount,
               "Architecture metadata must match backend count");
 
 inline constexpr std::array<Architecture, kArchitectureCount> kAllArchitectures = {
@@ -71,9 +71,9 @@ constexpr Architecture fromIndex(std::size_t index) {
 }
 
 /// @brief Return the backend the architecture belongs to.
-constexpr backend::Backend backendOf(Architecture arch) {
+constexpr execution::Execution backendOf(Architecture arch) {
     const auto backend_index = tables::kArchitectureBackendIndices[toIndex(arch)];
-    return backend::fromIndex(backend_index);
+    return execution::fromIndex(backend_index);
 }
 
 /// @brief Return the backend-local index (0 == Generic).
@@ -99,25 +99,25 @@ constexpr std::string_view descriptionOf(Architecture arch) {
     return tables::kArchitectureDescriptions[toIndex(arch)];
 }
 
-constexpr std::size_t countForBackend(backend::Backend backend_id) {
-    return tables::kBackendArchitectureCounts[backend::toIndex(backend_id)];
+constexpr std::size_t countForBackend(execution::Execution backend_id) {
+    return tables::kBackendArchitectureCounts[execution::toIndex(backend_id)];
 }
 
-constexpr std::size_t offsetForBackend(backend::Backend backend_id) {
-    return tables::kBackendArchitectureOffsets[backend::toIndex(backend_id)];
+constexpr std::size_t offsetForBackend(execution::Execution backend_id) {
+    return tables::kBackendArchitectureOffsets[execution::toIndex(backend_id)];
 }
 
-constexpr bool hasLocalIndex(backend::Backend backend_id, std::uint16_t local_index) {
+constexpr bool hasLocalIndex(execution::Execution backend_id, std::uint16_t local_index) {
     return local_index < countForBackend(backend_id);
 }
 
 /// @brief Construct an architecture from a backend and local index.
-constexpr Architecture fromBackendAndLocalIndex(backend::Backend backend_id, std::uint16_t local_index) {
+constexpr Architecture fromBackendAndLocalIndex(execution::Execution backend_id, std::uint16_t local_index) {
     return static_cast<Architecture>(offsetForBackend(backend_id) + local_index);
 }
 
 /// @brief Return a span of every architecture belonging to the backend.
-inline constexpr std::span<const Architecture> architecturesOf(backend::Backend backend_id) {
+inline constexpr std::span<const Architecture> architecturesOf(execution::Execution backend_id) {
     const auto offset = offsetForBackend(backend_id);
     const auto count = countForBackend(backend_id);
     return std::span<const Architecture>(kAllArchitectures.data() + offset, count);

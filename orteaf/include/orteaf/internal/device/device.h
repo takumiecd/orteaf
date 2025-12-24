@@ -7,7 +7,7 @@
 #include <string_view>
 
 #include <orteaf/internal/architecture/architecture.h>
-#include <orteaf/internal/backend/backend.h>
+#include <orteaf/internal/execution/execution.h>
 #include <orteaf/internal/dtype/dtype.h>
 #include <orteaf/internal/ops/ops.h>
 
@@ -78,8 +78,8 @@ struct Capability {
 };
 
 /// @brief Return the backend this device belongs to.
-constexpr backend::Backend backendOf(Device device) {
-    return backend::fromIndex(tables::kDeviceBackendIndices[toIndex(device)]);
+constexpr execution::Execution backendOf(Device device) {
+    return execution::fromIndex(tables::kDeviceBackendIndices[toIndex(device)]);
 }
 
 /// @brief Return the architecture associated with the device.

@@ -1,6 +1,6 @@
 #include "orteaf/internal/architecture/cpu_detect.h"
 
-#include "orteaf/internal/backend/backend.h"
+#include "orteaf/internal/execution/execution.h"
 
 #include <algorithm>
 #include <cctype>
@@ -316,7 +316,7 @@ Architecture detectCpuArchitecture() {
         if (localIndexOf(arch) == 0) {
             continue; // skip generic, reserve as fallback
         }
-        if (backendOf(arch) != backend::Backend::Cpu) {
+        if (backendOf(arch) != execution::Execution::Cpu) {
             continue;
         }
         if (!matchesDetectSpec(index, info)) {

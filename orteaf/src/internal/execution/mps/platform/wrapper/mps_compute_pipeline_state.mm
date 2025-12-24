@@ -16,7 +16,7 @@
 namespace orteaf::internal::execution::mps::platform::wrapper {
 
 /**
- * @copydoc orteaf::internal::backend::mps::createComputePipelineState
+ * @copydoc orteaf::internal::execution::mps::createComputePipelineState
  */
 MpsComputePipelineState_t createComputePipelineState(MpsDevice_t device,
                                                      MpsFunction_t function,
@@ -40,7 +40,7 @@ MpsComputePipelineState_t createComputePipelineState(MpsDevice_t device,
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::destroyComputePipelineState
+ * @copydoc orteaf::internal::execution::mps::destroyComputePipelineState
  */
 void destroyComputePipelineState(MpsComputePipelineState_t pipeline_state) {
   if (pipeline_state == nullptr)

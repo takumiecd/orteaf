@@ -21,7 +21,7 @@
 namespace orteaf::internal::execution::mps::platform::wrapper {
 
 /**
- * @copydoc orteaf::internal::backend::mps::getDevice
+ * @copydoc orteaf::internal::execution::mps::getDevice
  */
 MpsDevice_t getDevice() {
   id<MTLDevice> device = MTLCreateSystemDefaultDevice();
@@ -34,7 +34,7 @@ MpsDevice_t getDevice() {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::getDevice(MPSInt_t)
+ * @copydoc orteaf::internal::execution::mps::getDevice(MPSInt_t)
  */
 MpsDevice_t getDevice(MPSInt_t device_id) {
   NSArray<id<MTLDevice>> *devices = MTLCopyAllDevices();
@@ -63,7 +63,7 @@ MpsDevice_t getDevice(MPSInt_t device_id) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::getDeviceCount
+ * @copydoc orteaf::internal::execution::mps::getDeviceCount
  */
 int getDeviceCount() {
   NSArray<id<MTLDevice>> *devices = MTLCopyAllDevices();
@@ -75,7 +75,7 @@ int getDeviceCount() {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::deviceRetain
+ * @copydoc orteaf::internal::execution::mps::deviceRetain
  */
 void deviceRetain(MpsDevice_t device) {
   if (device == nullptr) {
@@ -86,7 +86,7 @@ void deviceRetain(MpsDevice_t device) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::deviceRelease
+ * @copydoc orteaf::internal::execution::mps::deviceRelease
  */
 void deviceRelease(MpsDevice_t device) {
   if (device == nullptr) {
@@ -97,7 +97,7 @@ void deviceRelease(MpsDevice_t device) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::getDeviceArray
+ * @copydoc orteaf::internal::execution::mps::getDeviceArray
  */
 MpsDeviceArray_t getDeviceArray() {
   NSArray<id<MTLDevice>> *devices = MTLCopyAllDevices();
@@ -163,7 +163,7 @@ std::string guessFamilyFromName(id<MTLDevice> device) {
 } // namespace
 
 /**
- * @copydoc orteaf::internal::backend::mps::getDeviceName
+ * @copydoc orteaf::internal::execution::mps::getDeviceName
  */
 std::string getDeviceName(MpsDevice_t device) {
   if (device == nullptr) {
@@ -174,7 +174,7 @@ std::string getDeviceName(MpsDevice_t device) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::getDeviceVendor
+ * @copydoc orteaf::internal::execution::mps::getDeviceVendor
  */
 std::string getDeviceVendor(MpsDevice_t device) {
   (void)device;
@@ -182,7 +182,7 @@ std::string getDeviceVendor(MpsDevice_t device) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::getDeviceMetalFamily
+ * @copydoc orteaf::internal::execution::mps::getDeviceMetalFamily
  */
 std::string getDeviceMetalFamily(MpsDevice_t device) {
   if (device == nullptr) {

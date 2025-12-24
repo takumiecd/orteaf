@@ -3,7 +3,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "orteaf/internal/backend/backend.h"
+#include "orteaf/internal/execution/execution.h"
 #include "orteaf/internal/execution/allocator/buffer_resource.h"
 #include "orteaf/internal/execution/allocator/policies/chunk_locator/direct_chunk_locator.h"
 #include "orteaf/internal/execution/allocator/policies/fast_free/fast_free_policies.h"
@@ -16,7 +16,7 @@
 
 namespace {
 
-using ::orteaf::internal::backend::Backend;
+using ::orteaf::internal::execution::Execution;
 using ::orteaf::internal::execution::allocator::BufferBlock;
 using ::orteaf::internal::execution::allocator::BufferResource;
 using ::orteaf::internal::execution::allocator::testing::MockCpuResource;
@@ -32,9 +32,9 @@ using ::testing::Return;
 struct MockResource {
   using BufferView = CpuBufferView;
   using BufferResource =
-      ::orteaf::internal::execution::allocator::BufferResource<Backend::Cpu>;
+      ::orteaf::internal::execution::allocator::BufferResource<Execution::Cpu>;
   using BufferBlock =
-      ::orteaf::internal::execution::allocator::BufferBlock<Backend::Cpu>;
+      ::orteaf::internal::execution::allocator::BufferBlock<Execution::Cpu>;
   using FenceToken = typename BufferResource::FenceToken;
   struct ReuseToken {
     ReuseToken() = default;
@@ -42,10 +42,10 @@ struct MockResource {
   };
   struct LaunchParams {};
 
-  static constexpr Backend backend_type_static() noexcept {
-    return Backend::Cpu;
+  static constexpr Execution backend_type_static() noexcept {
+    return Execution::Cpu;
   }
-  constexpr Backend backend_type() const noexcept {
+  constexpr Execution backend_type() const noexcept {
     return backend_type_static();
   }
 
@@ -91,7 +91,7 @@ using Pool = ::orteaf::internal::execution::allocator::pool::SegregatePool<
     policies::DeferredReusePolicy<MockResource>,
     policies::HostStackFreelistPolicy<MockResource>>;
 
-using BufferResourceType = BufferResource<Backend::Cpu>;
+using BufferResourceType = BufferResource<Execution::Cpu>;
 
 TEST(SegregatePool, InitializePropagatesToAllPolicies) {
   NiceMock<MockCpuResourceImpl> impl;

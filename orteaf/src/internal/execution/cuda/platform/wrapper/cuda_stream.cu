@@ -15,7 +15,7 @@
 namespace orteaf::internal::execution::cuda::platform::wrapper {
 
 /**
- * @copydoc orteaf::internal::backend::cuda::getStream
+ * @copydoc orteaf::internal::execution::cuda::getStream
  */
 CudaStream_t getStream() {
     CUstream stream;
@@ -25,7 +25,7 @@ CudaStream_t getStream() {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::releaseStream
+ * @copydoc orteaf::internal::execution::cuda::releaseStream
  */
 void releaseStream(CudaStream_t stream) {
     if (stream == nullptr) return;
@@ -35,7 +35,7 @@ void releaseStream(CudaStream_t stream) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::synchronizeStream
+ * @copydoc orteaf::internal::execution::cuda::synchronizeStream
  */
 void synchronizeStream(CudaStream_t stream) {
     if (stream == nullptr) {
@@ -47,7 +47,7 @@ void synchronizeStream(CudaStream_t stream) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::waitStream
+ * @copydoc orteaf::internal::execution::cuda::waitStream
  */
 void waitStream(CudaStream_t stream, CudaDevicePtr_t addr, uint32_t value) {
     if (stream == nullptr) {
@@ -64,7 +64,7 @@ void waitStream(CudaStream_t stream, CudaDevicePtr_t addr, uint32_t value) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::writeStream
+ * @copydoc orteaf::internal::execution::cuda::writeStream
  */
 void writeStream(CudaStream_t stream, CudaDevicePtr_t addr, uint32_t value) {
     if (stream == nullptr) {

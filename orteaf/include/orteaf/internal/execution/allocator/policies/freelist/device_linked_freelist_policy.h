@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <unordered_map>
 
-#include <orteaf/internal/backend/backend.h>
+#include <orteaf/internal/execution/execution.h>
 #include <orteaf/internal/base/heap_vector.h>
 #include <orteaf/internal/diagnostics/error/error_macros.h>
 #include <orteaf/internal/execution/allocator/buffer_resource.h>
@@ -22,7 +22,7 @@ namespace orteaf::internal::execution::allocator::policies {
  * サイズクラスの計算（min/max_block_size）は SegregatePool が担当し、
  * 本ポリシーは list_index のみを扱う。
  */
-template <typename Resource, ::orteaf::internal::backend::Backend B>
+template <typename Resource, ::orteaf::internal::execution::Execution B>
 class DeviceLinkedFreelistPolicy {
 public:
   using BufferResource =

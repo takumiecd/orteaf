@@ -14,7 +14,7 @@
 namespace orteaf::internal::execution::cuda::platform::wrapper {
 
 /**
- * @copydoc orteaf::internal::backend::cuda::loadModuleFromFile
+ * @copydoc orteaf::internal::execution::cuda::loadModuleFromFile
  */
 CudaModule_t loadModuleFromFile(const char* filepath) {
     if (filepath == nullptr) {
@@ -31,7 +31,7 @@ CudaModule_t loadModuleFromFile(const char* filepath) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::loadModuleFromImage
+ * @copydoc orteaf::internal::execution::cuda::loadModuleFromImage
  */
 CudaModule_t loadModuleFromImage(const void* image) {
     if (image == nullptr) {
@@ -44,7 +44,7 @@ CudaModule_t loadModuleFromImage(const void* image) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::getFunction
+ * @copydoc orteaf::internal::execution::cuda::getFunction
  */
 CudaFunction_t getFunction(CudaModule_t module, const char* kernel_name) {
     if (module == nullptr) {
@@ -66,7 +66,7 @@ CudaFunction_t getFunction(CudaModule_t module, const char* kernel_name) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::unloadModule
+ * @copydoc orteaf::internal::execution::cuda::unloadModule
  */
 void unloadModule(CudaModule_t module) {
     if (module == nullptr) return;

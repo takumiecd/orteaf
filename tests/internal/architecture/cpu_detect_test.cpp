@@ -1,12 +1,12 @@
 #include "orteaf/internal/architecture/architecture.h"
-#include "orteaf/internal/backend/backend.h"
+#include "orteaf/internal/execution/execution.h"
 #include "orteaf/internal/architecture/cpu_detect.h"
 
 #include <cstdlib>
 #include <iostream>
 #include <gtest/gtest.h>
 namespace architecture = orteaf::internal::architecture;
-namespace backend = orteaf::internal::backend;
+namespace execution = orteaf::internal::execution;
 
 /// Manual test hook: set ORTEAF_EXPECT_CPU_ARCH=Zen4 (or other ID) to assert your environment.
 TEST(CpuDetect, ManualEnvironmentCheck) {
@@ -22,7 +22,7 @@ TEST(CpuDetect, ManualEnvironmentCheck) {
 
 TEST(CpuDetect, ReportsCpuBackendArchitecture) {
     const auto arch = architecture::detectCpuArchitecture();
-    EXPECT_EQ(architecture::backendOf(arch), backend::Backend::Cpu);
+    EXPECT_EQ(architecture::backendOf(arch), execution::Execution::Cpu);
     EXPECT_GE(static_cast<std::uint16_t>(arch), 0);
 }
 

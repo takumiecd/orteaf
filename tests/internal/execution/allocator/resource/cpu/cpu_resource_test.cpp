@@ -5,7 +5,7 @@
 #include "tests/internal/testing/error_assert.h"
 
 namespace orteaf::tests {
-using orteaf::internal::backend::cpu::CpuResource;
+using orteaf::internal::execution::cpu::CpuResource;
 namespace diag_error = ::orteaf::internal::diagnostics::error;
 
 TEST(CpuResourceTest, InitializeIsIdempotent) {

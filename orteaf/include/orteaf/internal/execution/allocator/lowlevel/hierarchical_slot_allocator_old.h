@@ -9,7 +9,7 @@
 #include <type_traits>
 #include <vector>
 
-#include "orteaf/internal/backend/backend.h"
+#include "orteaf/internal/execution/execution.h"
 #include "orteaf/internal/base/heap_vector.h"
 #include "orteaf/internal/base/math_utils.h"
 #include "orteaf/internal/diagnostics/error/error.h"
@@ -126,7 +126,7 @@ template <> struct SlotChildCountAccessor<true> {
  * 最小で足りる層から割り当てを行う。親子分割の完全実装はこれからだが、
  * まずは複数サイズクラスを扱える骨格として提供する。
  */
-template <class HeapOps, ::orteaf::internal::backend::Backend B>
+template <class HeapOps, ::orteaf::internal::execution::Execution B>
 class HierarchicalSlotAllocator {
 public:
   // ========================================================================

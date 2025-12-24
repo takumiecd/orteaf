@@ -1,4 +1,4 @@
-#include "orteaf/internal/backend/backend.h"
+#include "orteaf/internal/execution/execution.h"
 #include "orteaf/internal/diagnostics/log/log.h"
 #include "orteaf/internal/execution/allocator/policies/large_alloc/direct_resource_large_alloc.h"
 
@@ -14,7 +14,7 @@ using ::testing::Return;
 
 namespace allocator = ::orteaf::internal::execution::allocator;
 namespace policies = ::orteaf::internal::execution::allocator::policies;
-using Backend = ::orteaf::internal::backend::Backend;
+using Backend = ::orteaf::internal::execution::Execution;
 using ::orteaf::internal::execution::allocator::testing::MockCpuResource;
 using ::orteaf::internal::execution::allocator::testing::MockCpuResourceImpl;
 

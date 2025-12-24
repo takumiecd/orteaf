@@ -6,7 +6,7 @@
 
 #include <gtest/gtest.h>
 
-#include "orteaf/internal/backend/backend.h"
+#include "orteaf/internal/execution/execution.h"
 #include "orteaf/internal/base/handle.h"
 #include "orteaf/internal/execution/allocator/buffer_resource.h"
 #include "orteaf/internal/execution/cpu/resource/cpu_buffer_view.h"
@@ -14,26 +14,26 @@
 
 namespace allocator = ::orteaf::internal::execution::allocator;
 namespace policies = ::orteaf::internal::execution::allocator::policies;
-using Backend = ::orteaf::internal::backend::Backend;
+using Execution = ::orteaf::internal::execution::Execution;
 using BufferViewHandle = ::orteaf::internal::base::BufferViewHandle;
 using CpuView = ::orteaf::internal::execution::cpu::resource::CpuBufferView;
 namespace {
-using BufferResource = allocator::BufferResource<Backend::Cpu>;
-using BufferBlock = allocator::BufferBlock<Backend::Cpu>;
+using BufferResource = allocator::BufferResource<Execution::Cpu>;
+using BufferBlock = allocator::BufferBlock<Execution::Cpu>;
 using FenceToken = typename BufferResource::FenceToken;
 
 struct FakeResource;
 using Policy = policies::DeferredReusePolicy<FakeResource>;
 
 struct FakeResource {
-  using BufferResource = allocator::BufferResource<Backend::Cpu>;
+  using BufferResource = allocator::BufferResource<Execution::Cpu>;
   struct ReuseToken {
     ReuseToken() = default;
     explicit ReuseToken(FenceToken &&) {}
   };
 
-  static constexpr Backend backend_type_static() noexcept {
-    return Backend::Cpu;
+  static constexpr Execution backend_type_static() noexcept {
+    return Execution::Cpu;
   }
 
   std::atomic<bool> next_result{true};

@@ -507,7 +507,7 @@ GeneratedData GenerateOutputs(const std::vector<BackendInfo>& backends,
         std::ostringstream def_stream;
         def_stream << "// Auto-generated. Do not edit.\n";
         for (const auto& arch : resolved) {
-            def_stream << "ARCHITECTURE(" << arch.enum_name << ", backend::Backend::"
+            def_stream << "ARCHITECTURE(" << arch.enum_name << ", execution::Execution::"
                        << backends[arch.backend_index].id << ", "
                        << arch.local_index << ", \""
                        << EscapeStringLiteral(arch.architecture_id) << "\", \""

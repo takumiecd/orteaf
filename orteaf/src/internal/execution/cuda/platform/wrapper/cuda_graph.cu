@@ -14,7 +14,7 @@
 namespace orteaf::internal::execution::cuda::platform::wrapper {
 
 /**
- * @copydoc orteaf::internal::backend::cuda::createGraph
+ * @copydoc orteaf::internal::execution::cuda::createGraph
  */
 CudaGraph_t createGraph() {
     CUgraph graph;
@@ -23,7 +23,7 @@ CudaGraph_t createGraph() {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::createGraphExec
+ * @copydoc orteaf::internal::execution::cuda::createGraphExec
  */
 CudaGraphExec_t createGraphExec(CudaGraph_t graph) {
     if (graph == nullptr) {
@@ -37,7 +37,7 @@ CudaGraphExec_t createGraphExec(CudaGraph_t graph) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::destroyGraph
+ * @copydoc orteaf::internal::execution::cuda::destroyGraph
  */
 void destroyGraph(CudaGraph_t graph) {
     if (graph == nullptr) return;
@@ -46,7 +46,7 @@ void destroyGraph(CudaGraph_t graph) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::destroyGraphExec
+ * @copydoc orteaf::internal::execution::cuda::destroyGraphExec
  */
 void destroyGraphExec(CudaGraphExec_t graph_exec) {
     if (graph_exec == nullptr) return;
@@ -55,7 +55,7 @@ void destroyGraphExec(CudaGraphExec_t graph_exec) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::beginGraphCapture
+ * @copydoc orteaf::internal::execution::cuda::beginGraphCapture
  */
 void beginGraphCapture(CudaStream_t stream) {
     if (stream == nullptr) {
@@ -67,7 +67,7 @@ void beginGraphCapture(CudaStream_t stream) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::endGraphCapture
+ * @copydoc orteaf::internal::execution::cuda::endGraphCapture
  */
 void endGraphCapture(CudaStream_t stream, CudaGraph_t* graph) {
     if (stream == nullptr) {
@@ -91,7 +91,7 @@ void endGraphCapture(CudaStream_t stream, CudaGraph_t* graph) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::instantiateGraph
+ * @copydoc orteaf::internal::execution::cuda::instantiateGraph
  */
 void instantiateGraph(CudaGraph_t graph, CudaGraphExec_t* graph_exec) {
     if (graph == nullptr) {
@@ -109,7 +109,7 @@ void instantiateGraph(CudaGraph_t graph, CudaGraphExec_t* graph_exec) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::graphLaunch
+ * @copydoc orteaf::internal::execution::cuda::graphLaunch
  */
 void graphLaunch(CudaGraphExec_t graph_exec, CudaStream_t stream) {
     if (graph_exec == nullptr) {

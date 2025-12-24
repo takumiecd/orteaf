@@ -50,7 +50,7 @@ namespace {
 } // namespace
 
 /**
- * @copydoc orteaf::internal::backend::mps::createError(const std::string&)
+ * @copydoc orteaf::internal::execution::mps::createError(const std::string&)
  */
 MpsError_t createError(const std::string &message) {
   return makeError("NSCocoaErrorDomain", message);
@@ -58,7 +58,7 @@ MpsError_t createError(const std::string &message) {
 
 /**
  * @copydoc
- * orteaf::internal::backend::mps::createError(std::string_view,std::string_view)
+ * orteaf::internal::execution::mps::createError(std::string_view,std::string_view)
  */
 MpsError_t createError(std::string_view domain, std::string_view description) {
   return makeError(domain, description);
@@ -66,7 +66,7 @@ MpsError_t createError(std::string_view domain, std::string_view description) {
 
 /**
  * @copydoc
- * orteaf::internal::backend::mps::createError(std::string_view,std::string_view,void*)
+ * orteaf::internal::execution::mps::createError(std::string_view,std::string_view,void*)
  */
 MpsError_t createError(std::string_view domain, std::string_view description,
                        void *additional_user_info) {
@@ -76,7 +76,7 @@ MpsError_t createError(std::string_view domain, std::string_view description,
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::destroyError
+ * @copydoc orteaf::internal::execution::mps::destroyError
  */
 void destroyError(MpsError_t error) {
   if (error == nullptr)

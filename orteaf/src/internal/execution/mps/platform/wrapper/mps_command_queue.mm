@@ -16,7 +16,7 @@
 namespace orteaf::internal::execution::mps::platform::wrapper {
 
 /**
- * @copydoc orteaf::internal::backend::mps::createCommandQueue
+ * @copydoc orteaf::internal::execution::mps::createCommandQueue
  */
 MpsCommandQueue_t createCommandQueue(MpsDevice_t device) {
   if (device == nullptr) {
@@ -31,7 +31,7 @@ MpsCommandQueue_t createCommandQueue(MpsDevice_t device) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::destroyCommandQueue
+ * @copydoc orteaf::internal::execution::mps::destroyCommandQueue
  */
 void destroyCommandQueue(MpsCommandQueue_t command_queue) {
   if (command_queue == nullptr)

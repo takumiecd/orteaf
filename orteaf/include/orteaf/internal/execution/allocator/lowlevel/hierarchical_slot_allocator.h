@@ -13,7 +13,7 @@ namespace orteaf::internal::execution::allocator::policies {
  * Storage, SingleOps, DenseOpsを統合し、
  * 従来のAPIを提供する。
  */
-template <class HeapOps, ::orteaf::internal::backend::Backend B>
+template <class HeapOps, ::orteaf::internal::execution::Execution B>
 class HierarchicalSlotAllocator {
 public:
     using Storage = HierarchicalSlotStorage<HeapOps, B>;

@@ -1,6 +1,6 @@
 #include "orteaf/internal/architecture/mps_detect.h"
 
-#include "orteaf/internal/backend/backend.h"
+#include "orteaf/internal/execution/execution.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 
 #if ORTEAF_ENABLE_MPS
@@ -80,7 +80,7 @@ Architecture detectMpsArchitecture(std::string_view metal_family,
     if (localIndexOf(arch) == 0) {
       continue;
     }
-    if (backendOf(arch) != backend::Backend::Mps) {
+    if (backendOf(arch) != execution::Execution::Mps) {
       continue;
     }
 

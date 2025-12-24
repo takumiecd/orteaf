@@ -3,31 +3,31 @@
 #include <atomic>
 #include <cstdint>
 #include <iostream>
-#include <orteaf/internal/backend/backend.h>
+#include <orteaf/internal/execution/execution.h>
 #include <sstream>
 
 namespace orteaf::internal::execution::allocator::pool {
 
-template <::orteaf::internal::backend::Backend BackendType>
+template <::orteaf::internal::execution::Execution BackendType>
 class SegregatePoolStats {
 private:
   // Determine statistics level based on backend type
   static constexpr int StatsLevel = []() {
-    if constexpr (BackendType == ::orteaf::internal::backend::Backend::Cpu) {
+    if constexpr (BackendType == ::orteaf::internal::execution::Execution::Cpu) {
 #ifdef ORTEAF_STATS_LEVEL_CPU_VALUE
       return ORTEAF_STATS_LEVEL_CPU_VALUE;
 #else
       return 0;
 #endif
     } else if constexpr (BackendType ==
-                         ::orteaf::internal::backend::Backend::Mps) {
+                         ::orteaf::internal::execution::Execution::Mps) {
 #ifdef ORTEAF_STATS_LEVEL_MPS_VALUE
       return ORTEAF_STATS_LEVEL_MPS_VALUE;
 #else
       return 0;
 #endif
     } else if constexpr (BackendType ==
-                         ::orteaf::internal::backend::Backend::Cuda) {
+                         ::orteaf::internal::execution::Execution::Cuda) {
 #ifdef ORTEAF_STATS_LEVEL_CUDA_VALUE
       return ORTEAF_STATS_LEVEL_CUDA_VALUE;
 #else

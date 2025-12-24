@@ -2,32 +2,32 @@
 
 #include <string_view>
 
-#include <orteaf/internal/backend/backend.h>
+#include <orteaf/internal/execution/execution.h>
 
-namespace backend = orteaf::internal::backend;
+namespace execution = orteaf::internal::execution;
 
 TEST(BackendTablesTest, BasicEnumerationProperties) {
-    EXPECT_EQ(backend::kBackendCount, backend::allBackends().size());
-    EXPECT_TRUE(backend::isValidIndex(0));
-    EXPECT_FALSE(backend::isValidIndex(backend::kBackendCount));
+    EXPECT_EQ(execution::kBackendCount, execution::allBackends().size());
+    EXPECT_TRUE(execution::isValidIndex(0));
+    EXPECT_FALSE(execution::isValidIndex(execution::kBackendCount));
 
-    EXPECT_EQ(backend::fromIndex(0), backend::allBackends().front());
-    EXPECT_EQ(backend::idOf(backend::fromIndex(0)), std::string_view("Cuda"));
+    EXPECT_EQ(execution::fromIndex(0), execution::allBackends().front());
+    EXPECT_EQ(execution::idOf(execution::fromIndex(0)), std::string_view("Cuda"));
 }
 
 TEST(BackendTablesTest, MetadataMatchesCatalog) {
-    constexpr auto cuda = backend::Backend::Cuda;
-    EXPECT_EQ(backend::displayNameOf(cuda), "CUDA");
-    EXPECT_EQ(backend::modulePathOf(cuda), "@orteaf/internal/backend/cuda");
-    EXPECT_EQ(backend::descriptionOf(cuda), "NVIDIA CUDA 実装");
+    constexpr auto cuda = execution::Execution::Cuda;
+    EXPECT_EQ(execution::displayNameOf(cuda), "CUDA");
+    EXPECT_EQ(execution::modulePathOf(cuda), "@orteaf/internal/backend/cuda");
+    EXPECT_EQ(execution::descriptionOf(cuda), "NVIDIA CUDA 実装");
 
-    constexpr auto mps = backend::Backend::Mps;
-    EXPECT_EQ(backend::displayNameOf(mps), "MPS");
-    EXPECT_EQ(backend::modulePathOf(mps), "@orteaf/internal/backend/mps");
-    EXPECT_EQ(backend::descriptionOf(mps), "macOS/iOS 向け Metal Performance Shaders 実装");
+    constexpr auto mps = execution::Execution::Mps;
+    EXPECT_EQ(execution::displayNameOf(mps), "MPS");
+    EXPECT_EQ(execution::modulePathOf(mps), "@orteaf/internal/backend/mps");
+    EXPECT_EQ(execution::descriptionOf(mps), "macOS/iOS 向け Metal Performance Shaders 実装");
 
-    constexpr auto cpu = backend::Backend::Cpu;
-    EXPECT_EQ(backend::displayNameOf(cpu), "CPU");
-    EXPECT_EQ(backend::modulePathOf(cpu), "@orteaf/internal/backend/cpu");
-    EXPECT_EQ(backend::descriptionOf(cpu), "汎用 CPU 実装");
+    constexpr auto cpu = execution::Execution::Cpu;
+    EXPECT_EQ(execution::displayNameOf(cpu), "CPU");
+    EXPECT_EQ(execution::modulePathOf(cpu), "@orteaf/internal/backend/cpu");
+    EXPECT_EQ(execution::descriptionOf(cpu), "汎用 CPU 実装");
 }

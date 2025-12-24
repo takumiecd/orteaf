@@ -9,7 +9,7 @@ namespace orteaf::internal::execution::allocator::policies {
 /**
  * @brief 複数スロット操作（Dense用）
  */
-template <class HeapOps, ::orteaf::internal::backend::Backend B>
+template <class HeapOps, ::orteaf::internal::execution::Execution B>
 class HierarchicalSlotDenseOps {
 public:
     using Storage = HierarchicalSlotStorage<HeapOps, B>;

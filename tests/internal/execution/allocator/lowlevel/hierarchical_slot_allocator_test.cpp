@@ -3,7 +3,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "orteaf/internal/backend/backend.h"
+#include "orteaf/internal/execution/execution.h"
 #include "orteaf/internal/execution/base/backend_traits.h"
 #include "tests/internal/execution/allocator/testing/mock_resource.h"
 #include "tests/internal/testing/error_assert.h"
@@ -14,8 +14,8 @@ using ::testing::Return;
 
 namespace allocator = ::orteaf::internal::execution::allocator;
 namespace policies = ::orteaf::internal::execution::allocator::policies;
-using Backend = ::orteaf::internal::backend::Backend;
-using Traits = ::orteaf::internal::execution::base::BackendTraits<Backend::Cpu>;
+using Execution = ::orteaf::internal::execution::Execution;
+using Traits = ::orteaf::internal::execution::base::BackendTraits<Execution::Cpu>;
 using BufferView = Traits::BufferView;
 using HeapRegion = Traits::HeapRegion;
 using ::orteaf::internal::execution::allocator::testing::MockCpuHeapOps;
@@ -25,7 +25,7 @@ using OrteafErrc = ::orteaf::internal::diagnostics::error::OrteafErrc;
 namespace {
 
 using Allocator =
-    policies::HierarchicalSlotAllocator<MockCpuHeapOps, Backend::Cpu>;
+    policies::HierarchicalSlotAllocator<MockCpuHeapOps, Execution::Cpu>;
 
 static BufferView MapReturn(HeapRegion region) {
   return BufferView{region.data(), 0, region.size()};

@@ -20,7 +20,7 @@
 namespace orteaf::internal::execution::cuda::platform::wrapper {
 
 /**
- * @copydoc orteaf::internal::backend::cuda::getPrimaryContext
+ * @copydoc orteaf::internal::execution::cuda::getPrimaryContext
  */
 CudaContext_t getPrimaryContext(CudaDevice_t device) {
     CUdevice objc_device = cuDeviceFromOpaque(device);
@@ -30,7 +30,7 @@ CudaContext_t getPrimaryContext(CudaDevice_t device) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::createContext
+ * @copydoc orteaf::internal::execution::cuda::createContext
  */
 CudaContext_t createContext(CudaDevice_t device) {
     CUdevice objc_device = cuDeviceFromOpaque(device);
@@ -49,7 +49,7 @@ CudaContext_t createContext(CudaDevice_t device) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::setContext
+ * @copydoc orteaf::internal::execution::cuda::setContext
  */
 void setContext(CudaContext_t context) {
     if (context == nullptr) {
@@ -61,7 +61,7 @@ void setContext(CudaContext_t context) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::releasePrimaryContext
+ * @copydoc orteaf::internal::execution::cuda::releasePrimaryContext
  */
 void releasePrimaryContext(CudaDevice_t device) {
     CUdevice objc_device = cuDeviceFromOpaque(device);
@@ -69,7 +69,7 @@ void releasePrimaryContext(CudaDevice_t device) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::releaseContext
+ * @copydoc orteaf::internal::execution::cuda::releaseContext
  */
 void releaseContext(CudaContext_t context) {
     if (context == nullptr) return;

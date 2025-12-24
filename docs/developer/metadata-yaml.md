@@ -102,7 +102,7 @@ backend kernels that rely on the affected IDs.
 
 - **YAML**: `configs/backend/backends.yml`
 - **Generator**: `tools/codegen/gen_backends.cpp` (`generate_backends`)
-- **Public header**: `orteaf/include/orteaf/internal/backend/backend.h`
+- **Public header**: `orteaf/include/orteaf/internal/execution/execution.h`
 - **Tests**: `tests/internal/backend/backend_tables_test.cpp`
 
 ```yaml

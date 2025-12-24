@@ -2,7 +2,7 @@
 
 #include <utility>
 
-#include <orteaf/internal/backend/backend.h>
+#include <orteaf/internal/execution/execution.h>
 #include <orteaf/internal/base/handle.h>
 #include <orteaf/internal/execution/cpu/resource/cpu_buffer_view.h>
 
@@ -18,26 +18,26 @@
 namespace orteaf::internal::execution::allocator {
 struct CpuFenceToken {};
 
-template <backend::Backend B> struct ResourceBufferType {
+template <execution::Execution B> struct ResourceBufferType {
   using view = ::orteaf::internal::execution::cpu::resource::CpuBufferView;
   using fence_token = CpuFenceToken;
 };
 
 #if ORTEAF_ENABLE_CUDA
-template <> struct ResourceBufferType<backend::Backend::Cuda> {
+template <> struct ResourceBufferType<execution::Execution::Cuda> {
   using view = ::orteaf::internal::execution::cuda::resource::CudaBufferView;
 };
 #endif // ORTEAF_ENABLE_CUDA
 
 #if ORTEAF_ENABLE_MPS
-template <> struct ResourceBufferType<backend::Backend::Mps> {
+template <> struct ResourceBufferType<execution::Execution::Mps> {
   using view = ::orteaf::internal::execution::mps::resource::MpsBufferView;
   using fence_token = ::orteaf::internal::execution::mps::resource::MpsFenceToken;
 };
 #endif // ORTEAF_ENABLE_MPS
 
 // Lightweight pair of buffer view and handle (no fence tracking).
-template <backend::Backend B> struct BufferBlock {
+template <execution::Execution B> struct BufferBlock {
   using BufferView = typename ResourceBufferType<B>::view;
   using BufferViewHandle = ::orteaf::internal::base::BufferViewHandle;
 
@@ -52,7 +52,7 @@ template <backend::Backend B> struct BufferBlock {
 };
 
 // Non-owning view of a buffer with an associated strong ID.
-template <backend::Backend B> struct BufferResource {
+template <execution::Execution B> struct BufferResource {
   using BufferView = typename ResourceBufferType<B>::view;
   using BufferViewHandle = ::orteaf::internal::base::BufferViewHandle;
   using FenceToken = typename ResourceBufferType<B>::fence_token;

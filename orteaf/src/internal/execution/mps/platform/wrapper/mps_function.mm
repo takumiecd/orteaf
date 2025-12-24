@@ -16,7 +16,7 @@
 namespace orteaf::internal::execution::mps::platform::wrapper {
 
 /**
- * @copydoc orteaf::internal::backend::mps::createFunction
+ * @copydoc orteaf::internal::execution::mps::createFunction
  */
 MpsFunction_t createFunction(MpsLibrary_t library, std::string_view name) {
   if (library == nullptr) {
@@ -43,7 +43,7 @@ MpsFunction_t createFunction(MpsLibrary_t library, std::string_view name) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::destroyFunction
+ * @copydoc orteaf::internal::execution::mps::destroyFunction
  */
 void destroyFunction(MpsFunction_t function) {
   if (function == nullptr)

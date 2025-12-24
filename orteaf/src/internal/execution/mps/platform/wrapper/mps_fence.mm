@@ -20,7 +20,7 @@
 namespace orteaf::internal::execution::mps::platform::wrapper {
 
 /**
- * @copydoc orteaf::internal::backend::mps::createFence
+ * @copydoc orteaf::internal::execution::mps::createFence
  */
 MpsFence_t createFence(MpsDevice_t device) {
   if (device == nullptr) {
@@ -39,7 +39,7 @@ MpsFence_t createFence(MpsDevice_t device) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::destroyFence
+ * @copydoc orteaf::internal::execution::mps::destroyFence
  */
 void destroyFence(MpsFence_t fence) {
   if (fence == nullptr) {
@@ -51,7 +51,7 @@ void destroyFence(MpsFence_t fence) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::updateFence
+ * @copydoc orteaf::internal::execution::mps::updateFence
  */
 void updateFence(MpsComputeCommandEncoder_t encoder, MpsFence_t fence) {
   if (encoder == nullptr) {
@@ -70,7 +70,7 @@ void updateFence(MpsComputeCommandEncoder_t encoder, MpsFence_t fence) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::waitForFence
+ * @copydoc orteaf::internal::execution::mps::waitForFence
  */
 void waitForFence(MpsComputeCommandEncoder_t encoder, MpsFence_t fence) {
   if (encoder == nullptr) {

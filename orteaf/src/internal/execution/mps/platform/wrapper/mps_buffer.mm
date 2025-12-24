@@ -17,7 +17,7 @@
 namespace orteaf::internal::execution::mps::platform::wrapper {
 
 /**
- * @copydoc orteaf::internal::backend::mps::createBuffer
+ * @copydoc orteaf::internal::execution::mps::createBuffer
  */
 MpsBuffer_t createBuffer(MpsHeap_t heap, size_t size, MpsBufferUsage_t usage) {
   if (heap == nullptr) {
@@ -80,7 +80,7 @@ MpsBuffer_t createBufferWithOffset(MpsHeap_t heap, size_t size, size_t offset,
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::destroyBuffer
+ * @copydoc orteaf::internal::execution::mps::destroyBuffer
  */
 void destroyBuffer(MpsBuffer_t buffer) {
   if (buffer == nullptr)
@@ -89,7 +89,7 @@ void destroyBuffer(MpsBuffer_t buffer) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::getBufferContentsConst
+ * @copydoc orteaf::internal::execution::mps::getBufferContentsConst
  */
 const void *getBufferContentsConst(MpsBuffer_t buffer) {
   if (buffer == nullptr)
@@ -99,7 +99,7 @@ const void *getBufferContentsConst(MpsBuffer_t buffer) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::getBufferContents
+ * @copydoc orteaf::internal::execution::mps::getBufferContents
  */
 void *getBufferContents(MpsBuffer_t buffer) {
   return const_cast<void *>(getBufferContentsConst(buffer));

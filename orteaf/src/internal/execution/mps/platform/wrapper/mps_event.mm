@@ -20,7 +20,7 @@
 namespace orteaf::internal::execution::mps::platform::wrapper {
 
 /**
- * @copydoc orteaf::internal::backend::mps::createEvent
+ * @copydoc orteaf::internal::execution::mps::createEvent
  */
 MpsEvent_t createEvent(MpsDevice_t device) {
   ::orteaf::internal::execution::mps::platform::wrapper::AutoreleasePool pool{};
@@ -36,7 +36,7 @@ MpsEvent_t createEvent(MpsDevice_t device) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::destroyEvent
+ * @copydoc orteaf::internal::execution::mps::destroyEvent
  */
 void destroyEvent(MpsEvent_t event) {
   if (event == nullptr)
@@ -47,7 +47,7 @@ void destroyEvent(MpsEvent_t event) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::recordEvent
+ * @copydoc orteaf::internal::execution::mps::recordEvent
  */
 void recordEvent(MpsEvent_t event, MpsCommandBuffer_t command_buffer,
                  uint64_t value) {
@@ -67,7 +67,7 @@ void recordEvent(MpsEvent_t event, MpsCommandBuffer_t command_buffer,
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::queryEvent
+ * @copydoc orteaf::internal::execution::mps::queryEvent
  */
 bool queryEvent(MpsEvent_t event, uint64_t expected_value) {
   if (event == nullptr) {
@@ -80,7 +80,7 @@ bool queryEvent(MpsEvent_t event, uint64_t expected_value) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::eventValue
+ * @copydoc orteaf::internal::execution::mps::eventValue
  */
 uint64_t eventValue(MpsEvent_t event) {
   if (event == nullptr) {
@@ -92,7 +92,7 @@ uint64_t eventValue(MpsEvent_t event) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::waitEvent
+ * @copydoc orteaf::internal::execution::mps::waitEvent
  */
 void waitEvent(MpsCommandBuffer_t command_buffer, MpsEvent_t event,
                uint64_t value) {

@@ -10,14 +10,14 @@
 namespace orteaf::internal::execution::cuda::platform::wrapper {
 
 /**
- * @copydoc orteaf::internal::backend::cuda::makeDim3
+ * @copydoc orteaf::internal::execution::cuda::makeDim3
  */
 CudaDim3_t makeDim3(std::uint32_t x, std::uint32_t y, std::uint32_t z) noexcept {
     return CudaDim3_t{x, y, z};
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::makeUInt3
+ * @copydoc orteaf::internal::execution::cuda::makeUInt3
  */
 CudaUInt3_t makeUInt3(std::uint32_t x, std::uint32_t y, std::uint32_t z) noexcept {
     return CudaUInt3_t{x, y, z};

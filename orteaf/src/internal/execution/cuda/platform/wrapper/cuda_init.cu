@@ -18,7 +18,7 @@ std::once_flag g_cuda_driver_init_flag;
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::cudaInit
+ * @copydoc orteaf::internal::execution::cuda::cudaInit
  */
 void cudaInit() {
     std::call_once(g_cuda_driver_init_flag, []() {

@@ -15,7 +15,7 @@
 namespace orteaf::internal::execution::mps::platform::wrapper {
 
 /**
- * @copydoc orteaf::internal::backend::mps::createComputeCommandEncoder
+ * @copydoc orteaf::internal::execution::mps::createComputeCommandEncoder
  */
 MpsComputeCommandEncoder_t
 createComputeCommandEncoder(MpsCommandBuffer_t command_buffer) {
@@ -32,7 +32,7 @@ createComputeCommandEncoder(MpsCommandBuffer_t command_buffer) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::destroyComputeCommandEncoder
+ * @copydoc orteaf::internal::execution::mps::destroyComputeCommandEncoder
  */
 void destroyComputeCommandEncoder(
     MpsComputeCommandEncoder_t compute_command_encoder) {
@@ -42,7 +42,7 @@ void destroyComputeCommandEncoder(
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::setPipelineState
+ * @copydoc orteaf::internal::execution::mps::setPipelineState
  */
 void setPipelineState(MpsComputeCommandEncoder_t compute_command_encoder,
                       MpsComputePipelineState_t pipeline_state) {
@@ -65,7 +65,7 @@ void setPipelineState(MpsComputeCommandEncoder_t compute_command_encoder,
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::endEncoding
+ * @copydoc orteaf::internal::execution::mps::endEncoding
  */
 void endEncoding(MpsComputeCommandEncoder_t compute_command_encoder) {
   if (compute_command_encoder == nullptr) {
@@ -80,7 +80,7 @@ void endEncoding(MpsComputeCommandEncoder_t compute_command_encoder) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::setBuffer
+ * @copydoc orteaf::internal::execution::mps::setBuffer
  */
 void setBuffer(MpsComputeCommandEncoder_t compute_command_encoder,
                MpsBuffer_t buffer, size_t offset, size_t index) {
@@ -101,7 +101,7 @@ void setBuffer(MpsComputeCommandEncoder_t compute_command_encoder,
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::setBytes
+ * @copydoc orteaf::internal::execution::mps::setBytes
  */
 void setBytes(MpsComputeCommandEncoder_t compute_command_encoder,
               const void *bytes, size_t length, size_t index) {
@@ -121,7 +121,7 @@ void setBytes(MpsComputeCommandEncoder_t compute_command_encoder,
 }
 
 /**
- * @copydoc orteaf::internal::backend::mps::setThreadgroups
+ * @copydoc orteaf::internal::execution::mps::setThreadgroups
  */
 void setThreadgroups(MpsComputeCommandEncoder_t compute_command_encoder,
                      MPSSize_t threadgroups,

@@ -5,7 +5,7 @@
 #include <cstddef>
 #include <gmock/gmock.h>
 
-#include <orteaf/internal/backend/backend.h>
+#include <orteaf/internal/execution/execution.h>
 #include <orteaf/internal/base/handle.h>
 #include <orteaf/internal/base/heap_vector.h>
 #include <orteaf/internal/execution/allocator/buffer_resource.h>
@@ -26,13 +26,13 @@ class StubMpsResource {
 public:
   using BufferView = ::orteaf::internal::execution::mps::resource::MpsBufferView;
   using BufferResource = ::orteaf::internal::execution::allocator::BufferResource<
-      ::orteaf::internal::backend::Backend::Mps>;
+      ::orteaf::internal::execution::Execution::Mps>;
   using BufferBlock = ::orteaf::internal::execution::allocator::BufferBlock<
-      ::orteaf::internal::backend::Backend::Mps>;
+      ::orteaf::internal::execution::Execution::Mps>;
   using FenceToken = ::orteaf::internal::execution::mps::resource::MpsFenceToken;
   using ReuseToken = ::orteaf::internal::execution::mps::resource::MpsReuseToken;
   using LaunchParams = ::orteaf::internal::execution::base::BackendTraits<
-      ::orteaf::internal::backend::Backend::Mps>::KernelLaunchParams;
+      ::orteaf::internal::execution::Execution::Mps>::KernelLaunchParams;
   using MpsBuffer_t =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsBuffer_t;
 
@@ -46,9 +46,9 @@ public:
     void *library_manager{nullptr}; // Stub - MpsResource has MpsLibraryManager*
   };
 
-  static constexpr ::orteaf::internal::backend::Backend
+  static constexpr ::orteaf::internal::execution::Execution
   backend_type_static() noexcept {
-    return ::orteaf::internal::backend::Backend::Mps;
+    return ::orteaf::internal::execution::Execution::Mps;
   }
 
   StubMpsResource() = default;

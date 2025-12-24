@@ -16,7 +16,7 @@
 namespace orteaf::internal::execution::cuda::platform::wrapper {
 
 /**
- * @copydoc orteaf::internal::backend::cuda::createEvent
+ * @copydoc orteaf::internal::execution::cuda::createEvent
  */
 CudaEvent_t createEvent() {
     CUevent event;
@@ -26,7 +26,7 @@ CudaEvent_t createEvent() {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::destroyEvent
+ * @copydoc orteaf::internal::execution::cuda::destroyEvent
  */
 void destroyEvent(CudaEvent_t event) {
     if (event == nullptr) return;
@@ -36,7 +36,7 @@ void destroyEvent(CudaEvent_t event) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::recordEvent
+ * @copydoc orteaf::internal::execution::cuda::recordEvent
  */
 void recordEvent(CudaEvent_t event, CudaStream_t stream) {
     if (event == nullptr) {
@@ -53,7 +53,7 @@ void recordEvent(CudaEvent_t event, CudaStream_t stream) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::queryEvent
+ * @copydoc orteaf::internal::execution::cuda::queryEvent
  */
 bool queryEvent(CudaEvent_t event) {
     if (event == nullptr) return true;
@@ -66,7 +66,7 @@ bool queryEvent(CudaEvent_t event) {
 }
 
 /**
- * @copydoc orteaf::internal::backend::cuda::waitEvent
+ * @copydoc orteaf::internal::execution::cuda::waitEvent
  */
 void waitEvent(CudaStream_t stream, CudaEvent_t event) {
     if (stream == nullptr) {

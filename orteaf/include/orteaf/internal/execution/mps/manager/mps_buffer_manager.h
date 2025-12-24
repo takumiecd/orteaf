@@ -6,7 +6,7 @@
 #include <string>
 #include <utility>
 
-#include "orteaf/internal/backend/backend.h"
+#include "orteaf/internal/execution/execution.h"
 #include "orteaf/internal/base/handle.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include "orteaf/internal/execution/allocator/buffer.h"
@@ -28,7 +28,7 @@
 
 namespace orteaf::internal::execution::mps::manager {
 
-using ::orteaf::internal::backend::Backend;
+using ::orteaf::internal::execution::Execution;
 
 // ============================================================================
 // SegregatePool type alias template (for GPU memory allocation)
@@ -98,7 +98,7 @@ template <typename ResourceT> struct BufferPayloadPoolTraitsT {
       payload = Payload{};
       return;
     }
-    auto &res = payload.template asResource<Backend::Mps>();
+    auto &res = payload.template asResource<Execution::Mps>();
     if (res.valid()) {
       context.segregate_pool->deallocate(std::move(res), payload.size(),
                                          payload.alignment(),
