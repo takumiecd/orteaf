@@ -2,7 +2,7 @@
 
 #include "orteaf/internal/execution/mps/platform/wrapper/metal_kernel_embed_api.h"
 
-#include "orteaf/backend_embed/mps/metal_kernel_registry_entries.h"
+#include "orteaf/execution_embed/mps/metal_kernel_registry_entries.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_function.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_library.h"
 

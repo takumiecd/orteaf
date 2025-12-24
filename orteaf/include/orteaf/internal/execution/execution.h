@@ -14,7 +14,7 @@ namespace orteaf::internal::execution {
 /// as direct indices into the generated metadata tables.
 enum class Execution : std::uint16_t {
 #define BACKEND(ID, DISPLAY_NAME, MODULE_PATH, DESCRIPTION) ID,
-#include <orteaf/backend/backend.def>
+#include <orteaf/execution/execution.def>
 #undef BACKEND
     Count,
 };
@@ -28,24 +28,24 @@ inline constexpr std::size_t kBackendCount = static_cast<std::size_t>(Execution:
 
 }  // namespace orteaf::internal::execution
 
-#include <orteaf/backend/backend_tables.h>
+#include <orteaf/execution/execution_tables.h>
 
 namespace orteaf::internal::execution {
 
-namespace tables = ::orteaf::generated::backend_tables;
+namespace tables = ::orteaf::generated::execution_tables;
 
 static_assert(kBackendCount == tables::kBackendCount,
               "Backend enum size must match generated table size");
 
 inline constexpr std::array<std::string_view, kBackendCount> kBackendIds = {
 #define BACKEND(ID, DISPLAY_NAME, MODULE_PATH, DESCRIPTION) std::string_view{#ID},
-#include <orteaf/backend/backend.def>
+#include <orteaf/execution/execution.def>
 #undef BACKEND
 };
 
 inline constexpr std::array<Execution, kBackendCount> kAllBackends = {
 #define BACKEND(ID, DISPLAY_NAME, MODULE_PATH, DESCRIPTION) Execution::ID,
-#include <orteaf/backend/backend.def>
+#include <orteaf/execution/execution.def>
 #undef BACKEND
 };
 
