@@ -18,16 +18,16 @@ TEST(BackendTablesTest, BasicEnumerationProperties) {
 TEST(BackendTablesTest, MetadataMatchesCatalog) {
     constexpr auto cuda = execution::Execution::Cuda;
     EXPECT_EQ(execution::displayNameOf(cuda), "CUDA");
-    EXPECT_EQ(execution::modulePathOf(cuda), "@orteaf/internal/backend/cuda");
+    EXPECT_EQ(execution::modulePathOf(cuda), "@orteaf/internal/execution/cuda");
     EXPECT_EQ(execution::descriptionOf(cuda), "NVIDIA CUDA 実装");
 
     constexpr auto mps = execution::Execution::Mps;
     EXPECT_EQ(execution::displayNameOf(mps), "MPS");
-    EXPECT_EQ(execution::modulePathOf(mps), "@orteaf/internal/backend/mps");
+    EXPECT_EQ(execution::modulePathOf(mps), "@orteaf/internal/execution/mps");
     EXPECT_EQ(execution::descriptionOf(mps), "macOS/iOS 向け Metal Performance Shaders 実装");
 
     constexpr auto cpu = execution::Execution::Cpu;
     EXPECT_EQ(execution::displayNameOf(cpu), "CPU");
-    EXPECT_EQ(execution::modulePathOf(cpu), "@orteaf/internal/backend/cpu");
+    EXPECT_EQ(execution::modulePathOf(cpu), "@orteaf/internal/execution/cpu");
     EXPECT_EQ(execution::descriptionOf(cpu), "汎用 CPU 実装");
 }

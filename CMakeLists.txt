@@ -52,8 +52,8 @@ configure_file(
 set(ORTEAF_GENERATED_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated CACHE INTERNAL "")
 set(DTYPE_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/orteaf/dtype CACHE INTERNAL "")
 set(OPS_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/orteaf/ops CACHE INTERNAL "")
-set(BACKEND_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/orteaf/backend CACHE INTERNAL "")
-set(BACKEND_KERNEL_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/orteaf/backend_embed CACHE INTERNAL "")
+set(EXECUTION_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/orteaf/execution CACHE INTERNAL "")
+set(EXECUTION_KERNEL_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/orteaf/execution_embed CACHE INTERNAL "")
 set(ARCHITECTURE_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/orteaf/architecture CACHE INTERNAL "")
 set(DEVICE_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/orteaf/device CACHE INTERNAL "")
 
@@ -101,9 +101,9 @@ add_custom_target(generate_ops
 
 add_custom_command(
     OUTPUT
-        ${BACKEND_GEN_DIR}/backend.def
-        ${BACKEND_GEN_DIR}/backend_tables.h
-    COMMAND $<TARGET_FILE:gen_backends> ${CMAKE_CURRENT_SOURCE_DIR}/configs/backend/backends.yml ${BACKEND_GEN_DIR}
+        ${EXECUTION_GEN_DIR}/execution.def
+        ${EXECUTION_GEN_DIR}/execution_tables.h
+    COMMAND $<TARGET_FILE:gen_backends> ${CMAKE_CURRENT_SOURCE_DIR}/configs/backend/backends.yml ${EXECUTION_GEN_DIR}
     DEPENDS
         ${CMAKE_CURRENT_SOURCE_DIR}/configs/backend/backends.yml
         gen_backends
@@ -113,8 +113,8 @@ add_custom_command(
 
 add_custom_target(generate_backends
     DEPENDS
-        ${BACKEND_GEN_DIR}/backend.def
-        ${BACKEND_GEN_DIR}/backend_tables.h
+        ${EXECUTION_GEN_DIR}/execution.def
+        ${EXECUTION_GEN_DIR}/execution_tables.h
 )
 
 add_custom_command(

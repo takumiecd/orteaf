@@ -111,7 +111,7 @@ schema_version: "1.0"
 backends:
   - id: "Cuda"
     display_name: "CUDA"
-    module_path: "@orteaf/internal/backend/cuda"
+    module_path: "@orteaf/internal/execution/cuda"
     metadata:
       description: "NVIDIA CUDA implementation"
 ```

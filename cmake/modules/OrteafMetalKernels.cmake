@@ -48,8 +48,8 @@ function(orteaf_add_metal_kernel_binaries)
         message(STATUS "[ORTEAF][Metal] No .metal sources under ${_kernel_root}")
     endif()
 
-    set(_output_dir "${BACKEND_KERNEL_GEN_DIR}/mps/kernels")
-    set(_module_cache_dir "${BACKEND_KERNEL_GEN_DIR}/mps/module_cache")
+    set(_output_dir "${EXECUTION_KERNEL_GEN_DIR}/mps/kernels")
+    set(_module_cache_dir "${EXECUTION_KERNEL_GEN_DIR}/mps/module_cache")
     file(MAKE_DIRECTORY "${_output_dir}")
     file(MAKE_DIRECTORY "${_module_cache_dir}")
 
@@ -111,7 +111,7 @@ function(orteaf_add_metal_kernel_binaries)
 
     string(REPLACE ";" "|" KERNEL_RECORDS_SERIALIZED "${KERNEL_RECORDS}")
     get_filename_component(GENERATED_SOURCE_CANONICAL
-        "${BACKEND_KERNEL_GEN_DIR}/mps/metal_kernel_registry_entries.h"
+        "${EXECUTION_KERNEL_GEN_DIR}/mps/metal_kernel_registry_entries.h"
         ABSOLUTE
     )
     add_custom_command(

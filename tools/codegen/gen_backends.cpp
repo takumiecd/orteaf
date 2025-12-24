@@ -229,7 +229,7 @@ GeneratedData GenerateOutputs(const ParsedConfig& config) {
         header_stream << "#include <array>\n";
         header_stream << "#include <cstddef>\n";
         header_stream << "#include <string_view>\n\n";
-        header_stream << "namespace orteaf::generated::backend_tables {\n";
+        header_stream << "namespace orteaf::generated::execution_tables {\n";
         header_stream << "inline constexpr std::size_t kBackendCount = " << config.backends.size() << ";\n\n";
 
         auto emit_string_array = [&](const std::string_view name, auto getter) {
@@ -247,7 +247,7 @@ GeneratedData GenerateOutputs(const ParsedConfig& config) {
         emit_string_array("kBackendDescriptions",
                           [](const BackendDefinition& backend) { return EscapeStringLiteral(backend.description); });
 
-        header_stream << "}  // namespace orteaf::generated::backend_tables\n";
+        header_stream << "}  // namespace orteaf::generated::execution_tables\n";
         generated.backend_tables_header = header_stream.str();
     }
 
@@ -292,8 +292,8 @@ int main(int argc, char** argv) try {
         return 1;
     }
 
-    WriteFile(output_dir / "backend.def", generated.backend_def);
-    WriteFile(output_dir / "backend_tables.h", generated.backend_tables_header);
+    WriteFile(output_dir / "execution.def", generated.backend_def);
+    WriteFile(output_dir / "execution_tables.h", generated.backend_tables_header);
 
     return 0;
 } catch (const std::exception& e) {

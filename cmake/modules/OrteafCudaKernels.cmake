@@ -80,7 +80,7 @@ function(orteaf_add_cuda_kernel_binaries)
         message(STATUS "[ORTEAF][CUDA] No kernel sources under ${_kernel_root}")
     endif()
 
-    set(_kernel_bin_dir "${BACKEND_KERNEL_GEN_DIR}/cuda/kernels")
+    set(_kernel_bin_dir "${EXECUTION_KERNEL_GEN_DIR}/cuda/kernels")
     file(MAKE_DIRECTORY "${_kernel_bin_dir}")
 
     set(ALL_BINARIES)
@@ -198,7 +198,7 @@ function(orteaf_add_cuda_kernel_binaries)
     endforeach()
 
     string(REPLACE ";" "|" KERNEL_RECORDS_SERIALIZED "${KERNEL_RECORDS}")
-    set(GENERATED_SOURCE "${BACKEND_KERNEL_GEN_DIR}/cuda/cuda_kernel_registry.cpp")
+    set(GENERATED_SOURCE "${EXECUTION_KERNEL_GEN_DIR}/cuda/cuda_kernel_registry.cpp")
     add_custom_command(
         OUTPUT "${GENERATED_SOURCE}"
         COMMAND "${CMAKE_COMMAND}"
