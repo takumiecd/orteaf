@@ -65,7 +65,7 @@ public:
   /// @brief Manager type that creates leases.
   using ManagerType = ManagerT;
   /// @brief Category tag indicating this is a shared (strong) lease.
-  using CompatibleCategory = lease_category::Shared;
+  using CompatibleCategory = lease_category::Strong;
 
   /**
    * @brief Default constructor creating an invalid (empty) lease.
@@ -216,8 +216,8 @@ public:
    * Useful for testing and debugging reference counting behavior.
    */
   std::uint32_t count() const noexcept
-    requires requires(const ControlBlockT *cb) { 
-      { cb->count() } -> std::convertible_to<std::uint32_t>; 
+    requires requires(const ControlBlockT *cb) {
+      { cb->count() } -> std::convertible_to<std::uint32_t>;
     }
   {
     return control_block_ ? control_block_->count() : 0;
