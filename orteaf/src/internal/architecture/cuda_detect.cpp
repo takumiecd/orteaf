@@ -1,8 +1,8 @@
 #include "orteaf/internal/architecture/cuda_detect.h"
 
-#include "orteaf/internal/backend/backend.h"
+#include "orteaf/internal/execution/execution.h"
 #include "orteaf/internal/diagnostics/error/error.h"
-#include "orteaf/internal/runtime/cuda/platform/wrapper/cuda_device.h"
+#include "orteaf/internal/execution/cuda/platform/wrapper/cuda_device.h"
 
 #include <algorithm>
 #include <cctype>
@@ -54,7 +54,7 @@ Architecture detectCudaArchitecture(int compute_capability,
     if (localIndexOf(arch) == 0) {
       continue;
     }
-    if (backendOf(arch) != backend::Backend::Cuda) {
+    if (executionOf(arch) != execution::Execution::Cuda) {
       continue;
     }
 
@@ -80,34 +80,34 @@ Architecture detectCudaArchitecture(int compute_capability,
 Architecture detectCudaArchitectureForDeviceId(
     ::orteaf::internal::base::DeviceHandle device_id) {
 #if ORTEAF_ENABLE_CUDA
-  using runtime::cuda::platform::wrapper::ComputeCapability;
-  using runtime::cuda::platform::wrapper::CudaDevice_t;
+  using execution::cuda::platform::wrapper::ComputeCapability;
+  using execution::cuda::platform::wrapper::CudaDevice_t;
   using diagnostics::error::OrteafErrc;
 
   const std::uint32_t device_index = static_cast<std::uint32_t>(device_id);
-  const auto backend_unavailable =
-      diagnostics::error::makeErrorCode(OrteafErrc::BackendUnavailable);
+  const auto execution_unavailable =
+      diagnostics::error::makeErrorCode(OrteafErrc::ExecutionUnavailable);
 
   try {
-    int count = runtime::cuda::platform::wrapper::getDeviceCount();
+    int count = execution::cuda::platform::wrapper::getDeviceCount();
     if (count <= 0 || device_index >= static_cast<std::uint32_t>(count)) {
       return Architecture::CudaGeneric;
     }
 
-    CudaDevice_t device = runtime::cuda::platform::wrapper::getDevice(device_index);
+    CudaDevice_t device = execution::cuda::platform::wrapper::getDevice(device_index);
     if (!device) {
       return Architecture::CudaGeneric;
     }
 
-    ComputeCapability capability = runtime::cuda::platform::wrapper::getComputeCapability(device);
+    ComputeCapability capability = execution::cuda::platform::wrapper::getComputeCapability(device);
     const int cc_value = capability.major * 10 + capability.minor;
-    std::string vendor = runtime::cuda::platform::wrapper::getDeviceVendor(device);
+    std::string vendor = execution::cuda::platform::wrapper::getDeviceVendor(device);
     if (vendor.empty()) {
       vendor = "nvidia";
     }
     return detectCudaArchitecture(cc_value, vendor);
   } catch (const std::system_error &err) {
-    if (err.code() == backend_unavailable) {
+    if (err.code() == execution_unavailable) {
       // CUDA driver not ready on this environment; pretend it's generic.
       return Architecture::CudaGeneric;
     }

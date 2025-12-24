@@ -8,7 +8,7 @@
 - **SingleOps**: 単一スロットの確保/解放（Fast）。`acquireSpecificSlot` で指定スロットを直接確保可能。
 - **DenseOps**: 複数スロットの連続確保/解放（Dense）。plan に従って決定的に InUse + map する。
 - **Allocator ファサード**: 上記をまとめた API（Fast/Dense を切り替え）。将来テンプレ戦略で静的切り替え、動的選択ラッパも視野。
-- **HeapOps (backend)**: reserve/map/unmap を提供。将来的に「連続範囲をまとめて map/unmap」できる拡張を想定。
+- **HeapOps (execution)**: reserve/map/unmap を提供。将来的に「連続範囲をまとめて map/unmap」できる拡張を想定。
 
 ## 2つの戦略
 

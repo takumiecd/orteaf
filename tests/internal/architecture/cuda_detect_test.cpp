@@ -1,6 +1,6 @@
 #include "orteaf/internal/architecture/architecture.h"
 #include "orteaf/internal/architecture/cuda_detect.h"
-#include "orteaf/internal/backend/backend.h"
+#include "orteaf/internal/execution/execution.h"
 #include "orteaf/internal/base/handle.h"
 
 #include <cstdint>
@@ -26,7 +26,7 @@ TEST(CudaDetect, ManualEnvironmentCheck) {
 
     const auto arch = architecture::detectCudaArchitectureForDeviceId(base::DeviceHandle{device_index});
     ASSERT_NE(arch, architecture::Architecture::CudaGeneric)
-        << "Generic fallback indicates CUDA backend is disabled or device index "
+        << "Generic fallback indicates CUDA execution is disabled or device index "
         << device_index << " is unavailable.";
     EXPECT_STREQ(expected_env, architecture::idOf(arch).data());
 }

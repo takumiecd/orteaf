@@ -3,7 +3,7 @@ schema_version: "1.0"
 devices:
   - id: "CudaGeneric"
     display_name: "Generic CUDA Device"
-    backend: "Cuda"
+    execution: "Cuda"
     architecture: "Generic"
     memory:
       max_bytes: 4294967296   # 4 GiB
@@ -17,7 +17,7 @@ devices:
 
   - id: "CudaH100Pcie80GB"
     display_name: "H100 PCIe (80GB)"
-    backend: "Cuda"
+    execution: "Cuda"
     architecture: "Sm90"
     memory:
       max_bytes: 85899345920   # 80 GiB
@@ -32,7 +32,7 @@ devices:
 
   - id: "CudaRtx3070"
     display_name: "GeForce RTX 3070"
-    backend: "Cuda"
+    execution: "Cuda"
     architecture: "Sm86"
     memory:
       max_bytes: 8589934592    # 8 GiB
@@ -47,7 +47,7 @@ devices:
 
   - id: "MpsGeneric"
     display_name: "Generic MPS Device"
-    backend: "Mps"
+    execution: "Mps"
     architecture: "Generic"
     memory:
       max_bytes: 2147483648   # 2 GiB
@@ -58,7 +58,7 @@ devices:
 
   - id: "MpsM3Max40c"
     display_name: "M3 Max (40-core GPU)"
-    backend: "Mps"
+    execution: "Mps"
     architecture: "M3"
     memory:
       max_bytes: 34359738368   # 32 GiB
@@ -70,7 +70,7 @@ devices:
 
   - id: "MpsM4Pro"
     display_name: "M4 Pro (Integrated GPU)"
-    backend: "Mps"
+    execution: "Mps"
     architecture: "M4"
     memory:
       max_bytes: 25769803776   # 24 GiB
@@ -83,7 +83,7 @@ devices:
 
   - id: "CpuGeneric"
     display_name: "Generic CPU"
-    backend: "Cpu"
+    execution: "Cpu"
     architecture: "Generic"
     memory:
       max_bytes: 17179869184   # 16 GiB
@@ -94,7 +94,7 @@ devices:
 
   - id: "CpuZen4"
     display_name: "Zen 4 (AVX-512)"
-    backend: "Cpu"
+    execution: "Cpu"
     architecture: "Zen4"
     memory:
       max_bytes: 34359738368   # 32 GiB

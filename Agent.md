@@ -17,7 +17,7 @@ orteaf/                # Library sources
   include/orteaf/
     user/              # Public wrappers (PImpl front end)
     extension/         # Extension points (Kernel, Ops, TensorImpl, ModuleImpl)
-    internal/          # Core backend/allocator/diagnostics implementations
+    internal/          # Core execution/allocator/diagnostics implementations
       diagnostics/
         error/         # Common error data + throw/fatal helpers
         log/           # Compile-time logging macros and sinks

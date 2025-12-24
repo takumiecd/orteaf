@@ -48,8 +48,8 @@ function(orteaf_add_metal_kernel_binaries)
         message(STATUS "[ORTEAF][Metal] No .metal sources under ${_kernel_root}")
     endif()
 
-    set(_output_dir "${BACKEND_KERNEL_GEN_DIR}/mps/kernels")
-    set(_module_cache_dir "${BACKEND_KERNEL_GEN_DIR}/mps/module_cache")
+    set(_output_dir "${EXECUTION_KERNEL_GEN_DIR}/mps/kernels")
+    set(_module_cache_dir "${EXECUTION_KERNEL_GEN_DIR}/mps/module_cache")
     file(MAKE_DIRECTORY "${_output_dir}")
     file(MAKE_DIRECTORY "${_module_cache_dir}")
 
@@ -111,7 +111,7 @@ function(orteaf_add_metal_kernel_binaries)
 
     string(REPLACE ";" "|" KERNEL_RECORDS_SERIALIZED "${KERNEL_RECORDS}")
     get_filename_component(GENERATED_SOURCE_CANONICAL
-        "${BACKEND_KERNEL_GEN_DIR}/mps/metal_kernel_registry_entries.h"
+        "${EXECUTION_KERNEL_GEN_DIR}/mps/metal_kernel_registry_entries.h"
         ABSOLUTE
     )
     add_custom_command(
@@ -134,7 +134,7 @@ function(orteaf_add_metal_kernel_binaries)
             "${GENERATED_SOURCE_CANONICAL}"
     )
 
-    set(ORTEAF_METAL_EMBED_SOURCE "${CMAKE_SOURCE_DIR}/orteaf/src/internal/runtime/mps/platform/wrapper/metal_kernel_embed_registry.mm" PARENT_SCOPE)
+    set(ORTEAF_METAL_EMBED_SOURCE "${CMAKE_SOURCE_DIR}/orteaf/src/internal/execution/mps/platform/wrapper/metal_kernel_embed_registry.mm" PARENT_SCOPE)
     set(ORTEAF_METAL_EMBED_HEADER "${GENERATED_SOURCE_CANONICAL}" PARENT_SCOPE)
     set(ORTEAF_METAL_EMBED_OBJECTS "${EMBEDDED_OBJECTS}" PARENT_SCOPE)
     set(ORTEAF_METAL_GENERATED_LIBS "${ALL_METALLIBS}" PARENT_SCOPE)

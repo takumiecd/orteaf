@@ -12,7 +12,7 @@ namespace orteaf::internal::architecture {
  * @brief Select the CUDA architecture that matches the provided compute capability.
  *
  * The generated architecture metadata keeps compute capability hints per entry, so the
- * detector walks each CUDA backend row and returns the first match that shares the requested
+ * detector walks each CUDA execution row and returns the first match that shares the requested
  * capability and (optionally) vendor. Undefined capabilities (negative values) skip the check,
  * allowing the generic architecture to be returned instead.
  *
@@ -25,7 +25,7 @@ Architecture detectCudaArchitecture(int compute_capability, std::string_view ven
 /**
  * @brief Enumerate CUDA devices and detect the architecture for the requested `DeviceHandle`.
  *
- * When CUDA is enabled, the helper queries `backend::cuda` for the device count, extracts
+ * When CUDA is enabled, the helper queries `execution::cuda` for the device count, extracts
  * the compute capability and vendor for the requested device, and then delegates to
  * `detectCudaArchitecture`. Out-of-range devices or missing CUDA support result in
  * `Architecture::CudaGeneric`.

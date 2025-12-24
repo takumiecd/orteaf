@@ -25,7 +25,7 @@ TEST(MpsDetect, ManualEnvironmentCheck) {
 
     const auto arch = architecture::detectMpsArchitectureForDeviceId(device_id);
     ASSERT_NE(arch, architecture::Architecture::MpsGeneric)
-        << "Generic fallback indicates Metal backend disabled or no device at index "
+        << "Generic fallback indicates Metal execution disabled or no device at index "
         << device_index;
     std::cout << "arch: " << architecture::idOf(arch).data() << std::endl;
     EXPECT_STREQ(expected_env, architecture::idOf(arch).data());

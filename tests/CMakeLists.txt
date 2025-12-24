@@ -24,13 +24,13 @@ endif()
 
 enable_testing()
 
-# Collect test sources by backend
+# Collect test sources by execution
 # Common tests (always compiled) - all .cpp files
 file(GLOB_RECURSE ORTEAF_TEST_SOURCES_COMMON CONFIGURE_DEPENDS
     ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
 )
 
-# CUDA backend tests - all .cu files in tests/
+# CUDA execution tests - all .cu files in tests/
 set(ORTEAF_TEST_SOURCES_CUDA "")
 if(ORTEAF_ENABLE_CUDA_INT)
     file(GLOB_RECURSE ORTEAF_TEST_SOURCES_CUDA CONFIGURE_DEPENDS
@@ -38,7 +38,7 @@ if(ORTEAF_ENABLE_CUDA_INT)
     )
 endif()
 
-# MPS backend tests - all .mm files in tests/
+# MPS execution tests - all .mm files in tests/
 set(ORTEAF_TEST_SOURCES_MPS "")
 if(ORTEAF_ENABLE_MPS_INT)
     file(GLOB_RECURSE ORTEAF_TEST_SOURCES_MPS CONFIGURE_DEPENDS

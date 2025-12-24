@@ -6,17 +6,17 @@
 #include <span>
 #include <string_view>
 
-#include <orteaf/internal/backend/backend.h>
+#include <orteaf/internal/execution/execution.h>
 
 namespace orteaf::internal::architecture {
 
-/// @brief Enumerates per-backend optimization architectures (Generic, Sm90, etc.).
+/// @brief Enumerates per-execution optimization architectures (Generic, Sm90, etc.).
 ///
-/// The generator serializes architectures as `(backend, local_index)` pairs. Local
+/// The generator serializes architectures as `(execution, local_index)` pairs. Local
 /// index `0` is automatically reserved for the Generic entry and can be used as a
 /// universal fallback.
 enum class Architecture : std::uint16_t {
-#define ARCHITECTURE(ENUM_NAME, BACKEND_ENUM, LOCAL_INDEX, ID, DISPLAY_NAME, DESCRIPTION) ENUM_NAME,
+#define ARCHITECTURE(ENUM_NAME, EXECUTION_ENUM, LOCAL_INDEX, ID, DISPLAY_NAME, DESCRIPTION) ENUM_NAME,
 #include <orteaf/architecture/architecture.def>
 #undef ARCHITECTURE
     Count,
@@ -39,23 +39,23 @@ namespace tables = ::orteaf::generated::architecture_tables;
 
 static_assert(kArchitectureCount == tables::kArchitectureCount,
               "Architecture enum size must match generated table size");
-static_assert(backend::kBackendCount == tables::kBackendCount,
-              "Architecture metadata must match backend count");
+static_assert(execution::kExecutionCount == tables::kExecutionCount,
+              "Architecture metadata must match execution count");
 
 inline constexpr std::array<Architecture, kArchitectureCount> kAllArchitectures = {
-#define ARCHITECTURE(ENUM_NAME, BACKEND_ENUM, LOCAL_INDEX, ID, DISPLAY_NAME, DESCRIPTION) Architecture::ENUM_NAME,
+#define ARCHITECTURE(ENUM_NAME, EXECUTION_ENUM, LOCAL_INDEX, ID, DISPLAY_NAME, DESCRIPTION) Architecture::ENUM_NAME,
 #include <orteaf/architecture/architecture.def>
 #undef ARCHITECTURE
 };
 
 inline constexpr std::array<std::string_view, kArchitectureCount> kArchitectureIds = {
-#define ARCHITECTURE(ENUM_NAME, BACKEND_ENUM, LOCAL_INDEX, ID, DISPLAY_NAME, DESCRIPTION) std::string_view{ID},
+#define ARCHITECTURE(ENUM_NAME, EXECUTION_ENUM, LOCAL_INDEX, ID, DISPLAY_NAME, DESCRIPTION) std::string_view{ID},
 #include <orteaf/architecture/architecture.def>
 #undef ARCHITECTURE
 };
 
 inline constexpr std::array<std::string_view, kArchitectureCount> kArchitectureDisplayNames = {
-#define ARCHITECTURE(ENUM_NAME, BACKEND_ENUM, LOCAL_INDEX, ID, DISPLAY_NAME, DESCRIPTION) std::string_view{DISPLAY_NAME},
+#define ARCHITECTURE(ENUM_NAME, EXECUTION_ENUM, LOCAL_INDEX, ID, DISPLAY_NAME, DESCRIPTION) std::string_view{DISPLAY_NAME},
 #include <orteaf/architecture/architecture.def>
 #undef ARCHITECTURE
 };
@@ -70,13 +70,13 @@ constexpr Architecture fromIndex(std::size_t index) {
     return static_cast<Architecture>(index);
 }
 
-/// @brief Return the backend the architecture belongs to.
-constexpr backend::Backend backendOf(Architecture arch) {
-    const auto backend_index = tables::kArchitectureBackendIndices[toIndex(arch)];
-    return backend::fromIndex(backend_index);
+/// @brief Return the execution the architecture belongs to.
+constexpr execution::Execution executionOf(Architecture arch) {
+    const auto execution_index = tables::kArchitectureExecutionIndices[toIndex(arch)];
+    return execution::fromIndex(execution_index);
 }
 
-/// @brief Return the backend-local index (0 == Generic).
+/// @brief Return the execution-local index (0 == Generic).
 constexpr std::uint16_t localIndexOf(Architecture arch) {
     return tables::kArchitectureLocalIndices[toIndex(arch)];
 }
@@ -99,27 +99,27 @@ constexpr std::string_view descriptionOf(Architecture arch) {
     return tables::kArchitectureDescriptions[toIndex(arch)];
 }
 
-constexpr std::size_t countForBackend(backend::Backend backend_id) {
-    return tables::kBackendArchitectureCounts[backend::toIndex(backend_id)];
+constexpr std::size_t countForExecution(execution::Execution execution_id) {
+    return tables::kExecutionArchitectureCounts[execution::toIndex(execution_id)];
 }
 
-constexpr std::size_t offsetForBackend(backend::Backend backend_id) {
-    return tables::kBackendArchitectureOffsets[backend::toIndex(backend_id)];
+constexpr std::size_t offsetForExecution(execution::Execution execution_id) {
+    return tables::kExecutionArchitectureOffsets[execution::toIndex(execution_id)];
 }
 
-constexpr bool hasLocalIndex(backend::Backend backend_id, std::uint16_t local_index) {
-    return local_index < countForBackend(backend_id);
+constexpr bool hasLocalIndex(execution::Execution execution_id, std::uint16_t local_index) {
+    return local_index < countForExecution(execution_id);
 }
 
-/// @brief Construct an architecture from a backend and local index.
-constexpr Architecture fromBackendAndLocalIndex(backend::Backend backend_id, std::uint16_t local_index) {
-    return static_cast<Architecture>(offsetForBackend(backend_id) + local_index);
+/// @brief Construct an architecture from a execution and local index.
+constexpr Architecture fromExecutionAndLocalIndex(execution::Execution execution_id, std::uint16_t local_index) {
+    return static_cast<Architecture>(offsetForExecution(execution_id) + local_index);
 }
 
-/// @brief Return a span of every architecture belonging to the backend.
-inline constexpr std::span<const Architecture> architecturesOf(backend::Backend backend_id) {
-    const auto offset = offsetForBackend(backend_id);
-    const auto count = countForBackend(backend_id);
+/// @brief Return a span of every architecture belonging to the execution.
+inline constexpr std::span<const Architecture> architecturesOf(execution::Execution execution_id) {
+    const auto offset = offsetForExecution(execution_id);
+    const auto count = countForExecution(execution_id);
     return std::span<const Architecture>(kAllArchitectures.data() + offset, count);
 }
 

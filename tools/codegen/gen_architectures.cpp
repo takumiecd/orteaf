@@ -212,7 +212,7 @@ std::vector<std::string> ReadOptionalStringList(const YAML::Node& node, std::str
     return result;
 }
 
-struct BackendInfo {
+struct ExecutionInfo {
     std::string id;
     std::string display_name;
 };
@@ -229,7 +229,7 @@ struct DetectSpec {
 
 struct ArchitectureInput {
     std::string id;
-    std::string backend_id;
+    std::string execution_id;
     std::string display_name;
     std::string description;
     std::optional<DetectSpec> detect;
@@ -269,63 +269,63 @@ std::optional<DetectSpec> ParseDetectSpec(const YAML::Node& node, std::string_vi
     return spec;
 }
 
-std::vector<BackendInfo> ParseBackendConfig(const fs::path& backend_yaml_path) {
+std::vector<ExecutionInfo> ParseExecutionConfig(const fs::path& execution_yaml_path) {
     YAML::Node root;
     try {
-        root = YAML::LoadFile(backend_yaml_path.string());
+        root = YAML::LoadFile(execution_yaml_path.string());
     } catch (const std::exception& e) {
         std::ostringstream oss;
-        oss << "Failed to load backend YAML '" << backend_yaml_path << "': " << e.what();
+        oss << "Failed to load execution YAML '" << execution_yaml_path << "': " << e.what();
         Fail(oss.str());
     }
 
     if (!root || !root.IsMap()) {
-        Fail("Backend YAML root must be a mapping");
+        Fail("Execution YAML root must be a mapping");
     }
 
-    const auto backends_node = root["backends"];
-    if (!backends_node || !backends_node.IsSequence()) {
-        Fail("Backend YAML must contain a sequence 'backends'");
+    const auto executions_node = root["executions"];
+    if (!executions_node || !executions_node.IsSequence()) {
+        Fail("Execution YAML must contain a sequence 'executions'");
     }
 
-    std::vector<BackendInfo> backends;
-    backends.reserve(backends_node.size());
+    std::vector<ExecutionInfo> executions;
+    executions.reserve(executions_node.size());
     std::unordered_set<std::string> seen;
 
-    for (std::size_t i = 0; i < backends_node.size(); ++i) {
-        const auto& node = backends_node[i];
+    for (std::size_t i = 0; i < executions_node.size(); ++i) {
+        const auto& node = executions_node[i];
         if (!node.IsMap()) {
             std::ostringstream oss;
-            oss << "Each backend entry must be a mapping (index " << i << ")";
+            oss << "Each execution entry must be a mapping (index " << i << ")";
             Fail(oss.str());
         }
-        const std::string context = "backends[" + std::to_string(i) + "]";
+        const std::string context = "executions[" + std::to_string(i) + "]";
 
-        BackendInfo info;
+        ExecutionInfo info;
         info.id = ReadRequiredString(node, "id", context);
         if (!LooksLikeIdentifier(info.id)) {
             std::ostringstream oss;
-            oss << "Backend id '" << info.id << "' is not a valid identifier (" << context << ")";
+            oss << "Execution id '" << info.id << "' is not a valid identifier (" << context << ")";
             Fail(oss.str());
         }
         if (!seen.insert(info.id).second) {
             std::ostringstream oss;
-            oss << "Duplicate backend id '" << info.id << "'";
+            oss << "Duplicate execution id '" << info.id << "'";
             Fail(oss.str());
         }
         info.display_name = ReadRequiredString(node, "display_name", context);
-        backends.push_back(std::move(info));
+        executions.push_back(std::move(info));
     }
 
-    if (backends.empty()) {
-        Fail("At least one backend must be defined");
+    if (executions.empty()) {
+        Fail("At least one execution must be defined");
     }
 
-    return backends;
+    return executions;
 }
 
 std::vector<ArchitectureInput> ParseArchitectureConfig(const fs::path& architecture_yaml_path,
-                                                       const std::unordered_set<std::string>& valid_backends) {
+                                                       const std::unordered_set<std::string>& valid_executions) {
     YAML::Node root;
     try {
         root = YAML::LoadFile(architecture_yaml_path.string());
@@ -351,7 +351,7 @@ std::vector<ArchitectureInput> ParseArchitectureConfig(const fs::path& architect
 
     std::vector<ArchitectureInput> architectures;
     architectures.reserve(architectures_node.size());
-    std::unordered_map<std::string, std::unordered_set<std::string>> seen_per_backend;
+    std::unordered_map<std::string, std::unordered_set<std::string>> seen_per_execution;
 
     for (std::size_t i = 0; i < architectures_node.size(); ++i) {
         const auto& node = architectures_node[i];
@@ -370,16 +370,16 @@ std::vector<ArchitectureInput> ParseArchitectureConfig(const fs::path& architect
             Fail(oss.str());
         }
 
-        input.backend_id = ReadRequiredString(node, "backend", context);
-        if (!valid_backends.count(input.backend_id)) {
+        input.execution_id = ReadRequiredString(node, "execution", context);
+        if (!valid_executions.count(input.execution_id)) {
             std::ostringstream oss;
-            oss << "Architecture '" << input.id << "' references unknown backend '" << input.backend_id << "'";
+            oss << "Architecture '" << input.id << "' references unknown execution '" << input.execution_id << "'";
             Fail(oss.str());
         }
 
-        if (!seen_per_backend[input.backend_id].insert(input.id).second) {
+        if (!seen_per_execution[input.execution_id].insert(input.id).second) {
             std::ostringstream oss;
-            oss << "Duplicate architecture id '" << input.id << "' for backend '" << input.backend_id << "'";
+            oss << "Duplicate architecture id '" << input.id << "' for execution '" << input.execution_id << "'";
             Fail(oss.str());
         }
 
@@ -414,7 +414,7 @@ struct ResolvedArchitecture {
     std::string architecture_id;
     std::string display_name;
     std::string description;
-    std::size_t backend_index;
+    std::size_t execution_index;
     std::uint16_t local_index;
     std::optional<DetectSpec> detect;
 };
@@ -424,29 +424,29 @@ struct GeneratedData {
     std::string architecture_tables_header;
 };
 
-GeneratedData GenerateOutputs(const std::vector<BackendInfo>& backends,
+GeneratedData GenerateOutputs(const std::vector<ExecutionInfo>& executions,
                               const std::vector<ArchitectureInput>& architectures) {
-    // Group user-defined architectures by backend.
-    std::unordered_map<std::string, std::vector<ArchitectureInput>> by_backend;
-    by_backend.reserve(backends.size());
+    // Group user-defined architectures by execution.
+    std::unordered_map<std::string, std::vector<ArchitectureInput>> by_execution;
+    by_execution.reserve(executions.size());
     for (const auto& arch : architectures) {
-        by_backend[arch.backend_id].push_back(arch);
+        by_execution[arch.execution_id].push_back(arch);
     }
 
-    // Prepare resolved list in backend order.
+    // Prepare resolved list in execution order.
     std::vector<ResolvedArchitecture> resolved;
-    resolved.reserve(backends.size() + architectures.size());
+    resolved.reserve(executions.size() + architectures.size());
 
-    std::vector<std::size_t> backend_offsets;
-    backend_offsets.reserve(backends.size() + 1);
-    std::vector<std::size_t> backend_counts(backends.size(), 0);
+    std::vector<std::size_t> execution_offsets;
+    execution_offsets.reserve(executions.size() + 1);
+    std::vector<std::size_t> execution_counts(executions.size(), 0);
 
-    for (std::size_t backend_index = 0; backend_index < backends.size(); ++backend_index) {
-        const auto& backend = backends[backend_index];
-        backend_offsets.push_back(resolved.size());
+    for (std::size_t execution_index = 0; execution_index < executions.size(); ++execution_index) {
+        const auto& execution = executions[execution_index];
+        execution_offsets.push_back(resolved.size());
 
-        const auto duplicate_it = by_backend.find(backend.id);
-        if (duplicate_it != by_backend.end()) {
+        const auto duplicate_it = by_execution.find(execution.id);
+        if (duplicate_it != by_execution.end()) {
             const auto& entries = duplicate_it->second;
             if (std::any_of(entries.begin(), entries.end(), [](const ArchitectureInput& input) {
                     std::string lower = input.id;
@@ -455,51 +455,51 @@ GeneratedData GenerateOutputs(const std::vector<BackendInfo>& backends,
                     return lower == "generic";
                 })) {
                 std::ostringstream oss;
-                oss << "Backend '" << backend.id
+                oss << "Execution '" << execution.id
                     << "' defines architecture id 'generic', which is reserved for the auto-generated fallback";
                 Fail(oss.str());
             }
         }
 
-    auto make_enum_name = [](const std::string& backend_id, const std::string& arch_id) {
+    auto make_enum_name = [](const std::string& execution_id, const std::string& arch_id) {
         std::ostringstream oss;
-        oss << backend_id << arch_id;
+        oss << execution_id << arch_id;
         return oss.str();
     };
 
         // Auto-insert generic entry (local index 0).
         ResolvedArchitecture generic;
-        generic.enum_name = make_enum_name(backend.id, "Generic");
+        generic.enum_name = make_enum_name(execution.id, "Generic");
         generic.architecture_id = "Generic";
-        generic.display_name = "Generic " + backend.display_name;
-        generic.description = "Backend-wide fallback architecture for " + backend.display_name;
-        generic.backend_index = backend_index;
+        generic.display_name = "Generic " + execution.display_name;
+        generic.description = "Execution-wide fallback architecture for " + execution.display_name;
+        generic.execution_index = execution_index;
         generic.local_index = 0;
         generic.detect = std::nullopt;
         resolved.push_back(std::move(generic));
 
         // Append user entries honoring input order.
-        const auto by_backend_it = by_backend.find(backend.id);
-        if (by_backend_it != by_backend.end()) {
-            const auto& entries = by_backend_it->second;
+        const auto by_execution_it = by_execution.find(execution.id);
+        if (by_execution_it != by_execution.end()) {
+            const auto& entries = by_execution_it->second;
             std::uint16_t local_index = 1;
             for (const auto& entry : entries) {
                 ResolvedArchitecture resolved_entry;
-                resolved_entry.enum_name = make_enum_name(backend.id, entry.id);
+                resolved_entry.enum_name = make_enum_name(execution.id, entry.id);
                 resolved_entry.architecture_id = entry.id;
                 resolved_entry.display_name = entry.display_name;
                 resolved_entry.description = entry.description;
-                resolved_entry.backend_index = backend_index;
+                resolved_entry.execution_index = execution_index;
                 resolved_entry.local_index = local_index++;
                 resolved_entry.detect = entry.detect;
                 resolved.push_back(std::move(resolved_entry));
             }
-            backend_counts[backend_index] = entries.size() + 1;  // +1 for generic
+            execution_counts[execution_index] = entries.size() + 1;  // +1 for generic
         } else {
-            backend_counts[backend_index] = 1;  // generic only
+            execution_counts[execution_index] = 1;  // generic only
         }
     }
-    backend_offsets.push_back(resolved.size());
+    execution_offsets.push_back(resolved.size());
 
     GeneratedData generated;
 
@@ -507,8 +507,8 @@ GeneratedData GenerateOutputs(const std::vector<BackendInfo>& backends,
         std::ostringstream def_stream;
         def_stream << "// Auto-generated. Do not edit.\n";
         for (const auto& arch : resolved) {
-            def_stream << "ARCHITECTURE(" << arch.enum_name << ", backend::Backend::"
-                       << backends[arch.backend_index].id << ", "
+            def_stream << "ARCHITECTURE(" << arch.enum_name << ", execution::Execution::"
+                       << executions[arch.execution_index].id << ", "
                        << arch.local_index << ", \""
                        << EscapeStringLiteral(arch.architecture_id) << "\", \""
                        << EscapeStringLiteral(arch.display_name) << "\", \""
@@ -527,7 +527,7 @@ GeneratedData GenerateOutputs(const std::vector<BackendInfo>& backends,
         header_stream << "#include <string_view>\n\n";
         header_stream << "namespace orteaf::generated::architecture_tables {\n";
         header_stream << "inline constexpr std::size_t kArchitectureCount = " << resolved.size() << ";\n";
-        header_stream << "inline constexpr std::size_t kBackendCount = " << backends.size() << ";\n\n";
+        header_stream << "inline constexpr std::size_t kExecutionCount = " << executions.size() << ";\n\n";
 
         auto emit_array = [&](const std::string_view decl, auto value_fn) {
             header_stream << "inline constexpr " << decl << " = {\n";
@@ -537,8 +537,8 @@ GeneratedData GenerateOutputs(const std::vector<BackendInfo>& backends,
             header_stream << "};\n\n";
         };
 
-        emit_array("std::array<std::uint16_t, kArchitectureCount> kArchitectureBackendIndices",
-                   [](const ResolvedArchitecture& arch) { return std::to_string(arch.backend_index); });
+        emit_array("std::array<std::uint16_t, kArchitectureCount> kArchitectureExecutionIndices",
+                   [](const ResolvedArchitecture& arch) { return std::to_string(arch.execution_index); });
         emit_array("std::array<std::uint16_t, kArchitectureCount> kArchitectureLocalIndices",
                    [](const ResolvedArchitecture& arch) { return std::to_string(arch.local_index); });
         emit_array("std::array<std::string_view, kArchitectureCount> kArchitectureIds",
@@ -560,16 +560,16 @@ GeneratedData GenerateOutputs(const std::vector<BackendInfo>& backends,
                        return oss.str();
                    });
 
-        header_stream << "inline constexpr std::array<std::size_t, " << backends.size()
-                      << "> kBackendArchitectureCounts = {\n";
-        for (const auto count : backend_counts) {
+        header_stream << "inline constexpr std::array<std::size_t, " << executions.size()
+                      << "> kExecutionArchitectureCounts = {\n";
+        for (const auto count : execution_counts) {
             header_stream << "    " << count << ",\n";
         }
         header_stream << "};\n\n";
 
-        header_stream << "inline constexpr std::array<std::size_t, " << (backends.size() + 1)
-                      << "> kBackendArchitectureOffsets = {\n";
-        for (const auto offset : backend_offsets) {
+        header_stream << "inline constexpr std::array<std::size_t, " << (executions.size() + 1)
+                      << "> kExecutionArchitectureOffsets = {\n";
+        for (const auto offset : execution_offsets) {
             header_stream << "    " << offset << ",\n";
         }
         header_stream << "};\n\n";
@@ -719,24 +719,24 @@ void WriteFile(const fs::path& path, const std::string& content) {
 
 int main(int argc, char** argv) {
     if (argc != 4) {
-        std::cerr << "Usage: gen_architectures <architectures.yml> <backends.yml> <output_dir>\n";
+        std::cerr << "Usage: gen_architectures <architectures.yml> <executions.yml> <output_dir>\n";
         return 1;
     }
 
     const fs::path architecture_yaml = argv[1];
-    const fs::path backend_yaml = argv[2];
+    const fs::path execution_yaml = argv[2];
     const fs::path output_dir = argv[3];
 
     try {
-        const auto backends = ParseBackendConfig(backend_yaml);
-        std::unordered_set<std::string> backend_ids;
-        backend_ids.reserve(backends.size());
-        for (const auto& backend : backends) {
-            backend_ids.insert(backend.id);
+        const auto executions = ParseExecutionConfig(execution_yaml);
+        std::unordered_set<std::string> execution_ids;
+        execution_ids.reserve(executions.size());
+        for (const auto& execution : executions) {
+            execution_ids.insert(execution.id);
         }
 
-        const auto architectures = ParseArchitectureConfig(architecture_yaml, backend_ids);
-        const auto generated = GenerateOutputs(backends, architectures);
+        const auto architectures = ParseArchitectureConfig(architecture_yaml, execution_ids);
+        const auto generated = GenerateOutputs(executions, architectures);
 
         WriteFile(output_dir / "architecture.def", generated.architecture_def);
         WriteFile(output_dir / "architecture_tables.h", generated.architecture_tables_header);
