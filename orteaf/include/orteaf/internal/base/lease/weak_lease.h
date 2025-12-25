@@ -253,8 +253,8 @@ public:
     if (control_block_ == nullptr) {
       return StrongLeaseType{};
     }
-    if constexpr (requires { control_block_->tryPromote(); }) {
-      if (control_block_->tryPromote()) {
+    if constexpr (requires { control_block_->tryPromoteWeakToStrong(); }) {
+      if (control_block_->tryPromoteWeakToStrong()) {
         return StrongLeaseType::adopt(control_block_, pool_, handle_);
       }
     }
