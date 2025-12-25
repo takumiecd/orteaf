@@ -15,7 +15,7 @@ namespace orteaf::internal::execution::base {
 // =============================================================================
 
 /**
- * @brief BasePoolManagerCore用のTraits Concept
+ * @brief PoolManager用のTraits Concept
  *
  * Required members:
  *   using PayloadPool = ...;         // Payload用のPool型
@@ -34,7 +34,7 @@ concept PoolManagerTraitsConcept = requires {
 };
 
 // =============================================================================
-// BasePoolManagerCore
+// PoolManager
 // =============================================================================
 
 /**
@@ -54,7 +54,7 @@ concept PoolManagerTraitsConcept = requires {
  */
 template <typename Traits>
   requires PoolManagerTraitsConcept<Traits>
-class BasePoolManagerCore {
+class PoolManager {
 public:
   // ===========================================================================
   // Type Aliases
@@ -81,12 +81,12 @@ public:
   // Lifecycle
   // ===========================================================================
 
-  BasePoolManagerCore() = default;
-  BasePoolManagerCore(const BasePoolManagerCore &) = delete;
-  BasePoolManagerCore &operator=(const BasePoolManagerCore &) = delete;
-  BasePoolManagerCore(BasePoolManagerCore &&) = default;
-  BasePoolManagerCore &operator=(BasePoolManagerCore &&) = default;
-  ~BasePoolManagerCore() = default;
+  PoolManager() = default;
+  PoolManager(const PoolManager &) = delete;
+  PoolManager &operator=(const PoolManager &) = delete;
+  PoolManager(PoolManager &&) = default;
+  PoolManager &operator=(PoolManager &&) = default;
+  ~PoolManager() = default;
 
   // ===========================================================================
   // Initialization State
