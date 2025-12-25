@@ -216,7 +216,7 @@ public:
   void release(GraphLease &lease) noexcept { lease.release(); }
 
 #if ORTEAF_ENABLE_TEST
-  bool isInitializedForTest() const noexcept { return core_.isInitialized(); }
+  bool isConfiguredForTest() const noexcept { return core_.isConfigured(); }
   std::size_t payloadPoolSizeForTest() const noexcept {
     return core_.payloadPool().size();
   }

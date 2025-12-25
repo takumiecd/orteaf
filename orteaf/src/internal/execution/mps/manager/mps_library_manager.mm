@@ -69,11 +69,11 @@ void MpsLibraryManager::configure(const Config &config) {
       /*control_block_capacity=*/control_block_capacity,
       /*control_block_block_size=*/control_block_block_size,
       /*growth_chunk_size=*/config.control_block_growth_chunk_size});
-  core_.setInitialized(true);
+  core_.setConfigured(true);
 }
 
 void MpsLibraryManager::shutdown() {
-  if (!core_.isInitialized()) {
+  if (!core_.isConfigured()) {
     return;
   }
 
@@ -90,7 +90,7 @@ void MpsLibraryManager::shutdown() {
 
 MpsLibraryManager::LibraryLease
 MpsLibraryManager::acquire(const LibraryKey &key) {
-  core_.ensureInitialized();
+  core_.ensureConfigured();
   validateKey(key);
 
   // Check cache first
@@ -137,7 +137,7 @@ MpsLibraryManager::acquire(const LibraryKey &key) {
 
 MpsLibraryManager::LibraryLease
 MpsLibraryManager::acquire(LibraryHandle handle) {
-  core_.ensureInitialized();
+  core_.ensureConfigured();
   if (!handle.isValid()) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,

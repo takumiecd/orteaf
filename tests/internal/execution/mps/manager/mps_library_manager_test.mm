@@ -313,7 +313,7 @@ TYPED_TEST(MpsLibraryManagerTypedTest,
 
   // Assert
   EXPECT_NE(pipeline_manager, nullptr);
-  EXPECT_TRUE(pipeline_manager->isInitializedForTest());
+  EXPECT_TRUE(pipeline_manager->isConfiguredForTest());
 
   // Cleanup
   manager.release(library_lease);

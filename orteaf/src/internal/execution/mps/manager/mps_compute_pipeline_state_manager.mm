@@ -70,11 +70,11 @@ void MpsComputePipelineStateManager::configure(const Config &config) {
       /*control_block_capacity=*/control_block_capacity,
       /*control_block_block_size=*/control_block_block_size,
       /*growth_chunk_size=*/config.control_block_growth_chunk_size});
-  core_.setInitialized(true);
+  core_.setConfigured(true);
 }
 
 void MpsComputePipelineStateManager::shutdown() {
-  if (!core_.isInitialized()) {
+  if (!core_.isConfigured()) {
     return;
   }
 
@@ -91,7 +91,7 @@ void MpsComputePipelineStateManager::shutdown() {
 
 MpsComputePipelineStateManager::PipelineLease
 MpsComputePipelineStateManager::acquire(const FunctionKey &key) {
-  core_.ensureInitialized();
+  core_.ensureConfigured();
   validateKey(key);
 
   // Check cache first

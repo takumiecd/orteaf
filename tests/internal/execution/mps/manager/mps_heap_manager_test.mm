@@ -396,7 +396,7 @@ TYPED_TEST(MpsHeapManagerTypedTest, BufferManagerAccessFromLease) {
 
   // Assert: BufferManager is valid and initialized
   EXPECT_NE(buffer_manager, nullptr);
-  EXPECT_TRUE(buffer_manager->isInitializedForTest());
+  EXPECT_TRUE(buffer_manager->isConfiguredForTest());
 
   // Cleanup: Release lease before shutdown
   lease.release();
@@ -424,7 +424,7 @@ TYPED_TEST(MpsHeapManagerTypedTest, BufferManagerAccessFromKey) {
 
   // Assert: BufferManager is valid
   EXPECT_NE(buffer_manager, nullptr);
-  EXPECT_TRUE(buffer_manager->isInitializedForTest());
+  EXPECT_TRUE(buffer_manager->isConfiguredForTest());
 
   // Act: Same key returns same buffer manager (cached)
   auto *buffer_manager2 = manager.bufferManager(key);

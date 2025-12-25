@@ -73,11 +73,11 @@ void MpsFenceManager::configure(const Config &config) {
       /*control_block_capacity=*/control_block_capacity,
       /*control_block_block_size=*/config.control_block_block_size,
       /*growth_chunk_size=*/config.control_block_growth_chunk_size});
-  core_.setInitialized(true);
+  core_.setConfigured(true);
 }
 
 void MpsFenceManager::shutdown() {
-  if (!core_.isInitialized()) {
+  if (!core_.isConfigured()) {
     return;
   }
   // Check canShutdown on all created control blocks
@@ -90,11 +90,11 @@ void MpsFenceManager::shutdown() {
 
   device_ = nullptr;
   ops_ = nullptr;
-  core_.setInitialized(false);
+  core_.setConfigured(false);
 }
 
 MpsFenceManager::FenceLease MpsFenceManager::acquire() {
-  core_.ensureInitialized();
+  core_.ensureConfigured();
   const FencePayloadPoolTraits::Request request{};
   const auto context = makePayloadContext();
   auto payload_ref = core_.acquirePayloadOrGrowAndCreate(

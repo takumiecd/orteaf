@@ -108,7 +108,7 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, InitializeSetsCapacity) {
 
   // Assert
   EXPECT_EQ(manager.payloadPoolSizeForTest(), 2u);
-  EXPECT_TRUE(manager.isInitializedForTest());
+  EXPECT_TRUE(manager.isConfiguredForTest());
 
   // Cleanup
   manager.shutdown();

@@ -85,7 +85,7 @@ void MpsDeviceManager::configure(const Config &config) {
         /*control_block_capacity=*/0,
         /*control_block_block_size=*/control_block_block_size,
         /*growth_chunk_size=*/core_.growthChunkSize()});
-    core_.setInitialized(true);
+    core_.setConfigured(true);
     return;
   }
 
@@ -106,11 +106,11 @@ void MpsDeviceManager::configure(const Config &config) {
       /*control_block_capacity=*/control_block_size,
       /*control_block_block_size=*/control_block_block_size,
       /*growth_chunk_size=*/core_.growthChunkSize()});
-  core_.setInitialized(true);
+  core_.setConfigured(true);
 }
 
 void MpsDeviceManager::shutdown() {
-  if (!core_.isInitialized()) {
+  if (!core_.isConfigured()) {
     return;
   }
   // Check canShutdown on all created control blocks
@@ -128,11 +128,11 @@ void MpsDeviceManager::shutdown() {
   core_.payloadPool().shutdown(payload_request, payload_context);
   core_.shutdownControlBlockPool();
   ops_ = nullptr;
-  core_.setInitialized(false);
+  core_.setConfigured(false);
 }
 
 MpsDeviceManager::DeviceLease MpsDeviceManager::acquire(DeviceHandle handle) {
-  core_.ensureInitialized();
+  core_.ensureConfigured();
   if (!core_.payloadPool().isValid(handle)) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
@@ -183,7 +183,7 @@ MpsDeviceManager::DeviceLease MpsDeviceManager::acquire(DeviceHandle handle) {
 
 ::orteaf::internal::architecture::Architecture
 MpsDeviceManager::getArch(DeviceHandle handle) const {
-  if (!core_.isInitialized()) {
+  if (!core_.isConfigured()) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
         "MPS devices not initialized");

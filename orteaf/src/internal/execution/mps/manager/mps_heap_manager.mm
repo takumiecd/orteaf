@@ -116,11 +116,11 @@ void MpsHeapManager::configure(const Config &config) {
   payload_cfg.block_size = config.payload_block_size;
   core_.payloadPool().configure(payload_cfg);
 
-  core_.setInitialized(true);
+  core_.setConfigured(true);
 }
 
 void MpsHeapManager::shutdown() {
-  if (!core_.isInitialized()) {
+  if (!core_.isConfigured()) {
     return;
   }
 
@@ -139,12 +139,12 @@ void MpsHeapManager::shutdown() {
   device_handle_ = {};
   library_manager_ = nullptr;
   ops_ = nullptr;
-  core_.setInitialized(false);
+  core_.setConfigured(false);
 }
 
 MpsHeapManager::HeapLease
 MpsHeapManager::acquire(const HeapDescriptorKey &key) {
-  core_.ensureInitialized();
+  core_.ensureConfigured();
   validateKey(key);
 
   // Check if already cached
@@ -201,7 +201,7 @@ MpsHeapManager::bufferManager(const HeapLease &lease) {
 
 MpsHeapManager::BufferManager *
 MpsHeapManager::bufferManager(const HeapDescriptorKey &key) {
-  core_.ensureInitialized();
+  core_.ensureConfigured();
   validateKey(key);
 
   // Check if already cached

@@ -73,11 +73,11 @@ void MpsCommandQueueManager::configure(const Config &config) {
       /*control_block_capacity=*/control_block_capacity,
       /*control_block_block_size=*/config.control_block_block_size,
       /*growth_chunk_size=*/config.control_block_growth_chunk_size});
-  core_.setInitialized(true);
+  core_.setConfigured(true);
 }
 
 void MpsCommandQueueManager::shutdown() {
-  if (!core_.isInitialized()) {
+  if (!core_.isConfigured()) {
     return;
   }
   // Check canShutdown on all created control blocks
@@ -90,11 +90,11 @@ void MpsCommandQueueManager::shutdown() {
 
   device_ = nullptr;
   ops_ = nullptr;
-  core_.setInitialized(false);
+  core_.setConfigured(false);
 }
 
 MpsCommandQueueManager::CommandQueueLease MpsCommandQueueManager::acquire() {
-  core_.ensureInitialized();
+  core_.ensureConfigured();
   const CommandQueuePayloadPoolTraits::Request request{};
   const CommandQueuePayloadPoolTraits::Context context{device_, ops_};
 
@@ -132,7 +132,7 @@ MpsCommandQueueManager::CommandQueueLease MpsCommandQueueManager::acquire() {
 
 MpsCommandQueueManager::CommandQueueLease
 MpsCommandQueueManager::acquire(CommandQueueHandle handle) {
-  core_.ensureInitialized();
+  core_.ensureConfigured();
 
   if (!handle.isValid()) {
     ::orteaf::internal::diagnostics::error::throwError(

@@ -114,7 +114,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, InitializeMarksManagerInitialized) {
   manager.configure(makeConfig(this->getOps()));
 
   // Assert
-  EXPECT_TRUE(manager.isInitializedForTest());
+  EXPECT_TRUE(manager.isConfiguredForTest());
   EXPECT_EQ(manager.payloadPoolSizeForTest(), manager.getDeviceCountForTest());
   if (expected_count >= 0) {
     EXPECT_EQ(manager.getDeviceCountForTest(),
@@ -123,7 +123,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, InitializeMarksManagerInitialized) {
 
   // Cleanup
   manager.shutdown();
-  EXPECT_FALSE(manager.isInitializedForTest());
+  EXPECT_FALSE(manager.isConfiguredForTest());
   EXPECT_EQ(manager.payloadPoolSizeForTest(), 0u);
 }
 
@@ -148,7 +148,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, InitializeWithZeroDevicesSucceeds) {
   manager.configure(makeConfig(this->getOps()));
 
   // Assert
-  EXPECT_TRUE(manager.isInitializedForTest());
+  EXPECT_TRUE(manager.isConfiguredForTest());
   EXPECT_EQ(manager.payloadPoolSizeForTest(), 0u);
   EXPECT_EQ(manager.getDeviceCountForTest(), 0u);
   ExpectError(diag_error::OrteafErrc::InvalidArgument,
@@ -472,7 +472,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, ShutdownClearsDeviceState) {
 
   // Assert: All state cleared
   EXPECT_EQ(manager.getDeviceCountForTest(), 0u);
-  EXPECT_FALSE(manager.isInitializedForTest());
+  EXPECT_FALSE(manager.isConfiguredForTest());
   EXPECT_EQ(manager.payloadPoolSizeForTest(), 0u);
   for (std::uint32_t i = 0; i < static_cast<std::uint32_t>(count); ++i) {
     const auto id = base::DeviceHandle{i};
@@ -504,7 +504,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, ShutdownThrowsWhenActiveLeaseExists) {
 
   lease.release();
   manager.shutdown();
-  EXPECT_FALSE(manager.isInitializedForTest());
+  EXPECT_FALSE(manager.isConfiguredForTest());
 }
 
 TYPED_TEST(MpsDeviceManagerTypedTest, ShutdownWithoutInitializeIsNoOp) {
@@ -514,7 +514,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, ShutdownWithoutInitializeIsNoOp) {
   manager.shutdown();
 
   // Assert
-  EXPECT_FALSE(manager.isInitializedForTest());
+  EXPECT_FALSE(manager.isConfiguredForTest());
   EXPECT_EQ(manager.payloadPoolSizeForTest(), 0u);
 }
 
@@ -531,14 +531,14 @@ TYPED_TEST(MpsDeviceManagerTypedTest, MultipleShutdownsAreIdempotent) {
   this->adapter().expectReleaseDevices({device0});
 
   manager.configure(makeConfig(this->getOps()));
-  EXPECT_TRUE(manager.isInitializedForTest());
+  EXPECT_TRUE(manager.isConfiguredForTest());
 
   // Act & Assert: Multiple shutdowns are safe
   manager.shutdown();
-  EXPECT_FALSE(manager.isInitializedForTest());
+  EXPECT_FALSE(manager.isConfiguredForTest());
 
   manager.shutdown();
-  EXPECT_FALSE(manager.isInitializedForTest());
+  EXPECT_FALSE(manager.isConfiguredForTest());
 }
 
 // =============================================================================

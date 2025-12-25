@@ -93,25 +93,25 @@ public:
   // ===========================================================================
 
   /**
-   * @brief Manager が初期化済みかを返す
+   * @brief Manager が設定済みかを返す
    */
-  bool isInitialized() const noexcept { return initialized_; }
+  bool isConfigured() const noexcept { return configured_; }
 
   /**
-   * @brief 初期化済みでなければ例外をスロー
+   * @brief 設定済みでなければ例外をスロー
    */
-  void ensureInitialized() const {
-    if (!initialized_) {
+  void ensureConfigured() const {
+    if (!configured_) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-          std::string(managerName()) + " has not been initialized");
+          std::string(managerName()) + " has not been configured");
     }
   }
 
   /**
-   * @brief 初期化済みフラグをセット
+   * @brief 設定済みフラグをセット
    */
-  void setInitialized(bool value) noexcept { initialized_ = value; }
+  void setConfigured(bool value) noexcept { configured_ = value; }
 
   // ===========================================================================
   // ControlBlock Pool Operations
@@ -359,7 +359,7 @@ public:
    * @return 初期化済み && valid && created であればtrue
    */
   bool isAlive(PayloadHandle handle) const noexcept {
-    return initialized_ && payload_pool_.isValid(handle) &&
+    return configured_ && payload_pool_.isValid(handle) &&
            payload_pool_.isCreated(handle);
   }
 
@@ -408,7 +408,7 @@ private:
     }
   }
 
-  bool initialized_{false};
+  bool configured_{false};
   std::size_t growth_chunk_size_{1};
   std::size_t control_block_block_size_{0};
   PayloadPool payload_pool_{};

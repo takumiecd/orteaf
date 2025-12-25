@@ -38,7 +38,8 @@ using MpsBufferPoolT =
     ::orteaf::internal::execution::allocator::pool::SegregatePool<
         ResourceT,
         ::orteaf::internal::execution::allocator::policies::FastFreePolicy,
-        ::orteaf::internal::execution::allocator::policies::NoLockThreadingPolicy,
+        ::orteaf::internal::execution::allocator::policies::
+            NoLockThreadingPolicy,
         ::orteaf::internal::execution::allocator::policies::
             DirectResourceLargeAllocPolicy<ResourceT>,
         ::orteaf::internal::execution::allocator::policies::
@@ -267,11 +268,11 @@ public:
     core_.payloadPool().configure(payload_cfg);
 
     payload_growth_chunk_size_ = config.payload_growth_chunk_size;
-    core_.setInitialized(true);
+    core_.setConfigured(true);
   }
 
   void shutdown() {
-    if (!core_.isInitialized()) {
+    if (!core_.isConfigured()) {
       return;
     }
 
@@ -291,7 +292,7 @@ public:
 
     device_ = nullptr;
     heap_ = nullptr;
-    core_.setInitialized(false);
+    core_.setConfigured(false);
   }
 
   // =========================================================================
@@ -303,7 +304,7 @@ public:
 
   StrongBufferLease acquire(std::size_t size, std::size_t alignment,
                             LaunchParams &params) {
-    core_.ensureInitialized();
+    core_.ensureConfigured();
     if (size == 0) {
       return {};
     }
@@ -346,7 +347,7 @@ public:
   // Acquire (share existing buffer by handle)
   // =========================================================================
   StrongBufferLease acquire(BufferHandle handle) {
-    core_.ensureInitialized();
+    core_.ensureConfigured();
     if (!core_.isAlive(handle)) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
@@ -386,7 +387,7 @@ public:
   const SegregatePool *pool() const { return &segregate_pool_; }
 
 #if ORTEAF_ENABLE_TEST
-  bool isInitializedForTest() const noexcept { return core_.isInitialized(); }
+  bool isConfiguredForTest() const noexcept { return core_.isConfigured(); }
   std::size_t payloadPoolSizeForTest() const noexcept {
     return core_.payloadPool().size();
   }

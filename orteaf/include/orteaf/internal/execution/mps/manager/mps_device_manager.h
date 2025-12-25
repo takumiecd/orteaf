@@ -271,7 +271,7 @@ public:
   std::size_t getDeviceCountForTest() const noexcept {
     return core_.payloadPool().size();
   }
-  bool isInitializedForTest() const noexcept { return core_.isInitialized(); }
+  bool isConfiguredForTest() const noexcept { return core_.isConfigured(); }
   std::size_t payloadPoolSizeForTest() const noexcept {
     return core_.payloadPool().size();
   }

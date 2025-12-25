@@ -56,7 +56,7 @@ TEST_F(MpsBufferManagerSimpleTest,
 
 TEST_F(MpsBufferManagerSimpleTest, IsNotInitializedByDefault) {
   // Assert: Not initialized by default
-  EXPECT_FALSE(manager().isInitializedForTest());
+  EXPECT_FALSE(manager().isConfiguredForTest());
 }
 
 TEST_F(MpsBufferManagerSimpleTest, CapacityIsZeroBeforeInitialize) {
@@ -203,7 +203,7 @@ TEST_F(MpsBufferManagerIntegrationTest, InitializeSucceeds) {
 
   // Act & Assert
   EXPECT_NO_THROW(initializeManager());
-  EXPECT_TRUE(manager().isInitializedForTest());
+  EXPECT_TRUE(manager().isConfiguredForTest());
 }
 
 TEST_F(MpsBufferManagerIntegrationTest, InitializeWithZeroCapacitySucceeds) {
@@ -215,7 +215,7 @@ TEST_F(MpsBufferManagerIntegrationTest, InitializeWithZeroCapacitySucceeds) {
   EXPECT_NO_THROW(initializeManager(0));
 
   // Assert
-  EXPECT_TRUE(manager().isInitializedForTest());
+  EXPECT_TRUE(manager().isConfiguredForTest());
   EXPECT_EQ(manager().payloadPoolCapacityForTest(), 0u);
 }
 
@@ -231,7 +231,7 @@ TEST_F(MpsBufferManagerIntegrationTest, ShutdownAfterInitializeWorks) {
   EXPECT_NO_THROW(manager().shutdown());
 
   // Assert
-  EXPECT_FALSE(manager().isInitializedForTest());
+  EXPECT_FALSE(manager().isConfiguredForTest());
 }
 
 TEST_F(MpsBufferManagerIntegrationTest, MultipleInitializeShutdownCyclesWork) {
@@ -242,9 +242,9 @@ TEST_F(MpsBufferManagerIntegrationTest, MultipleInitializeShutdownCyclesWork) {
   // Act & Assert: Multiple cycles work
   for (int i = 0; i < 3; ++i) {
     EXPECT_NO_THROW(initializeManager());
-    EXPECT_TRUE(manager().isInitializedForTest());
+    EXPECT_TRUE(manager().isConfiguredForTest());
     EXPECT_NO_THROW(manager().shutdown());
-    EXPECT_FALSE(manager().isInitializedForTest());
+    EXPECT_FALSE(manager().isConfiguredForTest());
   }
 }
 
@@ -393,7 +393,7 @@ protected:
 TEST_F(MpsBufferManagerMockTest, InitializeSucceeds) {
   // Act & Assert
   EXPECT_NO_THROW(initializeManager());
-  EXPECT_TRUE(manager_.isInitializedForTest());
+  EXPECT_TRUE(manager_.isConfiguredForTest());
 }
 
 TEST_F(MpsBufferManagerMockTest, ShutdownAfterInitializeWorks) {
@@ -404,7 +404,7 @@ TEST_F(MpsBufferManagerMockTest, ShutdownAfterInitializeWorks) {
   EXPECT_NO_THROW(manager_.shutdown());
 
   // Assert
-  EXPECT_FALSE(manager_.isInitializedForTest());
+  EXPECT_FALSE(manager_.isConfiguredForTest());
 }
 
 // -----------------------------------------------------------------------------
