@@ -5,7 +5,11 @@
 #include <cstdint>
 #include <string>
 
+#include <orteaf/internal/base/lease/concepts.h>
+#include <orteaf/internal/base/lease/strong_lease.h>
+#include <orteaf/internal/base/lease/weak_lease.h>
 #include <orteaf/internal/base/pool/default_control_block_pool_traits.h>
+#include <orteaf/internal/base/pool/pool_concepts.h>
 #include <orteaf/internal/diagnostics/error/error.h>
 
 namespace orteaf::internal::base {
@@ -68,6 +72,12 @@ public:
       pool::DefaultControlBlockPoolTraits<ControlBlock, ControlBlockTag>;
   using ControlBlockPool = pool::SlotPool<ControlBlockPoolTraits>;
   using PayloadHandle = typename Traits::PayloadHandle;
+
+  // Lease types - PoolManager is the friend (ManagerT) for these leases
+  using WeakLeaseType = WeakLease<ControlBlockHandle, ControlBlock,
+                                  ControlBlockPool, PoolManager<Traits>>;
+  using StrongLeaseType = StrongLease<ControlBlockHandle, ControlBlock,
+                                      ControlBlockPool, PoolManager<Traits>>;
 
   static constexpr const char *managerName() { return Traits::Name; }
 
@@ -164,21 +174,21 @@ public:
   /**
    * @brief ControlBlockを取得（なければgrowして再取得）
    *
-   * @return ControlBlockへのSlotRef
+   * @return ControlBlockHandle
    * @throws OutOfRange grow後も取得できない場合
    */
-  typename ControlBlockPool::SlotRef acquireControlBlock() {
-    auto ref = control_block_pool_.tryAcquireCreated();
-    if (!ref.valid()) {
+  ControlBlockHandle acquireControlBlock() {
+    auto handle = control_block_pool_.tryAcquireCreated();
+    if (!handle.isValid()) {
       growControlBlockPool();
-      ref = control_block_pool_.tryAcquireCreated();
+      handle = control_block_pool_.tryAcquireCreated();
     }
-    if (!ref.valid()) {
+    if (!handle.isValid()) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::OutOfRange,
           std::string(managerName()) + " has no available control blocks");
     }
-    return ref;
+    return handle;
   }
 
   /**
@@ -302,21 +312,19 @@ public:
    * @param grow_by 追加で確保するスロット数
    * @param request Payload作成に渡すリクエスト
    * @param context Payload作成に渡すコンテキスト
-   * @return 取得できなければ invalid な SlotRef
+   * @return 取得できなければ invalid な Handle
    */
   template <typename Request, typename Context>
-  typename PayloadPool::SlotRef
-  acquirePayloadOrGrowAndCreate(std::size_t grow_by, const Request &request,
-                                const Context &context)
+  PayloadHandle acquirePayloadOrGrowAndCreate(std::size_t grow_by,
+                                              const Request &request,
+                                              const Context &context)
     requires requires(PayloadPool &pool) {
-      {
-        pool.tryAcquireCreated()
-      } -> std::same_as<typename PayloadPool::SlotRef>;
+      { pool.tryAcquireCreated() } -> std::same_as<PayloadHandle>;
     }
   {
-    auto ref = payload_pool_.tryAcquireCreated();
-    if (ref.valid()) {
-      return ref;
+    auto handle = payload_pool_.tryAcquireCreated();
+    if (handle.isValid()) {
+      return handle;
     }
     if (!growPayloadPoolByAndCreate(grow_by, request, context)) {
       ::orteaf::internal::diagnostics::error::throwError(
@@ -330,19 +338,16 @@ public:
    * @brief 未作成スロットを予約（必要なら拡張）
    *
    * @param grow_by 追加で確保するスロット数
-   * @return 取得できなければ invalid な SlotRef
+   * @return 取得できなければ invalid な Handle
    */
-  typename PayloadPool::SlotRef
-  reserveUncreatedPayloadOrGrow(std::size_t grow_by)
+  PayloadHandle reserveUncreatedPayloadOrGrow(std::size_t grow_by)
     requires requires(PayloadPool &pool) {
-      {
-        pool.tryReserveUncreated()
-      } -> std::same_as<typename PayloadPool::SlotRef>;
+      { pool.tryReserveUncreated() } -> std::same_as<PayloadHandle>;
     }
   {
-    auto ref = payload_pool_.tryReserveUncreated();
-    if (ref.valid() || grow_by == 0) {
-      return ref;
+    auto handle = payload_pool_.tryReserveUncreated();
+    if (handle.isValid() || grow_by == 0) {
+      return handle;
     }
     growPayloadPoolBy(grow_by);
     return payload_pool_.tryReserveUncreated();
@@ -363,6 +368,139 @@ public:
            payload_pool_.isCreated(handle);
   }
 
+  // ===========================================================================
+  // Lease Factory (High-Level API)
+  // ===========================================================================
+
+  /**
+   * @brief WeakLeaseを取得（Binding対応Poolの場合は既存CBを再利用）
+   *
+   * @param handle Payload handle
+   * @return WeakLeaseType
+   * @throws InvalidArgument handleが無効な場合
+   * @throws InvalidState payloadが利用不可の場合
+   * @note ControlBlockがWeakControlBlockConceptを満たす場合のみ利用可能
+   */
+  WeakLeaseType acquireWeakLease(PayloadHandle handle)
+    requires WeakControlBlockConcept<ControlBlock>
+  {
+    ensureConfigured();
+
+    // Validate handle
+    if (!payload_pool_.isValid(handle)) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+          std::string(managerName()) + " handle is invalid");
+    }
+    if (!payload_pool_.isCreated(handle)) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+          std::string(managerName()) + " payload is unavailable");
+    }
+
+    auto *payload_ptr = payload_pool_.get(handle);
+    if (payload_ptr == nullptr) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+          std::string(managerName()) + " payload pointer is null");
+    }
+
+    // Check for existing bound CB (if pool supports binding)
+    if constexpr (pool::ControlBlockBindableConcept<PayloadPool>) {
+      if (payload_pool_.hasBoundControlBlock(handle)) {
+        auto existing_cb_handle = payload_pool_.getBoundControlBlock(handle);
+        auto *cb_ptr = control_block_pool_.get(existing_cb_handle);
+        if (cb_ptr != nullptr) {
+          cb_ptr->acquireWeak();
+          return WeakLeaseType{cb_ptr, &control_block_pool_,
+                               existing_cb_handle};
+        }
+        payload_pool_.unbindControlBlock(handle);
+      }
+    }
+
+    // Acquire new CB
+    auto cb_handle = acquireControlBlock();
+    auto *cb_ptr = getControlBlock(cb_handle);
+    if (!cb_ptr->tryBindPayload(handle, payload_ptr, &payload_pool_)) {
+      releaseControlBlock(cb_handle);
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+          std::string(managerName()) + " control block binding failed");
+    }
+
+    // Bind CB handle to payload (if pool supports binding)
+    if constexpr (pool::ControlBlockBindableConcept<PayloadPool>) {
+      payload_pool_.bindControlBlock(handle, cb_handle);
+    }
+
+    return WeakLeaseType{cb_ptr, &control_block_pool_, cb_handle};
+  }
+
+  /**
+   * @brief StrongLeaseを取得（Binding対応Poolの場合は既存CBを再利用）
+   *
+   * @param handle Payload handle
+   * @return StrongLeaseType
+   * @throws InvalidArgument handleが無効な場合
+   * @throws InvalidState payloadが利用不可の場合
+   * @note ControlBlockがStrongControlBlockConceptを満たす場合のみ利用可能
+   */
+  StrongLeaseType acquireStrongLease(PayloadHandle handle)
+    requires StrongControlBlockConcept<ControlBlock>
+  {
+    ensureConfigured();
+
+    // Validate handle
+    if (!payload_pool_.isValid(handle)) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+          std::string(managerName()) + " handle is invalid");
+    }
+    if (!payload_pool_.isCreated(handle)) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+          std::string(managerName()) + " payload is unavailable");
+    }
+
+    auto *payload_ptr = payload_pool_.get(handle);
+    if (payload_ptr == nullptr) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+          std::string(managerName()) + " payload pointer is null");
+    }
+
+    // Check for existing bound CB (if pool supports binding)
+    if constexpr (pool::ControlBlockBindableConcept<PayloadPool>) {
+      if (payload_pool_.hasBoundControlBlock(handle)) {
+        auto existing_cb_handle = payload_pool_.getBoundControlBlock(handle);
+        auto *cb_ptr = control_block_pool_.get(existing_cb_handle);
+        if (cb_ptr != nullptr) {
+          cb_ptr->acquireStrong();
+          return StrongLeaseType{cb_ptr, &control_block_pool_,
+                                 existing_cb_handle};
+        }
+        payload_pool_.unbindControlBlock(handle);
+      }
+    }
+
+    // Acquire new CB
+    auto cb_handle = acquireControlBlock();
+    auto *cb_ptr = getControlBlock(cb_handle);
+    if (!cb_ptr->tryBindPayload(handle, payload_ptr, &payload_pool_)) {
+      releaseControlBlock(cb_handle);
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+          std::string(managerName()) + " control block binding failed");
+    }
+
+    // Bind CB handle to payload (if pool supports binding)
+    if constexpr (pool::ControlBlockBindableConcept<PayloadPool>) {
+      payload_pool_.bindControlBlock(handle, cb_handle);
+    }
+
+    return StrongLeaseType{cb_ptr, &control_block_pool_, cb_handle};
+  }
 #if ORTEAF_ENABLE_TEST
   // ===========================================================================
   // Test Support
