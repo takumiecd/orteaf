@@ -159,12 +159,7 @@ public:
     DeviceType device{nullptr};
     LibraryType library{nullptr};
     SlowOps *ops{nullptr};
-    std::size_t payload_capacity{0};
-    std::size_t control_block_capacity{0};
-    std::size_t payload_block_size{0};
-    std::size_t control_block_block_size{1};
-    std::size_t payload_growth_chunk_size{1};
-    std::size_t control_block_growth_chunk_size{1};
+    Core::Config pool{};
   };
 
   void configure(const Config &config);

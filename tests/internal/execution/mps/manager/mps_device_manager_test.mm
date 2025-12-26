@@ -39,6 +39,47 @@ mps_rt::MpsDeviceManager::Config makeConfig(
     mps_rt::MpsDeviceManager::SlowOps *ops) {
   mps_rt::MpsDeviceManager::Config config{};
   config.ops = ops;
+  const int count = ops ? ops->getDeviceCount() : 0;
+  const std::size_t capacity =
+      count <= 0 ? 0u : static_cast<std::size_t>(count);
+  config.pool.payload_capacity = capacity;
+  config.pool.control_block_capacity = capacity;
+  config.pool.payload_block_size = capacity == 0 ? 1u : capacity;
+  config.pool.control_block_block_size = capacity == 0 ? 1u : capacity;
+  config.pool.payload_growth_chunk_size = 1;
+  config.pool.control_block_growth_chunk_size = 1;
+  config.command_queue_config.pool.payload_block_size = 1;
+  config.command_queue_config.pool.control_block_block_size = 1;
+  config.command_queue_config.pool.payload_growth_chunk_size = 1;
+  config.command_queue_config.pool.control_block_growth_chunk_size = 1;
+  config.event_config.pool.payload_block_size = 1;
+  config.event_config.pool.control_block_block_size = 1;
+  config.event_config.pool.payload_growth_chunk_size = 1;
+  config.event_config.pool.control_block_growth_chunk_size = 1;
+  config.fence_config.pool.payload_block_size = 1;
+  config.fence_config.pool.control_block_block_size = 1;
+  config.fence_config.pool.payload_growth_chunk_size = 1;
+  config.fence_config.pool.control_block_growth_chunk_size = 1;
+  config.graph_config.pool.payload_block_size = 1;
+  config.graph_config.pool.control_block_block_size = 1;
+  config.graph_config.pool.payload_growth_chunk_size = 1;
+  config.graph_config.pool.control_block_growth_chunk_size = 1;
+  config.library_config.pool.payload_block_size = 1;
+  config.library_config.pool.control_block_block_size = 1;
+  config.library_config.pool.payload_growth_chunk_size = 1;
+  config.library_config.pool.control_block_growth_chunk_size = 1;
+  config.library_config.pipeline_config.pool.payload_block_size = 1;
+  config.library_config.pipeline_config.pool.control_block_block_size = 1;
+  config.library_config.pipeline_config.pool.payload_growth_chunk_size = 1;
+  config.library_config.pipeline_config.pool.control_block_growth_chunk_size = 1;
+  config.heap_config.pool.payload_block_size = 1;
+  config.heap_config.pool.control_block_block_size = 1;
+  config.heap_config.pool.payload_growth_chunk_size = 1;
+  config.heap_config.pool.control_block_growth_chunk_size = 1;
+  config.heap_config.buffer_config.pool.payload_block_size = 1;
+  config.heap_config.buffer_config.pool.control_block_block_size = 1;
+  config.heap_config.buffer_config.pool.payload_growth_chunk_size = 1;
+  config.heap_config.buffer_config.pool.control_block_growth_chunk_size = 1;
   return config;
 }
 
@@ -552,8 +593,12 @@ TYPED_TEST(MpsDeviceManagerTypedTest,
 
   // Arrange
   auto config = makeConfig(this->getOps());
-  config.command_queue_config.payload_capacity = kCapacity;
-  config.command_queue_config.control_block_capacity = kCapacity;
+  config.command_queue_config.pool.payload_capacity = kCapacity;
+  config.command_queue_config.pool.control_block_capacity = kCapacity;
+  config.command_queue_config.pool.payload_block_size = kCapacity;
+  config.command_queue_config.pool.control_block_block_size = kCapacity;
+  config.command_queue_config.pool.payload_growth_chunk_size = 1;
+  config.command_queue_config.pool.control_block_growth_chunk_size = 1;
 
   const auto device0 = makeDevice(0x500);
   const auto device1 = makeDevice(0x600);
@@ -600,7 +645,10 @@ TYPED_TEST(MpsDeviceManagerTypedTest,
 
   // Arrange
   auto config = makeConfig(this->getOps());
-  config.heap_initial_capacity = kCapacity;
+  config.heap_config.pool.payload_capacity = kCapacity;
+  config.heap_config.pool.control_block_capacity = kCapacity;
+  config.heap_config.pool.payload_block_size = kCapacity;
+  config.heap_config.pool.control_block_block_size = kCapacity;
 
   const auto device0 = makeDevice(0x700);
   this->adapter().expectGetDeviceCount(1);
@@ -638,7 +686,10 @@ TYPED_TEST(MpsDeviceManagerTypedTest,
 
   // Arrange
   auto config = makeConfig(this->getOps());
-  config.library_initial_capacity = kCapacity;
+  config.library_config.pool.payload_capacity = kCapacity;
+  config.library_config.pool.control_block_capacity = kCapacity;
+  config.library_config.pool.payload_block_size = kCapacity;
+  config.library_config.pool.control_block_block_size = kCapacity;
 
   const auto device0 = makeDevice(0x750);
   this->adapter().expectGetDeviceCount(1);

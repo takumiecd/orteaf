@@ -132,8 +132,10 @@ protected:
     mps_rt::MpsLibraryManager::Config lib_config{};
     lib_config.device = device_;
     lib_config.ops = &ops_;
-    lib_config.payload_capacity = 16;
-    lib_config.control_block_capacity = 16;
+    lib_config.pool.payload_capacity = 16;
+    lib_config.pool.control_block_capacity = 16;
+    lib_config.pool.payload_block_size = 1;
+    lib_config.pool.control_block_block_size = 1;
     lib_manager_.configure(lib_config);
 
     setup_successful_ = true;
@@ -163,10 +165,10 @@ protected:
     cfg.min_block_size = 64;
     cfg.max_block_size = 16 * 1024 * 1024;
     cfg.chunk_size = 16 * 1024 * 1024;
-    cfg.payload_capacity = capacity;
-    cfg.control_block_capacity = capacity;
-    cfg.payload_block_size = 1;
-    cfg.control_block_block_size = 1;
+    cfg.pool.payload_capacity = capacity;
+    cfg.pool.control_block_capacity = capacity;
+    cfg.pool.payload_block_size = 1;
+    cfg.pool.control_block_block_size = 1;
     manager_.configure(cfg);
   }
 
@@ -366,10 +368,10 @@ protected:
     cfg.min_block_size = 64;
     cfg.max_block_size = 1024 * 1024;
     cfg.chunk_size = 1024 * 1024;
-    cfg.payload_capacity = capacity;
-    cfg.control_block_capacity = capacity;
-    cfg.payload_block_size = 1;
-    cfg.control_block_block_size = 1;
+    cfg.pool.payload_capacity = capacity;
+    cfg.pool.control_block_capacity = capacity;
+    cfg.pool.payload_block_size = 1;
+    cfg.pool.control_block_block_size = 1;
     manager_.configure(cfg);
   }
 

@@ -99,22 +99,12 @@ void MpsHeapManager::configure(const Config &config) {
   library_manager_ = config.library_manager;
   ops_ = config.ops;
   buffer_config_ = config.buffer_config;
-  // payload block size managed by core_
-  // payload growth chunk size configured via core_
   key_to_index_.clear();
 
   // Configure core + payload pool
-  typename Core::Config core_cfg{};
-  core_cfg.control_block_capacity = config.control_block_capacity;
-  core_cfg.control_block_block_size = config.control_block_block_size;
-  core_cfg.control_block_growth_chunk_size =
-      config.control_block_growth_chunk_size;
-  core_cfg.payload_growth_chunk_size = config.payload_growth_chunk_size;
-  core_cfg.payload_capacity = config.payload_capacity;
-  core_cfg.payload_block_size = config.payload_block_size;
   HeapPayloadPoolTraits::Request request{};
   auto context = makePayloadContext();
-  core_.configure(core_cfg, request, context);
+  core_.configure(config.pool, request, context);
 
   core_.setConfigured(true);
 }

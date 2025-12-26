@@ -186,12 +186,7 @@ public:
         usage{::orteaf::internal::execution::mps::platform::wrapper::
                   kMPSDefaultBufferUsage};
     // PoolManager config
-    std::size_t payload_capacity{0};
-    std::size_t control_block_capacity{0};
-    std::size_t payload_block_size{1};
-    std::size_t control_block_block_size{1};
-    std::size_t payload_growth_chunk_size{1};
-    std::size_t control_block_growth_chunk_size{1};
+    Core::Config pool{};
   };
 
   // =========================================================================
@@ -248,17 +243,9 @@ public:
     segregate_pool_.initialize(pool_cfg);
 
     // Configure PoolManager + PayloadPool
-    typename Core::Config core_cfg{};
-    core_cfg.control_block_capacity = config.control_block_capacity;
-    core_cfg.control_block_block_size = config.control_block_block_size;
-    core_cfg.control_block_growth_chunk_size =
-        config.control_block_growth_chunk_size;
-    core_cfg.payload_growth_chunk_size = config.payload_growth_chunk_size;
-    core_cfg.payload_capacity = config.payload_capacity;
-    core_cfg.payload_block_size = config.payload_block_size;
     typename BufferPayloadPoolTraitsT<ResourceT>::Request request{};
     auto context = makePayloadContext();
-    core_.configure(core_cfg, request, context);
+    core_.configure(config.pool, request, context);
 
     core_.setConfigured(true);
   }

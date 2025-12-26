@@ -90,6 +90,30 @@ public:
     std::size_t payload_block_size{0};
   };
 
+  static void validateConfig(const Config &config) {
+    if (config.control_block_block_size == 0) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+          std::string(managerName()) + " control block size must be > 0");
+    }
+    if (config.control_block_growth_chunk_size == 0) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+          std::string(managerName()) +
+              " control block growth chunk size must be > 0");
+    }
+    if (config.payload_growth_chunk_size == 0) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+          std::string(managerName()) + " payload growth chunk size must be > 0");
+    }
+    if (config.payload_capacity != 0 && config.payload_block_size == 0) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+          std::string(managerName()) + " payload block size must be > 0");
+    }
+  }
+
   // ===========================================================================
   // Lifecycle
   // ===========================================================================
@@ -139,6 +163,7 @@ public:
       pool.shutdown(req, ctx);
     }
   {
+    validateConfig(config);
     const typename PayloadPool::Config payload_config{
         config.payload_capacity, config.payload_block_size};
     if constexpr (requires { payload_config.block_size; }) {
@@ -160,6 +185,7 @@ public:
       pool.configure(cfg);
     }
   {
+    validateConfig(config);
     const typename PayloadPool::Config payload_config{
         config.payload_capacity, config.payload_block_size};
     if constexpr (requires { payload_config.block_size; }) {

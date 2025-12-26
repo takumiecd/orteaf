@@ -18,60 +18,12 @@ void MpsGraphManager::configure(const Config &config) {
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
         "MPS graph manager requires valid ops");
   }
-  const std::size_t payload_capacity =
-      config.payload_capacity != 0 ? config.payload_capacity : 0u;
-  const std::size_t control_block_capacity = config.control_block_capacity != 0
-                                                 ? config.control_block_capacity
-                                                 : payload_capacity;
-  if (payload_capacity >
-      static_cast<std::size_t>(GraphHandle::invalid_index())) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-        "MPS graph manager capacity exceeds maximum handle range");
-  }
-  if (control_block_capacity >
-      static_cast<std::size_t>(Core::ControlBlockHandle::invalid_index())) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-        "MPS graph manager control block capacity exceeds maximum handle range");
-  }
-  if (config.payload_growth_chunk_size == 0) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-        "MPS graph manager requires non-zero payload growth chunk size");
-  }
-  if (config.control_block_growth_chunk_size == 0) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-        "MPS graph manager requires non-zero control block growth chunk size");
-  }
-
-  std::size_t payload_block_size = config.payload_block_size;
-  if (payload_block_size == 0) {
-    payload_block_size = payload_capacity == 0 ? 1u : payload_capacity;
-  }
-  std::size_t control_block_block_size = config.control_block_block_size;
-  if (control_block_block_size == 0) {
-    control_block_block_size =
-        control_block_capacity == 0 ? 1u : control_block_capacity;
-  }
-
   device_ = config.device;
   ops_ = config.ops;
-  // payload block size managed by core_
-  // payload growth chunk size configured via core_
   key_to_index_.clear();
   const GraphPayloadPoolTraits::Request payload_request{};
   const auto payload_context = makePayloadContext();
-  MpsGraphManager::Core::Config core_cfg{};
-  core_cfg.control_block_capacity = control_block_capacity;
-  core_cfg.control_block_block_size = control_block_block_size;
-  core_cfg.control_block_growth_chunk_size =
-      config.control_block_growth_chunk_size;
-  core_cfg.payload_growth_chunk_size = config.payload_growth_chunk_size;
-  core_cfg.payload_capacity = payload_capacity;
-  core_cfg.payload_block_size = payload_block_size;
-  core_.configure(core_cfg, payload_request, payload_context);
+  core_.configure(config.pool, payload_request, payload_context);
   core_.setConfigured(true);
 }
 

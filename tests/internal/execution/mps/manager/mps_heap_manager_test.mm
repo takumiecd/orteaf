@@ -53,10 +53,14 @@ protected:
     config.device_handle = base::DeviceHandle{0};
     config.library_manager = nullptr;
     config.ops = this->getOps();
-    config.payload_capacity = payload_capacity;
-    config.control_block_capacity = control_block_capacity;
-    config.payload_growth_chunk_size = 1;
-    config.control_block_growth_chunk_size = 1;
+    config.pool.payload_capacity = payload_capacity;
+    config.pool.control_block_capacity = control_block_capacity;
+    config.pool.payload_block_size =
+        payload_capacity == 0 ? 1u : payload_capacity;
+    config.pool.control_block_block_size =
+        control_block_capacity == 0 ? 1u : control_block_capacity;
+    config.pool.payload_growth_chunk_size = 1;
+    config.pool.control_block_growth_chunk_size = 1;
     return config;
   }
 
@@ -177,7 +181,7 @@ TYPED_TEST(MpsHeapManagerTypedTest, GrowthChunkControlsPoolExpansion) {
 
   // Arrange
   auto config = this->makeConfig(0, 0);
-  config.payload_growth_chunk_size = 3;
+  config.pool.payload_growth_chunk_size = 3;
   manager.configure(config);
 
   const auto key = this->defaultKey();
