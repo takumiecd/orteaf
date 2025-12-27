@@ -126,36 +126,17 @@ concept ManagerStrongLeaseAcquirableConcept =
 // 組み合わせ Concept
 // =============================================================================
 
-/// @brief PoolManager の基本機能（shutdown/configure 以外）
-template <typename Manager>
-concept BasePoolManagerConcept = ManagerStateQueryConcept<Manager> &&
-                                 ManagerBlockSizeSettableConcept<Manager> &&
-                                 ManagerResizableConcept<Manager> &&
-                                 ManagerGrowthChunkSettableConcept<Manager> &&
-                                 ManagerPayloadAliveCheckConcept<Manager>;
-
-/// @brief WeakLease を使う PoolManager
-template <typename Manager>
-concept WeakLeasePoolManagerConcept =
-    BasePoolManagerConcept<Manager> &&
-    ManagerWeakLeaseAcquirableConcept<Manager>;
-
-/// @brief StrongLease を使う PoolManager
-template <typename Manager>
-concept StrongLeasePoolManagerConcept =
-    BasePoolManagerConcept<Manager> &&
+/// @brief PoolManager の全機能をまとめた Concept
+template <typename Manager, typename Request, typename Context>
+concept FullPoolManagerConcept =
+    PoolManagerTypeConcept<Manager> &&
+    ManagerStateQueryConcept<Manager> &&
+    ManagerShutdownableConcept<Manager, Request, Context> &&
+    ManagerBlockSizeSettableConcept<Manager> &&
+    ManagerResizableConcept<Manager> &&
+    ManagerGrowthChunkSettableConcept<Manager> &&
+    ManagerPayloadAliveCheckConcept<Manager> &&
+    ManagerWeakLeaseAcquirableConcept<Manager> &&
     ManagerStrongLeaseAcquirableConcept<Manager>;
-
-/// @brief shutdown 込みの WeakLease PoolManager
-template <typename Manager, typename Request, typename Context>
-concept WeakLeasePoolManagerWithShutdownConcept =
-    WeakLeasePoolManagerConcept<Manager> &&
-    ManagerShutdownableConcept<Manager, Request, Context>;
-
-/// @brief shutdown 込みの StrongLease PoolManager
-template <typename Manager, typename Request, typename Context>
-concept StrongLeasePoolManagerWithShutdownConcept =
-    StrongLeasePoolManagerConcept<Manager> &&
-    ManagerShutdownableConcept<Manager, Request, Context>;
 
 } // namespace orteaf::internal::base
