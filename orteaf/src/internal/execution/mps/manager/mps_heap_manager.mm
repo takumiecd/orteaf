@@ -106,7 +106,6 @@ void MpsHeapManager::configure(const Config &config) {
   auto context = makePayloadContext();
   core_.configure(config.pool, request, context);
 
-  core_.setConfigured(true);
 }
 
 void MpsHeapManager::shutdown() {
@@ -129,7 +128,6 @@ void MpsHeapManager::shutdown() {
   device_handle_ = {};
   library_manager_ = nullptr;
   ops_ = nullptr;
-  core_.setConfigured(false);
 }
 
 MpsHeapManager::HeapLease

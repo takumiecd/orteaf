@@ -27,7 +27,6 @@ void MpsComputePipelineStateManager::configure(const Config &config) {
   const PipelinePayloadPoolTraits::Request payload_request{};
   const auto payload_context = makePayloadContext();
   core_.configure(config.pool, payload_request, payload_context);
-  core_.setConfigured(true);
 }
 
 void MpsComputePipelineStateManager::shutdown() {

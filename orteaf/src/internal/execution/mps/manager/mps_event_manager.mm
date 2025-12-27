@@ -29,7 +29,6 @@ void MpsEventManager::configure(const Config &config) {
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
         "Failed to create MPS events");
   }
-  core_.setConfigured(true);
 }
 
 void MpsEventManager::shutdown() {
@@ -46,7 +45,6 @@ void MpsEventManager::shutdown() {
 
   device_ = nullptr;
   ops_ = nullptr;
-  core_.setConfigured(false);
 }
 
 MpsEventManager::EventLease MpsEventManager::acquire() {

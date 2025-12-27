@@ -246,8 +246,6 @@ public:
     typename BufferPayloadPoolTraitsT<ResourceT>::Request request{};
     auto context = makePayloadContext();
     core_.configure(config.pool, request, context);
-
-    core_.setConfigured(true);
   }
 
   void shutdown() {
@@ -271,7 +269,6 @@ public:
 
     device_ = nullptr;
     heap_ = nullptr;
-    core_.setConfigured(false);
   }
 
   // =========================================================================

@@ -33,13 +33,11 @@ void MpsDeviceManager::configure(const Config &config) {
                                        config.graph_config};
   if (device_count <= 0) {
     core_.configure(config.pool, payload_request, payload_context);
-    core_.setConfigured(true);
     return;
   }
 
   core_.configure(config.pool, payload_request, payload_context);
   core_.createAllPayloads(payload_request, payload_context);
-  core_.setConfigured(true);
 }
 
 void MpsDeviceManager::shutdown() {
@@ -61,7 +59,6 @@ void MpsDeviceManager::shutdown() {
   core_.shutdownPayloadPool(payload_request, payload_context);
   core_.shutdownControlBlockPool();
   ops_ = nullptr;
-  core_.setConfigured(false);
 }
 
 MpsDeviceManager::DeviceLease MpsDeviceManager::acquire(DeviceHandle handle) {

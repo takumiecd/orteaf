@@ -31,7 +31,6 @@ void MpsCommandQueueManager::configure(const Config &config) {
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
         "Failed to create MPS command queues");
   }
-  core_.setConfigured(true);
 }
 
 void MpsCommandQueueManager::shutdown() {
@@ -48,7 +47,6 @@ void MpsCommandQueueManager::shutdown() {
 
   device_ = nullptr;
   ops_ = nullptr;
-  core_.setConfigured(false);
 }
 
 MpsCommandQueueManager::CommandQueueLease MpsCommandQueueManager::acquire() {

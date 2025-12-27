@@ -24,7 +24,6 @@ void MpsGraphManager::configure(const Config &config) {
   const GraphPayloadPoolTraits::Request payload_request{};
   const auto payload_context = makePayloadContext();
   core_.configure(config.pool, payload_request, payload_context);
-  core_.setConfigured(true);
 }
 
 void MpsGraphManager::shutdown() {

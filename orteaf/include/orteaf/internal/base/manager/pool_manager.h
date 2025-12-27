@@ -134,7 +134,9 @@ public:
   /**
    * @brief Manager が設定済みかを返す
    */
-  bool isConfigured() const noexcept { return !control_block_pool_.empty(); }
+  bool isConfigured() const noexcept {
+    return !control_block_pool_.empty() || !payload_pool_.empty();
+  }
 
   /**
    * @brief 設定済みでなければ例外をスロー

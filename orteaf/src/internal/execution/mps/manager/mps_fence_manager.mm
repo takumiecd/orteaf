@@ -29,7 +29,6 @@ void MpsFenceManager::configure(const Config &config) {
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
         "Failed to create MPS fences");
   }
-  core_.setConfigured(true);
 }
 
 void MpsFenceManager::shutdown() {
@@ -46,7 +45,6 @@ void MpsFenceManager::shutdown() {
 
   device_ = nullptr;
   ops_ = nullptr;
-  core_.setConfigured(false);
 }
 
 MpsFenceManager::FenceLease MpsFenceManager::acquire() {

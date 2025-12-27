@@ -28,7 +28,6 @@ void MpsLibraryManager::configure(const Config &config) {
   const LibraryPayloadPoolTraits::Request payload_request{};
   const auto payload_context = makePayloadContext();
   core_.configure(config.pool, payload_request, payload_context);
-  core_.setConfigured(true);
 }
 
 void MpsLibraryManager::shutdown() {
