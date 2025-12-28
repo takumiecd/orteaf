@@ -24,6 +24,17 @@ mps_wrapper::MpsLibrary_t makeLibrary(std::uintptr_t value) {
   return reinterpret_cast<mps_wrapper::MpsLibrary_t>(value);
 }
 
+void setPoolBlockSizes(mps_rt::MpsLibraryManager::Core::Config &pool) {
+  if (pool.payload_block_size == 0) {
+    pool.payload_block_size =
+        pool.payload_capacity == 0 ? 1u : pool.payload_capacity;
+  }
+  if (pool.control_block_block_size == 0) {
+    pool.control_block_block_size =
+        pool.control_block_capacity == 0 ? 1u : pool.control_block_capacity;
+  }
+}
+
 template <class Provider>
 class MpsLibraryManagerTypedTest
     : public testing_mps::RuntimeManagerFixture<Provider,
@@ -40,8 +51,8 @@ protected:
     mps_rt::MpsLibraryManager::Config config{};
     config.device = device;
     config.ops = this->getOps();
-    config.payload_capacity = capacity;
-    config.control_block_capacity = capacity;
+    config.pool.payload_capacity = capacity;
+    config.pool.control_block_capacity = capacity;
     manager().configure(config);
   }
 
@@ -75,9 +86,10 @@ TYPED_TEST(MpsLibraryManagerTypedTest, GrowthChunkSizeCanBeAdjusted) {
   mps_rt::MpsLibraryManager::Config config{};
   config.device = device;
   config.ops = this->getOps();
-  config.payload_growth_chunk_size = 3;
-  config.control_block_growth_chunk_size = 4;
-  manager.configure(config);
+  config.pool.payload_growth_chunk_size = 3;
+  config.pool.control_block_growth_chunk_size = 4;
+  setPoolBlockSizes(config.pool);
+    manager.configure(config);
 
   // Assert
   EXPECT_EQ(manager.payloadGrowthChunkSizeForTest(), 3u);
@@ -93,14 +105,16 @@ TYPED_TEST(MpsLibraryManagerTypedTest, GrowthChunkSizeRejectsZero) {
     mps_rt::MpsLibraryManager::Config config{};
     config.device = device;
     config.ops = this->getOps();
-    config.payload_growth_chunk_size = 0;
+    config.pool.payload_growth_chunk_size = 0;
+    setPoolBlockSizes(config.pool);
     manager.configure(config);
   });
   ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
     mps_rt::MpsLibraryManager::Config config{};
     config.device = device;
     config.ops = this->getOps();
-    config.control_block_growth_chunk_size = 0;
+    config.pool.control_block_growth_chunk_size = 0;
+    setPoolBlockSizes(config.pool);
     manager.configure(config);
   });
 }
@@ -126,8 +140,9 @@ TYPED_TEST(MpsLibraryManagerTypedTest, InitializeRejectsNullDevice) {
     mps_rt::MpsLibraryManager::Config config{};
     config.device = nullptr;
     config.ops = this->getOps();
-    config.payload_capacity = 1;
-    config.control_block_capacity = 1;
+    config.pool.payload_capacity = 1;
+    config.pool.control_block_capacity = 1;
+    setPoolBlockSizes(config.pool);
     manager.configure(config);
   });
 }
@@ -141,23 +156,9 @@ TYPED_TEST(MpsLibraryManagerTypedTest, InitializeRejectsNullOps) {
     mps_rt::MpsLibraryManager::Config config{};
     config.device = device;
     config.ops = nullptr;
-    config.payload_capacity = 1;
-    config.control_block_capacity = 1;
-    manager.configure(config);
-  });
-}
-
-TYPED_TEST(MpsLibraryManagerTypedTest, InitializeRejectsCapacityAboveLimit) {
-  auto &manager = this->manager();
-  const auto device = this->adapter().device();
-
-  // Act & Assert
-  ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
-    mps_rt::MpsLibraryManager::Config config{};
-    config.device = device;
-    config.ops = this->getOps();
-    config.payload_capacity = std::numeric_limits<std::size_t>::max();
-    config.control_block_capacity = std::numeric_limits<std::size_t>::max();
+    config.pool.payload_capacity = 1;
+    config.pool.control_block_capacity = 1;
+    setPoolBlockSizes(config.pool);
     manager.configure(config);
   });
 }
@@ -187,8 +188,9 @@ TYPED_TEST(MpsLibraryManagerTypedTest, GrowthChunkSizeControlsPoolExpansion) {
   mps_rt::MpsLibraryManager::Config config{};
   config.device = this->adapter().device();
   config.ops = this->getOps();
-  config.payload_growth_chunk_size = 3;
-  manager.configure(config);
+  config.pool.payload_growth_chunk_size = 3;
+  setPoolBlockSizes(config.pool);
+    manager.configure(config);
   const auto lib_handle = makeLibrary(0x800);
   this->adapter().expectCreateLibraries({{"GrowthTest0", lib_handle}});
   this->adapter().expectDestroyLibraries({lib_handle});
@@ -313,7 +315,7 @@ TYPED_TEST(MpsLibraryManagerTypedTest,
 
   // Assert
   EXPECT_NE(pipeline_manager, nullptr);
-  EXPECT_TRUE(pipeline_manager->isInitializedForTest());
+  EXPECT_TRUE(pipeline_manager->isConfiguredForTest());
 
   // Cleanup
   manager.release(library_lease);

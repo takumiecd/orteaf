@@ -92,10 +92,12 @@ struct GraphPayloadPoolTraits {
       ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t;
   using SlowOps = ::orteaf::internal::execution::mps::platform::MpsSlowOps;
 
-  using CompileFn = std::function<
-      ::orteaf::internal::execution::mps::platform::wrapper::MpsGraphExecutable_t(
-          ::orteaf::internal::execution::mps::platform::wrapper::MpsGraph_t graph,
-          DeviceType device, SlowOps *slow_ops)>;
+  using CompileFn =
+      std::function<::orteaf::internal::execution::mps::platform::wrapper::
+                        MpsGraphExecutable_t(
+                            ::orteaf::internal::execution::mps::platform::
+                                wrapper::MpsGraph_t graph,
+                            DeviceType device, SlowOps *slow_ops)>;
 
   struct Request {
     const CompileFn *compile_fn{nullptr};
@@ -139,8 +141,7 @@ struct GraphPayloadPoolTraits {
 };
 
 using GraphPayloadPool =
-    ::orteaf::internal::base::pool::FixedSlotStore<
-        GraphPayloadPoolTraits>;
+    ::orteaf::internal::base::pool::FixedSlotStore<GraphPayloadPoolTraits>;
 
 // =============================================================================
 // ControlBlock
@@ -168,21 +169,18 @@ struct MpsGraphManagerTraits {
 // =============================================================================
 
 class MpsGraphManager {
-  using Core = ::orteaf::internal::base::PoolManager<
-      MpsGraphManagerTraits>;
+  using Core = ::orteaf::internal::base::PoolManager<MpsGraphManagerTraits>;
 
 public:
   using SlowOps = ::orteaf::internal::execution::mps::platform::MpsSlowOps;
   using DeviceType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t;
   using GraphHandle = ::orteaf::internal::base::GraphHandle;
-  using ExecutableType =
-      ::orteaf::internal::execution::mps::platform::wrapper::MpsGraphExecutable_t;
+  using ExecutableType = ::orteaf::internal::execution::mps::platform::wrapper::
+      MpsGraphExecutable_t;
   using ControlBlockHandle = Core::ControlBlockHandle;
   using ControlBlockPool = Core::ControlBlockPool;
-  using GraphLease = ::orteaf::internal::base::StrongLease<
-      ControlBlockHandle, GraphControlBlock, ControlBlockPool,
-      MpsGraphManager>;
+  using GraphLease = Core::StrongLeaseType;
   using CompileFn = std::function<ExecutableType(
       ::orteaf::internal::execution::mps::platform::wrapper::MpsGraph_t graph,
       DeviceType device, SlowOps *slow_ops)>;
@@ -194,12 +192,7 @@ public:
   struct Config {
     DeviceType device{nullptr};
     SlowOps *ops{nullptr};
-    std::size_t payload_capacity{0};
-    std::size_t control_block_capacity{0};
-    std::size_t payload_block_size{0};
-    std::size_t control_block_block_size{1};
-    std::size_t payload_growth_chunk_size{1};
-    std::size_t control_block_growth_chunk_size{1};
+    Core::Config pool{};
   };
 
   MpsGraphManager() = default;
@@ -216,12 +209,12 @@ public:
   void release(GraphLease &lease) noexcept { lease.release(); }
 
 #if ORTEAF_ENABLE_TEST
-  bool isInitializedForTest() const noexcept { return core_.isInitialized(); }
+  bool isConfiguredForTest() const noexcept { return core_.isConfigured(); }
   std::size_t payloadPoolSizeForTest() const noexcept {
-    return core_.payloadPool().size();
+    return core_.payloadPoolSizeForTest();
   }
   std::size_t payloadPoolCapacityForTest() const noexcept {
-    return core_.payloadPool().capacity();
+    return core_.payloadPoolCapacityForTest();
   }
   std::size_t controlBlockPoolSizeForTest() const noexcept {
     return core_.controlBlockPoolSizeForTest();
@@ -233,24 +226,20 @@ public:
     return core_.isAlive(handle);
   }
   std::size_t payloadGrowthChunkSizeForTest() const noexcept {
-    return payload_growth_chunk_size_;
+    return core_.payloadGrowthChunkSize();
   }
   std::size_t controlBlockGrowthChunkSizeForTest() const noexcept {
-    return core_.growthChunkSize();
+    return core_.controlBlockGrowthChunkSize();
   }
 #endif
 
 private:
   void validateKey(const GraphKey &key) const;
-  GraphLease buildLease(GraphHandle handle, MpsGraphResource *payload_ptr);
   GraphPayloadPoolTraits::Context makePayloadContext() const noexcept;
 
   std::unordered_map<GraphKey, std::size_t, GraphKeyHasher> key_to_index_{};
   DeviceType device_{nullptr};
   SlowOps *ops_{nullptr};
-  std::size_t payload_block_size_{0};
-  std::size_t payload_growth_chunk_size_{1};
-  std::size_t next_index_{0};
   Core core_{};
 };
 

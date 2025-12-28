@@ -36,6 +36,18 @@ mps_wrapper::MpsComputePipelineState_t makePipeline(std::uintptr_t value) {
   return reinterpret_cast<mps_wrapper::MpsComputePipelineState_t>(value);
 }
 
+template <typename PoolConfig>
+void setPoolBlockSizes(PoolConfig &pool) {
+  if (pool.payload_block_size == 0) {
+    pool.payload_block_size =
+        pool.payload_capacity == 0 ? 1u : pool.payload_capacity;
+  }
+  if (pool.control_block_block_size == 0) {
+    pool.control_block_block_size =
+        pool.control_block_capacity == 0 ? 1u : pool.control_block_capacity;
+  }
+}
+
 template <class Provider>
 class MpsComputePipelineStateManagerTypedTest
     : public testing_mps::RuntimeManagerFixture<
@@ -70,8 +82,8 @@ protected:
       config.device = device;
       config.library = *library;
       config.ops = this->getOps();
-      config.payload_capacity = capacity;
-      config.control_block_capacity = capacity;
+      config.pool.payload_capacity = capacity;
+      config.pool.control_block_capacity = capacity;
       manager().configure(config);
       return true;
     }
@@ -160,11 +172,12 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest,
   config.device = device;
   config.library = *maybe_library;
   config.ops = this->getOps();
-  config.payload_growth_chunk_size = 5;
-  config.control_block_growth_chunk_size = 6;
+  config.pool.payload_growth_chunk_size = 5;
+  config.pool.control_block_growth_chunk_size = 6;
 
   // Act
-  manager.configure(config);
+  setPoolBlockSizes(config.pool);
+    manager.configure(config);
 
   // Assert
   EXPECT_EQ(manager.payloadGrowthChunkSizeForTest(), 5u);
@@ -188,7 +201,8 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest,
     config.device = device;
     config.library = *maybe_library;
     config.ops = this->getOps();
-    config.payload_growth_chunk_size = 0;
+    config.pool.payload_growth_chunk_size = 0;
+    setPoolBlockSizes(config.pool);
     manager.configure(config);
   });
   ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
@@ -196,7 +210,8 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest,
     config.device = device;
     config.library = *maybe_library;
     config.ops = this->getOps();
-    config.control_block_growth_chunk_size = 0;
+    config.pool.control_block_growth_chunk_size = 0;
+    setPoolBlockSizes(config.pool);
     manager.configure(config);
   });
 }
@@ -219,8 +234,9 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest,
   config.device = device;
   config.library = *maybe_library;
   config.ops = this->getOps();
-  config.payload_growth_chunk_size = 2;
-  manager.configure(config);
+  config.pool.payload_growth_chunk_size = 2;
+  setPoolBlockSizes(config.pool);
+    manager.configure(config);
 
   const auto key = mps_rt::FunctionKey::Named("ChunkedFunction");
   const auto function_handle = makeFunction(0x8801);
@@ -270,8 +286,9 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest,
     config.device = nullptr;
     config.library = *maybe_library;
     config.ops = this->getOps();
-    config.payload_capacity = 1;
-    config.control_block_capacity = 1;
+    config.pool.payload_capacity = 1;
+    config.pool.control_block_capacity = 1;
+    setPoolBlockSizes(config.pool);
     manager.configure(config);
   });
 }
@@ -287,30 +304,9 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest,
     config.device = device;
     config.library = nullptr;
     config.ops = this->getOps();
-    config.payload_capacity = 1;
-    config.control_block_capacity = 1;
-    manager.configure(config);
-  });
-}
-
-TYPED_TEST(MpsComputePipelineStateManagerTypedTest,
-           InitializeRejectsCapacityAboveLimit) {
-  auto &manager = this->manager();
-  const auto device = this->adapter().device();
-  const auto maybe_library = this->ensureLibrary();
-  if (!maybe_library.has_value()) {
-    return;
-  }
-
-  // Act & Assert
-  ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
-    mps_rt::MpsComputePipelineStateManager::Config config{};
-    config.device = device;
-    config.library = *maybe_library;
-    config.ops = this->getOps();
-    config.payload_capacity = std::numeric_limits<std::size_t>::max();
-    config.control_block_capacity =
-        std::numeric_limits<std::size_t>::max();
+    config.pool.payload_capacity = 1;
+    config.pool.control_block_capacity = 1;
+    setPoolBlockSizes(config.pool);
     manager.configure(config);
   });
 }

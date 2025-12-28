@@ -78,8 +78,8 @@ struct LibraryPayloadPoolTraits {
     if (context.ops == nullptr || context.device == nullptr) {
       return false;
     }
-    payload.library =
-        context.ops->createLibraryWithName(context.device, request.key.identifier);
+    payload.library = context.ops->createLibraryWithName(
+        context.device, request.key.identifier);
     if (payload.library == nullptr) {
       return false;
     }
@@ -102,8 +102,7 @@ struct LibraryPayloadPoolTraits {
 };
 
 using LibraryPayloadPool =
-    ::orteaf::internal::base::pool::FixedSlotStore<
-        LibraryPayloadPoolTraits>;
+    ::orteaf::internal::base::pool::FixedSlotStore<LibraryPayloadPoolTraits>;
 
 // ControlBlock type using WeakControlBlock
 using LibraryControlBlock = ::orteaf::internal::base::WeakControlBlock<
@@ -121,8 +120,7 @@ struct MpsLibraryManagerTraits {
 
 class MpsLibraryManager {
 public:
-  using Core = ::orteaf::internal::base::PoolManager<
-      MpsLibraryManagerTraits>;
+  using Core = ::orteaf::internal::base::PoolManager<MpsLibraryManagerTraits>;
   using SlowOps = ::orteaf::internal::execution::mps::platform::MpsSlowOps;
   using DeviceType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t;
@@ -130,9 +128,7 @@ public:
   using LibraryHandle = ::orteaf::internal::base::LibraryHandle;
   using ControlBlockHandle = Core::ControlBlockHandle;
   using ControlBlockPool = Core::ControlBlockPool;
-  using LibraryLease = ::orteaf::internal::base::WeakLease<
-      ControlBlockHandle, LibraryControlBlock, ControlBlockPool,
-      MpsLibraryManager>;
+  using LibraryLease = Core::WeakLeaseType;
 
   MpsLibraryManager() = default;
   MpsLibraryManager(const MpsLibraryManager &) = delete;
@@ -144,12 +140,7 @@ public:
   struct Config {
     DeviceType device{nullptr};
     SlowOps *ops{nullptr};
-    std::size_t payload_capacity{0};
-    std::size_t control_block_capacity{0};
-    std::size_t payload_block_size{0};
-    std::size_t control_block_block_size{1};
-    std::size_t payload_growth_chunk_size{1};
-    std::size_t control_block_growth_chunk_size{1};
+    Core::Config pool{};
     MpsComputePipelineStateManager::Config pipeline_config{};
   };
 
@@ -162,12 +153,12 @@ public:
   void release(LibraryLease &lease) noexcept { lease.release(); }
 
 #if ORTEAF_ENABLE_TEST
-  bool isInitializedForTest() const noexcept { return core_.isInitialized(); }
+  bool isConfiguredForTest() const noexcept { return core_.isConfigured(); }
   std::size_t payloadPoolSizeForTest() const noexcept {
-    return core_.payloadPool().size();
+    return core_.payloadPoolSizeForTest();
   }
   std::size_t payloadPoolCapacityForTest() const noexcept {
-    return core_.payloadPool().capacity();
+    return core_.payloadPoolCapacityForTest();
   }
   std::size_t controlBlockPoolSizeForTest() const noexcept {
     return core_.controlBlockPoolSizeForTest();
@@ -179,16 +170,16 @@ public:
     return core_.isAlive(handle);
   }
   std::size_t payloadGrowthChunkSizeForTest() const noexcept {
-    return payload_growth_chunk_size_;
+    return core_.payloadGrowthChunkSize();
   }
   std::size_t controlBlockGrowthChunkSizeForTest() const noexcept {
-    return core_.growthChunkSize();
+    return core_.controlBlockGrowthChunkSize();
   }
   bool payloadCreatedForTest(LibraryHandle handle) const noexcept {
-    return core_.payloadPool().isCreated(handle);
+    return core_.payloadCreatedForTest(handle);
   }
   const MpsLibraryResource *payloadForTest(LibraryHandle handle) const noexcept {
-    return core_.payloadPool().get(handle);
+    return core_.payloadForTest(handle);
   }
 #endif
 
@@ -196,14 +187,11 @@ private:
   friend LibraryLease;
 
   void validateKey(const LibraryKey &key) const;
-  LibraryLease buildLease(LibraryHandle handle, MpsLibraryResource *payload_ptr);
   LibraryPayloadPoolTraits::Context makePayloadContext() const noexcept;
 
   std::unordered_map<LibraryKey, std::size_t, LibraryKeyHasher> key_to_index_{};
   DeviceType device_{nullptr};
   SlowOps *ops_{nullptr};
-  std::size_t payload_block_size_{0};
-  std::size_t payload_growth_chunk_size_{1};
   MpsComputePipelineStateManager::Config pipeline_config_{};
   Core core_{};
 };

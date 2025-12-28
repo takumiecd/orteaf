@@ -18,79 +18,29 @@ void MpsGraphManager::configure(const Config &config) {
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
         "MPS graph manager requires valid ops");
   }
-  const std::size_t payload_capacity =
-      config.payload_capacity != 0 ? config.payload_capacity : 0u;
-  const std::size_t control_block_capacity =
-      config.control_block_capacity != 0 ? config.control_block_capacity
-                                         : payload_capacity;
-  if (payload_capacity >
-      static_cast<std::size_t>(GraphHandle::invalid_index())) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-        "MPS graph manager capacity exceeds maximum handle range");
-  }
-  if (control_block_capacity >
-      static_cast<std::size_t>(Core::ControlBlockHandle::invalid_index())) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-        "MPS graph manager control block capacity exceeds maximum handle range");
-  }
-  if (config.payload_growth_chunk_size == 0) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-        "MPS graph manager requires non-zero payload growth chunk size");
-  }
-  if (config.control_block_growth_chunk_size == 0) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-        "MPS graph manager requires non-zero control block growth chunk size");
-  }
-
-  std::size_t payload_block_size = config.payload_block_size;
-  if (payload_block_size == 0) {
-    payload_block_size =
-        payload_capacity == 0 ? 1u : payload_capacity;
-  }
-  std::size_t control_block_block_size = config.control_block_block_size;
-  if (control_block_block_size == 0) {
-    control_block_block_size =
-        control_block_capacity == 0 ? 1u : control_block_capacity;
-  }
-
   device_ = config.device;
   ops_ = config.ops;
-  payload_block_size_ = payload_block_size;
-  payload_growth_chunk_size_ = config.payload_growth_chunk_size;
   key_to_index_.clear();
-  next_index_ = 0;
-
-  core_.payloadPool().configure(
-      GraphPayloadPool::Config{payload_capacity, payload_block_size_});
-  core_.configure(MpsGraphManager::Core::Config{
-      /*control_block_capacity=*/control_block_capacity,
-      /*control_block_block_size=*/control_block_block_size,
-      /*growth_chunk_size=*/config.control_block_growth_chunk_size});
-  core_.setInitialized(true);
+  const GraphPayloadPoolTraits::Request payload_request{};
+  const auto payload_context = makePayloadContext();
+  core_.configure(config.pool, payload_request, payload_context);
 }
 
 void MpsGraphManager::shutdown() {
-  if (!core_.isInitialized()) {
+  if (!core_.isConfigured()) {
     return;
   }
-  core_.checkCanShutdownOrThrow();
   const GraphPayloadPoolTraits::Request payload_request{};
   const auto payload_context = makePayloadContext();
-  core_.payloadPool().shutdown(payload_request, payload_context);
-  core_.shutdownControlBlockPool();
+  core_.shutdown(payload_request, payload_context);
   key_to_index_.clear();
-  next_index_ = 0;
   device_ = nullptr;
   ops_ = nullptr;
 }
 
 MpsGraphManager::GraphLease
 MpsGraphManager::acquire(const GraphKey &key, const CompileFn &compile_fn) {
-  core_.ensureInitialized();
+  core_.ensureConfigured();
   validateKey(key);
   if (!compile_fn) {
     ::orteaf::internal::diagnostics::error::throwError(
@@ -100,45 +50,33 @@ MpsGraphManager::acquire(const GraphKey &key, const CompileFn &compile_fn) {
 
   // Check if already cached
   if (auto it = key_to_index_.find(key); it != key_to_index_.end()) {
-    const auto handle = GraphHandle{
-        static_cast<typename GraphHandle::index_type>(it->second)};
-    auto *payload_ptr = core_.payloadPool().get(handle);
-    if (payload_ptr == nullptr || !core_.payloadPool().isCreated(handle)) {
+    const auto handle =
+        GraphHandle{static_cast<typename GraphHandle::index_type>(it->second)};
+    if (!core_.isAlive(handle)) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
           "MPS graph cache is invalid");
     }
-    return buildLease(handle, payload_ptr);
+    return core_.acquireStrongLease(handle);
   }
 
-  if (next_index_ >= core_.payloadPool().size()) {
-    core_.growPayloadPoolBy(payload_growth_chunk_size_);
-  }
-  if (next_index_ >= core_.payloadPool().size()) {
+  auto handle = core_.reserveUncreatedPayloadOrGrow();
+  if (!handle.isValid()) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::OutOfRange,
         "MPS graph manager has no available slots");
   }
 
-  const auto handle = GraphHandle{
-      static_cast<typename GraphHandle::index_type>(next_index_)};
-  ++next_index_;
   GraphPayloadPoolTraits::Request request{&compile_fn};
   const auto context = makePayloadContext();
-  if (!core_.payloadPool().emplace(handle, request, context)) {
+  if (!core_.emplacePayload(handle, request, context)) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
         "Failed to create MPS graph executable");
   }
 
   key_to_index_.emplace(key, static_cast<std::size_t>(handle.index));
-  auto *payload_ptr = core_.payloadPool().get(handle);
-  if (payload_ptr == nullptr) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-        "MPS graph payload is unavailable");
-  }
-  return buildLease(handle, payload_ptr);
+  return core_.acquireStrongLease(handle);
 }
 
 void MpsGraphManager::validateKey(const GraphKey &key) const {
@@ -158,30 +96,6 @@ void MpsGraphManager::validateKey(const GraphKey &key) const {
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
         "Graph target tensor count must be > 0");
   }
-}
-
-MpsGraphManager::GraphLease
-MpsGraphManager::buildLease(GraphHandle handle,
-                            MpsGraphResource *payload_ptr) {
-  auto cb_ref = core_.acquireControlBlock();
-  auto *cb = cb_ref.payload_ptr;
-  if (cb == nullptr) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-        "MPS graph control block is unavailable");
-  }
-  if (cb->hasPayload()) {
-    if (cb->payloadHandle() != handle) {
-      ::orteaf::internal::diagnostics::error::throwError(
-          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-          "MPS graph control block payload mismatch");
-    }
-  } else if (!cb->tryBindPayload(handle, payload_ptr, &core_.payloadPool())) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-        "MPS graph control block binding failed");
-  }
-  return GraphLease{cb, core_.controlBlockPoolForLease(), cb_ref.handle};
 }
 
 GraphPayloadPoolTraits::Context

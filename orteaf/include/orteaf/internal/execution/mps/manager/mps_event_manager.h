@@ -97,14 +97,12 @@ public:
   using EventType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsEvent_t;
 
-  using Core = ::orteaf::internal::base::PoolManager<
-      MpsEventManagerTraits>;
+  using Core = ::orteaf::internal::base::PoolManager<MpsEventManagerTraits>;
   using ControlBlock = Core::ControlBlock;
   using ControlBlockHandle = Core::ControlBlockHandle;
   using ControlBlockPool = Core::ControlBlockPool;
 
-  using EventLease = ::orteaf::internal::base::StrongLease<
-      ControlBlockHandle, ControlBlock, ControlBlockPool, MpsEventManager>;
+  using EventLease = Core::StrongLeaseType;
 
 private:
   friend EventLease;
@@ -113,12 +111,7 @@ public:
   struct Config {
     DeviceType device{nullptr};
     SlowOps *ops{nullptr};
-    std::size_t payload_capacity{0};
-    std::size_t control_block_capacity{0};
-    std::size_t payload_block_size{0};
-    std::size_t control_block_block_size{1};
-    std::size_t payload_growth_chunk_size{1};
-    std::size_t control_block_growth_chunk_size{1};
+    Core::Config pool{};
   };
 
   MpsEventManager() = default;
@@ -135,13 +128,13 @@ public:
   void release(EventLease &lease) noexcept { lease.release(); }
 
 #if ORTEAF_ENABLE_TEST
-  bool isInitializedForTest() const noexcept { return core_.isInitialized(); }
+  bool isConfiguredForTest() const noexcept { return core_.isConfigured(); }
 
   std::size_t payloadPoolSizeForTest() const noexcept {
-    return core_.payloadPool().size();
+    return core_.payloadPoolSizeForTest();
   }
   std::size_t payloadPoolCapacityForTest() const noexcept {
-    return core_.payloadPool().capacity();
+    return core_.payloadPoolCapacityForTest();
   }
   std::size_t controlBlockPoolSizeForTest() const noexcept {
     return core_.controlBlockPoolSizeForTest();
@@ -153,23 +146,19 @@ public:
     return core_.isAlive(handle);
   }
   std::size_t payloadGrowthChunkSizeForTest() const noexcept {
-    return payload_growth_chunk_size_;
+    return core_.payloadGrowthChunkSize();
   }
   std::size_t controlBlockGrowthChunkSizeForTest() const noexcept {
-    return core_.growthChunkSize();
+    return core_.controlBlockGrowthChunkSize();
   }
 #endif
 
 private:
   EventPayloadPoolTraits::Context makePayloadContext() const noexcept;
-  EventLease buildLease(ControlBlock &cb, EventHandle payload_handle,
-                        ControlBlockHandle cb_handle);
 
   DeviceType device_{nullptr};
   SlowOps *ops_{nullptr};
   Core core_{};
-  std::size_t payload_block_size_{0};
-  std::size_t payload_growth_chunk_size_{1};
 };
 
 } // namespace orteaf::internal::execution::mps::manager

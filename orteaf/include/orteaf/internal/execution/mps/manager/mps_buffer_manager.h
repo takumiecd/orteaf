@@ -38,7 +38,8 @@ using MpsBufferPoolT =
     ::orteaf::internal::execution::allocator::pool::SegregatePool<
         ResourceT,
         ::orteaf::internal::execution::allocator::policies::FastFreePolicy,
-        ::orteaf::internal::execution::allocator::policies::NoLockThreadingPolicy,
+        ::orteaf::internal::execution::allocator::policies::
+            NoLockThreadingPolicy,
         ::orteaf::internal::execution::allocator::policies::
             DirectResourceLargeAllocPolicy<ResourceT>,
         ::orteaf::internal::execution::allocator::policies::
@@ -159,17 +160,10 @@ public:
   using PayloadPool = typename Core::PayloadPool;
 
   // Lease types
-  using StrongBufferLease = ::orteaf::internal::base::StrongLease<
-      ControlBlockHandle, ControlBlock, ControlBlockPool, MpsBufferManagerT>;
-  using WeakBufferLease =
-      ::orteaf::internal::base::WeakLease<ControlBlockHandle, ControlBlock,
-                                          ControlBlockPool, MpsBufferManagerT>;
+  using StrongBufferLease = typename Core::StrongLeaseType;
+  using WeakBufferLease = typename Core::WeakLeaseType;
   // Legacy alias for compatibility
   using BufferLease = StrongBufferLease;
-
-private:
-  friend StrongBufferLease;
-  friend WeakBufferLease;
 
 public:
   // HeapType deduced from Resource::Config
@@ -192,12 +186,7 @@ public:
         usage{::orteaf::internal::execution::mps::platform::wrapper::
                   kMPSDefaultBufferUsage};
     // PoolManager config
-    std::size_t payload_capacity{0};
-    std::size_t control_block_capacity{0};
-    std::size_t payload_block_size{1};
-    std::size_t control_block_block_size{1};
-    std::size_t payload_growth_chunk_size{1};
-    std::size_t control_block_growth_chunk_size{1};
+    Core::Config pool{};
   };
 
   // =========================================================================
@@ -253,37 +242,21 @@ public:
     pool_cfg.freelist.resource = segregate_pool_.resource();
     segregate_pool_.initialize(pool_cfg);
 
-    // Configure PoolManager
-    typename Core::Config core_cfg{};
-    core_cfg.control_block_capacity = config.control_block_capacity;
-    core_cfg.control_block_block_size = config.control_block_block_size;
-    core_cfg.growth_chunk_size = config.control_block_growth_chunk_size;
-    core_.configure(core_cfg);
-
-    // Configure PayloadPool
-    typename PayloadPool::Config payload_cfg{};
-    payload_cfg.size = config.payload_capacity;
-    payload_cfg.block_size = config.payload_block_size;
-    core_.payloadPool().configure(payload_cfg);
-
-    payload_growth_chunk_size_ = config.payload_growth_chunk_size;
-    core_.setInitialized(true);
+    // Configure PoolManager + PayloadPool
+    typename BufferPayloadPoolTraitsT<ResourceT>::Request request{};
+    auto context = makePayloadContext();
+    core_.configure(config.pool, request, context);
   }
 
   void shutdown() {
-    if (!core_.isInitialized()) {
+    if (!core_.isConfigured()) {
       return;
     }
 
-    core_.checkCanShutdownOrThrow();
-
-    // Destroy all payloads
+    // Shutdown PoolManager (includes check and clear for both pools)
     auto context = makePayloadContext();
     typename BufferPayloadPoolTraitsT<ResourceT>::Request request{};
-    core_.payloadPool().shutdown(request, context);
-
-    // Shutdown ControlBlock pool
-    core_.shutdownControlBlockPool();
+    core_.shutdown(request, context);
 
     // Shutdown SegregatePool
     segregate_pool_.~SegregatePool();
@@ -291,7 +264,6 @@ public:
 
     device_ = nullptr;
     heap_ = nullptr;
-    core_.setInitialized(false);
   }
 
   // =========================================================================
@@ -303,7 +275,7 @@ public:
 
   StrongBufferLease acquire(std::size_t size, std::size_t alignment,
                             LaunchParams &params) {
-    core_.ensureInitialized();
+    core_.ensureConfigured();
     if (size == 0) {
       return {};
     }
@@ -311,90 +283,27 @@ public:
     // Get or grow PayloadPool slot
     typename BufferPayloadPoolTraitsT<ResourceT>::Request request{size,
                                                                   alignment};
-    auto context = makePayloadContext(&params);
-    auto payload_ref = core_.reserveUncreatedPayloadOrGrow(
-        payload_growth_chunk_size_, request, context);
-    if (!payload_ref.valid()) {
-      return {};
-    }
-
-    // Create the buffer using emplace
-    if (!core_.payloadPool().emplace(payload_ref.handle, request, context)) {
-      core_.payloadPool().release(payload_ref.handle);
-      return {};
-    }
-
-    // Acquire ControlBlock
-    auto cb_ref = core_.acquireControlBlock();
-    auto *cb = cb_ref.payload_ptr;
-
-    // Bind payload to ControlBlock
-    if (!cb->tryBindPayload(payload_ref.handle, payload_ref.payload_ptr,
-                            &core_.payloadPool())) {
-      // Rollback
-      core_.payloadPool().destroy(payload_ref.handle, request, context);
-      core_.payloadPool().release(payload_ref.handle);
-      core_.releaseControlBlock(cb_ref.handle);
-      return {};
-    }
-
-    return StrongBufferLease{cb, core_.controlBlockPoolForLease(),
-                             cb_ref.handle};
-  }
-
-  // =========================================================================
-  // Acquire (share existing buffer by handle)
-  // =========================================================================
-  StrongBufferLease acquire(BufferHandle handle) {
-    core_.ensureInitialized();
-    if (!core_.isAlive(handle)) {
+    auto context =
+        makePayloadContext(&params); // Build lease for the buffer payload
+    auto payload_handle = core_.acquirePayloadOrGrowAndCreate(request, context);
+    if (!payload_handle.isValid()) {
       ::orteaf::internal::diagnostics::error::throwError(
-          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-          std::string(Traits::Name) + " handle is not alive");
+          ::orteaf::internal::diagnostics::error::OrteafErrc::OutOfRange,
+          "MPS buffer manager has no available slots");
     }
-
-    // Find ControlBlock for this payload handle
-    // For now, create a new ControlBlock for the same payload
-    auto *payload_ptr = core_.payloadPool().get(handle);
-    if (payload_ptr == nullptr) {
-      return {};
-    }
-
-    auto cb_ref = core_.acquireControlBlock();
-    auto *cb = cb_ref.payload_ptr;
-
-    if (!cb->tryBindPayload(handle, payload_ptr, &core_.payloadPool())) {
-      core_.releaseControlBlock(cb_ref.handle);
-      return {};
-    }
-
-    return StrongBufferLease{cb, core_.controlBlockPoolForLease(),
-                             cb_ref.handle};
+    return core_.acquireStrongLease(payload_handle);
   }
-
-  // =========================================================================
-  // Release
-  // =========================================================================
-  void release(StrongBufferLease &lease) noexcept { lease.release(); }
-
-  void release(WeakBufferLease &lease) noexcept { lease.release(); }
-
-  // =========================================================================
-  // Accessors
-  // =========================================================================
-  SegregatePool *pool() { return &segregate_pool_; }
-  const SegregatePool *pool() const { return &segregate_pool_; }
 
 #if ORTEAF_ENABLE_TEST
-  bool isInitializedForTest() const noexcept { return core_.isInitialized(); }
+  bool isConfiguredForTest() const noexcept { return core_.isConfigured(); }
   std::size_t payloadPoolSizeForTest() const noexcept {
-    return core_.payloadPool().size();
+    return core_.payloadPoolSizeForTest();
   }
   std::size_t payloadPoolCapacityForTest() const noexcept {
-    return core_.payloadPool().capacity();
+    return core_.payloadPoolCapacityForTest();
   }
   std::size_t payloadPoolAvailableForTest() const noexcept {
-    return core_.payloadPool().available();
+    return core_.payloadPoolAvailableForTest();
   }
   std::size_t controlBlockPoolSizeForTest() const noexcept {
     return core_.controlBlockPoolSizeForTest();
@@ -406,13 +315,13 @@ public:
     return core_.isAlive(handle);
   }
   std::size_t payloadGrowthChunkSizeForTest() const noexcept {
-    return payload_growth_chunk_size_;
+    return core_.payloadGrowthChunkSize();
   }
   std::size_t controlBlockGrowthChunkSizeForTest() const noexcept {
-    return core_.growthChunkSize();
+    return core_.controlBlockGrowthChunkSize();
   }
   const ControlBlock *controlBlockForTest(ControlBlockHandle handle) const {
-    return core_.controlBlockPoolForLease()->get(handle);
+    return core_.controlBlockForTest(handle);
   }
 #endif
 
@@ -431,7 +340,6 @@ private:
   ::orteaf::internal::base::DeviceHandle device_handle_{};
   HeapType heap_{nullptr};
   LaunchParams default_params_{};
-  std::size_t payload_growth_chunk_size_{1};
   Core core_{};
 };
 

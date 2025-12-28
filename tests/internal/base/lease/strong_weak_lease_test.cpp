@@ -25,14 +25,17 @@ struct DummyPool {
   std::size_t release_calls{0};
 };
 
-using ControlBlock = ::orteaf::internal::base::SharedControlBlock<
-    ControlBlockHandle, int, DummyPool>;
+using ControlBlock =
+    ::orteaf::internal::base::SharedControlBlock<ControlBlockHandle, int,
+                                                 DummyPool>;
 
 struct DummyManager {
-  using StrongLease = ::orteaf::internal::base::StrongLease<
-      ControlBlockHandle, ControlBlock, DummyPool, DummyManager>;
-  using WeakLease = ::orteaf::internal::base::WeakLease<
-      ControlBlockHandle, ControlBlock, DummyPool, DummyManager>;
+  using StrongLease =
+      ::orteaf::internal::base::StrongLease<ControlBlockHandle, ControlBlock,
+                                            DummyPool, DummyManager>;
+  using WeakLease =
+      ::orteaf::internal::base::WeakLease<ControlBlockHandle, ControlBlock,
+                                          DummyPool, DummyManager>;
 
   static StrongLease makeStrong(ControlBlock *control_block, DummyPool *pool,
                                 ControlBlockHandle handle) {
@@ -51,10 +54,10 @@ TEST(StrongLease, CopyIncrementsStrongCount) {
   ControlBlockHandle handle{0, 0};
 
   auto lease = DummyManager::makeStrong(&control_block, &pool, handle);
-  EXPECT_EQ(control_block.count(), 1u);
+  EXPECT_EQ(control_block.strongCount(), 1u);
 
   auto copy = lease;
-  EXPECT_EQ(control_block.count(), 2u);
+  EXPECT_EQ(control_block.strongCount(), 2u);
 }
 
 TEST(WeakLease, CopyIncrementsWeakCount) {
@@ -77,11 +80,11 @@ TEST(WeakLease, LockPromotesToStrongLease) {
   auto strong = DummyManager::makeStrong(&control_block, &pool, handle);
   auto weak = DummyManager::makeWeak(&control_block, &pool, handle);
 
-  EXPECT_EQ(control_block.count(), 1u);
+  EXPECT_EQ(control_block.strongCount(), 1u);
 
   auto promoted = weak.lock();
   EXPECT_TRUE(promoted);
-  EXPECT_EQ(control_block.count(), 2u);
+  EXPECT_EQ(control_block.strongCount(), 2u);
 }
 
 TEST(WeakLease, LockFailsWhenNoStrongRefs) {
@@ -90,7 +93,7 @@ TEST(WeakLease, LockFailsWhenNoStrongRefs) {
   ControlBlockHandle handle{0, 0};
 
   auto weak = DummyManager::makeWeak(&control_block, &pool, handle);
-  EXPECT_EQ(control_block.count(), 0u);
+  EXPECT_EQ(control_block.strongCount(), 0u);
 
   auto promoted = weak.lock();
   EXPECT_FALSE(promoted);
@@ -104,7 +107,7 @@ TEST(StrongWeakLease, ReturnControlBlockToPoolWhenCountsZero) {
   {
     auto strong = DummyManager::makeStrong(&control_block, &pool, handle);
     auto weak = DummyManager::makeWeak(&control_block, &pool, handle);
-    EXPECT_EQ(control_block.count(), 1u);
+    EXPECT_EQ(control_block.strongCount(), 1u);
     EXPECT_EQ(control_block.weakCount(), 1u);
   }
 
@@ -118,11 +121,11 @@ TEST(WeakLease, ConstructFromStrongLease) {
   ControlBlockHandle handle{0, 0};
 
   auto strong = DummyManager::makeStrong(&control_block, &pool, handle);
-  EXPECT_EQ(control_block.count(), 1u);
+  EXPECT_EQ(control_block.strongCount(), 1u);
   EXPECT_EQ(control_block.weakCount(), 0u);
 
   DummyManager::WeakLease weak(strong);
-  EXPECT_EQ(control_block.count(), 1u);
+  EXPECT_EQ(control_block.strongCount(), 1u);
   EXPECT_EQ(control_block.weakCount(), 1u);
   EXPECT_TRUE(weak);
 }
@@ -145,7 +148,7 @@ TEST(WeakLease, ConstructedFromStrongCanPromote) {
 
   auto promoted = weak.lock();
   EXPECT_TRUE(promoted);
-  EXPECT_EQ(control_block.count(), 2u);
+  EXPECT_EQ(control_block.strongCount(), 2u);
 }
 
 } // namespace

@@ -99,52 +99,38 @@ void MpsHeapManager::configure(const Config &config) {
   library_manager_ = config.library_manager;
   ops_ = config.ops;
   buffer_config_ = config.buffer_config;
-  payload_block_size_ = config.payload_block_size;
-  payload_growth_chunk_size_ = config.payload_growth_chunk_size;
   key_to_index_.clear();
 
-  // Configure core
-  typename Core::Config core_cfg{};
-  core_cfg.control_block_capacity = config.control_block_capacity;
-  core_cfg.control_block_block_size = config.control_block_block_size;
-  core_cfg.growth_chunk_size = config.control_block_growth_chunk_size;
-  core_.configure(core_cfg);
+  // Configure core + payload pool
+  HeapPayloadPoolTraits::Request request{};
+  auto context = makePayloadContext();
+  core_.configure(config.pool, request, context);
 
-  // Configure payload pool
-  typename HeapPayloadPool::Config payload_cfg{};
-  payload_cfg.size = config.payload_capacity;
-  payload_cfg.block_size = config.payload_block_size;
-  core_.payloadPool().configure(payload_cfg);
-
-  core_.setInitialized(true);
 }
 
 void MpsHeapManager::shutdown() {
-  if (!core_.isInitialized()) {
+  if (!core_.isConfigured()) {
     return;
   }
 
-  core_.checkCanShutdownOrThrow();
 
   // Destroy all payloads
   auto context = makePayloadContext();
   HeapPayloadPoolTraits::Request request{};
-  core_.payloadPool().shutdown(request, context);
+  core_.shutdown(request, context);
 
   // Shutdown control block pool
-  core_.shutdownControlBlockPool();
 
   key_to_index_.clear();
   device_ = nullptr;
   device_handle_ = {};
   library_manager_ = nullptr;
   ops_ = nullptr;
-  core_.setInitialized(false);
 }
 
 MpsHeapManager::HeapLease
 MpsHeapManager::acquire(const HeapDescriptorKey &key) {
-  core_.ensureInitialized();
+  core_.ensureConfigured();
   validateKey(key);
 
   // Check if already cached
@@ -152,41 +138,31 @@ MpsHeapManager::acquire(const HeapDescriptorKey &key) {
     const auto index = it->second;
     const HeapHandle handle{
         static_cast<typename HeapHandle::index_type>(index)};
-    auto *payload_ptr = core_.payloadPool().get(handle);
-    if (payload_ptr == nullptr || !core_.payloadPool().isCreated(handle)) {
+    if (!core_.isAlive(handle)) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
           "Cached heap index is invalid");
     }
-    return buildLease(handle, payload_ptr);
+    return core_.acquireWeakLease(handle);
   }
 
   // Reserve an uncreated slot and create the heap
   HeapPayloadPoolTraits::Request request{key};
   auto context = makePayloadContext();
-  auto payload_ref = core_.reserveUncreatedPayloadOrGrow(
-      payload_growth_chunk_size_, request, context);
-  if (!payload_ref.valid()) {
+  auto handle = core_.reserveUncreatedPayloadOrGrow();
+  if (!handle.isValid()) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::OutOfRange,
         "Heap manager has no available slots");
   }
-
-  const auto handle = payload_ref.handle;
-  if (!core_.payloadPool().emplace(handle, request, context)) {
+  if (!core_.emplacePayload(handle, request, context)) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
         "Failed to create heap");
   }
 
   key_to_index_.emplace(key, static_cast<std::size_t>(handle.index));
-  auto *payload_ptr = core_.payloadPool().get(handle);
-  if (payload_ptr == nullptr) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-        "Heap payload is unavailable");
-  }
-  return buildLease(handle, payload_ptr);
+  return core_.acquireWeakLease(handle);
 }
 
 MpsHeapManager::BufferManager *
@@ -194,14 +170,13 @@ MpsHeapManager::bufferManager(const HeapLease &lease) {
   if (!lease) {
     return nullptr;
   }
-  auto handle = lease.payloadHandle();
-  auto *payload = core_.payloadPool().get(handle);
+  auto *payload = const_cast<MpsHeapResource *>(lease.payloadPtr());
   return payload ? &payload->buffer_manager : nullptr;
 }
 
 MpsHeapManager::BufferManager *
 MpsHeapManager::bufferManager(const HeapDescriptorKey &key) {
-  core_.ensureInitialized();
+  core_.ensureConfigured();
   validateKey(key);
 
   // Check if already cached
@@ -209,7 +184,8 @@ MpsHeapManager::bufferManager(const HeapDescriptorKey &key) {
     const auto index = it->second;
     const HeapHandle handle{
         static_cast<typename HeapHandle::index_type>(index)};
-    auto *payload = core_.payloadPool().get(handle);
+    auto lease = core_.acquireWeakLease(handle);
+    auto *payload = lease.payloadPtr();
     return payload ? &payload->buffer_manager : nullptr;
   }
 
@@ -218,8 +194,7 @@ MpsHeapManager::bufferManager(const HeapDescriptorKey &key) {
   if (!lease) {
     return nullptr;
   }
-  auto handle = lease.payloadHandle();
-  auto *payload = core_.payloadPool().get(handle);
+  auto *payload = lease.payloadPtr();
   return payload ? &payload->buffer_manager : nullptr;
 }
 
@@ -229,23 +204,6 @@ void MpsHeapManager::validateKey(const HeapDescriptorKey &key) const {
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
         "Heap size must be > 0");
   }
-}
-
-MpsHeapManager::HeapLease
-MpsHeapManager::buildLease(HeapHandle handle, MpsHeapResource *payload_ptr) {
-  // Acquire control block
-  auto cb_ref = core_.acquireControlBlock();
-  auto *cb = cb_ref.payload_ptr;
-
-  // Bind payload to control block
-  if (!cb->tryBindPayload(handle, payload_ptr, &core_.payloadPool())) {
-    core_.releaseControlBlock(cb_ref.handle);
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-        "Failed to bind heap payload to control block");
-  }
-
-  return HeapLease{cb, core_.controlBlockPoolForLease(), cb_ref.handle};
 }
 
 HeapPayloadPoolTraits::Context

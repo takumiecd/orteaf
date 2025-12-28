@@ -34,11 +34,11 @@ struct HeapDescriptorKey {
       cpu_cache_mode{::orteaf::internal::execution::mps::platform::wrapper::
                          kMPSCPUCacheModeDefaultCache};
   ::orteaf::internal::execution::mps::platform::wrapper::MpsHazardTrackingMode_t
-      hazard_tracking_mode{::orteaf::internal::execution::mps::platform::wrapper::
-                               kMPSHazardTrackingModeDefault};
-  ::orteaf::internal::execution::mps::platform::wrapper::MpsHeapType_t heap_type{
-      ::orteaf::internal::execution::mps::platform::wrapper::
-          kMPSHeapTypeAutomatic};
+      hazard_tracking_mode{::orteaf::internal::execution::mps::platform::
+                               wrapper::kMPSHazardTrackingModeDefault};
+  ::orteaf::internal::execution::mps::platform::wrapper::MpsHeapType_t
+      heap_type{::orteaf::internal::execution::mps::platform::wrapper::
+                    kMPSHeapTypeAutomatic};
 
   static HeapDescriptorKey Sized(std::size_t size) {
     HeapDescriptorKey key{};
@@ -71,7 +71,8 @@ struct HeapDescriptorKeyHasher {
 // =============================================================================
 
 struct MpsHeapResource {
-  ::orteaf::internal::execution::mps::platform::wrapper::MpsHeap_t heap{nullptr};
+  ::orteaf::internal::execution::mps::platform::wrapper::MpsHeap_t heap{
+      nullptr};
   MpsBufferManagerT<
       ::orteaf::internal::execution::allocator::resource::mps::MpsResource>
       buffer_manager{};
@@ -108,8 +109,8 @@ struct HeapPayloadPoolTraits {
                       const Context &context);
 };
 
-using HeapPayloadPool = ::orteaf::internal::base::pool::FixedSlotStore<
-    HeapPayloadPoolTraits>;
+using HeapPayloadPool =
+    ::orteaf::internal::base::pool::FixedSlotStore<HeapPayloadPoolTraits>;
 
 // =============================================================================
 // ControlBlock type using WeakControlBlock
@@ -135,8 +136,7 @@ struct MpsHeapManagerTraits {
 // =============================================================================
 
 class MpsHeapManager {
-  using Core = ::orteaf::internal::base::PoolManager<
-      MpsHeapManagerTraits>;
+  using Core = ::orteaf::internal::base::PoolManager<MpsHeapManagerTraits>;
 
 public:
   using SlowOps = ::orteaf::internal::execution::mps::platform::MpsSlowOps;
@@ -149,8 +149,7 @@ public:
       ::orteaf::internal::execution::allocator::resource::mps::MpsResource>;
   using ControlBlockHandle = Core::ControlBlockHandle;
   using ControlBlockPool = Core::ControlBlockPool;
-  using HeapLease = ::orteaf::internal::base::WeakLease<
-      ControlBlockHandle, HeapControlBlock, ControlBlockPool, MpsHeapManager>;
+  using HeapLease = Core::WeakLeaseType;
 
   MpsHeapManager() = default;
   MpsHeapManager(const MpsHeapManager &) = delete;
@@ -165,12 +164,7 @@ public:
     MpsLibraryManager *library_manager{nullptr};
     SlowOps *ops{nullptr};
     BufferManager::Config buffer_config{};
-    std::size_t payload_capacity{0};
-    std::size_t control_block_capacity{0};
-    std::size_t payload_block_size{0};
-    std::size_t control_block_block_size{1};
-    std::size_t payload_growth_chunk_size{1};
-    std::size_t control_block_growth_chunk_size{1};
+    Core::Config pool{};
   };
 
   void configure(const Config &config);
@@ -184,12 +178,12 @@ public:
   BufferManager *bufferManager(const HeapDescriptorKey &key);
 
 #if ORTEAF_ENABLE_TEST
-  bool isInitializedForTest() const noexcept { return core_.isInitialized(); }
+  bool isConfiguredForTest() const noexcept { return core_.isConfigured(); }
   std::size_t payloadPoolSizeForTest() const noexcept {
-    return core_.payloadPool().size();
+    return core_.payloadPoolSizeForTest();
   }
   std::size_t payloadPoolCapacityForTest() const noexcept {
-    return core_.payloadPool().capacity();
+    return core_.payloadPoolCapacityForTest();
   }
   std::size_t controlBlockPoolSizeForTest() const noexcept {
     return core_.controlBlockPoolSizeForTest();
@@ -201,16 +195,16 @@ public:
     return core_.isAlive(handle);
   }
   std::size_t payloadGrowthChunkSizeForTest() const noexcept {
-    return payload_growth_chunk_size_;
+    return core_.payloadGrowthChunkSize();
   }
   std::size_t controlBlockGrowthChunkSizeForTest() const noexcept {
-    return core_.growthChunkSize();
+    return core_.controlBlockGrowthChunkSize();
   }
   bool payloadCreatedForTest(HeapHandle handle) const noexcept {
-    return core_.payloadPool().isCreated(handle);
+    return core_.payloadCreatedForTest(handle);
   }
   const MpsHeapResource *payloadForTest(HeapHandle handle) const noexcept {
-    return core_.payloadPool().get(handle);
+    return core_.payloadForTest(handle);
   }
 #endif
 
@@ -218,7 +212,6 @@ private:
   friend HeapLease;
 
   void validateKey(const HeapDescriptorKey &key) const;
-  HeapLease buildLease(HeapHandle handle, MpsHeapResource *payload_ptr);
   HeapPayloadPoolTraits::Context makePayloadContext() const noexcept;
   HeapType createHeap(const HeapDescriptorKey &key);
 
@@ -229,8 +222,6 @@ private:
   MpsLibraryManager *library_manager_{nullptr};
   SlowOps *ops_{nullptr};
   BufferManager::Config buffer_config_{};
-  std::size_t payload_block_size_{0};
-  std::size_t payload_growth_chunk_size_{1};
   Core core_{};
 };
 

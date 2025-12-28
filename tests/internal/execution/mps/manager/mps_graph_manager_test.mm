@@ -27,6 +27,18 @@ mps_wrapper::MpsGraphExecutable_t makeExecutable(std::uintptr_t value) {
   return reinterpret_cast<mps_wrapper::MpsGraphExecutable_t>(value);
 }
 
+template <typename PoolConfig>
+void setPoolBlockSizes(PoolConfig &pool) {
+  if (pool.payload_block_size == 0) {
+    pool.payload_block_size =
+        pool.payload_capacity == 0 ? 1u : pool.payload_capacity;
+  }
+  if (pool.control_block_block_size == 0) {
+    pool.control_block_block_size =
+        pool.control_block_capacity == 0 ? 1u : pool.control_block_capacity;
+  }
+}
+
 mps_wrapper::MpsGraphTensor_t makeTensor(std::uintptr_t value) {
   return reinterpret_cast<mps_wrapper::MpsGraphTensor_t>(value);
 }
@@ -85,8 +97,9 @@ TEST_F(MpsGraphManagerTest, AcquireCachesExecutableForSameKey) {
   mps_rt::MpsGraphManager::Config config{};
   config.device = device_;
   config.ops = &mock_;
-  config.payload_capacity = 1;
-  config.control_block_capacity = 1;
+  config.pool.payload_capacity = 1;
+  config.pool.control_block_capacity = 1;
+  setPoolBlockSizes(config.pool);
   manager_.configure(config);
   mps_rt::GraphKey key = mps_rt::GraphKey::Named("g-cache");
   key.shape = {1, 2, 3};
@@ -147,8 +160,9 @@ TEST_F(MpsGraphManagerTest, DifferentKeyShapeTriggersNewCompile) {
   mps_rt::MpsGraphManager::Config config{};
   config.device = device_;
   config.ops = &mock_;
-  config.payload_capacity = 2;
-  config.control_block_capacity = 2;
+  config.pool.payload_capacity = 2;
+  config.pool.control_block_capacity = 2;
+  setPoolBlockSizes(config.pool);
   manager_.configure(config);
 
   auto compile_fn = [&](mps_wrapper::MpsGraph_t g, mps_wrapper::MpsDevice_t dev,
@@ -190,8 +204,9 @@ TEST_F(MpsGraphManagerTest, InvalidKeyRejected) {
   mps_rt::MpsGraphManager::Config config{};
   config.device = device_;
   config.ops = &mock_;
-  config.payload_capacity = 1;
-  config.control_block_capacity = 1;
+  config.pool.payload_capacity = 1;
+  config.pool.control_block_capacity = 1;
+  setPoolBlockSizes(config.pool);
   manager_.configure(config);
   mps_rt::GraphKey key = mps_rt::GraphKey::Named("");
   key.data_type = mps_wrapper::MpsGraphDataType::kFloat32;
@@ -218,8 +233,9 @@ TEST_F(MpsGraphManagerTest, NullExecutableFromCompileThrowsAndCleansUp) {
   mps_rt::MpsGraphManager::Config config{};
   config.device = device_;
   config.ops = &mock_;
-  config.payload_capacity = 1;
-  config.control_block_capacity = 1;
+  config.pool.payload_capacity = 1;
+  config.pool.control_block_capacity = 1;
+  setPoolBlockSizes(config.pool);
   manager_.configure(config);
   mps_rt::GraphKey key = mps_rt::GraphKey::Named("null-exe");
   key.data_type = mps_wrapper::MpsGraphDataType::kFloat32;

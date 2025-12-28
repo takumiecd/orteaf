@@ -36,28 +36,7 @@ public:
   using Request = typename Traits::Request;
   using Context = typename Traits::Context;
 
-  struct Config {
-    std::size_t size{0};
-    std::size_t block_size{0};
-  };
-
-  /**
-   * @brief Lightweight handle+pointer pair returned by acquisition calls.
-   *
-   * SlotRef is a non-owning view. It is only valid if the underlying handle is
-   * valid and the payload is created.
-   */
-  struct SlotRef {
-    Handle handle{Handle::invalid()};
-    Payload *payload_ptr{nullptr};
-
-    /**
-     * @brief Returns true if the handle is valid and the pointer is non-null.
-     */
-    bool valid() const noexcept {
-      return handle.isValid() && payload_ptr != nullptr;
-    }
-  };
+  // SlotRef removed - use Handle and get(handle) instead
 
   FixedSlotStore() = default;
   FixedSlotStore(const FixedSlotStore &) = delete;
@@ -67,17 +46,15 @@ public:
   ~FixedSlotStore() = default;
 
   /**
-   * @brief Applies configuration to the store, growing storage if needed.
+   * @brief Sets the payload block size, rebuilding storage if needed.
    *
-   * This method does not reset existing state. Call shutdown() first when
-   * reinitialization is required. Configuration changes are restricted to
-   * size growth and a fixed block size.
-   *
-   * @param config Configuration containing size and block size.
-   * @return The previous size before applying the configuration.
-   * @throws OrteafErrc::InvalidArgument if size exceeds handle range.
+   * @param block_size New block size (must be > 0).
+   * @return The previous block size.
+   * @throws OrteafErrc::InvalidArgument if block_size is 0.
    */
-  std::size_t configure(const Config &config) { return applyConfig(config); }
+  std::size_t setBlockSize(std::size_t block_size) {
+    return applyBlockSize(block_size);
+  }
 
   /**
    * @brief Returns the number of slots in the store.
@@ -91,6 +68,10 @@ public:
    * @brief Returns the payload block size in use.
    */
   std::size_t blockSize() const noexcept { return payloads_.blockSize(); }
+  /**
+   * @brief Returns true if the store has no slots.
+   */
+  bool empty() const noexcept { return payloads_.empty(); }
 
   /**
    * @brief Reserves storage for at least new_capacity slots.
@@ -110,13 +91,13 @@ public:
    *
    * This method iterates over all slots and calls Traits::destroy for any
    * slot marked as created before clearing internal storage. Callers should
-   * verify canShutdown at the manager layer before calling this method.
+   * verify canTeardown at the manager layer before calling this method.
    *
    * @param request Request details forwarded to Traits::destroy.
    * @param context Context details forwarded to Traits::destroy.
    */
-  void shutdown(const Request &request = {},
-                const Context &context = {}) noexcept {
+  void clear(const Request &request = {},
+             const Context &context = {}) noexcept {
     // Destroy all created payloads before clearing storage
     for (std::size_t idx = 0; idx < size(); ++idx) {
       if (created_[idx] != 0) {
@@ -177,19 +158,17 @@ public:
    * This method searches for the first slot that is created and returns a
    * reference to it.
    *
-   * @param request Request details (unused for acquisition search).
-   * @param context Context details (unused for acquisition search).
-   * @return SlotRef with a valid handle and payload pointer.
+   * @return Handle of an available created slot.
    * @throws OrteafErrc::OutOfRange if no created slots are available.
    */
-  SlotRef acquireCreated(const Request &request, const Context &context) {
-    SlotRef ref = tryAcquireCreated(request, context);
-    if (!ref.valid()) {
+  Handle acquireCreated() {
+    Handle handle = tryAcquireCreated();
+    if (!handle.isValid()) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::OutOfRange,
           "FixedSlotStore slot is not available");
     }
-    return ref;
+    return handle;
   }
 
   /**
@@ -198,36 +177,32 @@ public:
    * Returns the first created slot (index 0) if any slots have been created.
    * O(1) complexity.
    *
-   * @return SlotRef with invalid handle and null pointer if not available.
+   * @return Valid Handle if successful, invalid Handle otherwise.
    */
-  SlotRef tryAcquireCreated(const Request &, const Context &) noexcept {
+  Handle tryAcquireCreated() noexcept {
     if (next_uncreated_index_ == 0) {
-      return SlotRef{Handle::invalid(), nullptr};
+      return Handle::invalid();
     }
-    // Verify the first slot is actually created (safety check)
     if (created_[0] == 0) {
-      return SlotRef{Handle::invalid(), nullptr};
+      return Handle::invalid();
     }
-    Handle handle = makeHandle(0);
-    return SlotRef{handle, &payloads_[0]};
+    return makeHandle(0);
   }
 
   /**
    * @brief Reserves an uncreated slot by scanning the store.
    *
-   * @param request Request details (unused for reservation search).
-   * @param context Context details (unused for reservation search).
-   * @return SlotRef with a valid handle and payload pointer.
+   * @return Handle of an available uncreated slot.
    * @throws OrteafErrc::OutOfRange if no uncreated slots are available.
    */
-  SlotRef reserveUncreated(const Request &request, const Context &context) {
-    SlotRef ref = tryReserveUncreated(request, context);
-    if (!ref.valid()) {
+  Handle reserveUncreated() {
+    Handle handle = tryReserveUncreated();
+    if (!handle.isValid()) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::OutOfRange,
           "FixedSlotStore slot is not available");
     }
-    return ref;
+    return handle;
   }
 
   /**
@@ -236,18 +211,16 @@ public:
    * Returns the next uncreated slot at next_uncreated_index_.
    * O(1) complexity.
    *
-   * @return SlotRef with invalid handle and null pointer if none available.
+   * @return Valid Handle if successful, invalid Handle otherwise.
    */
-  SlotRef tryReserveUncreated(const Request &, const Context &) noexcept {
+  Handle tryReserveUncreated() noexcept {
     if (next_uncreated_index_ >= size()) {
-      return SlotRef{Handle::invalid(), nullptr};
+      return Handle::invalid();
     }
-    // Verify the slot is actually uncreated (safety check)
     if (created_[next_uncreated_index_] != 0) {
-      return SlotRef{Handle::invalid(), nullptr};
+      return Handle::invalid();
     }
-    Handle handle = makeHandle(static_cast<index_type>(next_uncreated_index_));
-    return SlotRef{handle, &payloads_[next_uncreated_index_]};
+    return makeHandle(static_cast<index_type>(next_uncreated_index_));
   }
 
   /**
@@ -480,24 +453,17 @@ private:
     return Handle{idx};
   }
 
-  std::size_t applyConfig(const Config &config) {
-    const std::size_t desired_size = config.size;
-    if (desired_size > static_cast<std::size_t>(Handle::invalid_index())) {
+  std::size_t applyBlockSize(std::size_t block_size) {
+    if (block_size == 0) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-          "FixedSlotStore size exceeds handle range");
+          "FixedSlotStore block size must be > 0");
     }
-    const std::size_t desired_block_size = config.block_size;
-    if (desired_block_size == 0) {
-      if (desired_size != 0 && payloads_.blockSize() == 0) {
-        ::orteaf::internal::diagnostics::error::throwError(
-            ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-            "FixedSlotStore requires non-zero block size when size > 0");
-      }
-    } else if (payloads_.blockSize() != desired_block_size) {
-      payloads_.resizeBlocks(desired_block_size);
+    const std::size_t old_block_size = payloads_.blockSize();
+    if (old_block_size != block_size) {
+      payloads_.resizeBlocks(block_size);
     }
-    return resizeStorage(desired_size);
+    return old_block_size;
   }
 
   void reserveStorage(std::size_t new_capacity) {

@@ -70,7 +70,7 @@ public:
    * strong and weak reference counts are zero.
    */
   bool canBindPayload() const noexcept {
-    return payload_ptr_ == nullptr && count() == 0 && weakCount() == 0;
+    return payload_ptr_ == nullptr && strongCount() == 0 && weakCount() == 0;
   }
 
   /**
@@ -118,7 +118,7 @@ public:
   /**
    * @brief Increments the strong reference count.
    */
-  void acquire() noexcept {
+  void acquireStrong() noexcept {
     strong_count_.fetch_add(1, std::memory_order_relaxed);
   }
 
@@ -130,7 +130,7 @@ public:
    *
    * @return True when this call drops the count from 1 to 0.
    */
-  bool release() noexcept {
+  bool releaseStrong() noexcept {
     auto current = strong_count_.load(std::memory_order_acquire);
     while (current > 0) {
       if (strong_count_.compare_exchange_weak(current, current - 1,
@@ -149,7 +149,7 @@ public:
   /**
    * @brief Returns the current strong reference count.
    */
-  std::uint32_t count() const noexcept {
+  std::uint32_t strongCount() const noexcept {
     return strong_count_.load(std::memory_order_acquire);
   }
 
@@ -197,7 +197,7 @@ public:
    * the CAS loop. This does not validate payload creation; that is managed by
    * higher-level systems.
    */
-  bool tryPromote() noexcept {
+  bool tryPromoteWeakToStrong() noexcept {
     std::uint32_t current = strong_count_.load(std::memory_order_acquire);
     while (current > 0) {
       if (strong_count_.compare_exchange_weak(current, current + 1,
@@ -214,13 +214,15 @@ public:
    *
    * For SharedControlBlock, this is equivalent to strong count == 0.
    */
-  bool canTeardown() const noexcept { return count() == 0; }
+  bool canTeardown() const noexcept { return strongCount() == 0; }
   /**
    * @brief Returns true if the control block can be safely shutdown.
    *
    * Requires both strong and weak counts to be zero.
    */
-  bool canShutdown() const noexcept { return count() == 0 && weakCount() == 0; }
+  bool canShutdown() const noexcept {
+    return strongCount() == 0 && weakCount() == 0;
+  }
 
 private:
   /**

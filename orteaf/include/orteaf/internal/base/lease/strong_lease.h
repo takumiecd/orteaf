@@ -212,15 +212,15 @@ public:
    * @brief Get the strong reference count from control block.
    * @return The strong reference count, or 0 if invalid.
    *
-   * Only available if ControlBlockT has a `count()` method.
+   * Only available if ControlBlockT has a `strongCount()` method.
    * Useful for testing and debugging reference counting behavior.
    */
   std::uint32_t count() const noexcept
     requires requires(const ControlBlockT *cb) {
-      { cb->count() } -> std::convertible_to<std::uint32_t>;
+      { cb->strongCount() } -> std::convertible_to<std::uint32_t>;
     }
   {
-    return control_block_ ? control_block_->count() : 0;
+    return control_block_ ? control_block_->strongCount() : 0;
   }
 
   /**
@@ -248,7 +248,7 @@ public:
     if (!control_block_) {
       return;
     }
-    const bool released = control_block_->release();
+    const bool released = control_block_->releaseStrong();
     if (released && pool_ != nullptr && control_block_->canShutdown()) {
       pool_->release(handle_);
     }
@@ -272,7 +272,7 @@ private:
   StrongLease(ControlBlockT *control_block, PoolT *pool, HandleT handle)
       : control_block_(control_block), pool_(pool), handle_(std::move(handle)) {
     if (control_block_) {
-      control_block_->acquire();
+      control_block_->acquireStrong();
     }
   }
 
@@ -299,7 +299,7 @@ private:
       control_block_ = other.control_block_;
       pool_ = other.pool_;
       handle_ = other.handle_;
-      control_block_->acquire();
+      control_block_->acquireStrong();
     }
   }
 

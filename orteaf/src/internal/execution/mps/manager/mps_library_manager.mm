@@ -18,70 +18,26 @@ void MpsLibraryManager::configure(const Config &config) {
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
         "MPS library manager requires valid ops");
   }
-  const std::size_t payload_capacity =
-      config.payload_capacity != 0 ? config.payload_capacity : 0u;
-  const std::size_t control_block_capacity =
-      config.control_block_capacity != 0 ? config.control_block_capacity
-                                                 : payload_capacity;
-  if (payload_capacity >
-      static_cast<std::size_t>(LibraryHandle::invalid_index())) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-        "MPS library manager capacity exceeds maximum handle range");
-  }
-  if (control_block_capacity >
-      static_cast<std::size_t>(Core::ControlBlockHandle::invalid_index())) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-        "MPS library manager control block capacity exceeds maximum handle range");
-  }
-  if (config.payload_growth_chunk_size == 0) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-        "MPS library manager requires non-zero payload growth chunk size");
-  }
-  if (config.control_block_growth_chunk_size == 0) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-        "MPS library manager requires non-zero control block growth chunk size");
-  }
-
-  std::size_t payload_block_size = config.payload_block_size;
-  if (payload_block_size == 0) {
-    payload_block_size = payload_capacity == 0 ? 1u : payload_capacity;
-  }
-  std::size_t control_block_block_size = config.control_block_block_size;
-  if (control_block_block_size == 0) {
-    control_block_block_size =
-        control_block_capacity == 0 ? 1u : control_block_capacity;
-  }
-
   device_ = config.device;
   ops_ = config.ops;
   pipeline_config_ = config.pipeline_config;
-  payload_block_size_ = payload_block_size;
-  payload_growth_chunk_size_ = config.payload_growth_chunk_size;
+  // payload block size managed by core_
+  // payload growth chunk size configured via core_
   key_to_index_.clear();
 
-  core_.payloadPool().configure(
-      LibraryPayloadPool::Config{payload_capacity, payload_block_size_});
-  core_.configure(MpsLibraryManager::Core::Config{
-      /*control_block_capacity=*/control_block_capacity,
-      /*control_block_block_size=*/control_block_block_size,
-      /*growth_chunk_size=*/config.control_block_growth_chunk_size});
-  core_.setInitialized(true);
+  const LibraryPayloadPoolTraits::Request payload_request{};
+  const auto payload_context = makePayloadContext();
+  core_.configure(config.pool, payload_request, payload_context);
 }
 
 void MpsLibraryManager::shutdown() {
-  if (!core_.isInitialized()) {
+  if (!core_.isConfigured()) {
     return;
   }
 
-  core_.checkCanShutdownOrThrow();
   const LibraryPayloadPoolTraits::Request payload_request{};
   const auto payload_context = makePayloadContext();
-  core_.payloadPool().shutdown(payload_request, payload_context);
-  core_.shutdownControlBlockPool();
+  core_.shutdown(payload_request, payload_context);
 
   key_to_index_.clear();
   device_ = nullptr;
@@ -90,66 +46,56 @@ void MpsLibraryManager::shutdown() {
 
 MpsLibraryManager::LibraryLease
 MpsLibraryManager::acquire(const LibraryKey &key) {
-  core_.ensureInitialized();
+  core_.ensureConfigured();
   validateKey(key);
 
   // Check cache first
   if (auto it = key_to_index_.find(key); it != key_to_index_.end()) {
     const auto handle = LibraryHandle{
         static_cast<typename LibraryHandle::index_type>(it->second)};
-    auto *payload_ptr =
-        const_cast<MpsLibraryResource *>(core_.payloadPool().get(handle));
-    if (payload_ptr == nullptr || !core_.payloadPool().isCreated(handle)) {
+    if (!core_.isAlive(handle)) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
           "MPS library cache is invalid");
     }
-    return buildLease(handle, payload_ptr);
+    return core_.acquireWeakLease(handle);
   }
 
   // Reserve an uncreated slot and create the library
   LibraryPayloadPoolTraits::Request request{key};
   const auto context = makePayloadContext();
-  auto payload_ref = core_.reserveUncreatedPayloadOrGrow(
-      payload_growth_chunk_size_, request, context);
-  if (!payload_ref.valid()) {
+  auto handle = core_.reserveUncreatedPayloadOrGrow();
+  if (!handle.isValid()) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::OutOfRange,
         "MPS library manager has no available slots");
   }
-  const auto handle = payload_ref.handle;
-  if (!core_.payloadPool().emplace(handle, request, context)) {
+  if (!core_.emplacePayload(handle, request, context)) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
         "Failed to create MPS library");
   }
 
   key_to_index_.emplace(key, static_cast<std::size_t>(handle.index));
-  auto *payload_ptr =
-      const_cast<MpsLibraryResource *>(core_.payloadPool().get(handle));
-  if (payload_ptr == nullptr) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-        "MPS library payload is unavailable");
-  }
-  return buildLease(handle, payload_ptr);
+  return core_.acquireWeakLease(handle);
 }
 
 MpsLibraryManager::LibraryLease
 MpsLibraryManager::acquire(LibraryHandle handle) {
-  core_.ensureInitialized();
+  core_.ensureConfigured();
   if (!handle.isValid()) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
         "Invalid library handle");
   }
-  auto *payload_ptr = core_.payloadPool().get(handle);
+  auto lease = core_.acquireWeakLease(handle);
+  const auto *payload_ptr = lease.payloadPtr();
   if (payload_ptr == nullptr || payload_ptr->library == nullptr) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
         "Library handle does not exist");
   }
-  return buildLease(handle, payload_ptr);
+  return lease;
 }
 
 void MpsLibraryManager::validateKey(const LibraryKey &key) const {
@@ -158,30 +104,6 @@ void MpsLibraryManager::validateKey(const LibraryKey &key) const {
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
         "Library identifier cannot be empty");
   }
-}
-
-MpsLibraryManager::LibraryLease
-MpsLibraryManager::buildLease(LibraryHandle handle,
-                              MpsLibraryResource *payload_ptr) {
-  auto cb_ref = core_.acquireControlBlock();
-  auto *cb = cb_ref.payload_ptr;
-  if (cb == nullptr) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-        "MPS library control block is unavailable");
-  }
-  if (cb->hasPayload()) {
-    if (cb->payloadHandle() != handle) {
-      ::orteaf::internal::diagnostics::error::throwError(
-          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-          "MPS library control block payload mismatch");
-    }
-  } else if (!cb->tryBindPayload(handle, payload_ptr, &core_.payloadPool())) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-        "MPS library control block binding failed");
-  }
-  return LibraryLease{cb, core_.controlBlockPoolForLease(), cb_ref.handle};
 }
 
 LibraryPayloadPoolTraits::Context

@@ -145,11 +145,12 @@ public:
   }
 
   /**
-   * @brief Returns true if the control block can be torn down.
+   * @brief Returns true if the payload can be torn down.
    *
-   * For WeakControlBlock, this is equivalent to weak count == 0.
+   * For WeakControlBlock, this always returns true because the control block
+   * does not own the payload - its lifetime is managed externally.
    */
-  bool canTeardown() const noexcept { return weakCount() == 0; }
+  bool canTeardown() const noexcept { return true; }
   /**
    * @brief Returns true if the control block can be safely shutdown.
    *

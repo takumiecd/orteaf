@@ -54,8 +54,8 @@ struct FunctionKeyHasher {
 struct MpsPipelineResource {
   ::orteaf::internal::execution::mps::platform::wrapper::MpsFunction_t function{
       nullptr};
-  ::orteaf::internal::execution::mps::platform::wrapper::MpsComputePipelineState_t
-      pipeline_state{nullptr};
+  ::orteaf::internal::execution::mps::platform::wrapper::
+      MpsComputePipelineState_t pipeline_state{nullptr};
 };
 
 struct PipelinePayloadPoolTraits {
@@ -112,15 +112,13 @@ struct PipelinePayloadPoolTraits {
 };
 
 using PipelinePayloadPool =
-    ::orteaf::internal::base::pool::FixedSlotStore<
-        PipelinePayloadPoolTraits>;
+    ::orteaf::internal::base::pool::FixedSlotStore<PipelinePayloadPoolTraits>;
 
 struct PipelineControlBlockTag {};
 
-using PipelineControlBlock =
-    ::orteaf::internal::base::WeakControlBlock<
-        ::orteaf::internal::base::FunctionHandle, MpsPipelineResource,
-        PipelinePayloadPool>;
+using PipelineControlBlock = ::orteaf::internal::base::WeakControlBlock<
+    ::orteaf::internal::base::FunctionHandle, MpsPipelineResource,
+    PipelinePayloadPool>;
 
 struct MpsComputePipelineStateManagerTraits {
   using PayloadPool = PipelinePayloadPool;
@@ -145,9 +143,7 @@ public:
       MpsComputePipelineState_t;
   using ControlBlockHandle = Core::ControlBlockHandle;
   using ControlBlockPool = Core::ControlBlockPool;
-  using PipelineLease = ::orteaf::internal::base::WeakLease<
-      ControlBlockHandle, PipelineControlBlock, ControlBlockPool,
-      MpsComputePipelineStateManager>;
+  using PipelineLease = Core::WeakLeaseType;
 
   MpsComputePipelineStateManager() = default;
   MpsComputePipelineStateManager(const MpsComputePipelineStateManager &) =
@@ -163,12 +159,7 @@ public:
     DeviceType device{nullptr};
     LibraryType library{nullptr};
     SlowOps *ops{nullptr};
-    std::size_t payload_capacity{0};
-    std::size_t control_block_capacity{0};
-    std::size_t payload_block_size{0};
-    std::size_t control_block_block_size{1};
-    std::size_t payload_growth_chunk_size{1};
-    std::size_t control_block_growth_chunk_size{1};
+    Core::Config pool{};
   };
 
   void configure(const Config &config);
@@ -178,13 +169,13 @@ public:
   void release(PipelineLease &lease) noexcept { lease.release(); }
 
 #if ORTEAF_ENABLE_TEST
-  bool isInitializedForTest() const noexcept { return core_.isInitialized(); }
+  bool isConfiguredForTest() const noexcept { return core_.isConfigured(); }
 
   std::size_t payloadPoolSizeForTest() const noexcept {
-    return core_.payloadPool().size();
+    return core_.payloadPoolSizeForTest();
   }
   std::size_t payloadPoolCapacityForTest() const noexcept {
-    return core_.payloadPool().capacity();
+    return core_.payloadPoolCapacityForTest();
   }
   std::size_t controlBlockPoolSizeForTest() const noexcept {
     return core_.controlBlockPoolSizeForTest();
@@ -196,19 +187,19 @@ public:
     return core_.isAlive(handle);
   }
   std::size_t payloadGrowthChunkSizeForTest() const noexcept {
-    return payload_growth_chunk_size_;
+    return core_.payloadGrowthChunkSize();
   }
   std::size_t controlBlockGrowthChunkSizeForTest() const noexcept {
-    return core_.growthChunkSize();
+    return core_.controlBlockGrowthChunkSize();
   }
 
   bool payloadCreatedForTest(FunctionHandle handle) const noexcept {
-    return core_.payloadPool().isCreated(handle);
+    return core_.payloadCreatedForTest(handle);
   }
 
   const MpsPipelineResource *
   payloadForTest(FunctionHandle handle) const noexcept {
-    return core_.payloadPool().get(handle);
+    return core_.payloadForTest(handle);
   }
 #endif
 
@@ -216,16 +207,12 @@ private:
   friend PipelineLease;
 
   void validateKey(const FunctionKey &key) const;
-  PipelineLease buildLease(FunctionHandle handle,
-                           MpsPipelineResource *payload_ptr);
   PipelinePayloadPoolTraits::Context makePayloadContext() const noexcept;
 
   std::unordered_map<FunctionKey, std::size_t, FunctionKeyHasher> key_to_index_{};
   LibraryType library_{nullptr};
   DeviceType device_{nullptr};
   SlowOps *ops_{nullptr};
-  std::size_t payload_block_size_{0};
-  std::size_t payload_growth_chunk_size_{1};
   Core core_{};
 };
 

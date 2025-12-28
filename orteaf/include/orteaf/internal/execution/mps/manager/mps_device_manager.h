@@ -8,11 +8,12 @@
 
 #include "orteaf/internal/architecture/architecture.h"
 #include "orteaf/internal/base/handle.h"
-#include "orteaf/internal/diagnostics/error/error.h"
 #include "orteaf/internal/base/lease/control_block/weak.h"
 #include "orteaf/internal/base/lease/weak_lease.h"
 #include "orteaf/internal/base/manager/pool_manager.h"
 #include "orteaf/internal/base/pool/fixed_slot_store.h"
+#include "orteaf/internal/base/pool/with_control_block_binding.h"
+#include "orteaf/internal/diagnostics/error/error.h"
 #include "orteaf/internal/execution/mps/manager/mps_command_queue_manager.h"
 #include "orteaf/internal/execution/mps/manager/mps_event_manager.h"
 #include "orteaf/internal/execution/mps/manager/mps_fence_manager.h"
@@ -106,8 +107,8 @@ struct DevicePayloadPoolTraits {
     MpsCommandQueueManager::Config command_queue_config{};
     MpsEventManager::Config event_config{};
     MpsFenceManager::Config fence_config{};
-    std::size_t heap_initial_capacity{0};
-    std::size_t library_initial_capacity{0};
+    MpsHeapManager::Config heap_config{};
+    MpsLibraryManager::Config library_config{};
     MpsGraphManager::Config graph_config{};
   };
 
@@ -130,22 +131,15 @@ struct DevicePayloadPoolTraits {
     command_queue_config.device = device;
     command_queue_config.ops = context.ops;
     payload.command_queue_manager.configure(command_queue_config);
-    // Configure library manager (payload/control capacities share initial
-    // value).
-    MpsLibraryManager::Config library_config{};
+    auto library_config = context.library_config;
     library_config.device = device;
     library_config.ops = context.ops;
-    library_config.payload_capacity = context.library_initial_capacity;
-    library_config.control_block_capacity = context.library_initial_capacity;
     payload.library_manager.configure(library_config);
-    // Configure heap manager
-    MpsHeapManager::Config heap_config{};
+    auto heap_config = context.heap_config;
     heap_config.device = device;
     heap_config.device_handle = request.handle;
     heap_config.library_manager = &payload.library_manager;
     heap_config.ops = context.ops;
-    heap_config.payload_capacity = context.heap_initial_capacity;
-    heap_config.control_block_capacity = context.heap_initial_capacity;
     payload.heap_manager.configure(heap_config);
     auto graph_config = context.graph_config;
     graph_config.device = device;
@@ -168,15 +162,31 @@ struct DevicePayloadPoolTraits {
   }
 };
 
+// Forward declare to get proper ordering
+struct MpsDeviceManagerTraits;
+
+// =============================================================================
+// Payload Pool with ControlBlock Binding
+// =============================================================================
+
+using DevicePayloadPoolBase =
+    ::orteaf::internal::base::pool::FixedSlotStore<DevicePayloadPoolTraits>;
+
+// Forward-declare CB tag to avoid circular dependency
+struct DeviceManagerCBTag {};
+
+// Use DeviceManagerCBTag for CB binding
+using DeviceCBHandle =
+    ::orteaf::internal::base::pool::ControlBlockHandle<DeviceManagerCBTag>;
+
+// Add CB binding capability
 using DevicePayloadPool =
-    ::orteaf::internal::base::pool::FixedSlotStore<
-        DevicePayloadPoolTraits>;
+    ::orteaf::internal::base::pool::WithControlBlockBinding<
+        DevicePayloadPoolBase, DeviceCBHandle>;
 
 // =============================================================================
 // ControlBlock (using default pool traits via PoolManager)
 // =============================================================================
-
-struct DeviceControlBlockTag {};
 
 using DeviceControlBlock = ::orteaf::internal::base::WeakControlBlock<
     ::orteaf::internal::base::DeviceHandle, MpsDeviceResource,
@@ -189,7 +199,7 @@ using DeviceControlBlock = ::orteaf::internal::base::WeakControlBlock<
 struct MpsDeviceManagerTraits {
   using PayloadPool = DevicePayloadPool;
   using ControlBlock = DeviceControlBlock;
-  struct ControlBlockTag {};
+  using ControlBlockTag = DeviceManagerCBTag; // Use the same tag
   using PayloadHandle = ::orteaf::internal::base::DeviceHandle;
   static constexpr const char *Name = "MPS device manager";
 };
@@ -205,26 +215,21 @@ public:
   using DeviceType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t;
 
-  using Core = ::orteaf::internal::base::PoolManager<
-      MpsDeviceManagerTraits>;
+  using Core = ::orteaf::internal::base::PoolManager<MpsDeviceManagerTraits>;
   using ControlBlock = Core::ControlBlock;
   using ControlBlockHandle = Core::ControlBlockHandle;
   using ControlBlockPool = Core::ControlBlockPool;
 
-  using DeviceLease = ::orteaf::internal::base::WeakLease<
-      ControlBlockHandle, ControlBlock, ControlBlockPool, MpsDeviceManager>;
+  using DeviceLease = Core::WeakLeaseType;
 
   struct Config {
     SlowOps *ops{nullptr};
-    std::size_t payload_size{0};
-    std::size_t heap_initial_capacity{0};
-    std::size_t library_initial_capacity{0};
-    std::size_t control_block_size{0};
-    std::size_t control_block_block_size{0};
-    std::size_t control_block_growth_chunk_size{1};
+    Core::Config pool{};
     MpsCommandQueueManager::Config command_queue_config{};
     MpsEventManager::Config event_config{};
     MpsFenceManager::Config fence_config{};
+    MpsHeapManager::Config heap_config{};
+    MpsLibraryManager::Config library_config{};
     MpsGraphManager::Config graph_config{};
   };
 
@@ -248,18 +253,18 @@ public:
   void release(DeviceLease &lease) noexcept { lease.release(); }
 
   ::orteaf::internal::architecture::Architecture
-  getArch(DeviceHandle handle) const;
+  getArch(DeviceHandle handle);
 
 #if ORTEAF_ENABLE_TEST
   std::size_t getDeviceCountForTest() const noexcept {
-    return core_.payloadPool().size();
+    return core_.payloadPoolSizeForTest();
   }
-  bool isInitializedForTest() const noexcept { return core_.isInitialized(); }
+  bool isConfiguredForTest() const noexcept { return core_.isConfigured(); }
   std::size_t payloadPoolSizeForTest() const noexcept {
-    return core_.payloadPool().size();
+    return core_.payloadPoolSizeForTest();
   }
   std::size_t payloadPoolCapacityForTest() const noexcept {
-    return core_.payloadPool().capacity();
+    return core_.payloadPoolCapacityForTest();
   }
   bool isAliveForTest(DeviceHandle handle) const noexcept {
     return core_.isAlive(handle);

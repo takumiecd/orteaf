@@ -59,8 +59,7 @@ struct CommandQueuePayloadPoolTraits {
 };
 
 using CommandQueuePayloadPool =
-    ::orteaf::internal::base::pool::SlotPool<
-        CommandQueuePayloadPoolTraits>;
+    ::orteaf::internal::base::pool::SlotPool<CommandQueuePayloadPoolTraits>;
 
 // =============================================================================
 // ControlBlock (WeakControlBlock for non-owning references)
@@ -68,11 +67,10 @@ using CommandQueuePayloadPool =
 
 struct CommandQueueControlBlockTag {};
 
-using CommandQueueControlBlock =
-    ::orteaf::internal::base::WeakControlBlock<
-        ::orteaf::internal::base::CommandQueueHandle,
-        ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandQueue_t,
-        CommandQueuePayloadPool>;
+using CommandQueueControlBlock = ::orteaf::internal::base::WeakControlBlock<
+    ::orteaf::internal::base::CommandQueueHandle,
+    ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandQueue_t,
+    CommandQueuePayloadPool>;
 
 // =============================================================================
 // Manager Traits for PoolManager
@@ -99,15 +97,13 @@ public:
   using CommandQueueType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandQueue_t;
 
-  using Core = ::orteaf::internal::base::PoolManager<
-      MpsCommandQueueManagerTraits>;
+  using Core =
+      ::orteaf::internal::base::PoolManager<MpsCommandQueueManagerTraits>;
   using ControlBlock = Core::ControlBlock;
   using ControlBlockHandle = Core::ControlBlockHandle;
   using ControlBlockPool = Core::ControlBlockPool;
 
-  using CommandQueueLease = ::orteaf::internal::base::WeakLease<
-      ControlBlockHandle, ControlBlock, ControlBlockPool,
-      MpsCommandQueueManager>;
+  using CommandQueueLease = Core::WeakLeaseType;
 
 private:
   friend CommandQueueLease;
@@ -116,12 +112,7 @@ public:
   struct Config {
     DeviceType device{nullptr};
     SlowOps *ops{nullptr};
-    std::size_t payload_capacity{0};
-    std::size_t control_block_capacity{0};
-    std::size_t payload_block_size{0};
-    std::size_t control_block_block_size{1};
-    std::size_t payload_growth_chunk_size{1};
-    std::size_t control_block_growth_chunk_size{1};
+    Core::Config pool{};
   };
 
   // ===========================================================================
@@ -150,13 +141,13 @@ public:
   CommandQueueLease acquire(CommandQueueHandle handle);
 
 #if ORTEAF_ENABLE_TEST
-  bool isInitializedForTest() const noexcept { return core_.isInitialized(); }
+  bool isConfiguredForTest() const noexcept { return core_.isConfigured(); }
 
   std::size_t payloadPoolSizeForTest() const noexcept {
-    return core_.payloadPool().size();
+    return core_.payloadPoolSizeForTest();
   }
   std::size_t payloadPoolCapacityForTest() const noexcept {
-    return core_.payloadPool().capacity();
+    return core_.payloadPoolCapacityForTest();
   }
   std::size_t controlBlockPoolSizeForTest() const noexcept {
     return core_.controlBlockPoolSizeForTest();
@@ -168,10 +159,10 @@ public:
     return core_.isAlive(handle);
   }
   std::size_t payloadGrowthChunkSizeForTest() const noexcept {
-    return payload_growth_chunk_size_;
+    return core_.payloadGrowthChunkSize();
   }
   std::size_t controlBlockGrowthChunkSizeForTest() const noexcept {
-    return core_.growthChunkSize();
+    return core_.controlBlockGrowthChunkSize();
   }
 #endif
 
@@ -179,8 +170,6 @@ private:
   Core core_{};
   DeviceType device_{nullptr};
   SlowOps *ops_{nullptr};
-  std::size_t payload_block_size_{0};
-  std::size_t payload_growth_chunk_size_{1};
 };
 
 } // namespace orteaf::internal::execution::mps::manager
