@@ -85,18 +85,6 @@ concept ManagerBlockSizeSettableConcept =
     };
 
 // =============================================================================
-// Resize Concept
-// =============================================================================
-
-/// @brief resize をサポート
-template <typename Manager>
-concept ManagerResizableConcept =
-    PoolManagerTypeConcept<Manager> && requires(Manager &m, std::size_t n) {
-      { m.resizeControlBlockPool(n) } -> std::convertible_to<std::size_t>;
-      { m.resizePayloadPool(n) } -> std::convertible_to<std::size_t>;
-    };
-
-// =============================================================================
 // Growth Chunk Size Concept
 // =============================================================================
 
@@ -186,7 +174,6 @@ concept FullPoolManagerConcept =
     ManagerShutdownableConcept<Manager, Request, Context> &&
     ManagerConfigurableConcept<Manager, Request, Context> &&
     ManagerBlockSizeSettableConcept<Manager> &&
-    ManagerResizableConcept<Manager> &&
     ManagerGrowthChunkSettableConcept<Manager> &&
     ManagerPayloadAliveCheckConcept<Manager> &&
     ManagerPayloadCreateAllConcept<Manager, Request, Context> &&
