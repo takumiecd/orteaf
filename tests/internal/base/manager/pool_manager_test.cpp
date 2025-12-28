@@ -327,6 +327,71 @@ TEST(PoolManager, ConfigureAcceptsPayloadBlockSizeChangeAfterLeaseReleased) {
   EXPECT_NO_THROW(manager.configure(updated, req, ctx));
 }
 
+TEST(PoolManager, ShutdownRejectsWhenStrongLeaseActive) {
+  PoolManager manager;
+  auto config = makeBaseConfig();
+  DummyPayloadTraits::Request req{};
+  DummyPayloadTraits::Context ctx{};
+
+  manager.configure(config, req, ctx);
+  auto handle = manager.reserveUncreatedPayloadOrGrow();
+  EXPECT_TRUE(handle.isValid());
+  EXPECT_TRUE(manager.emplacePayload(handle, req, ctx));
+
+  auto lease = manager.acquireStrongLease(handle);
+  EXPECT_TRUE(lease);
+
+  ::orteaf::tests::ExpectErrorMessage(
+      ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+      {"DummyManager", "teardown aborted due to active strong references"},
+      [&manager, &req, &ctx] { manager.shutdown(req, ctx); });
+}
+
+TEST(PoolManager, ShutdownRejectsWhenWeakLeaseActive) {
+  PoolManager manager;
+  auto config = makeBaseConfig();
+  DummyPayloadTraits::Request req{};
+  DummyPayloadTraits::Context ctx{};
+
+  manager.configure(config, req, ctx);
+  auto handle = manager.reserveUncreatedPayloadOrGrow();
+  EXPECT_TRUE(handle.isValid());
+  EXPECT_TRUE(manager.emplacePayload(handle, req, ctx));
+
+  auto strong = manager.acquireStrongLease(handle);
+  EXPECT_TRUE(strong);
+  auto weak = manager.acquireWeakLease(handle);
+  EXPECT_TRUE(weak);
+  strong.release();
+
+  ::orteaf::tests::ExpectErrorMessage(
+      ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+      {"DummyManager", "shutdown aborted due to active leases"},
+      [&manager, &req, &ctx] { manager.shutdown(req, ctx); });
+}
+
+TEST(PoolManager, ShutdownAcceptsAfterLeasesReleased) {
+  PoolManager manager;
+  auto config = makeBaseConfig();
+  DummyPayloadTraits::Request req{};
+  DummyPayloadTraits::Context ctx{};
+
+  manager.configure(config, req, ctx);
+  auto handle = manager.reserveUncreatedPayloadOrGrow();
+  EXPECT_TRUE(handle.isValid());
+  EXPECT_TRUE(manager.emplacePayload(handle, req, ctx));
+
+  {
+    auto strong = manager.acquireStrongLease(handle);
+    EXPECT_TRUE(strong);
+    auto weak = manager.acquireWeakLease(handle);
+    EXPECT_TRUE(weak);
+  }
+
+  EXPECT_NO_THROW(manager.shutdown(req, ctx));
+  EXPECT_FALSE(manager.isConfigured());
+}
+
 TEST(PoolManager, ControlBlockGrowthChunkSizeDefaultsToOne) {
   PoolManager manager;
   EXPECT_EQ(manager.controlBlockGrowthChunkSize(), 1u);
