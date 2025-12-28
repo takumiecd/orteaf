@@ -5,6 +5,7 @@
 #include "orteaf/internal/base/handle.h"
 #include "orteaf/internal/base/lease/control_block/shared.h"
 #include "orteaf/internal/base/pool/slot_pool.h"
+#include "orteaf/internal/base/pool/with_control_block_binding.h"
 #include "tests/internal/testing/error_assert.h"
 
 namespace {
@@ -50,6 +51,25 @@ struct DummyManagerTraits {
 
 using PoolManager =
     ::orteaf::internal::base::PoolManager<DummyManagerTraits>;
+
+struct BoundControlBlockTag {};
+using BoundControlBlockHandle =
+    ::orteaf::internal::base::pool::ControlBlockHandle<BoundControlBlockTag>;
+using BoundPayloadPool = ::orteaf::internal::base::pool::WithControlBlockBinding<
+    PayloadPool, BoundControlBlockHandle>;
+using BoundControlBlock = ::orteaf::internal::base::SharedControlBlock<
+    PayloadHandle, DummyPayload, BoundPayloadPool>;
+
+struct BoundManagerTraits {
+  using PayloadPool = BoundPayloadPool;
+  using ControlBlock = BoundControlBlock;
+  using ControlBlockTag = BoundControlBlockTag;
+  using PayloadHandle = ::PayloadHandle;
+  static constexpr const char *Name = "BoundManager";
+};
+
+using BoundPoolManager =
+    ::orteaf::internal::base::PoolManager<BoundManagerTraits>;
 
 PoolManager::Config makeBaseConfig() {
   PoolManager::Config config{};
@@ -660,6 +680,72 @@ TEST(PoolManager, AcquireWeakLeaseReturnsValidLease) {
   EXPECT_EQ(lease.controlBlock()->weakCount(), 1u);
   EXPECT_NE(lease.payloadPtr(), nullptr);
   EXPECT_EQ(lease.payloadPtr()->value, 1);
+}
+
+TEST(PoolManager, AcquireStrongLeaseRebindsControlBlockAfterRelease) {
+  BoundPoolManager manager;
+  BoundPoolManager::Config config{};
+  config.control_block_capacity = 1;
+  config.control_block_block_size = 1;
+  config.control_block_growth_chunk_size = 1;
+  config.payload_growth_chunk_size = 1;
+  config.payload_capacity = 1;
+  config.payload_block_size = 1;
+  DummyPayloadTraits::Request req{};
+  DummyPayloadTraits::Context ctx{};
+
+  manager.configure(config, req, ctx);
+  auto handle = manager.reserveUncreatedPayloadOrGrow();
+  EXPECT_TRUE(handle.isValid());
+  EXPECT_TRUE(manager.emplacePayload(handle, req, ctx));
+
+  auto lease = manager.acquireStrongLease(handle);
+  EXPECT_TRUE(lease);
+  auto bound = manager.boundControlBlockForTest(handle);
+  EXPECT_TRUE(bound.isValid());
+  EXPECT_EQ(bound, lease.handle());
+
+  lease.release();
+  auto reacquired_handle = manager.acquirePayloadOrGrowAndCreate(req, ctx);
+  EXPECT_TRUE(reacquired_handle.isValid());
+  EXPECT_EQ(reacquired_handle.index, handle.index);
+  auto bound_after = manager.boundControlBlockForTest(reacquired_handle);
+  EXPECT_FALSE(bound_after.isValid());
+
+  auto reused = manager.acquireStrongLease(reacquired_handle);
+  EXPECT_TRUE(reused);
+  auto rebound = manager.boundControlBlockForTest(reacquired_handle);
+  EXPECT_TRUE(rebound.isValid());
+  EXPECT_EQ(rebound, reused.handle());
+  ASSERT_NE(reused.controlBlock(), nullptr);
+  EXPECT_EQ(reused.controlBlock()->strongCount(), 1u);
+}
+
+TEST(PoolManager, AcquireStrongLeaseTwiceReusesSameControlBlockAndHandle) {
+  BoundPoolManager manager;
+  BoundPoolManager::Config config{};
+  config.control_block_capacity = 1;
+  config.control_block_block_size = 1;
+  config.control_block_growth_chunk_size = 1;
+  config.payload_growth_chunk_size = 1;
+  config.payload_capacity = 1;
+  config.payload_block_size = 1;
+  DummyPayloadTraits::Request req{};
+  DummyPayloadTraits::Context ctx{};
+
+  manager.configure(config, req, ctx);
+  auto handle = manager.reserveUncreatedPayloadOrGrow();
+  EXPECT_TRUE(handle.isValid());
+  EXPECT_TRUE(manager.emplacePayload(handle, req, ctx));
+
+  auto first = manager.acquireStrongLease(handle);
+  auto second = manager.acquireStrongLease(handle);
+
+  EXPECT_TRUE(first);
+  EXPECT_TRUE(second);
+  EXPECT_EQ(first.handle(), second.handle());
+  EXPECT_EQ(first.payloadHandle(), handle);
+  EXPECT_EQ(second.payloadHandle(), handle);
 }
 
 } // namespace

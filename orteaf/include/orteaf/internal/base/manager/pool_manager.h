@@ -443,6 +443,14 @@ public:
     return payload_pool_.get(handle);
   }
 
+  auto boundControlBlockForTest(PayloadHandle handle) const noexcept
+    requires requires(const PayloadPool &pool, PayloadHandle h) {
+      pool.getBoundControlBlock(h);
+    }
+  {
+    return payload_pool_.getBoundControlBlock(handle);
+  }
+
   std::size_t controlBlockPoolSizeForTest() const noexcept {
     return control_block_pool_.size();
   }
