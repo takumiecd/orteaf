@@ -241,6 +241,92 @@ TEST(PoolManager, SetPayloadBlockSizeAcceptsAfterLeaseReleased) {
   EXPECT_NO_THROW(manager.setPayloadBlockSize(3));
 }
 
+TEST(PoolManager, ConfigureRejectsControlBlockSizeChangeWhenLeaseActive) {
+  PoolManager manager;
+  auto config = makeBaseConfig();
+  DummyPayloadTraits::Request req{};
+  DummyPayloadTraits::Context ctx{};
+
+  manager.configure(config, req, ctx);
+  auto handle = manager.reserveUncreatedPayloadOrGrow();
+  EXPECT_TRUE(handle.isValid());
+  EXPECT_TRUE(manager.emplacePayload(handle, req, ctx));
+
+  auto lease = manager.acquireWeakLease(handle);
+  EXPECT_TRUE(lease);
+
+  auto updated = config;
+  updated.control_block_block_size = config.control_block_block_size + 1;
+  ::orteaf::tests::ExpectErrorMessage(
+      ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+      {"DummyManager", "shutdown aborted due to active leases"},
+      [&manager, &updated, &req, &ctx] { manager.configure(updated, req, ctx); });
+}
+
+TEST(PoolManager, ConfigureAcceptsControlBlockSizeChangeAfterLeaseReleased) {
+  PoolManager manager;
+  auto config = makeBaseConfig();
+  DummyPayloadTraits::Request req{};
+  DummyPayloadTraits::Context ctx{};
+
+  manager.configure(config, req, ctx);
+  auto handle = manager.reserveUncreatedPayloadOrGrow();
+  EXPECT_TRUE(handle.isValid());
+  EXPECT_TRUE(manager.emplacePayload(handle, req, ctx));
+
+  {
+    auto lease = manager.acquireWeakLease(handle);
+    EXPECT_TRUE(lease);
+  }
+
+  auto updated = config;
+  updated.control_block_block_size = config.control_block_block_size + 1;
+  EXPECT_NO_THROW(manager.configure(updated, req, ctx));
+}
+
+TEST(PoolManager, ConfigureRejectsPayloadBlockSizeChangeWhenStrongLeaseActive) {
+  PoolManager manager;
+  auto config = makeBaseConfig();
+  DummyPayloadTraits::Request req{};
+  DummyPayloadTraits::Context ctx{};
+
+  manager.configure(config, req, ctx);
+  auto handle = manager.reserveUncreatedPayloadOrGrow();
+  EXPECT_TRUE(handle.isValid());
+  EXPECT_TRUE(manager.emplacePayload(handle, req, ctx));
+
+  auto lease = manager.acquireStrongLease(handle);
+  EXPECT_TRUE(lease);
+
+  auto updated = config;
+  updated.payload_block_size = config.payload_block_size + 1;
+  ::orteaf::tests::ExpectErrorMessage(
+      ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+      {"DummyManager", "teardown aborted due to active strong references"},
+      [&manager, &updated, &req, &ctx] { manager.configure(updated, req, ctx); });
+}
+
+TEST(PoolManager, ConfigureAcceptsPayloadBlockSizeChangeAfterLeaseReleased) {
+  PoolManager manager;
+  auto config = makeBaseConfig();
+  DummyPayloadTraits::Request req{};
+  DummyPayloadTraits::Context ctx{};
+
+  manager.configure(config, req, ctx);
+  auto handle = manager.reserveUncreatedPayloadOrGrow();
+  EXPECT_TRUE(handle.isValid());
+  EXPECT_TRUE(manager.emplacePayload(handle, req, ctx));
+
+  {
+    auto lease = manager.acquireStrongLease(handle);
+    EXPECT_TRUE(lease);
+  }
+
+  auto updated = config;
+  updated.payload_block_size = config.payload_block_size + 1;
+  EXPECT_NO_THROW(manager.configure(updated, req, ctx));
+}
+
 TEST(PoolManager, ControlBlockGrowthChunkSizeDefaultsToOne) {
   PoolManager manager;
   EXPECT_EQ(manager.controlBlockGrowthChunkSize(), 1u);
