@@ -203,7 +203,7 @@ public:
    * Only available if ControlBlockT has a `strongCount()` method.
    * Useful for testing and debugging reference counting behavior.
    */
-  std::uint32_t count() const noexcept
+  std::uint32_t strongCount() const noexcept
     requires requires(const ControlBlockT *cb) {
       { cb->strongCount() } -> std::convertible_to<std::uint32_t>;
     }
