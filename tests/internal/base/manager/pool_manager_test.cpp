@@ -163,4 +163,42 @@ TEST(PoolManager, SetPayloadBlockSizeAcceptsNonZero) {
   EXPECT_NO_THROW(manager.setPayloadBlockSize(2));
 }
 
+TEST(PoolManager, ControlBlockGrowthChunkSizeDefaultsToOne) {
+  PoolManager manager;
+  EXPECT_EQ(manager.controlBlockGrowthChunkSize(), 1u);
+}
+
+TEST(PoolManager, SetControlBlockGrowthChunkSizeRejectsZero) {
+  PoolManager manager;
+  ::orteaf::tests::ExpectErrorMessage(
+      ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+      {"DummyManager", "control block growth chunk size must be > 0"},
+      [&manager] { manager.setControlBlockGrowthChunkSize(0); });
+}
+
+TEST(PoolManager, SetControlBlockGrowthChunkSizeUpdatesValue) {
+  PoolManager manager;
+  manager.setControlBlockGrowthChunkSize(3);
+  EXPECT_EQ(manager.controlBlockGrowthChunkSize(), 3u);
+}
+
+TEST(PoolManager, PayloadGrowthChunkSizeDefaultsToOne) {
+  PoolManager manager;
+  EXPECT_EQ(manager.payloadGrowthChunkSize(), 1u);
+}
+
+TEST(PoolManager, SetPayloadGrowthChunkSizeRejectsZero) {
+  PoolManager manager;
+  ::orteaf::tests::ExpectErrorMessage(
+      ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+      {"DummyManager", "payload growth chunk size must be > 0"},
+      [&manager] { manager.setPayloadGrowthChunkSize(0); });
+}
+
+TEST(PoolManager, SetPayloadGrowthChunkSizeUpdatesValue) {
+  PoolManager manager;
+  manager.setPayloadGrowthChunkSize(4);
+  EXPECT_EQ(manager.payloadGrowthChunkSize(), 4u);
+}
+
 } // namespace
