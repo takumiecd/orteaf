@@ -339,4 +339,98 @@ TEST(PoolManager, AcquirePayloadOrGrowAndCreateCreatesPayload) {
   EXPECT_TRUE(manager.isAlive(handle));
 }
 
+TEST(PoolManager, AcquireStrongLeaseRejectsInvalidHandle) {
+  PoolManager manager;
+  auto config = makeBaseConfig();
+  DummyPayloadTraits::Request req{};
+  DummyPayloadTraits::Context ctx{};
+
+  manager.configure(config, req, ctx);
+  ::orteaf::tests::ExpectErrorMessage(
+      ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+      {"DummyManager", "handle is invalid"},
+      [&manager] { manager.acquireStrongLease(PayloadHandle::invalid()); });
+}
+
+TEST(PoolManager, AcquireWeakLeaseRejectsInvalidHandle) {
+  PoolManager manager;
+  auto config = makeBaseConfig();
+  DummyPayloadTraits::Request req{};
+  DummyPayloadTraits::Context ctx{};
+
+  manager.configure(config, req, ctx);
+  ::orteaf::tests::ExpectErrorMessage(
+      ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+      {"DummyManager", "handle is invalid"},
+      [&manager] { manager.acquireWeakLease(PayloadHandle::invalid()); });
+}
+
+TEST(PoolManager, AcquireStrongLeaseRejectsUncreatedPayload) {
+  PoolManager manager;
+  auto config = makeBaseConfig();
+  DummyPayloadTraits::Request req{};
+  DummyPayloadTraits::Context ctx{};
+
+  manager.configure(config, req, ctx);
+  auto handle = manager.reserveUncreatedPayloadOrGrow();
+  EXPECT_TRUE(handle.isValid());
+  ::orteaf::tests::ExpectErrorMessage(
+      ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+      {"DummyManager", "payload is unavailable"},
+      [&manager, handle] { manager.acquireStrongLease(handle); });
+}
+
+TEST(PoolManager, AcquireWeakLeaseRejectsUncreatedPayload) {
+  PoolManager manager;
+  auto config = makeBaseConfig();
+  DummyPayloadTraits::Request req{};
+  DummyPayloadTraits::Context ctx{};
+
+  manager.configure(config, req, ctx);
+  auto handle = manager.reserveUncreatedPayloadOrGrow();
+  EXPECT_TRUE(handle.isValid());
+  ::orteaf::tests::ExpectErrorMessage(
+      ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+      {"DummyManager", "payload is unavailable"},
+      [&manager, handle] { manager.acquireWeakLease(handle); });
+}
+
+TEST(PoolManager, AcquireStrongLeaseReturnsValidLease) {
+  PoolManager manager;
+  auto config = makeBaseConfig();
+  DummyPayloadTraits::Request req{};
+  DummyPayloadTraits::Context ctx{};
+
+  manager.configure(config, req, ctx);
+  auto handle = manager.reserveUncreatedPayloadOrGrow();
+  EXPECT_TRUE(handle.isValid());
+  EXPECT_TRUE(manager.emplacePayload(handle, req, ctx));
+
+  auto lease = manager.acquireStrongLease(handle);
+  EXPECT_TRUE(lease);
+  ASSERT_NE(lease.controlBlock(), nullptr);
+  EXPECT_EQ(lease.controlBlock()->strongCount(), 1u);
+  EXPECT_NE(lease.payloadPtr(), nullptr);
+  EXPECT_EQ(lease.payloadPtr()->value, 1);
+}
+
+TEST(PoolManager, AcquireWeakLeaseReturnsValidLease) {
+  PoolManager manager;
+  auto config = makeBaseConfig();
+  DummyPayloadTraits::Request req{};
+  DummyPayloadTraits::Context ctx{};
+
+  manager.configure(config, req, ctx);
+  auto handle = manager.reserveUncreatedPayloadOrGrow();
+  EXPECT_TRUE(handle.isValid());
+  EXPECT_TRUE(manager.emplacePayload(handle, req, ctx));
+
+  auto lease = manager.acquireWeakLease(handle);
+  EXPECT_TRUE(lease);
+  ASSERT_NE(lease.controlBlock(), nullptr);
+  EXPECT_EQ(lease.controlBlock()->weakCount(), 1u);
+  EXPECT_NE(lease.payloadPtr(), nullptr);
+  EXPECT_EQ(lease.payloadPtr()->value, 1);
+}
+
 } // namespace
