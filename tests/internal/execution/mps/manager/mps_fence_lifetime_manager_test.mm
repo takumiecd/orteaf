@@ -46,6 +46,10 @@ struct FakeFastOpsControlled {
   static bool isCompleted(CommandBufferHandle buffer) {
     return CompletionTracker::isCompleted(buffer);
   }
+
+  static void waitUntilCompleted(CommandBufferHandle buffer) {
+    CompletionTracker::markCompleted(buffer);
+  }
 };
 
 CommandBufferHandle fakeCommandBuffer(std::uintptr_t value) {
@@ -78,7 +82,9 @@ protected:
   }
 
   void TearDown() override {
-    lifetime_manager_.clear();
+    if (!lifetime_manager_.empty()) {
+      (void)lifetime_manager_.waitUntilReady<FakeFastOpsControlled>();
+    }
     EXPECT_CALL(ops_, destroyFence(fence_handle_)).Times(1);
     fence_manager_.shutdown();
   }
@@ -217,6 +223,87 @@ TEST_F(MpsFenceLifetimeManagerTest,
   EXPECT_EQ(lifetime_manager_.releaseReady<FakeFastOpsControlled>(), 1u);
   EXPECT_EQ(lifetime_manager_.size(), 0u);
   EXPECT_TRUE(lease_c.payloadPtr()->isCompleted());
+}
+
+TEST_F(MpsFenceLifetimeManagerTest, ClearThrowsWhenAnyIncomplete) {
+  const base::CommandQueueHandle handle{10};
+  auto command_buffer_a = fakeCommandBuffer(0x50);
+  auto command_buffer_b = fakeCommandBuffer(0x51);
+  auto fence_b = reinterpret_cast<mps_wrapper::MpsFence_t>(0x9);
+
+  ASSERT_TRUE(lifetime_manager_.setFenceManager(&fence_manager_));
+  ASSERT_TRUE(lifetime_manager_.setCommandQueueHandle(handle));
+
+  EXPECT_CALL(ops_, createFence(device_))
+      .WillOnce(::testing::Return(fence_b));
+  EXPECT_CALL(ops_, destroyFence(fence_b)).Times(1);
+
+  (void)lifetime_manager_.acquire(command_buffer_a);
+  (void)lifetime_manager_.acquire(command_buffer_b);
+
+  CompletionTracker::markCompleted(command_buffer_a);
+
+  ::orteaf::tests::ExpectError(
+      ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+      [&] { lifetime_manager_.clear<FakeFastOpsControlled>(); });
+
+  EXPECT_EQ(lifetime_manager_.size(), 2u);
+  EXPECT_EQ(lifetime_manager_.storageSizeForTest(), 2u);
+  EXPECT_EQ(lifetime_manager_.headIndexForTest(), 0u);
+}
+
+TEST_F(MpsFenceLifetimeManagerTest, ClearReleasesAllWhenCompleted) {
+  const base::CommandQueueHandle handle{11};
+  auto command_buffer_a = fakeCommandBuffer(0x60);
+  auto command_buffer_b = fakeCommandBuffer(0x61);
+  auto fence_b = reinterpret_cast<mps_wrapper::MpsFence_t>(0xA);
+
+  ASSERT_TRUE(lifetime_manager_.setFenceManager(&fence_manager_));
+  ASSERT_TRUE(lifetime_manager_.setCommandQueueHandle(handle));
+
+  EXPECT_CALL(ops_, createFence(device_))
+      .WillOnce(::testing::Return(fence_b));
+  EXPECT_CALL(ops_, destroyFence(fence_b)).Times(1);
+
+  auto lease_a = lifetime_manager_.acquire(command_buffer_a);
+  auto lease_b = lifetime_manager_.acquire(command_buffer_b);
+
+  CompletionTracker::markCompleted(command_buffer_a);
+  CompletionTracker::markCompleted(command_buffer_b);
+
+  lifetime_manager_.clear<FakeFastOpsControlled>();
+
+  EXPECT_EQ(lifetime_manager_.size(), 0u);
+  EXPECT_EQ(lifetime_manager_.storageSizeForTest(), 0u);
+  ASSERT_NE(lease_a.payloadPtr(), nullptr);
+  ASSERT_NE(lease_b.payloadPtr(), nullptr);
+  EXPECT_TRUE(lease_a.payloadPtr()->isCompleted());
+  EXPECT_TRUE(lease_b.payloadPtr()->isCompleted());
+}
+
+TEST_F(MpsFenceLifetimeManagerTest, WaitUntilReadyReleasesAll) {
+  const base::CommandQueueHandle handle{12};
+  auto command_buffer_a = fakeCommandBuffer(0x70);
+  auto command_buffer_b = fakeCommandBuffer(0x71);
+  auto fence_b = reinterpret_cast<mps_wrapper::MpsFence_t>(0xB);
+
+  ASSERT_TRUE(lifetime_manager_.setFenceManager(&fence_manager_));
+  ASSERT_TRUE(lifetime_manager_.setCommandQueueHandle(handle));
+
+  EXPECT_CALL(ops_, createFence(device_))
+      .WillOnce(::testing::Return(fence_b));
+  EXPECT_CALL(ops_, destroyFence(fence_b)).Times(1);
+
+  auto lease_a = lifetime_manager_.acquire(command_buffer_a);
+  auto lease_b = lifetime_manager_.acquire(command_buffer_b);
+
+  EXPECT_EQ(lifetime_manager_.waitUntilReady<FakeFastOpsControlled>(), 2u);
+  EXPECT_EQ(lifetime_manager_.size(), 0u);
+  EXPECT_EQ(lifetime_manager_.storageSizeForTest(), 0u);
+  ASSERT_NE(lease_a.payloadPtr(), nullptr);
+  ASSERT_NE(lease_b.payloadPtr(), nullptr);
+  EXPECT_TRUE(lease_a.payloadPtr()->isCompleted());
+  EXPECT_TRUE(lease_b.payloadPtr()->isCompleted());
 }
 
 TEST_F(MpsFenceLifetimeManagerTest,
