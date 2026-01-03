@@ -1,12 +1,12 @@
 /**
- * @file mps_fence_test.mm
- * @brief Tests for MpsFence behavior.
+ * @file mps_fence_hazard_test.mm
+ * @brief Tests for MpsFenceHazard behavior.
  */
 
 #include <cstdint>
 #include <gtest/gtest.h>
 
-#include "orteaf/internal/execution/mps/resource/mps_fence.h"
+#include "orteaf/internal/execution/mps/resource/mps_fence_hazard.h"
 
 namespace mps_res = orteaf::internal::execution::mps::resource;
 namespace mps_wrapper = orteaf::internal::execution::mps::platform::wrapper;
@@ -29,7 +29,7 @@ mps_wrapper::MpsCommandBuffer_t fakeCommandBuffer(std::uintptr_t value) {
 } // namespace
 
 TEST(MpsFenceResourceTest, DefaultConstructedIsReadyAndCompleted) {
-  mps_res::MpsFence fence;
+  mps_res::MpsFenceHazard fence;
   EXPECT_TRUE(fence.isReady());
   EXPECT_TRUE(fence.isCompleted());
   EXPECT_FALSE(fence.hasFence());
@@ -38,7 +38,7 @@ TEST(MpsFenceResourceTest, DefaultConstructedIsReadyAndCompleted) {
 }
 
 TEST(MpsFenceResourceTest, SetCommandBufferRequiresFence) {
-  mps_res::MpsFence fence;
+  mps_res::MpsFenceHazard fence;
   auto command_buffer = fakeCommandBuffer(0x9);
 
   EXPECT_FALSE(fence.setCommandBuffer(command_buffer));
@@ -47,7 +47,7 @@ TEST(MpsFenceResourceTest, SetCommandBufferRequiresFence) {
 }
 
 TEST(MpsFenceResourceTest, SetCommandBufferOnlyOnce) {
-  mps_res::MpsFence fence;
+  mps_res::MpsFenceHazard fence;
   auto first = fakeCommandBuffer(0x1);
   auto second = fakeCommandBuffer(0x2);
 
@@ -60,7 +60,7 @@ TEST(MpsFenceResourceTest, SetCommandBufferOnlyOnce) {
 }
 
 TEST(MpsFenceResourceTest, SetCommandQueueHandleBlockedAfterCommandBuffer) {
-  mps_res::MpsFence fence;
+  mps_res::MpsFenceHazard fence;
   base::CommandQueueHandle handle{7};
 
   EXPECT_TRUE(fence.setCommandQueueHandle(handle));
@@ -74,7 +74,7 @@ TEST(MpsFenceResourceTest, SetCommandQueueHandleBlockedAfterCommandBuffer) {
 }
 
 TEST(MpsFenceResourceTest, IsReadyUsesFastOpsAndNailsOnCompletion) {
-  mps_res::MpsFence fence;
+  mps_res::MpsFenceHazard fence;
   auto command_buffer = fakeCommandBuffer(0x5);
 
   ASSERT_TRUE(fence.setFence(reinterpret_cast<mps_wrapper::MpsFence_t>(0x13)));
@@ -89,7 +89,7 @@ TEST(MpsFenceResourceTest, IsReadyUsesFastOpsAndNailsOnCompletion) {
 }
 
 TEST(MpsFenceResourceTest, SetFenceIsAllowedOnlyOnceAndBeforeCommandBuffer) {
-  mps_res::MpsFence fence;
+  mps_res::MpsFenceHazard fence;
 
   auto fence_a = reinterpret_cast<mps_wrapper::MpsFence_t>(0x11);
   auto fence_b = reinterpret_cast<mps_wrapper::MpsFence_t>(0x22);

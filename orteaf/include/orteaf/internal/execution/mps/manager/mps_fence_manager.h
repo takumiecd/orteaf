@@ -12,7 +12,7 @@
 #include "orteaf/internal/base/pool/slot_pool.h"
 #include "orteaf/internal/execution/mps/platform/mps_slow_ops.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_fence.h"
-#include "orteaf/internal/execution/mps/resource/mps_fence.h"
+#include "orteaf/internal/execution/mps/resource/mps_fence_hazard.h"
 
 namespace orteaf::internal::execution::mps::manager {
 
@@ -21,7 +21,8 @@ namespace orteaf::internal::execution::mps::manager {
 // =============================================================================
 
 struct FencePayloadPoolTraits {
-  using Payload = ::orteaf::internal::execution::mps::resource::MpsFence;
+  using Payload =
+      ::orteaf::internal::execution::mps::resource::MpsFenceHazard;
   using Handle = ::orteaf::internal::base::FenceHandle;
   using DeviceType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t;
@@ -70,7 +71,8 @@ struct FenceControlBlockTag {};
 
 using FenceControlBlock = ::orteaf::internal::base::StrongControlBlock<
     ::orteaf::internal::base::FenceHandle,
-    ::orteaf::internal::execution::mps::resource::MpsFence, FencePayloadPool>;
+    ::orteaf::internal::execution::mps::resource::MpsFenceHazard,
+    FencePayloadPool>;
 
 // =============================================================================
 // Manager Traits for PoolManager
@@ -95,7 +97,7 @@ public:
       ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t;
   using FenceHandle = ::orteaf::internal::base::FenceHandle;
   using FenceType =
-      ::orteaf::internal::execution::mps::platform::wrapper::MpsFence_t;
+      ::orteaf::internal::execution::mps::resource::MpsFenceHazard;
 
   using Core = ::orteaf::internal::base::PoolManager<MpsFenceManagerTraits>;
   using ControlBlock = Core::ControlBlock;

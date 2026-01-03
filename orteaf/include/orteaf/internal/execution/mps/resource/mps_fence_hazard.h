@@ -14,7 +14,7 @@ struct FencePayloadPoolTraits;
 
 namespace orteaf::internal::execution::mps::resource {
 
-class MpsFence {
+class MpsFenceHazard {
 public:
   using FenceType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsFence_t;
@@ -22,7 +22,7 @@ public:
       ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandBuffer_t;
   using CommandQueueHandle = ::orteaf::internal::base::CommandQueueHandle;
 
-  MpsFence() = default;
+  MpsFenceHazard() = default;
 
   FenceType fence() const noexcept { return fence_; }
   CommandBufferType commandBuffer() const noexcept { return command_buffer_; }
