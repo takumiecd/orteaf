@@ -18,11 +18,12 @@ template <typename Resource> class DeferredReusePolicy {
 public:
   static constexpr auto kExecution = Resource::execution_type_static();
   using BufferResource = typename Resource::BufferResource;
-  using BufferBlock = ::orteaf::internal::execution::allocator::ExecutionBufferBlock<kExecution>;
+  using BufferBlock =
+      ::orteaf::internal::execution::allocator::ExecutionBufferBlock<
+          kExecution>;
   using BufferView = typename BufferResource::BufferView;
   using BufferViewHandle = typename BufferResource::BufferViewHandle;
   using ReuseToken = typename Resource::ReuseToken;
-  using FenceToken = typename BufferResource::FenceToken;
 
   DeferredReusePolicy() = default;
   DeferredReusePolicy(const DeferredReusePolicy &) = delete;
@@ -45,10 +46,9 @@ public:
   void scheduleForReuse(BufferResource block, std::size_t freelist_index) {
     ORTEAF_THROW_IF(resource_ == nullptr, InvalidState,
                     "DeferredReusePolicy is not initialized");
-    // Extract BufferBlock and convert FenceToken to ReuseToken
     PendingReuse pending{BufferBlock{block.handle, std::move(block.view)},
-                         ReuseToken(std::move(block.fence_token)),
-                         freelist_index, std::chrono::steady_clock::now()};
+                         std::move(block.reuse_token), freelist_index,
+                         std::chrono::steady_clock::now()};
     pending_queue_.pushBack(std::move(pending));
   }
 

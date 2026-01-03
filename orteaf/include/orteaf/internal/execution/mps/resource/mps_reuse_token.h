@@ -7,25 +7,25 @@
 
 #include <orteaf/internal/base/small_vector.h>
 #include <orteaf/internal/execution/mps/resource/mps_fence_token.h>
-#include <orteaf/internal/execution/mps/resource/mps_reuse_ticket.h>
+#include <orteaf/internal/execution/mps/resource/mps_reuse_hazard.h>
 
 namespace orteaf::internal::execution::mps::resource {
 
 class MpsReuseToken {
 public:
-  using Ticket = MpsReuseTicket;
+  using Hazard = MpsReuseHazard;
   static constexpr std::size_t kInlineCapacity = 4;
 
   static MpsReuseToken fromFenceToken(MpsFenceToken &&token) {
     MpsReuseToken reuse_token;
     for (const auto &lease : token) {
       auto *payload = lease.payloadPtr();
-      if (payload == nullptr) {
-        reuse_token.addTicket(Ticket{});
-        continue;
+      Hazard hazard;
+      if (payload != nullptr) {
+        hazard.setCommandQueueHandle(payload->commandQueueHandle());
+        hazard.setCommandBuffer(payload->commandBuffer());
       }
-      reuse_token.addTicket(
-          Ticket(payload->commandQueueHandle(), payload->commandBuffer()));
+      reuse_token.addOrReplaceHazard(std::move(hazard));
     }
     token.clear();
     return reuse_token;
@@ -42,25 +42,35 @@ public:
   MpsReuseToken &operator=(MpsReuseToken &&) noexcept = default;
   ~MpsReuseToken() = default;
 
-  bool empty() const noexcept { return tickets_.empty(); }
-  std::size_t size() const noexcept { return tickets_.size(); }
+  bool empty() const noexcept { return hazards_.empty(); }
+  std::size_t size() const noexcept { return hazards_.size(); }
 
-  void addTicket(Ticket &&ticket) { tickets_.pushBack(std::move(ticket)); }
-
-  void clear() noexcept { tickets_.clear(); }
-
-  const Ticket &operator[](std::size_t index) const noexcept {
-    return tickets_[index];
+  // Add a hazard, replacing any existing hazard with the same command queue id.
+  void addOrReplaceHazard(Hazard &&hazard) {
+    const auto queue_handle = hazard.commandQueueHandle();
+    for (std::size_t i = 0; i < hazards_.size(); ++i) {
+      if (hazards_[i].commandQueueHandle() == queue_handle) {
+        hazards_[i] = std::move(hazard);
+        return;
+      }
+    }
+    hazards_.pushBack(std::move(hazard));
   }
-  Ticket &operator[](std::size_t index) noexcept { return tickets_[index]; }
 
-  const Ticket *begin() const noexcept { return tickets_.begin(); }
-  const Ticket *end() const noexcept { return tickets_.end(); }
-  Ticket *begin() noexcept { return tickets_.begin(); }
-  Ticket *end() noexcept { return tickets_.end(); }
+  void clear() noexcept { hazards_.clear(); }
+
+  const Hazard &operator[](std::size_t index) const noexcept {
+    return hazards_[index];
+  }
+  Hazard &operator[](std::size_t index) noexcept { return hazards_[index]; }
+
+  const Hazard *begin() const noexcept { return hazards_.begin(); }
+  const Hazard *end() const noexcept { return hazards_.end(); }
+  Hazard *begin() noexcept { return hazards_.begin(); }
+  Hazard *end() noexcept { return hazards_.end(); }
 
 private:
-  ::orteaf::internal::base::SmallVector<Ticket, kInlineCapacity> tickets_{};
+  ::orteaf::internal::base::SmallVector<Hazard, kInlineCapacity> hazards_{};
 };
 
 } // namespace orteaf::internal::execution::mps::resource

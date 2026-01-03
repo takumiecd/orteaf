@@ -73,13 +73,12 @@ bool MpsResource::isCompleted(ReuseToken &token) {
   ORTEAF_THROW_IF(!initialized_, InvalidState,
                   "MpsResource::isCompleted called before initialize");
   bool all_completed = true;
-  for (auto &ticket : token) {
-    if (!ticket.valid()) {
+  for (auto &hazard : token) {
+    if (!hazard.hasCommandBuffer()) {
       continue;
     }
-    if (::orteaf::internal::execution::mps::platform::MpsFastOps::isCompleted(
-            ticket.commandBuffer())) {
-      ticket.reset();
+    if (hazard.isCompleted<
+            ::orteaf::internal::execution::mps::platform::MpsFastOps>()) {
       continue;
     } else {
       all_completed = false;

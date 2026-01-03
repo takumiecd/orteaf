@@ -1,6 +1,6 @@
 /**
  * @file mps_reuse_token_test.mm
- * @brief Tests for MpsReuseToken bundling MpsReuseTicket.
+ * @brief Tests for MpsReuseToken bundling MpsReuseHazard.
  */
 
 #import <Metal/Metal.h>
@@ -11,7 +11,7 @@
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_command_buffer.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_command_queue.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_device.h"
-#include "orteaf/internal/execution/mps/resource/mps_reuse_ticket.h"
+#include "orteaf/internal/execution/mps/resource/mps_reuse_hazard.h"
 #include "orteaf/internal/execution/mps/resource/mps_reuse_token.h"
 
 namespace mps_wrapper = orteaf::internal::execution::mps::platform::wrapper;
@@ -62,11 +62,20 @@ protected:
   }
 
 #if ORTEAF_ENABLE_MPS
+  mps_res::MpsReuseHazard makeHazard(base::CommandQueueHandle handle,
+                                     mps_wrapper::MpsCommandBuffer_t cb) {
+    mps_res::MpsReuseHazard hazard;
+    hazard.setCommandQueueHandle(handle);
+    hazard.setCommandBuffer(cb);
+    return hazard;
+  }
+
   mps_wrapper::MpsDevice_t device_{nullptr};
   mps_wrapper::MpsCommandQueue_t queue_{nullptr};
   mps_wrapper::MpsCommandBuffer_t command_buffer_a_{nullptr};
   mps_wrapper::MpsCommandBuffer_t command_buffer_b_{nullptr};
   base::CommandQueueHandle queue_id_{base::CommandQueueHandle{13}};
+  base::CommandQueueHandle queue_id_other_{base::CommandQueueHandle{42}};
 #endif
 };
 
@@ -78,22 +87,35 @@ TEST_F(MpsReuseTokenTest, DefaultConstructedIsEmpty) {
   EXPECT_EQ(token.size(), 0u);
 }
 
-TEST_F(MpsReuseTokenTest, AddTicketsStoresAndOrders) {
+TEST_F(MpsReuseTokenTest, AddOrReplaceHazardAddsNew) {
   mps_res::MpsReuseToken token;
 
-  token.addTicket(mps_res::MpsReuseTicket(queue_id_, command_buffer_a_));
-  token.addTicket(mps_res::MpsReuseTicket(queue_id_, command_buffer_b_));
+  token.addOrReplaceHazard(makeHazard(queue_id_, command_buffer_a_));
+  token.addOrReplaceHazard(makeHazard(queue_id_other_, command_buffer_b_));
 
   ASSERT_EQ(token.size(), 2u);
   EXPECT_EQ(token[0].commandQueueHandle(), queue_id_);
   EXPECT_EQ(token[0].commandBuffer(), command_buffer_a_);
-  EXPECT_EQ(token[1].commandQueueHandle(), queue_id_);
+  EXPECT_EQ(token[1].commandQueueHandle(), queue_id_other_);
   EXPECT_EQ(token[1].commandBuffer(), command_buffer_b_);
+}
+
+TEST_F(MpsReuseTokenTest, AddOrReplaceHazardReplacesExisting) {
+  mps_res::MpsReuseToken token;
+
+  token.addOrReplaceHazard(makeHazard(queue_id_, command_buffer_a_));
+  ASSERT_EQ(token.size(), 1u);
+  EXPECT_EQ(token[0].commandBuffer(), command_buffer_a_);
+
+  // Replace the hazard with same queue id
+  token.addOrReplaceHazard(makeHazard(queue_id_, command_buffer_b_));
+  ASSERT_EQ(token.size(), 1u);
+  EXPECT_EQ(token[0].commandBuffer(), command_buffer_b_);
 }
 
 TEST_F(MpsReuseTokenTest, MoveTransfersOwnership) {
   mps_res::MpsReuseToken token;
-  token.addTicket(mps_res::MpsReuseTicket(queue_id_, command_buffer_a_));
+  token.addOrReplaceHazard(makeHazard(queue_id_, command_buffer_a_));
 
   mps_res::MpsReuseToken moved(std::move(token));
   EXPECT_EQ(moved.size(), 1u);
@@ -103,9 +125,9 @@ TEST_F(MpsReuseTokenTest, MoveTransfersOwnership) {
   EXPECT_EQ(token.size(), 0u);
 }
 
-TEST_F(MpsReuseTokenTest, ClearRemovesAllTickets) {
+TEST_F(MpsReuseTokenTest, ClearRemovesAllHazards) {
   mps_res::MpsReuseToken token;
-  token.addTicket(mps_res::MpsReuseTicket(queue_id_, command_buffer_a_));
+  token.addOrReplaceHazard(makeHazard(queue_id_, command_buffer_a_));
 
   token.clear();
   EXPECT_TRUE(token.empty());
