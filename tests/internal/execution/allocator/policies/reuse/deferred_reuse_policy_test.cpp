@@ -20,17 +20,13 @@ using CpuView = ::orteaf::internal::execution::cpu::resource::CpuBufferView;
 namespace {
 using CpuBuffer = allocator::ExecutionBuffer<Execution::Cpu>;
 using CpuBufferBlock = allocator::ExecutionBufferBlock<Execution::Cpu>;
-using CpuFenceToken = typename CpuBuffer::FenceToken;
 
 struct FakeResource;
 using Policy = policies::DeferredReusePolicy<FakeResource>;
 
 struct FakeResource {
   using BufferResource = allocator::ExecutionBuffer<Execution::Cpu>;
-  struct ReuseToken {
-    ReuseToken() = default;
-    explicit ReuseToken(CpuFenceToken &&) {}
-  };
+  using ReuseToken = typename BufferResource::ReuseToken;
 
   static constexpr Execution execution_type_static() noexcept {
     return Execution::Cpu;

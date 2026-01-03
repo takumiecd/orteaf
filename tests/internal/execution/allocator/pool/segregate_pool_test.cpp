@@ -37,11 +37,7 @@ struct MockResource {
   using BufferBlock =
       ::orteaf::internal::execution::allocator::ExecutionBufferBlock<
           Execution::Cpu>;
-  using FenceToken = typename BufferResource::FenceToken;
-  struct ReuseToken {
-    ReuseToken() = default;
-    explicit ReuseToken(FenceToken &&) {}
-  };
+  using ReuseToken = typename BufferResource::ReuseToken;
   struct LaunchParams {};
 
   static constexpr Execution execution_type_static() noexcept {

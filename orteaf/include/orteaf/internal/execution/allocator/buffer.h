@@ -12,15 +12,15 @@
 
 #if ORTEAF_ENABLE_MPS
 #include <orteaf/internal/execution/mps/resource/mps_buffer_view.h>
-#include <orteaf/internal/execution/mps/resource/mps_fence_token.h>
+#include <orteaf/internal/execution/mps/resource/mps_reuse_token.h>
 #endif // ORTEAF_ENABLE_MPS
 
 namespace orteaf::internal::execution::allocator {
-struct CpuFenceToken {};
+struct CpuReuseToken {};
 
 template <execution::Execution B> struct ResourceBufferType {
   using view = ::orteaf::internal::execution::cpu::resource::CpuBufferView;
-  using fence_token = CpuFenceToken;
+  using reuse_token = CpuReuseToken;
 };
 
 #if ORTEAF_ENABLE_CUDA
@@ -32,12 +32,12 @@ template <> struct ResourceBufferType<execution::Execution::Cuda> {
 #if ORTEAF_ENABLE_MPS
 template <> struct ResourceBufferType<execution::Execution::Mps> {
   using view = ::orteaf::internal::execution::mps::resource::MpsBufferView;
-  using fence_token =
-      ::orteaf::internal::execution::mps::resource::MpsFenceToken;
+  using reuse_token =
+      ::orteaf::internal::execution::mps::resource::MpsReuseToken;
 };
 #endif // ORTEAF_ENABLE_MPS
 
-// Lightweight pair of buffer view and handle (no fence tracking).
+// Lightweight pair of buffer view and handle (no reuse tracking).
 template <execution::Execution B> struct ExecutionBufferBlock {
   using BufferView = typename ResourceBufferType<B>::view;
   using BufferViewHandle = ::orteaf::internal::base::BufferViewHandle;
@@ -56,22 +56,22 @@ template <execution::Execution B> struct ExecutionBufferBlock {
 template <execution::Execution B> struct ExecutionBuffer {
   using BufferView = typename ResourceBufferType<B>::view;
   using BufferViewHandle = ::orteaf::internal::base::BufferViewHandle;
-  using FenceToken = typename ResourceBufferType<B>::fence_token;
+  using ReuseToken = typename ResourceBufferType<B>::reuse_token;
 
   BufferViewHandle handle{};
   BufferView view{};
-  FenceToken fence_token{};
+  ReuseToken reuse_token{};
 
   ExecutionBuffer() = default;
   ExecutionBuffer(BufferViewHandle handle, BufferView view)
       : handle(handle), view(std::move(view)) {}
 
-  // Convert to ExecutionBufferBlock (discards fence_token)
+  // Convert to ExecutionBufferBlock (discards reuse_token)
   ExecutionBufferBlock<B> toBlock() const {
     return ExecutionBufferBlock<B>{handle, view};
   }
 
-  // Construct from ExecutionBufferBlock (fence_token is default-initialized)
+  // Construct from ExecutionBufferBlock (reuse_token is default-initialized)
   static ExecutionBuffer fromBlock(const ExecutionBufferBlock<B> &block) {
     return ExecutionBuffer{block.handle, block.view};
   }
