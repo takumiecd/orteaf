@@ -18,6 +18,9 @@ public:
   using FenceManager = ::orteaf::internal::execution::mps::manager::MpsFenceManager;
   using FenceLease = FenceManager::FenceLease;
   using CommandQueueHandle = ::orteaf::internal::base::CommandQueueHandle;
+  using CommandBufferType =
+      ::orteaf::internal::execution::mps::platform::wrapper::
+          MpsCommandBuffer_t;
 
   MpsFenceLifetimeManager() = default;
   MpsFenceLifetimeManager(const MpsFenceLifetimeManager &) = delete;
@@ -43,7 +46,7 @@ public:
     return true;
   }
 
-  FenceLease acquire() {
+  FenceLease acquire(CommandBufferType command_buffer) {
     if (fence_manager_ == nullptr) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
@@ -53,6 +56,11 @@ public:
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
           "MPS fence lifetime manager requires a valid command queue handle");
+    }
+    if (command_buffer == nullptr) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+          "MPS fence lifetime manager requires a command buffer");
     }
     auto lease = fence_manager_->acquire();
     auto *payload = lease.payloadPtr();
@@ -68,35 +76,14 @@ public:
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
           "MPS fence hazard failed to bind command queue handle");
     }
+    if (!payload->setCommandBuffer(command_buffer)) {
+      lease.release();
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+          "MPS fence hazard failed to bind command buffer");
+    }
+    hazards_.pushBack(lease);
     return lease;
-  }
-
-  void track(FenceLease &&lease) {
-    if (!lease) {
-      ::orteaf::internal::diagnostics::error::throwError(
-          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-          "MPS fence lifetime manager requires a valid lease");
-    }
-    auto *payload = lease.payloadPtr();
-    if (payload == nullptr) {
-      lease.release();
-      ::orteaf::internal::diagnostics::error::throwError(
-          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-          "MPS fence lease has no payload");
-    }
-    if (payload->commandQueueHandle() != queue_handle_) {
-      lease.release();
-      ::orteaf::internal::diagnostics::error::throwError(
-          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-          "MPS fence hazard command queue handle mismatch");
-    }
-    if (!payload->hasCommandBuffer()) {
-      lease.release();
-      ::orteaf::internal::diagnostics::error::throwError(
-          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-          "MPS fence hazard must have a command buffer before tracking");
-    }
-    hazards_.pushBack(std::move(lease));
   }
 
   template <typename FastOps =

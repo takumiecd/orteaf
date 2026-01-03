@@ -9,6 +9,7 @@
 #include "orteaf/internal/execution/mps/manager/mps_fence_lifetime_manager.h"
 #include "orteaf/internal/execution/mps/manager/mps_fence_manager.h"
 #include "tests/internal/execution/mps/manager/testing/execution_mock.h"
+#include "tests/internal/testing/error_assert.h"
 
 namespace mps_mgr = orteaf::internal::execution::mps::manager;
 namespace mps_wrapper = orteaf::internal::execution::mps::platform::wrapper;
@@ -73,11 +74,10 @@ TEST_F(MpsFenceLifetimeManagerTest,
   ASSERT_TRUE(lifetime_manager_.setFenceManager(&fence_manager_));
   ASSERT_TRUE(lifetime_manager_.setCommandQueueHandle(handle_a));
 
-  auto lease = lifetime_manager_.acquire();
+  auto lease = lifetime_manager_.acquire(command_buffer);
   ASSERT_TRUE(lease);
   ASSERT_NE(lease.payloadPtr(), nullptr);
-  ASSERT_TRUE(lease.payloadPtr()->setCommandBuffer(command_buffer));
-  lifetime_manager_.track(std::move(lease));
+  EXPECT_EQ(lease.payloadPtr()->commandBuffer(), command_buffer);
 
   mps_mgr::MpsFenceManager fence_manager_b;
   EXPECT_FALSE(lifetime_manager_.setFenceManager(&fence_manager_b));
@@ -85,6 +85,32 @@ TEST_F(MpsFenceLifetimeManagerTest,
 
   EXPECT_TRUE(lifetime_manager_.setFenceManager(&fence_manager_));
   EXPECT_TRUE(lifetime_manager_.setCommandQueueHandle(handle_a));
+}
+
+TEST_F(MpsFenceLifetimeManagerTest, AcquireRequiresCommandBuffer) {
+  const base::CommandQueueHandle handle{5};
+
+  ASSERT_TRUE(lifetime_manager_.setFenceManager(&fence_manager_));
+  ASSERT_TRUE(lifetime_manager_.setCommandQueueHandle(handle));
+
+  ::orteaf::tests::ExpectError(
+      ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+      [&] { (void)lifetime_manager_.acquire(nullptr); });
+}
+
+TEST_F(MpsFenceLifetimeManagerTest, AcquireBindsCommandBufferAndTracks) {
+  const base::CommandQueueHandle handle{6};
+  auto *command_buffer =
+      reinterpret_cast<mps_wrapper::MpsCommandBuffer_t>(0xA);
+
+  ASSERT_TRUE(lifetime_manager_.setFenceManager(&fence_manager_));
+  ASSERT_TRUE(lifetime_manager_.setCommandQueueHandle(handle));
+
+  auto lease = lifetime_manager_.acquire(command_buffer);
+  ASSERT_TRUE(lease);
+  ASSERT_NE(lease.payloadPtr(), nullptr);
+  EXPECT_EQ(lease.payloadPtr()->commandBuffer(), command_buffer);
+  EXPECT_EQ(lifetime_manager_.size(), 1u);
 }
 
 #endif // ORTEAF_ENABLE_MPS
