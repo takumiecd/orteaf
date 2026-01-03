@@ -12,6 +12,7 @@
 #include "orteaf/internal/base/pool/slot_pool.h"
 #include "orteaf/internal/execution/mps/platform/mps_slow_ops.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_command_queue.h"
+#include "orteaf/internal/execution/mps/resource/mps_command_queue_resource.h"
 
 namespace orteaf::internal::execution::mps::manager {
 
@@ -21,11 +22,13 @@ namespace orteaf::internal::execution::mps::manager {
 
 struct CommandQueuePayloadPoolTraits {
   using Payload =
-      ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandQueue_t;
+      ::orteaf::internal::execution::mps::resource::MpsCommandQueueResource;
   using Handle = ::orteaf::internal::base::CommandQueueHandle;
   using DeviceType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t;
   using SlowOps = ::orteaf::internal::execution::mps::platform::MpsSlowOps;
+  using FenceManager = ::orteaf::internal::execution::mps::manager::
+      MpsFenceManager;
 
   struct Request {
     Handle handle{Handle::invalid()};
@@ -34,9 +37,10 @@ struct CommandQueuePayloadPoolTraits {
   struct Context {
     DeviceType device{nullptr};
     SlowOps *ops{nullptr};
+    FenceManager *fence_manager{nullptr};
   };
 
-  static bool create(Payload &payload, const Request &,
+  static bool create(Payload &payload, const Request &request,
                      const Context &context) {
     if (context.ops == nullptr || context.device == nullptr) {
       return false;
@@ -45,16 +49,31 @@ struct CommandQueuePayloadPoolTraits {
     if (queue == nullptr) {
       return false;
     }
-    payload = queue;
+    payload.setQueue(queue);
+    auto &lifetime = payload.lifetime();
+    if (!lifetime.setFenceManager(context.fence_manager)) {
+      context.ops->destroyCommandQueue(queue);
+      payload.setQueue(nullptr);
+      return false;
+    }
+    if (!lifetime.setCommandQueueHandle(request.handle)) {
+      context.ops->destroyCommandQueue(queue);
+      payload.setQueue(nullptr);
+      return false;
+    }
     return true;
   }
 
   static void destroy(Payload &payload, const Request &,
                       const Context &context) {
-    if (payload != nullptr && context.ops != nullptr) {
-      context.ops->destroyCommandQueue(payload);
-      payload = nullptr;
+    if (!payload.hasQueue() || context.ops == nullptr) {
+      return;
     }
+    if (!payload.lifetime().empty()) {
+      payload.lifetime().waitUntilReady();
+    }
+    context.ops->destroyCommandQueue(payload.queue());
+    payload.setQueue(nullptr);
   }
 };
 
@@ -69,7 +88,7 @@ struct CommandQueueControlBlockTag {};
 
 using CommandQueueControlBlock = ::orteaf::internal::base::WeakControlBlock<
     ::orteaf::internal::base::CommandQueueHandle,
-    ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandQueue_t,
+    ::orteaf::internal::execution::mps::resource::MpsCommandQueueResource,
     CommandQueuePayloadPool>;
 
 // =============================================================================
@@ -113,6 +132,8 @@ public:
     DeviceType device{nullptr};
     SlowOps *ops{nullptr};
     Core::Config pool{};
+    ::orteaf::internal::execution::mps::manager::MpsFenceManager
+        *fence_manager{nullptr};
   };
 
   // ===========================================================================
@@ -170,6 +191,8 @@ private:
   Core core_{};
   DeviceType device_{nullptr};
   SlowOps *ops_{nullptr};
+  ::orteaf::internal::execution::mps::manager::MpsFenceManager
+      *fence_manager_{nullptr};
 };
 
 } // namespace orteaf::internal::execution::mps::manager

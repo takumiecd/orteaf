@@ -99,6 +99,13 @@ struct MpsFastOps {
     return ::orteaf::internal::execution::mps::platform::wrapper::isCompleted(
         command_buffer);
   }
+
+  static inline void waitUntilCompleted(
+      ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandBuffer_t
+          command_buffer) {
+    ::orteaf::internal::execution::mps::platform::wrapper::waitUntilCompleted(
+        command_buffer);
+  }
 };
 
 } // namespace orteaf::internal::execution::mps::platform

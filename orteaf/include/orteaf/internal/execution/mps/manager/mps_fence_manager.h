@@ -6,12 +6,13 @@
 #include <cstdint>
 
 #include "orteaf/internal/base/handle.h"
-#include "orteaf/internal/base/lease/control_block/strong.h"
+#include "orteaf/internal/base/lease/control_block/shared.h"
 #include "orteaf/internal/base/lease/strong_lease.h"
 #include "orteaf/internal/base/manager/pool_manager.h"
 #include "orteaf/internal/base/pool/slot_pool.h"
 #include "orteaf/internal/execution/mps/platform/mps_slow_ops.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_fence.h"
+#include "orteaf/internal/execution/mps/resource/mps_fence_hazard.h"
 
 namespace orteaf::internal::execution::mps::manager {
 
@@ -21,7 +22,7 @@ namespace orteaf::internal::execution::mps::manager {
 
 struct FencePayloadPoolTraits {
   using Payload =
-      ::orteaf::internal::execution::mps::platform::wrapper::MpsFence_t;
+      ::orteaf::internal::execution::mps::resource::MpsFenceHazard;
   using Handle = ::orteaf::internal::base::FenceHandle;
   using DeviceType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t;
@@ -45,15 +46,16 @@ struct FencePayloadPoolTraits {
     if (fence == nullptr) {
       return false;
     }
-    payload = fence;
+    payload.setFence(fence);
     return true;
   }
 
   static void destroy(Payload &payload, const Request &,
                       const Context &context) {
-    if (payload != nullptr && context.ops != nullptr) {
-      context.ops->destroyFence(payload);
-      payload = nullptr;
+    auto fence = payload.fence();
+    if (fence != nullptr && context.ops != nullptr) {
+      context.ops->destroyFence(fence);
+      payload.reset();
     }
   }
 };
@@ -67,9 +69,9 @@ using FencePayloadPool =
 
 struct FenceControlBlockTag {};
 
-using FenceControlBlock = ::orteaf::internal::base::StrongControlBlock<
+using FenceControlBlock = ::orteaf::internal::base::SharedControlBlock<
     ::orteaf::internal::base::FenceHandle,
-    ::orteaf::internal::execution::mps::platform::wrapper::MpsFence_t,
+    ::orteaf::internal::execution::mps::resource::MpsFenceHazard,
     FencePayloadPool>;
 
 // =============================================================================
@@ -95,7 +97,7 @@ public:
       ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t;
   using FenceHandle = ::orteaf::internal::base::FenceHandle;
   using FenceType =
-      ::orteaf::internal::execution::mps::platform::wrapper::MpsFence_t;
+      ::orteaf::internal::execution::mps::resource::MpsFenceHazard;
 
   using Core = ::orteaf::internal::base::PoolManager<MpsFenceManagerTraits>;
   using ControlBlock = Core::ControlBlock;
@@ -103,9 +105,7 @@ public:
   using ControlBlockPool = Core::ControlBlockPool;
 
   using FenceLease = Core::StrongLeaseType;
-
-private:
-  friend FenceLease;
+  using FenceWeakLease = Core::WeakLeaseType;
 
 public:
   struct Config {
@@ -125,7 +125,7 @@ public:
   void shutdown();
 
   FenceLease acquire();
-  void release(FenceLease &lease) noexcept { lease.release(); }
+  FenceWeakLease acquireWeak(FenceHandle handle);
 
 #if ORTEAF_ENABLE_TEST
   bool isConfiguredForTest() const noexcept { return core_.isConfigured(); }

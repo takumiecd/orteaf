@@ -20,11 +20,13 @@ void MpsCommandQueueManager::configure(const Config &config) {
   }
   device_ = config.device;
   ops_ = config.ops;
+  fence_manager_ = config.fence_manager;
   // payload block size managed by core_
   // payload growth chunk size configured via core_
 
   const CommandQueuePayloadPoolTraits::Request payload_request{};
-  const CommandQueuePayloadPoolTraits::Context payload_context{device_, ops_};
+  const CommandQueuePayloadPoolTraits::Context payload_context{device_, ops_,
+                                                               fence_manager_};
   core_.configure(config.pool, payload_request, payload_context);
   if (!core_.createAllPayloads(payload_request, payload_context)) {
     ::orteaf::internal::diagnostics::error::throwError(
@@ -40,17 +42,20 @@ void MpsCommandQueueManager::shutdown() {
   // Check canShutdown on all created control blocks
 
   const CommandQueuePayloadPoolTraits::Request payload_request{};
-  const CommandQueuePayloadPoolTraits::Context payload_context{device_, ops_};
+  const CommandQueuePayloadPoolTraits::Context payload_context{device_, ops_,
+                                                               fence_manager_};
   core_.shutdown(payload_request, payload_context);
 
   device_ = nullptr;
   ops_ = nullptr;
+  fence_manager_ = nullptr;
 }
 
 MpsCommandQueueManager::CommandQueueLease MpsCommandQueueManager::acquire() {
   core_.ensureConfigured();
   const CommandQueuePayloadPoolTraits::Request request{};
-  const CommandQueuePayloadPoolTraits::Context context{device_, ops_};
+  const CommandQueuePayloadPoolTraits::Context context{device_, ops_,
+                                                       fence_manager_};
 
   auto handle = core_.acquirePayloadOrGrowAndCreate(request, context);
   if (!handle.isValid()) {
@@ -73,7 +78,7 @@ MpsCommandQueueManager::acquire(CommandQueueHandle handle) {
 
   auto lease = core_.acquireWeakLease(handle);
   const auto *payload_ptr = lease.payloadPtr();
-  if (payload_ptr == nullptr || *payload_ptr == nullptr) {
+  if (payload_ptr == nullptr || !payload_ptr->hasQueue()) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
         "Command queue handle does not exist");

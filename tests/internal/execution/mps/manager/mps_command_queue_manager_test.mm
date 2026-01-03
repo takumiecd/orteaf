@@ -7,6 +7,7 @@
 #include <orteaf/internal/diagnostics/error/error.h>
 #include <orteaf/internal/diagnostics/log/log_config.h>
 #include <orteaf/internal/execution/mps/manager/mps_command_queue_manager.h>
+#include <orteaf/internal/execution/mps/manager/mps_fence_manager.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_command_queue.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_event.h>
 #include <tests/internal/execution/mps/manager/testing/execution_ops_provider.h>
@@ -27,11 +28,13 @@ mps_wrapper::MpsCommandQueue_t makeQueue(std::uintptr_t value) {
 }
 
 mps_rt::MpsCommandQueueManager::Config makeConfig(
-    mps_wrapper::MpsDevice_t device, mps_rt::MpsCommandQueueManager::SlowOps *ops,
+    mps_wrapper::MpsDevice_t device,
+    mps_rt::MpsCommandQueueManager::SlowOps *ops,
     std::size_t payload_capacity, std::size_t control_block_capacity,
     std::size_t payload_block_size, std::size_t control_block_block_size,
     std::size_t payload_growth_chunk_size,
-    std::size_t control_block_growth_chunk_size) {
+    std::size_t control_block_growth_chunk_size,
+    mps_rt::MpsFenceManager *fence_manager = nullptr) {
   mps_rt::MpsCommandQueueManager::Config config{};
   config.device = device;
   config.ops = ops;
@@ -41,6 +44,7 @@ mps_rt::MpsCommandQueueManager::Config makeConfig(
   config.pool.control_block_block_size = control_block_block_size;
   config.pool.payload_growth_chunk_size = payload_growth_chunk_size;
   config.pool.control_block_growth_chunk_size = control_block_growth_chunk_size;
+  config.fence_manager = fence_manager;
   return config;
 }
 
@@ -184,12 +188,46 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest,
     auto lease = manager.acquire();
 
     // Assert
-    EXPECT_NE(lease.payloadPtr(), nullptr);
-    EXPECT_NE(*lease.payloadPtr(), nullptr);
+    auto *payload = lease.payloadPtr();
+    ASSERT_NE(payload, nullptr);
+    EXPECT_TRUE(payload->hasQueue());
   } // lease released here
 
   // Cleanup
   manager.shutdown();
+}
+
+TYPED_TEST(MpsCommandQueueManagerTypedTest,
+           AcquireBindsLifetimeManagerForQueueHandle) {
+  auto &manager = this->manager();
+  const auto device = this->adapter().device();
+
+  mps_rt::MpsFenceManager fence_manager{};
+  mps_rt::MpsFenceManager::Config fence_config{};
+  fence_config.device = device;
+  fence_config.ops = this->getOps();
+  fence_config.pool.payload_capacity = 0;
+  fence_config.pool.control_block_capacity = 0;
+  fence_config.pool.payload_block_size = 1;
+  fence_config.pool.control_block_block_size = 1;
+  fence_config.pool.payload_growth_chunk_size = 1;
+  fence_config.pool.control_block_growth_chunk_size = 1;
+  fence_manager.configure(fence_config);
+
+  this->adapter().expectCreateCommandQueues({makeQueue(0x305)});
+  this->adapter().expectDestroyCommandQueues({makeQueue(0x305)});
+  manager.configure(
+      makeConfig(device, this->getOps(), 1, 1, 1, 1, 1, 1, &fence_manager));
+
+  auto lease = manager.acquire();
+  auto *payload = lease.payloadPtr();
+  ASSERT_NE(payload, nullptr);
+  EXPECT_TRUE(payload->hasQueue());
+  EXPECT_NO_THROW((void)payload->lifetime().releaseReady());
+
+  lease.release();
+  manager.shutdown();
+  fence_manager.shutdown();
 }
 
 TYPED_TEST(MpsCommandQueueManagerTypedTest, AcquireGrowsPoolWhenNeeded) {
@@ -290,7 +328,9 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, LeaseDestructionAllowsShutdown) {
   // Act: Lease goes out of scope
   {
     auto lease = manager.acquire();
-    EXPECT_NE(lease.payloadPtr(), nullptr);
+    auto *payload = lease.payloadPtr();
+    ASSERT_NE(payload, nullptr);
+    EXPECT_TRUE(payload->hasQueue());
   } // lease released here
 
   // Assert: Can still shutdown (weak lease released before shutdown)

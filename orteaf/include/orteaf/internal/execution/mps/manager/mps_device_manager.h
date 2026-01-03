@@ -127,9 +127,15 @@ struct DevicePayloadPoolTraits {
       return false;
     }
     payload.arch = context.ops->detectArchitecture(request.handle);
+    auto fence_config = context.fence_config;
+    fence_config.device = device;
+    fence_config.ops = context.ops;
+    payload.fence_pool.configure(fence_config);
+
     auto command_queue_config = context.command_queue_config;
     command_queue_config.device = device;
     command_queue_config.ops = context.ops;
+    command_queue_config.fence_manager = &payload.fence_pool;
     payload.command_queue_manager.configure(command_queue_config);
     auto library_config = context.library_config;
     library_config.device = device;
@@ -149,10 +155,6 @@ struct DevicePayloadPoolTraits {
     event_config.device = device;
     event_config.ops = context.ops;
     payload.event_pool.configure(event_config);
-    auto fence_config = context.fence_config;
-    fence_config.device = device;
-    fence_config.ops = context.ops;
-    payload.fence_pool.configure(fence_config);
     return true;
   }
 
