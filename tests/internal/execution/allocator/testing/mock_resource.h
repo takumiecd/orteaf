@@ -2,10 +2,10 @@
 
 #include <cstddef>
 
-#include "orteaf/internal/execution/execution.h"
-#include "orteaf/internal/execution/allocator/buffer.h"
+#include "orteaf/internal/execution/allocator/execution_buffer.h"
 #include "orteaf/internal/execution/cpu/resource/cpu_buffer_view.h"
 #include "orteaf/internal/execution/cpu/resource/cpu_heap_region.h"
+#include "orteaf/internal/execution/execution.h"
 #include <gmock/gmock.h>
 
 namespace orteaf::internal::execution::allocator::testing {
@@ -15,8 +15,10 @@ namespace orteaf::internal::execution::allocator::testing {
 // ============================================================================
 class MockCpuHeapOpsImpl {
 public:
-  using BufferView = ::orteaf::internal::execution::cpu::resource::CpuBufferView;
-  using HeapRegion = ::orteaf::internal::execution::cpu::resource::CpuHeapRegion;
+  using BufferView =
+      ::orteaf::internal::execution::cpu::resource::CpuBufferView;
+  using HeapRegion =
+      ::orteaf::internal::execution::cpu::resource::CpuHeapRegion;
 
   MOCK_METHOD(HeapRegion, reserve, (std::size_t size));
   MOCK_METHOD(BufferView, map, (HeapRegion region));
@@ -25,8 +27,10 @@ public:
 
 // Static-API wrapper that forwards to a shared MockCpuHeapOpsImpl instance.
 struct MockCpuHeapOps {
-  using BufferView = ::orteaf::internal::execution::cpu::resource::CpuBufferView;
-  using HeapRegion = ::orteaf::internal::execution::cpu::resource::CpuHeapRegion;
+  using BufferView =
+      ::orteaf::internal::execution::cpu::resource::CpuBufferView;
+  using HeapRegion =
+      ::orteaf::internal::execution::cpu::resource::CpuHeapRegion;
 
   static void set(MockCpuHeapOpsImpl *impl) { impl_ = impl; }
   static void reset() { impl_ = nullptr; }
@@ -51,7 +55,8 @@ private:
 // ============================================================================
 class MockCpuResourceImpl {
 public:
-  using BufferView = ::orteaf::internal::execution::cpu::resource::CpuBufferView;
+  using BufferView =
+      ::orteaf::internal::execution::cpu::resource::CpuBufferView;
 
   MOCK_METHOD(BufferView, allocate, (std::size_t size, std::size_t alignment));
   MOCK_METHOD(void, deallocate,

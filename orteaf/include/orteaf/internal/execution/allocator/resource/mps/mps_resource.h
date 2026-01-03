@@ -7,7 +7,7 @@
 
 #include <orteaf/internal/base/handle.h>
 #include <orteaf/internal/base/heap_vector.h>
-#include <orteaf/internal/execution/allocator/buffer.h>
+#include <orteaf/internal/execution/allocator/execution_buffer.h>
 #include <orteaf/internal/execution/mps/manager/mps_command_queue_manager.h>
 #include <orteaf/internal/execution/mps/manager/mps_library_manager.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_buffer.h>
@@ -38,8 +38,10 @@ public:
   using BufferBlock = MpsBufferBlock;
   using BufferResource = MpsBuffer;
 
-  using FenceToken = ::orteaf::internal::execution::mps::resource::MpsFenceToken;
-  using ReuseToken = ::orteaf::internal::execution::mps::resource::MpsReuseToken;
+  using FenceToken =
+      ::orteaf::internal::execution::mps::resource::MpsFenceToken;
+  using ReuseToken =
+      ::orteaf::internal::execution::mps::resource::MpsReuseToken;
   using MpsBuffer_t =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsBuffer_t;
   struct LaunchParams {
@@ -48,11 +50,13 @@ public:
         CommandQueueLease command_queue;
   };
 
-  static constexpr ::orteaf::internal::execution::Execution execution_type_static() {
+  static constexpr ::orteaf::internal::execution::Execution
+  execution_type_static() {
     return ExecutionType;
   }
 
-  constexpr ::orteaf::internal::execution::Execution execution_type() const noexcept {
+  constexpr ::orteaf::internal::execution::Execution
+  execution_type() const noexcept {
     return execution_type_static();
   }
 
@@ -62,8 +66,8 @@ public:
         nullptr};
     ::orteaf::internal::execution::mps::platform::wrapper::MpsHeap_t heap{
         nullptr};
-    ::orteaf::internal::execution::mps::platform::wrapper::MpsBufferUsage_t usage{
-        ::orteaf::internal::execution::mps::platform::wrapper::
+    ::orteaf::internal::execution::mps::platform::wrapper::MpsBufferUsage_t
+        usage{::orteaf::internal::execution::mps::platform::wrapper::
                   kMPSDefaultBufferUsage};
     ::orteaf::internal::execution::mps::manager::MpsLibraryManager
         *library_manager{nullptr};
@@ -121,9 +125,10 @@ private:
   ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t device_{
       nullptr};
   ::orteaf::internal::base::DeviceHandle device_handle_{};
-  ::orteaf::internal::execution::mps::platform::wrapper::MpsHeap_t heap_{nullptr};
-  ::orteaf::internal::execution::mps::platform::wrapper::MpsBufferUsage_t usage_{
-      ::orteaf::internal::execution::mps::platform::wrapper::
+  ::orteaf::internal::execution::mps::platform::wrapper::MpsHeap_t heap_{
+      nullptr};
+  ::orteaf::internal::execution::mps::platform::wrapper::MpsBufferUsage_t
+      usage_{::orteaf::internal::execution::mps::platform::wrapper::
                  kMPSDefaultBufferUsage};
   bool initialized_{false};
 };

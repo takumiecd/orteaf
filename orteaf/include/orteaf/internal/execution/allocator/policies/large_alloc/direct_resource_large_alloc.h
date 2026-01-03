@@ -4,18 +4,17 @@
 
 #include <string>
 
-#include "orteaf/internal/execution/execution.h"
-#include "orteaf/internal/base/heap_vector.h"
 #include "orteaf/internal/base/handle.h"
+#include "orteaf/internal/base/heap_vector.h"
 #include "orteaf/internal/diagnostics/error/error_macros.h"
 #include "orteaf/internal/diagnostics/log/log.h"
-#include "orteaf/internal/execution/allocator/buffer.h"
+#include "orteaf/internal/execution/allocator/execution_buffer.h"
 #include "orteaf/internal/execution/allocator/policies/policy_config.h"
+#include "orteaf/internal/execution/execution.h"
 
 namespace orteaf::internal::execution::allocator::policies {
 
-template <typename Resource>
-class DirectResourceLargeAllocPolicy {
+template <typename Resource> class DirectResourceLargeAllocPolicy {
 public:
   using BufferViewHandle = ::orteaf::internal::base::BufferViewHandle;
   using BufferView = Resource::BufferView;

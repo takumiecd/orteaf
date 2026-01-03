@@ -3,12 +3,12 @@
 #include <cstddef>
 #include <utility>
 
-#include <orteaf/internal/execution/execution.h>
 #include <orteaf/internal/base/heap_vector.h>
 #include <orteaf/internal/diagnostics/error/error_macros.h>
-#include <orteaf/internal/execution/allocator/buffer.h>
+#include <orteaf/internal/execution/allocator/execution_buffer.h>
 #include <orteaf/internal/execution/allocator/policies/policy_config.h>
 #include <orteaf/internal/execution/base/execution_traits.h>
+#include <orteaf/internal/execution/execution.h>
 
 namespace orteaf::internal::execution::allocator::policies {
 
@@ -19,8 +19,7 @@ namespace orteaf::internal::execution::allocator::policies {
  * サイズクラスの計算（min/max_block_size）は SegregatePool が担当し、
  * 本ポリシーは list_index のみを扱う。
  */
-template <typename Resource>
-class HostStackFreelistPolicy {
+template <typename Resource> class HostStackFreelistPolicy {
 public:
   using BufferBlock = Resource::BufferBlock;
   using BufferView = BufferBlock::BufferView;

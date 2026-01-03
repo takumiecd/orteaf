@@ -5,7 +5,7 @@
 
 #include <orteaf/internal/base/heap_vector.h>
 #include <orteaf/internal/diagnostics/error/error_macros.h>
-#include <orteaf/internal/execution/allocator/buffer.h>
+#include <orteaf/internal/execution/allocator/execution_buffer.h>
 #include <orteaf/internal/execution/allocator/policies/policy_config.h>
 #include <orteaf/internal/execution/base/execution_traits.h>
 #include <orteaf/internal/execution/execution.h>
@@ -28,7 +28,8 @@ public:
   using BufferResource =
       ::orteaf::internal::execution::allocator::ExecutionBuffer<B>;
   using LaunchParams =
-      typename ::orteaf::internal::execution::base::ExecutionTraits<B>::KernelLaunchParams;
+      typename ::orteaf::internal::execution::base::ExecutionTraits<
+          B>::KernelLaunchParams;
 
   struct Config : PolicyConfig<Resource> {
     // サイズクラスの情報は SegregatePool が管理するため、
