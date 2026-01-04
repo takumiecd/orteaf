@@ -45,7 +45,7 @@ void MpsFenceManager::shutdown() {
   ops_ = nullptr;
 }
 
-MpsFenceManager::FenceLease MpsFenceManager::acquire() {
+MpsFenceManager::StrongFenceLease MpsFenceManager::acquire() {
   core_.ensureConfigured();
   const FencePayloadPoolTraits::Request request{};
   const auto context = makePayloadContext();
@@ -58,7 +58,7 @@ MpsFenceManager::FenceLease MpsFenceManager::acquire() {
   return core_.acquireStrongLease(handle);
 }
 
-MpsFenceManager::FenceWeakLease
+MpsFenceManager::WeakFenceLease
 MpsFenceManager::acquireWeak(FenceHandle handle) {
   core_.ensureConfigured();
   return core_.acquireWeakLease(handle);

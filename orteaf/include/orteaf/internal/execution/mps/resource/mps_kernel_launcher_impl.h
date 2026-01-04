@@ -224,11 +224,10 @@ public:
    */
   template <typename FastOps =
                 ::orteaf::internal::execution::mps::platform::MpsFastOps>
-  void updateFence(
-      ::orteaf::internal::execution::mps::platform::wrapper::
-          MpsComputeCommandEncoder_t encoder,
-      ::orteaf::internal::execution::mps::manager::MpsFenceManager::FenceLease
-          &fence) const {
+  void updateFence(::orteaf::internal::execution::mps::platform::wrapper::
+                       MpsComputeCommandEncoder_t encoder,
+                   ::orteaf::internal::execution::mps::manager::
+                       MpsFenceManager::StrongFenceLease &fence) const {
     FastOps::updateFence(encoder, fence.payloadPtr()->fence());
   }
 
@@ -239,7 +238,7 @@ public:
   void waitForFence(::orteaf::internal::execution::mps::platform::wrapper::
                         MpsComputeCommandEncoder_t encoder,
                     const ::orteaf::internal::execution::mps::manager::
-                        MpsFenceManager::FenceLease &fence) const {
+                        MpsFenceManager::StrongFenceLease &fence) const {
     FastOps::waitForFence(encoder, fence.payloadPtr()->fence());
   }
 
@@ -265,7 +264,7 @@ public:
                 ::orteaf::internal::execution::mps::platform::MpsFastOps,
             typename RuntimeApi =
                 ::orteaf::internal::execution::mps::api::MpsRuntimeApi>
-  ::orteaf::internal::execution::mps::manager::MpsFenceManager::FenceLease
+  ::orteaf::internal::execution::mps::manager::MpsFenceManager::StrongFenceLease
   updateFence(
       ::orteaf::internal::base::DeviceHandle device,
       const ::orteaf::internal::execution::mps::manager::

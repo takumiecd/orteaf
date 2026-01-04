@@ -33,7 +33,7 @@ class DummyPrivateOps {
 public:
   using PipelineLease =
       mps_rt::manager::MpsComputePipelineStateManager::PipelineLease;
-  using FenceLease = mps_rt::manager::MpsFenceManager::FenceLease;
+  using StrongFenceLease = mps_rt::manager::MpsFenceManager::StrongFenceLease;
   static void reset() {
     last_device = {};
     last_library.clear();
@@ -52,9 +52,9 @@ public:
     return PipelineLease{};
   }
 
-  static FenceLease acquireFence(base::DeviceHandle device) {
+  static StrongFenceLease acquireFence(base::DeviceHandle device) {
     last_device = device;
-    return FenceLease{};
+    return StrongFenceLease{};
   }
 
   static inline base::DeviceHandle last_device{};
@@ -70,20 +70,20 @@ class FenceRuntimeOps {
 public:
   using PipelineLease =
       mps_rt::manager::MpsComputePipelineStateManager::PipelineLease;
-  using FenceLease = mps_rt::manager::MpsFenceManager::FenceLease;
+  using StrongFenceLease = mps_rt::manager::MpsFenceManager::StrongFenceLease;
 
   static void setFenceManager(mps_rt::manager::MpsFenceManager *manager) {
     fence_manager = manager;
   }
 
-  static PipelineLease
-  acquirePipeline(base::DeviceHandle, const mps_rt::manager::LibraryKey &,
-                  const mps_rt::manager::FunctionKey &) {
+  static PipelineLease acquirePipeline(base::DeviceHandle,
+                                       const mps_rt::manager::LibraryKey &,
+                                       const mps_rt::manager::FunctionKey &) {
     return PipelineLease{};
   }
 
-  static FenceLease acquireFence(base::DeviceHandle) {
-    return fence_manager ? fence_manager->acquire() : FenceLease{};
+  static StrongFenceLease acquireFence(base::DeviceHandle) {
+    return fence_manager ? fence_manager->acquire() : StrongFenceLease{};
   }
 
   static inline mps_rt::manager::MpsFenceManager *fence_manager{nullptr};

@@ -16,12 +16,12 @@ namespace orteaf::internal::execution::mps::manager {
 
 class MpsFenceLifetimeManager {
 public:
-  using FenceManager = ::orteaf::internal::execution::mps::manager::MpsFenceManager;
-  using FenceLease = FenceManager::FenceLease;
+  using FenceManager =
+      ::orteaf::internal::execution::mps::manager::MpsFenceManager;
+  using StrongFenceLease = FenceManager::StrongFenceLease;
   using CommandQueueHandle = ::orteaf::internal::base::CommandQueueHandle;
   using CommandBufferType =
-      ::orteaf::internal::execution::mps::platform::wrapper::
-          MpsCommandBuffer_t;
+      ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandBuffer_t;
 
   MpsFenceLifetimeManager() = default;
   MpsFenceLifetimeManager(const MpsFenceLifetimeManager &) = delete;
@@ -47,7 +47,7 @@ public:
     return true;
   }
 
-  FenceLease acquire(CommandBufferType command_buffer) {
+  StrongFenceLease acquire(CommandBufferType command_buffer) {
     if (fence_manager_ == nullptr) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
@@ -248,7 +248,7 @@ private:
 
   FenceManager *fence_manager_{nullptr};
   CommandQueueHandle queue_handle_{CommandQueueHandle::invalid()};
-  ::orteaf::internal::base::HeapVector<FenceLease> hazards_{};
+  ::orteaf::internal::base::HeapVector<StrongFenceLease> hazards_{};
   std::size_t head_{0};
 };
 

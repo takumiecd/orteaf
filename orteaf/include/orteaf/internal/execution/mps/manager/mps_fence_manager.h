@@ -21,8 +21,7 @@ namespace orteaf::internal::execution::mps::manager {
 // =============================================================================
 
 struct FencePayloadPoolTraits {
-  using Payload =
-      ::orteaf::internal::execution::mps::resource::MpsFenceHazard;
+  using Payload = ::orteaf::internal::execution::mps::resource::MpsFenceHazard;
   using Handle = ::orteaf::internal::base::FenceHandle;
   using DeviceType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t;
@@ -104,8 +103,8 @@ public:
   using ControlBlockHandle = Core::ControlBlockHandle;
   using ControlBlockPool = Core::ControlBlockPool;
 
-  using FenceLease = Core::StrongLeaseType;
-  using FenceWeakLease = Core::WeakLeaseType;
+  using StrongFenceLease = Core::StrongLeaseType;
+  using WeakFenceLease = Core::WeakLeaseType;
 
 public:
   struct Config {
@@ -124,8 +123,8 @@ public:
   void configure(const Config &config);
   void shutdown();
 
-  FenceLease acquire();
-  FenceWeakLease acquireWeak(FenceHandle handle);
+  StrongFenceLease acquire();
+  WeakFenceLease acquireWeak(FenceHandle handle);
 
 #if ORTEAF_ENABLE_TEST
   bool isConfiguredForTest() const noexcept { return core_.isConfigured(); }

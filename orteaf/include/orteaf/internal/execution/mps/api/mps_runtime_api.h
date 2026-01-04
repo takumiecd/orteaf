@@ -15,14 +15,15 @@ namespace orteaf::internal::execution::mps::api {
 
 class MpsRuntimeApi {
 public:
-  using Runtime = ::orteaf::internal::execution::mps::manager::MpsRuntimeManager;
+  using Runtime =
+      ::orteaf::internal::execution::mps::manager::MpsRuntimeManager;
   using DeviceHandle = ::orteaf::internal::base::DeviceHandle;
   using LibraryKey = ::orteaf::internal::execution::mps::manager::LibraryKey;
   using FunctionKey = ::orteaf::internal::execution::mps::manager::FunctionKey;
   using PipelineLease = ::orteaf::internal::execution::mps::manager::
       MpsComputePipelineStateManager::PipelineLease;
-  using FenceLease =
-      ::orteaf::internal::execution::mps::manager::MpsFenceManager::FenceLease;
+  using StrongFenceLease = ::orteaf::internal::execution::mps::manager::
+      MpsFenceManager::StrongFenceLease;
   using SlowOps = ::orteaf::internal::execution::mps::platform::MpsSlowOps;
 
   MpsRuntimeApi() = delete;
@@ -57,7 +58,7 @@ public:
     return library_resource->pipeline_manager.acquire(function_key);
   }
 
-  static FenceLease acquireFence(DeviceHandle device) {
+  static StrongFenceLease acquireFence(DeviceHandle device) {
     Runtime &rt = runtime();
     auto device_lease = rt.deviceManager().acquire(device);
     auto *resource = device_lease.payloadPtr();

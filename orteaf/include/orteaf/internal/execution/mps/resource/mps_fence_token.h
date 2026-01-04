@@ -13,8 +13,8 @@ namespace orteaf::internal::execution::mps::resource {
 
 class MpsFenceToken {
 public:
-  using FenceLease =
-      ::orteaf::internal::execution::mps::manager::MpsFenceManager::FenceLease;
+  using StrongFenceLease = ::orteaf::internal::execution::mps::manager::
+      MpsFenceManager::StrongFenceLease;
 
   static constexpr std::size_t kInlineCapacity = 4;
 
@@ -29,7 +29,7 @@ public:
   std::size_t size() const noexcept { return leases_.size(); }
 
   // Add a lease, replacing any existing lease with the same command queue id.
-  void addOrReplaceLease(FenceLease &&lease) {
+  void addOrReplaceLease(StrongFenceLease &&lease) {
     auto *payload = lease.payloadPtr();
     if (payload != nullptr) {
       const auto queue_handle = payload->commandQueueHandle();
@@ -47,18 +47,21 @@ public:
 
   void clear() noexcept { leases_.clear(); }
 
-  const FenceLease &operator[](std::size_t index) const noexcept {
+  const StrongFenceLease &operator[](std::size_t index) const noexcept {
     return leases_[index];
   }
-  FenceLease &operator[](std::size_t index) noexcept { return leases_[index]; }
+  StrongFenceLease &operator[](std::size_t index) noexcept {
+    return leases_[index];
+  }
 
-  const FenceLease *begin() const noexcept { return leases_.begin(); }
-  const FenceLease *end() const noexcept { return leases_.end(); }
-  FenceLease *begin() noexcept { return leases_.begin(); }
-  FenceLease *end() noexcept { return leases_.end(); }
+  const StrongFenceLease *begin() const noexcept { return leases_.begin(); }
+  const StrongFenceLease *end() const noexcept { return leases_.end(); }
+  StrongFenceLease *begin() noexcept { return leases_.begin(); }
+  StrongFenceLease *end() noexcept { return leases_.end(); }
 
 private:
-  ::orteaf::internal::base::SmallVector<FenceLease, kInlineCapacity> leases_{};
+  ::orteaf::internal::base::SmallVector<StrongFenceLease, kInlineCapacity>
+      leases_{};
 };
 
 } // namespace orteaf::internal::execution::mps::resource
