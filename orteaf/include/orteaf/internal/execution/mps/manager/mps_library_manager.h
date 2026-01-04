@@ -9,8 +9,8 @@
 #include <unordered_map>
 
 #include "orteaf/internal/base/handle.h"
-#include "orteaf/internal/base/lease/control_block/weak.h"
-#include "orteaf/internal/base/lease/weak_lease.h"
+#include "orteaf/internal/base/lease/control_block/strong.h"
+#include "orteaf/internal/base/manager/lease_lifetime_registry.h"
 #include "orteaf/internal/base/manager/pool_manager.h"
 #include "orteaf/internal/base/pool/fixed_slot_store.h"
 #include "orteaf/internal/execution/mps/manager/mps_compute_pipeline_state_manager.h"
@@ -104,8 +104,8 @@ struct LibraryPayloadPoolTraits {
 using LibraryPayloadPool =
     ::orteaf::internal::base::pool::FixedSlotStore<LibraryPayloadPoolTraits>;
 
-// ControlBlock type using WeakControlBlock
-using LibraryControlBlock = ::orteaf::internal::base::WeakControlBlock<
+// ControlBlock type using StrongControlBlock
+using LibraryControlBlock = ::orteaf::internal::base::StrongControlBlock<
     ::orteaf::internal::base::LibraryHandle, MpsLibraryResource,
     LibraryPayloadPool>;
 
@@ -128,7 +128,10 @@ public:
   using LibraryHandle = ::orteaf::internal::base::LibraryHandle;
   using ControlBlockHandle = Core::ControlBlockHandle;
   using ControlBlockPool = Core::ControlBlockPool;
-  using LibraryLease = Core::WeakLeaseType;
+  using LibraryLease = Core::StrongLeaseType;
+  using LifetimeRegistry =
+      ::orteaf::internal::base::manager::LeaseLifetimeRegistry<LibraryHandle,
+                                                               LibraryLease>;
 
   MpsLibraryManager() = default;
   MpsLibraryManager(const MpsLibraryManager &) = delete;
@@ -194,6 +197,7 @@ private:
   SlowOps *ops_{nullptr};
   MpsComputePipelineStateManager::Config pipeline_config_{};
   Core core_{};
+  LifetimeRegistry lifetime_{};
 };
 
 } // namespace orteaf::internal::execution::mps::manager

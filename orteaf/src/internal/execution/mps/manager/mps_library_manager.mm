@@ -35,6 +35,7 @@ void MpsLibraryManager::shutdown() {
     return;
   }
 
+  lifetime_.clear();
   const LibraryPayloadPoolTraits::Request payload_request{};
   const auto payload_context = makePayloadContext();
   core_.shutdown(payload_request, payload_context);
@@ -58,7 +59,13 @@ MpsLibraryManager::acquire(const LibraryKey &key) {
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
           "MPS library cache is invalid");
     }
-    return core_.acquireWeakLease(handle);
+    auto cached = lifetime_.get(handle);
+    if (cached) {
+      return cached;
+    }
+    auto lease = core_.acquireStrongLease(handle);
+    lifetime_.set(lease);
+    return lease;
   }
 
   // Reserve an uncreated slot and create the library
@@ -77,7 +84,9 @@ MpsLibraryManager::acquire(const LibraryKey &key) {
   }
 
   key_to_index_.emplace(key, static_cast<std::size_t>(handle.index));
-  return core_.acquireWeakLease(handle);
+  auto lease = core_.acquireStrongLease(handle);
+  lifetime_.set(lease);
+  return lease;
 }
 
 MpsLibraryManager::LibraryLease
@@ -88,13 +97,18 @@ MpsLibraryManager::acquire(LibraryHandle handle) {
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
         "Invalid library handle");
   }
-  auto lease = core_.acquireWeakLease(handle);
+  auto cached = lifetime_.get(handle);
+  if (cached) {
+    return cached;
+  }
+  auto lease = core_.acquireStrongLease(handle);
   const auto *payload_ptr = lease.payloadPtr();
   if (payload_ptr == nullptr || payload_ptr->library == nullptr) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
         "Library handle does not exist");
   }
+  lifetime_.set(lease);
   return lease;
 }
 
