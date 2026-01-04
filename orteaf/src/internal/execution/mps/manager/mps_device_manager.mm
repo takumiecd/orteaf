@@ -45,6 +45,7 @@ void MpsDeviceManager::shutdown() {
     return;
   }
   // Check canShutdown on all created control blocks
+  lifetime_.clear();
 
   const DevicePayloadPoolTraits::Request payload_request{};
   const auto payload_context =
@@ -60,7 +61,13 @@ void MpsDeviceManager::shutdown() {
 }
 
 MpsDeviceManager::DeviceLease MpsDeviceManager::acquire(DeviceHandle handle) {
-  return core_.acquireWeakLease(handle);
+  auto cached = lifetime_.get(handle);
+  if (cached) {
+    return cached;
+  }
+  auto lease = core_.acquireStrongLease(handle);
+  lifetime_.set(lease);
+  return lease;
 }
 
 ::orteaf::internal::architecture::Architecture
@@ -70,7 +77,7 @@ MpsDeviceManager::getArch(DeviceHandle handle) {
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
         "MPS devices not initialized");
   }
-  auto lease = core_.acquireWeakLease(handle);
+  auto lease = acquire(handle);
   return lease.payloadPtr()->arch;
 }
 

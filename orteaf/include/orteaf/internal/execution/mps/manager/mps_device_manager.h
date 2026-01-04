@@ -8,11 +8,10 @@
 
 #include "orteaf/internal/architecture/architecture.h"
 #include "orteaf/internal/base/handle.h"
-#include "orteaf/internal/base/lease/control_block/weak.h"
-#include "orteaf/internal/base/lease/weak_lease.h"
+#include "orteaf/internal/base/lease/control_block/strong.h"
+#include "orteaf/internal/base/manager/lease_lifetime_registry.h"
 #include "orteaf/internal/base/manager/pool_manager.h"
 #include "orteaf/internal/base/pool/fixed_slot_store.h"
-#include "orteaf/internal/base/pool/with_control_block_binding.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include "orteaf/internal/execution/mps/manager/mps_command_queue_manager.h"
 #include "orteaf/internal/execution/mps/manager/mps_event_manager.h"
@@ -168,29 +167,20 @@ struct DevicePayloadPoolTraits {
 struct MpsDeviceManagerTraits;
 
 // =============================================================================
-// Payload Pool with ControlBlock Binding
+// Payload Pool
 // =============================================================================
 
-using DevicePayloadPoolBase =
+using DevicePayloadPool =
     ::orteaf::internal::base::pool::FixedSlotStore<DevicePayloadPoolTraits>;
 
 // Forward-declare CB tag to avoid circular dependency
 struct DeviceManagerCBTag {};
 
-// Use DeviceManagerCBTag for CB binding
-using DeviceCBHandle =
-    ::orteaf::internal::base::pool::ControlBlockHandle<DeviceManagerCBTag>;
-
-// Add CB binding capability
-using DevicePayloadPool =
-    ::orteaf::internal::base::pool::WithControlBlockBinding<
-        DevicePayloadPoolBase, DeviceCBHandle>;
-
 // =============================================================================
 // ControlBlock (using default pool traits via PoolManager)
 // =============================================================================
 
-using DeviceControlBlock = ::orteaf::internal::base::WeakControlBlock<
+using DeviceControlBlock = ::orteaf::internal::base::StrongControlBlock<
     ::orteaf::internal::base::DeviceHandle, MpsDeviceResource,
     DevicePayloadPool>;
 
@@ -222,7 +212,10 @@ public:
   using ControlBlockHandle = Core::ControlBlockHandle;
   using ControlBlockPool = Core::ControlBlockPool;
 
-  using DeviceLease = Core::WeakLeaseType;
+  using DeviceLease = Core::StrongLeaseType;
+  using LifetimeRegistry =
+      ::orteaf::internal::base::manager::LeaseLifetimeRegistry<DeviceHandle,
+                                                               DeviceLease>;
 
   struct Config {
     SlowOps *ops{nullptr};
@@ -279,6 +272,7 @@ public:
 private:
   SlowOps *ops_{nullptr};
   Core core_{};
+  LifetimeRegistry lifetime_{};
 };
 
 } // namespace orteaf::internal::execution::mps::manager
