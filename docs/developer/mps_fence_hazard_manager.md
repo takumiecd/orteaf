@@ -7,7 +7,7 @@
 寿命を安全に管理する。
 
 ## 方針
-`MpsFenceManager::FenceLease` を **コマンドキュー単位の FIFO** で管理する。
+`MpsFenceManager::StrongFenceLease` を **コマンドキュー単位の FIFO** で管理する。
 同一キュー上の command buffer は順序通りに完了するため、**新しいものが
 完了していれば、より古いものも完了している**とみなしてまとめて解放する。
 
@@ -19,7 +19,7 @@
   - `isReady<FastOps>()` で `command_buffer` を `nullptr` に更新
 - `MpsFenceLifetimeManager`（名称案）
   - `MpsFenceManager*` を保持
-  - `FenceLease` の FIFO を保持
+  - `StrongFenceLease` の FIFO を保持
   - `acquire` と `releaseReady` を提供（寿命管理の単一入口）
 - `MpsCommandQueueResource`
   - `MpsCommandQueue_t queue`
@@ -33,13 +33,13 @@
 2. メンテナンス時、**後ろ（最新）から isReady を確認**する。
    - `false` なら何も解放しない。
    - `true` なら **先頭からその要素まで** をまとめて release。
-3. release された `FenceLease` は `MpsFenceManager` に返却される。
+3. release された `StrongFenceLease` は `MpsFenceManager` に返却される。
 
 ## API 案
 ### MpsFenceLifetimeManager（queueごと）
-- `FenceLease acquire();`
+- `StrongFenceLease acquire();`
   - `MpsFenceManager` から lease を取得する唯一の入口
-- `void track(FenceLease &&lease);`
+- `void track(StrongFenceLease &&lease);`
   - `command_buffer` 設定済みの lease を FIFO に追加
 - `std::size_t releaseReady();`
   - 解放した件数を返す
