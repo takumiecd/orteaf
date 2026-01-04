@@ -822,11 +822,11 @@ TYPED_TEST(MpsDeviceManagerTypedTest, DirectAccessReturnsValidPointers) {
 }
 
 // =============================================================================
-// Lease Copy/Move Tests with WeakCount Verification
+// Lease Copy/Move Tests with StrongCount Verification
 // =============================================================================
 
 #if ORTEAF_ENABLE_TEST
-TYPED_TEST(MpsDeviceManagerTypedTest, LeaseCopyIncrementsWeakCount) {
+TYPED_TEST(MpsDeviceManagerTypedTest, LeaseCopyIncrementsStrongCount) {
   auto &manager = this->manager();
 
   // Arrange
@@ -846,25 +846,25 @@ TYPED_TEST(MpsDeviceManagerTypedTest, LeaseCopyIncrementsWeakCount) {
 
   // Act
   auto lease1 = manager.acquire(base::DeviceHandle{0});
-  EXPECT_EQ(lease1.weakCount(), 1u);
+  EXPECT_EQ(lease1.strongCount(), 2u);
 
   auto lease2 = lease1; // Copy
 
-  // Assert: Both valid, weak count incremented
+  // Assert: Both valid, strong count incremented
   EXPECT_TRUE(lease1);
   EXPECT_TRUE(lease2);
-  EXPECT_EQ(lease1.weakCount(), 2u);
-  EXPECT_EQ(lease2.weakCount(), 2u);
+  EXPECT_EQ(lease1.strongCount(), 3u);
+  EXPECT_EQ(lease2.strongCount(), 3u);
 
   // Cleanup
   lease1.release();
-  EXPECT_EQ(lease2.weakCount(), 1u);
+  EXPECT_EQ(lease2.strongCount(), 2u);
   lease2.release();
 
   manager.shutdown();
 }
 
-TYPED_TEST(MpsDeviceManagerTypedTest, LeaseCopyAssignmentIncrementsWeakCount) {
+TYPED_TEST(MpsDeviceManagerTypedTest, LeaseCopyAssignmentIncrementsStrongCount) {
   auto &manager = this->manager();
 
   // Arrange
@@ -889,8 +889,8 @@ TYPED_TEST(MpsDeviceManagerTypedTest, LeaseCopyAssignmentIncrementsWeakCount) {
   lease2 = lease1; // Copy assignment
 
   // Assert
-  EXPECT_EQ(lease1.weakCount(), 2u);
-  EXPECT_EQ(lease2.weakCount(), 2u);
+  EXPECT_EQ(lease1.strongCount(), 3u);
+  EXPECT_EQ(lease2.strongCount(), 3u);
 
   // Cleanup
   lease1.release();
@@ -899,7 +899,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, LeaseCopyAssignmentIncrementsWeakCount) {
   manager.shutdown();
 }
 
-TYPED_TEST(MpsDeviceManagerTypedTest, LeaseMoveDoesNotChangeWeakCount) {
+TYPED_TEST(MpsDeviceManagerTypedTest, LeaseMoveDoesNotChangeStrongCount) {
   auto &manager = this->manager();
 
   // Arrange
@@ -918,15 +918,15 @@ TYPED_TEST(MpsDeviceManagerTypedTest, LeaseMoveDoesNotChangeWeakCount) {
   }
 
   auto lease1 = manager.acquire(base::DeviceHandle{0});
-  EXPECT_EQ(lease1.weakCount(), 1u);
+  EXPECT_EQ(lease1.strongCount(), 2u);
 
   // Act
   auto lease2 = std::move(lease1); // Move
 
-  // Assert: Source invalid, target valid, weak count unchanged
+  // Assert: Source invalid, target valid, strong count unchanged
   EXPECT_FALSE(lease1);
   EXPECT_TRUE(lease2);
-  EXPECT_EQ(lease2.weakCount(), 1u);
+  EXPECT_EQ(lease2.strongCount(), 2u);
 
   // Cleanup
   lease2.release();
@@ -935,7 +935,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, LeaseMoveDoesNotChangeWeakCount) {
 }
 
 TYPED_TEST(MpsDeviceManagerTypedTest,
-           LeaseMoveAssignmentDoesNotChangeWeakCount) {
+           LeaseMoveAssignmentDoesNotChangeStrongCount) {
   auto &manager = this->manager();
 
   // Arrange
@@ -962,7 +962,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest,
   // Assert
   EXPECT_FALSE(lease1);
   EXPECT_TRUE(lease2);
-  EXPECT_EQ(lease2.weakCount(), 1u);
+  EXPECT_EQ(lease2.strongCount(), 2u);
 
   // Cleanup
   lease2.release();
