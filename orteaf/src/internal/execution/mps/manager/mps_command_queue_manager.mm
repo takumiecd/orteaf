@@ -40,6 +40,7 @@ void MpsCommandQueueManager::shutdown() {
     return;
   }
   // Check canShutdown on all created control blocks
+  lifetime_.clear();
 
   const CommandQueuePayloadPoolTraits::Request payload_request{};
   const CommandQueuePayloadPoolTraits::Context payload_context{device_, ops_,
@@ -63,7 +64,13 @@ MpsCommandQueueManager::CommandQueueLease MpsCommandQueueManager::acquire() {
         ::orteaf::internal::diagnostics::error::OrteafErrc::OutOfRange,
         "MPS command queue manager has no available slots");
   }
-  return core_.acquireWeakLease(handle);
+  auto cached = lifetime_.get(handle);
+  if (cached) {
+    return cached;
+  }
+  auto lease = core_.acquireStrongLease(handle);
+  lifetime_.set(lease);
+  return lease;
 }
 
 MpsCommandQueueManager::CommandQueueLease
@@ -76,13 +83,18 @@ MpsCommandQueueManager::acquire(CommandQueueHandle handle) {
         "Invalid command queue handle");
   }
 
-  auto lease = core_.acquireWeakLease(handle);
+  auto cached = lifetime_.get(handle);
+  if (cached) {
+    return cached;
+  }
+  auto lease = core_.acquireStrongLease(handle);
   const auto *payload_ptr = lease.payloadPtr();
   if (payload_ptr == nullptr || !payload_ptr->hasQueue()) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
         "Command queue handle does not exist");
   }
+  lifetime_.set(lease);
   return lease;
 }
 
