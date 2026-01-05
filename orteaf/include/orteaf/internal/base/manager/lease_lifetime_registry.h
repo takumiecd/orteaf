@@ -75,6 +75,19 @@ public:
   std::size_t size() const noexcept { return size_; }
   bool empty() const noexcept { return size_ == 0; }
 
+  template <typename Func>
+  std::size_t forEachActiveLease(Func &&func) {
+    std::size_t visited = 0;
+    for (auto &entry : entries_) {
+      if (!entry.lease) {
+        continue;
+      }
+      ++visited;
+      std::forward<Func>(func)(entry.lease);
+    }
+    return visited;
+  }
+
 private:
   struct Entry {
     StrongLease lease{};

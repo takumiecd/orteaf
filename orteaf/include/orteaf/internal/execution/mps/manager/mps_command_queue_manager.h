@@ -11,6 +11,7 @@
 #include "orteaf/internal/base/manager/pool_manager.h"
 #include "orteaf/internal/base/pool/slot_pool.h"
 #include "orteaf/internal/execution/mps/platform/mps_slow_ops.h"
+#include "orteaf/internal/execution/mps/platform/mps_fast_ops.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_command_queue.h"
 #include "orteaf/internal/execution/mps/resource/mps_command_queue_resource.h"
 
@@ -188,6 +189,18 @@ public:
     }
     lease.release();
     return true;
+  }
+
+  template <typename FastOps =
+                ::orteaf::internal::execution::mps::platform::MpsFastOps>
+  std::size_t maintenanceReleaseReady() {
+    std::size_t released = 0;
+    lifetime_.forEachActiveLease([this, &released](CommandQueueLease &lease) {
+      if (releaseReadyAndMaybeRelease<FastOps>(lease)) {
+        ++released;
+      }
+    });
+    return released;
   }
 
 #if ORTEAF_ENABLE_TEST
