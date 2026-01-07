@@ -27,14 +27,14 @@ mps_wrapper::MpsCommandQueue_t makeQueue(std::uintptr_t value) {
   return reinterpret_cast<mps_wrapper::MpsCommandQueue_t>(value);
 }
 
-mps_rt::MpsCommandQueueManager::Config makeConfig(
-    mps_wrapper::MpsDevice_t device,
-    mps_rt::MpsCommandQueueManager::SlowOps *ops,
-    std::size_t payload_capacity, std::size_t control_block_capacity,
-    std::size_t payload_block_size, std::size_t control_block_block_size,
-    std::size_t payload_growth_chunk_size,
-    std::size_t control_block_growth_chunk_size,
-    mps_rt::MpsFenceManager *fence_manager = nullptr) {
+mps_rt::MpsCommandQueueManager::Config
+makeConfig(mps_wrapper::MpsDevice_t device,
+           mps_rt::MpsCommandQueueManager::SlowOps *ops,
+           std::size_t payload_capacity, std::size_t control_block_capacity,
+           std::size_t payload_block_size, std::size_t control_block_block_size,
+           std::size_t payload_growth_chunk_size,
+           std::size_t control_block_growth_chunk_size,
+           mps_rt::MpsFenceManager *fence_manager = nullptr) {
   mps_rt::MpsCommandQueueManager::Config config{};
   config.device = device;
   config.ops = ops;
@@ -105,11 +105,9 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, GrowthChunkSizeRejectsZero) {
   ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
     manager.configure(makeConfig(device, this->getOps(), 1, 1, 1, 1, 0, 1));
   });
-  ExpectError(diag_error::OrteafErrc::InvalidArgument,
-              [&] {
-                manager.configure(
-                    makeConfig(device, this->getOps(), 1, 1, 1, 1, 1, 0));
-              });
+  ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
+    manager.configure(makeConfig(device, this->getOps(), 1, 1, 1, 1, 1, 0));
+  });
 }
 
 // =============================================================================
@@ -338,7 +336,7 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, LeaseDestructionAllowsShutdown) {
   manager.shutdown();
 }
 
-TYPED_TEST(MpsCommandQueueManagerTypedTest, LeaseCopyIncrementsWeakCount) {
+TYPED_TEST(MpsCommandQueueManagerTypedTest, LeaseCopyIncrementsStrongCount) {
   auto &manager = this->manager();
   const auto device = this->adapter().device();
 
@@ -349,11 +347,11 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, LeaseCopyIncrementsWeakCount) {
   {
     // Act
     auto lease1 = manager.acquire();
-    auto initial_count = lease1.weakCount();
+    auto initial_count = lease1.strongCount();
     auto lease2 = lease1; // Copy
 
     // Assert
-    EXPECT_EQ(lease2.weakCount(), initial_count + 1);
+    EXPECT_EQ(lease2.strongCount(), initial_count + 1);
   } // leases released here
 
   // Cleanup
@@ -361,7 +359,7 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, LeaseCopyIncrementsWeakCount) {
   manager.shutdown();
 }
 
-TYPED_TEST(MpsCommandQueueManagerTypedTest, LeaseMoveDoesNotChangeWeakCount) {
+TYPED_TEST(MpsCommandQueueManagerTypedTest, LeaseMoveDoesNotChangeStrongCount) {
   auto &manager = this->manager();
   const auto device = this->adapter().device();
 
@@ -372,11 +370,11 @@ TYPED_TEST(MpsCommandQueueManagerTypedTest, LeaseMoveDoesNotChangeWeakCount) {
   {
     // Act
     auto lease1 = manager.acquire();
-    auto initial_count = lease1.weakCount();
+    auto initial_count = lease1.strongCount();
     auto lease2 = std::move(lease1); // Move
 
     // Assert
-    EXPECT_EQ(lease2.weakCount(), initial_count);
+    EXPECT_EQ(lease2.strongCount(), initial_count);
   } // lease2 released here
 
   // Cleanup
