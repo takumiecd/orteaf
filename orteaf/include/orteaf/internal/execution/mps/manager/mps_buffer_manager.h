@@ -130,7 +130,7 @@ using BufferControlBlockT = ::orteaf::internal::base::StrongControlBlock<
 // ============================================================================
 // Traits for PoolManager
 // ============================================================================
-template <typename ResourceT> struct MpsBufferManagerraitsT {
+template <typename ResourceT> struct MpsBufferManagerTraits {
   using PayloadPool = BufferPayloadPoolT<ResourceT>;
   using ControlBlock = BufferControlBlockT<ResourceT>;
   struct ControlBlockTag {};
@@ -143,7 +143,7 @@ template <typename ResourceT> struct MpsBufferManagerraitsT {
 // ============================================================================
 template <typename ResourceT> class MpsBufferManager {
 public:
-  using Traits = MpsBufferManagerraitsT<ResourceT>;
+  using Traits = MpsBufferManagerTraits<ResourceT>;
   using Core = ::orteaf::internal::base::PoolManager<Traits>;
   using MpsBuffer = MpsBuffer<ResourceT>;
   using BufferHandle = ::orteaf::internal::base::BufferHandle;
@@ -352,7 +352,7 @@ namespace orteaf::internal::execution::mps::manager {
 using MpsResource =
     ::orteaf::internal::execution::allocator::resource::mps::MpsResource;
 using MpsBufferPool = MpsBufferPoolT<MpsResource>;
-using MpsBufferManagerraits = MpsBufferManagerraitsT<MpsResource>;
+using MpsBufferManagerraits = MpsBufferManagerTraits<MpsResource>;
 } // namespace orteaf::internal::execution::mps::manager
 
 #endif // ORTEAF_ENABLE_MPS
