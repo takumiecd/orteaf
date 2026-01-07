@@ -7,9 +7,8 @@
 #include <utility>
 
 #include "orteaf/internal/base/handle.h"
-#include "orteaf/internal/base/lease/control_block/shared.h"
+#include "orteaf/internal/base/lease/control_block/strong.h"
 #include "orteaf/internal/base/lease/strong_lease.h"
-#include "orteaf/internal/base/lease/weak_lease.h"
 #include "orteaf/internal/base/manager/pool_manager.h"
 #include "orteaf/internal/base/pool/slot_pool.h"
 #include "orteaf/internal/diagnostics/error/error.h"
@@ -117,14 +116,14 @@ using BufferPayloadPoolT = ::orteaf::internal::base::pool::SlotPool<
     BufferPayloadPoolTraitsT<ResourceT>>;
 
 // ============================================================================
-// ControlBlock type using SharedControlBlock
+// ControlBlock type using StrongControlBlock
 // ============================================================================
 template <typename ResourceT>
 using MpsBuffer =
     ::orteaf::internal::execution::allocator::ExecutionBuffer<Execution::Mps>;
 
 template <typename ResourceT>
-using BufferControlBlockT = ::orteaf::internal::base::SharedControlBlock<
+using BufferControlBlockT = ::orteaf::internal::base::StrongControlBlock<
     ::orteaf::internal::base::BufferHandle, MpsBuffer<ResourceT>,
     BufferPayloadPoolT<ResourceT>>;
 
@@ -161,7 +160,6 @@ public:
 
   // Lease types
   using StrongBufferLease = typename Core::StrongLeaseType;
-  using WeakBufferLease = typename Core::WeakLeaseType;
   // Legacy alias for compatibility
   using BufferLease = StrongBufferLease;
 

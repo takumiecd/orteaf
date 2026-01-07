@@ -10,8 +10,6 @@ public:
   using MpsResource = ::orteaf::internal::execution::allocator::resource::mps::MpsResource;
   using StrongBufferLease =
       ::orteaf::internal::execution::mps::manager::MpsBufferManager<MpsResource>::StrongBufferLease;
-  using WeakBufferLease =
-      ::orteaf::internal::execution::mps::manager::MpsBufferManager<MpsResource>::WeakBufferLease;
   using FenceToken = ::orteaf::internal::execution::mps::manager::MpsFenceLifetimeManager::
 
 private:
