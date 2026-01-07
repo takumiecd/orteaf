@@ -23,12 +23,13 @@ mps_wrapper::MpsEvent_t makeEvent(std::uintptr_t value) {
   return reinterpret_cast<mps_wrapper::MpsEvent_t>(value);
 }
 
-mps_rt::MpsEventManager::Config makeConfig(
-    mps_wrapper::MpsDevice_t device, mps_rt::MpsEventManager::SlowOps *ops,
-    std::size_t payload_capacity, std::size_t control_block_capacity,
-    std::size_t payload_block_size, std::size_t control_block_block_size,
-    std::size_t payload_growth_chunk_size,
-    std::size_t control_block_growth_chunk_size) {
+mps_rt::MpsEventManager::Config
+makeConfig(mps_wrapper::MpsDevice_t device,
+           mps_rt::MpsEventManager::SlowOps *ops, std::size_t payload_capacity,
+           std::size_t control_block_capacity, std::size_t payload_block_size,
+           std::size_t control_block_block_size,
+           std::size_t payload_growth_chunk_size,
+           std::size_t control_block_growth_chunk_size) {
   mps_rt::MpsEventManager::Config config{};
   config.device = device;
   config.ops = ops;
@@ -71,8 +72,9 @@ TYPED_TEST(MpsEventManagerTypedTest, InitializeRejectsNullDevice) {
   auto &manager = this->manager();
 
   // Act & Assert
-  ExpectError(diag_error::OrteafErrc::InvalidArgument,
-              [&] { manager.configure(makeConfig(nullptr, this->getOps(), 1, 1, 1, 1, 1, 1)); });
+  ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
+    manager.configure(makeConfig(nullptr, this->getOps(), 1, 1, 1, 1, 1, 1));
+  });
 }
 
 TYPED_TEST(MpsEventManagerTypedTest, InitializeRejectsNullOps) {
@@ -80,8 +82,9 @@ TYPED_TEST(MpsEventManagerTypedTest, InitializeRejectsNullOps) {
   const auto device = this->adapter().device();
 
   // Act & Assert
-  ExpectError(diag_error::OrteafErrc::InvalidArgument,
-              [&] { manager.configure(makeConfig(device, nullptr, 1, 1, 1, 1, 1, 1)); });
+  ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
+    manager.configure(makeConfig(device, nullptr, 1, 1, 1, 1, 1, 1));
+  });
 }
 
 TYPED_TEST(MpsEventManagerTypedTest, OperationsBeforeInitializationThrow) {
@@ -141,7 +144,7 @@ TYPED_TEST(MpsEventManagerTypedTest, InitializeWithZeroCapacitySucceeds) {
   EXPECT_TRUE(event);
 
   // Cleanup
-  manager.release(event);
+  event.release();
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectDestroyEvents({makeEvent(0x200)});
   }
@@ -171,7 +174,7 @@ TYPED_TEST(MpsEventManagerTypedTest, AcquireReturnsValidLease) {
   EXPECT_TRUE(lease.payloadHandle().isValid());
 
   // Cleanup
-  manager.release(lease);
+  lease.release();
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectDestroyEvents({makeEvent(0x300)});
   }
@@ -223,7 +226,7 @@ TYPED_TEST(MpsEventManagerTypedTest, EventRecyclingReusesSlots) {
   // Act
   auto first = manager.acquire();
   const auto first_index = first.payloadHandle().index;
-  manager.release(first);
+  first.release();
 
   auto second = manager.acquire();
 
@@ -231,7 +234,7 @@ TYPED_TEST(MpsEventManagerTypedTest, EventRecyclingReusesSlots) {
   EXPECT_EQ(second.payloadHandle().index, first_index);
 
   // Cleanup
-  manager.release(second);
+  second.release();
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectDestroyEvents({makeEvent(0x800)});
   }
@@ -257,7 +260,7 @@ TYPED_TEST(MpsEventManagerTypedTest, MovedFromLeaseIsInactive) {
   EXPECT_TRUE(lease2);
 
   // Cleanup
-  manager.release(lease2);
+  lease2.release();
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectDestroyEvents({makeEvent(0x900)});
   }
@@ -286,7 +289,7 @@ TYPED_TEST(MpsEventManagerTypedTest, DestructionReturnsEventToPool) {
   EXPECT_EQ(new_lease.payloadHandle().index, index);
 
   // Cleanup
-  manager.release(new_lease);
+  new_lease.release();
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectDestroyEvents({makeEvent(0xA00)});
   }
@@ -311,8 +314,8 @@ TYPED_TEST(MpsEventManagerTypedTest, ShutdownReleasesInitializedEvents) {
   auto lease1 = manager.acquire();
   auto lease2 = manager.acquire();
 
-  manager.release(lease1);
-  manager.release(lease2);
+  lease1.release();
+  lease2.release();
 
   // Act & Assert: All created events destroyed
   if constexpr (TypeParam::is_mock) {
@@ -360,7 +363,7 @@ TYPED_TEST(MpsEventManagerTypedTest, ReinitializeResetsPreviousState) {
   manager.configure(makeConfig(device, this->getOps(), 1, 1, 1, 1, 1, 1));
 
   auto first_lease = manager.acquire();
-  manager.release(first_lease);
+  first_lease.release();
 
   // Act: Reinitialize destroys previous events
   if constexpr (TypeParam::is_mock) {
@@ -377,7 +380,7 @@ TYPED_TEST(MpsEventManagerTypedTest, ReinitializeResetsPreviousState) {
   EXPECT_TRUE(new_lease);
 
   // Cleanup
-  manager.release(new_lease);
+  new_lease.release();
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectDestroyEvents({makeEvent(0xD10), makeEvent(0xD11)});
   }
@@ -409,7 +412,7 @@ TYPED_TEST(MpsEventManagerTypedTest, DebugStateReflectsEventState) {
   // Generation check removed as BaseManagerCore + Slot does not use generations
 
   // Cleanup
-  manager.release(lease);
+  lease.release();
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectDestroyEvents({makeEvent(0xE00)});
   }
