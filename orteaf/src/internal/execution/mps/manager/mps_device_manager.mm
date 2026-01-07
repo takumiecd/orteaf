@@ -70,17 +70,6 @@ MpsDeviceManager::DeviceLease MpsDeviceManager::acquire(DeviceHandle handle) {
   return lease;
 }
 
-::orteaf::internal::architecture::Architecture
-MpsDeviceManager::getArch(DeviceHandle handle) {
-  if (!core_.isConfigured()) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-        "MPS devices not initialized");
-  }
-  auto lease = acquire(handle);
-  return lease.payloadPtr()->arch;
-}
-
 } // namespace orteaf::internal::execution::mps::manager
 
 #endif // ORTEAF_ENABLE_MPS

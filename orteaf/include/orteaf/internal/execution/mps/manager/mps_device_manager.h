@@ -245,10 +245,6 @@ public:
   // Device access
   // =========================================================================
   DeviceLease acquire(DeviceHandle handle);
-  void release(DeviceLease &lease) noexcept { lease.release(); }
-
-  ::orteaf::internal::architecture::Architecture
-  getArch(DeviceHandle handle);
 
 #if ORTEAF_ENABLE_TEST
   std::size_t getDeviceCountForTest() const noexcept {
