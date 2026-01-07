@@ -19,7 +19,7 @@ TEST(MpsKernelLauncherImplDeviceTest, InitializeWithEmbeddedLibraryRealDevice) {
     GTEST_SKIP() << "No MPS devices available";
   }
 
-  mps_api::MpsRuntimeApi::initialize();
+  mps_api::MpsRuntimeApi::configure();
 
   {
     mps_rt::resource::MpsKernelLauncherImpl<1> impl({
@@ -49,7 +49,7 @@ TEST(MpsKernelLauncherImplDeviceTest, DispatchOneShotExecutesEmbeddedIdentity) {
     GTEST_SKIP() << "No MPS devices available";
   }
 
-  mps_api::MpsRuntimeApi::initialize();
+  mps_api::MpsRuntimeApi::configure();
 
   auto *device_handle =
       ::orteaf::internal::execution::mps::platform::wrapper::getDevice(0);
@@ -58,7 +58,8 @@ TEST(MpsKernelLauncherImplDeviceTest, DispatchOneShotExecutesEmbeddedIdentity) {
   ::orteaf::internal::execution::mps::manager::MpsCommandQueueManager
       queue_manager{};
   queue_manager.configure(
-      ::orteaf::internal::execution::mps::manager::MpsCommandQueueManager::Config{device_handle, &slow_ops, 1, 1, 1, 1, 1, 1});
+      ::orteaf::internal::execution::mps::manager::MpsCommandQueueManager::
+          Config{device_handle, &slow_ops, 1, 1, 1, 1, 1, 1});
   auto queue_lease = queue_manager.acquire();
 
   // Create a shared heap and buffer.
@@ -68,11 +69,12 @@ TEST(MpsKernelLauncherImplDeviceTest, DispatchOneShotExecutesEmbeddedIdentity) {
   ::orteaf::internal::execution::mps::platform::wrapper::setHeapDescriptorSize(
       desc, 4096);
   ::orteaf::internal::execution::mps::platform::wrapper::
-      setHeapDescriptorStorageMode(desc,
-                                   ::orteaf::internal::execution::mps::platform::
-                                       wrapper::kMPSStorageModeShared);
-  auto *heap = ::orteaf::internal::execution::mps::platform::wrapper::createHeap(
-      device_handle, desc);
+      setHeapDescriptorStorageMode(
+          desc, ::orteaf::internal::execution::mps::platform::wrapper::
+                    kMPSStorageModeShared);
+  auto *heap =
+      ::orteaf::internal::execution::mps::platform::wrapper::createHeap(
+          device_handle, desc);
   ASSERT_NE(heap, nullptr);
 
   constexpr std::size_t kCount = 16;
@@ -91,7 +93,7 @@ TEST(MpsKernelLauncherImplDeviceTest, DispatchOneShotExecutesEmbeddedIdentity) {
   const uint32_t length = static_cast<uint32_t>(kCount);
 
   ::orteaf::internal::execution::mps::platform::wrapper::MPSSize_t tg{kCount, 1,
-                                                                    1};
+                                                                      1};
   ::orteaf::internal::execution::mps::platform::wrapper::MPSSize_t tptg{1, 1, 1};
 
   {

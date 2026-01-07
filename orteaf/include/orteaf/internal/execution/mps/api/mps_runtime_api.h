@@ -28,10 +28,12 @@ public:
 
   MpsRuntimeApi() = delete;
 
-  // Initialize runtime with a provided SlowOps implementation, or default
-  // MpsSlowOpsImpl.
-  static void initialize(std::unique_ptr<SlowOps> slow_ops = nullptr) {
-    runtime().initialize(std::move(slow_ops));
+  // Configure runtime with default configuration.
+  static void configure() { runtime().configure(); }
+
+  // Configure runtime with the provided configuration.
+  static void configure(const Runtime::Config &config) {
+    runtime().configure(config);
   }
 
   static void shutdown() { runtime().shutdown(); }

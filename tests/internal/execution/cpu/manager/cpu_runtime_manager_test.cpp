@@ -76,17 +76,18 @@ TEST_F(CpuRuntimeManagerTest, DeviceManagerReturnsCorrectArch) {
 }
 
 TEST_F(CpuRuntimeManagerTest, ConfigureWithCustomOps) {
-  auto mock_ops = std::make_unique<NiceMock<CpuSlowOpsMock>>();
-  auto *mock_ptr = mock_ops.get();
+  auto *mock_ops = new NiceMock<CpuSlowOpsMock>();
 
   ON_CALL(*mock_ops, getDeviceCount()).WillByDefault(Return(1));
   ON_CALL(*mock_ops, detectArchitecture(base::DeviceHandle{0}))
       .WillByDefault(Return(architecture::Architecture::CpuZen4));
 
-  manager_->configure(std::move(mock_ops));
+  cpu_rt::CpuRuntimeManager::Config config{};
+  config.slow_ops = mock_ops;
+  manager_->configure(config);
 
   EXPECT_TRUE(manager_->isConfigured());
-  EXPECT_EQ(manager_->slowOps(), mock_ptr);
+  EXPECT_EQ(manager_->slowOps(), mock_ops);
 }
 
 TEST_F(CpuRuntimeManagerTest, DoubleConfigureUsesExistingOps) {

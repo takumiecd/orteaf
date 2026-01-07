@@ -19,6 +19,18 @@ class CpuRuntimeManager {
       ::orteaf::internal::execution::cpu::platform::CpuSlowOpsImpl;
 
 public:
+  // =========================================================================
+  // Config
+  // =========================================================================
+
+  struct Config {
+    /// Custom SlowOps instance (nullptr for default implementation).
+    /// If provided, the RuntimeManager takes ownership.
+    SlowOps *slow_ops = nullptr;
+    /// Device manager configuration
+    CpuDeviceManager::Config device_config = {};
+  };
+
   CpuRuntimeManager() = default;
   CpuRuntimeManager(const CpuRuntimeManager &) = delete;
   CpuRuntimeManager &operator=(const CpuRuntimeManager &) = delete;
@@ -49,21 +61,24 @@ public:
   // =========================================================================
 
   /**
+   * @brief Configure the CPU runtime with default settings.
+   */
+  void configure() { configure(Config{}); }
+
+  /**
    * @brief Configure the CPU runtime.
    *
-   * Creates or uses provided SlowOps and configures all managers.
-   *
-   * @param slow_ops Optional custom SlowOps instance (for testing)
+   * @param config Configuration including SlowOps and sub-manager settings
    */
-  void configure(std::unique_ptr<SlowOps> slow_ops = nullptr) {
-    if (slow_ops) {
-      slow_ops_ = std::move(slow_ops);
+  void configure(const Config &config) {
+    if (config.slow_ops) {
+      slow_ops_.reset(config.slow_ops);
     } else if (!slow_ops_) {
       slow_ops_ = std::make_unique<SlowOpsImpl>();
     }
 
     // Configure device manager
-    CpuDeviceManager::Config device_config{};
+    auto device_config = config.device_config;
     device_config.ops = slow_ops_.get();
     device_manager_.configure(device_config);
   }
