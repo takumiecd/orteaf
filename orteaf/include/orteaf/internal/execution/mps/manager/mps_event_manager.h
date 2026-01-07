@@ -125,7 +125,6 @@ public:
   void shutdown();
 
   EventLease acquire();
-  void release(EventLease &lease) noexcept { lease.release(); }
 
 #if ORTEAF_ENABLE_TEST
   bool isConfiguredForTest() const noexcept { return core_.isConfigured(); }

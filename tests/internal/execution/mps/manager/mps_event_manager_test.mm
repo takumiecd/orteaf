@@ -111,8 +111,8 @@ TYPED_TEST(MpsEventManagerTypedTest, InitializeEagerlyCreatesEvents) {
   EXPECT_TRUE(second);
 
   // Cleanup
-  manager.release(first);
-  manager.release(second);
+  first.release();
+  second.release();
 
   if constexpr (TypeParam::is_mock) {
     this->adapter().expectDestroyEvents({makeEvent(0x100), makeEvent(0x101)});
