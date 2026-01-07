@@ -1,88 +1,98 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <memory>
 #include <system_error>
 
 #include "orteaf/internal/architecture/architecture.h"
 #include "orteaf/internal/execution/cpu/manager/cpu_device_manager.h"
-#include "tests/internal/testing/static_mock.h"
+#include "orteaf/internal/execution/cpu/platform/cpu_slow_ops.h"
 
 namespace architecture = orteaf::internal::architecture;
 namespace base = orteaf::internal::base;
 namespace cpu_rt = orteaf::internal::execution::cpu::manager;
-namespace test = orteaf::tests;
+namespace cpu_platform = orteaf::internal::execution::cpu::platform;
 using ::testing::NiceMock;
+using ::testing::Return;
 
 namespace {
 
-struct CpuExecutionOpsMock {
-  MOCK_METHOD(architecture::Architecture, detectArchitecture, ());
+/**
+ * @brief Mock implementation of CpuSlowOps for testing.
+ */
+class CpuSlowOpsMock : public cpu_platform::CpuSlowOps {
+public:
+  MOCK_METHOD(int, getDeviceCount, (), (override));
+  MOCK_METHOD(architecture::Architecture, detectArchitecture,
+              (base::DeviceHandle device_id), (override));
+  MOCK_METHOD(void *, allocBuffer, (std::size_t size, std::size_t alignment),
+              (override));
+  MOCK_METHOD(void, deallocBuffer, (void *ptr, std::size_t size), (override));
 };
-
-using CpuExecutionOpsMockRegistry = test::StaticMockRegistry<CpuExecutionOpsMock>;
-
-struct CpuExecutionOpsMockAdapter {
-  static architecture::Architecture detectArchitecture() {
-    return CpuExecutionOpsMockRegistry::get().detectArchitecture();
-  }
-};
-
-using MockCpuDeviceManager = cpu_rt::CpuDeviceManager<CpuExecutionOpsMockAdapter>;
 
 } // namespace
 
 class CpuDeviceManagerMockTest : public ::testing::Test {
 protected:
-  CpuDeviceManagerMockTest() : guard_(mock_) {}
-
-  void TearDown() override {
-    manager_.shutdown();
-    CpuExecutionOpsMockRegistry::unbind(mock_);
+  void SetUp() override {
+    mock_ops_ = std::make_unique<NiceMock<CpuSlowOpsMock>>();
+    manager_ = std::make_unique<cpu_rt::CpuDeviceManager>();
   }
 
-  NiceMock<CpuExecutionOpsMock> mock_;
-  CpuExecutionOpsMockRegistry::Guard guard_;
-  MockCpuDeviceManager manager_;
+  void TearDown() override {
+    manager_->shutdown();
+    manager_.reset();
+    mock_ops_.reset();
+  }
+
+  void configureManager() {
+    // Setup default mock behavior
+    ON_CALL(*mock_ops_, getDeviceCount()).WillByDefault(Return(1));
+    ON_CALL(*mock_ops_, detectArchitecture(base::DeviceHandle{0}))
+        .WillByDefault(Return(architecture::Architecture::CpuZen4));
+
+    cpu_rt::CpuDeviceManager::Config config{};
+    config.ops = mock_ops_.get();
+    manager_->configure(config);
+  }
+
+  std::unique_ptr<NiceMock<CpuSlowOpsMock>> mock_ops_;
+  std::unique_ptr<cpu_rt::CpuDeviceManager> manager_;
 };
 
-TEST_F(CpuDeviceManagerMockTest, InitializesWithExecutionArch) {
-  EXPECT_EQ(manager_.getDeviceCount(), 0u);
+TEST_F(CpuDeviceManagerMockTest, ConfiguresWithMockedArch) {
+  EXPECT_EQ(manager_->getDeviceCount(), 0u);
 
-  EXPECT_CALL(mock_, detectArchitecture())
-      .WillOnce(::testing::Return(architecture::Architecture::CpuZen4));
-  manager_.initializeDevices();
+  EXPECT_CALL(*mock_ops_, detectArchitecture(base::DeviceHandle{0}))
+      .WillOnce(Return(architecture::Architecture::CpuZen4));
 
-  EXPECT_EQ(manager_.getDeviceCount(), 1u);
-  EXPECT_EQ(manager_.getArch(base::DeviceHandle{0}),
+  configureManager();
+
+  EXPECT_EQ(manager_->getDeviceCount(), 1u);
+  auto lease = manager_->acquire(base::DeviceHandle{0});
+  EXPECT_TRUE(lease);
+  EXPECT_EQ(manager_->getArch(base::DeviceHandle{0}),
             architecture::Architecture::CpuZen4);
-  EXPECT_TRUE(manager_.isAlive(base::DeviceHandle{0}));
-}
-
-TEST_F(CpuDeviceManagerMockTest, DoubleInitializeDoesNotRedetect) {
-  EXPECT_CALL(mock_, detectArchitecture())
-      .WillOnce(::testing::Return(architecture::Architecture::CpuZen4));
-  manager_.initializeDevices();
-
-  manager_.initializeDevices(); // no additional expectation
-  SUCCEED();
+  EXPECT_TRUE(manager_->isAlive(base::DeviceHandle{0}));
 }
 
 TEST_F(CpuDeviceManagerMockTest, ShutdownClearsState) {
-  EXPECT_CALL(mock_, detectArchitecture())
-      .WillOnce(::testing::Return(architecture::Architecture::CpuZen4));
-  manager_.initializeDevices();
-  manager_.shutdown();
+  EXPECT_CALL(*mock_ops_, detectArchitecture(base::DeviceHandle{0}))
+      .WillOnce(Return(architecture::Architecture::CpuZen4));
 
-  EXPECT_EQ(manager_.getDeviceCount(), 0u);
-  EXPECT_THROW(manager_.isAlive(base::DeviceHandle{0}), std::system_error);
-  EXPECT_THROW(manager_.getArch(base::DeviceHandle{0}), std::system_error);
+  configureManager();
+  manager_->shutdown();
+
+  EXPECT_EQ(manager_->getDeviceCount(), 0u);
+  EXPECT_FALSE(manager_->isAlive(base::DeviceHandle{0}));
 }
 
 TEST_F(CpuDeviceManagerMockTest, InvalidDeviceIdThrows) {
-  EXPECT_CALL(mock_, detectArchitecture())
-      .WillOnce(::testing::Return(architecture::Architecture::CpuZen4));
-  manager_.initializeDevices();
+  EXPECT_CALL(*mock_ops_, detectArchitecture(base::DeviceHandle{0}))
+      .WillOnce(Return(architecture::Architecture::CpuZen4));
 
-  EXPECT_THROW(manager_.getArch(base::DeviceHandle{1}), std::system_error);
-  EXPECT_THROW(manager_.isAlive(base::DeviceHandle{1}), std::system_error);
+  configureManager();
+
+  // Device handle 1 is invalid for CPU (only 0 is valid)
+  EXPECT_THROW(manager_->acquire(base::DeviceHandle{1}), std::system_error);
 }

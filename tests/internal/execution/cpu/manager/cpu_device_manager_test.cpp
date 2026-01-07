@@ -1,40 +1,64 @@
 #include "orteaf/internal/architecture/architecture.h"
 #include "orteaf/internal/architecture/cpu_detect.h"
 #include "orteaf/internal/execution/cpu/manager/cpu_device_manager.h"
+#include "orteaf/internal/execution/cpu/platform/cpu_slow_ops.h"
 #include <gtest/gtest.h>
 #include <system_error>
 
 #include <cstdlib>
+#include <memory>
 
 namespace base = orteaf::internal::base;
 namespace cpu_rt = orteaf::internal::execution::cpu::manager;
+namespace cpu_platform = orteaf::internal::execution::cpu::platform;
 namespace architecture = orteaf::internal::architecture;
 
 class CpuDeviceManagerTest : public ::testing::Test {
 protected:
-  void SetUp() override { cpu_rt::GetCpuDeviceManager().shutdown(); }
-  void TearDown() override { cpu_rt::GetCpuDeviceManager().shutdown(); }
+  void SetUp() override {
+    slow_ops_ = std::make_unique<cpu_platform::CpuSlowOpsImpl>();
+    manager_ = std::make_unique<cpu_rt::CpuDeviceManager>();
+  }
+
+  void TearDown() override {
+    manager_->shutdown();
+    manager_.reset();
+    slow_ops_.reset();
+  }
+
+  void configureManager() {
+    cpu_rt::CpuDeviceManager::Config config{};
+    config.ops = slow_ops_.get();
+    manager_->configure(config);
+  }
+
+  std::unique_ptr<cpu_platform::CpuSlowOpsImpl> slow_ops_;
+  std::unique_ptr<cpu_rt::CpuDeviceManager> manager_;
 };
 
-TEST_F(CpuDeviceManagerTest, InitializeDevicesPopulatesState) {
-  auto &manager = cpu_rt::GetCpuDeviceManager();
-  EXPECT_EQ(manager.getDeviceCount(), 0u);
+TEST_F(CpuDeviceManagerTest, ConfigurePopulatesState) {
+  EXPECT_EQ(manager_->getDeviceCount(), 0u);
 
-  manager.initializeDevices();
-  EXPECT_EQ(manager.getDeviceCount(), 1u);
-  EXPECT_TRUE(manager.isAlive(base::DeviceHandle{0}));
-  EXPECT_EQ(manager.getArch(base::DeviceHandle{0}),
-            architecture::detectCpuArchitecture());
+  configureManager();
+  EXPECT_EQ(manager_->getDeviceCount(), 1u);
+  EXPECT_TRUE(manager_->isAlive(base::DeviceHandle{0}));
+}
+
+TEST_F(CpuDeviceManagerTest, AcquireAndGetArch) {
+  configureManager();
+
+  auto lease = manager_->acquire(base::DeviceHandle{0});
+  EXPECT_TRUE(lease);
+
+  auto arch = manager_->getArch(base::DeviceHandle{0});
+  EXPECT_EQ(arch, architecture::detectCpuArchitecture());
 }
 
 TEST_F(CpuDeviceManagerTest, ShutdownClearsState) {
-  auto &manager = cpu_rt::GetCpuDeviceManager();
-  manager.initializeDevices();
-  manager.shutdown();
+  configureManager();
+  manager_->shutdown();
 
-  EXPECT_EQ(manager.getDeviceCount(), 0u);
-  EXPECT_THROW(manager.getArch(base::DeviceHandle{0}), std::system_error);
-  EXPECT_THROW(manager.isAlive(base::DeviceHandle{0}), std::system_error);
+  EXPECT_EQ(manager_->getDeviceCount(), 0u);
 }
 
 #define ORTEAF_CPU_ENV_VAR "ORTEAF_EXPECT_CPU_MANAGER_ARCH"
@@ -47,23 +71,27 @@ TEST_F(CpuDeviceManagerTest, ManualEnvironmentCheck) {
     GTEST_SKIP() << "Set " ORTEAF_CPU_ENV_VAR
                     " to run this test on your environment.";
   }
-  const auto arch =
-      cpu_rt::GetCpuDeviceManager().getArch(base::DeviceHandle{0});
+  configureManager();
+  auto lease = manager_->acquire(base::DeviceHandle{0});
+  const auto arch = manager_->getArch(base::DeviceHandle{0});
   EXPECT_STREQ(expected_env, architecture::idOf(arch).data());
 }
 
 TEST_F(CpuDeviceManagerTest, GetArchitectureMatchesDetector) {
-  auto &manager = cpu_rt::GetCpuDeviceManager();
-  manager.initializeDevices();
-  EXPECT_EQ(manager.getArch(base::DeviceHandle{0}),
+  configureManager();
+  auto lease = manager_->acquire(base::DeviceHandle{0});
+  EXPECT_EQ(manager_->getArch(base::DeviceHandle{0}),
             architecture::detectCpuArchitecture());
 }
 
 TEST_F(CpuDeviceManagerTest, IsAliveReflectsInitialization) {
-  auto &manager = cpu_rt::GetCpuDeviceManager();
-  manager.initializeDevices();
-  EXPECT_TRUE(manager.isAlive(base::DeviceHandle{0}));
-  manager.shutdown();
-  EXPECT_THROW(manager.isAlive(base::DeviceHandle{0}), std::system_error);
+  configureManager();
+  EXPECT_TRUE(manager_->isAlive(base::DeviceHandle{0}));
+  manager_->shutdown();
+  EXPECT_FALSE(manager_->isAlive(base::DeviceHandle{0}));
 }
-#include <system_error>
+
+TEST_F(CpuDeviceManagerTest, InvalidDeviceHandleThrows) {
+  configureManager();
+  EXPECT_THROW(manager_->acquire(base::DeviceHandle{1}), std::system_error);
+}
