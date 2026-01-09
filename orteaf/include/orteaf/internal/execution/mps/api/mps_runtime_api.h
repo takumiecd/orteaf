@@ -6,10 +6,10 @@
 #include <memory>
 #include <utility>
 
-#include "orteaf/internal/base/handle.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include "orteaf/internal/execution/mps/manager/mps_runtime_manager.h"
 #include "orteaf/internal/execution/mps/platform/mps_slow_ops.h"
+#include "orteaf/internal/execution/mps/mps_handles.h"
 
 namespace orteaf::internal::execution::mps::api {
 
@@ -17,7 +17,7 @@ class MpsRuntimeApi {
 public:
   using Runtime =
       ::orteaf::internal::execution::mps::manager::MpsRuntimeManager;
-  using DeviceHandle = ::orteaf::internal::base::DeviceHandle;
+  using DeviceHandle = ::orteaf::internal::execution::mps::MpsDeviceHandle;
   using LibraryKey = ::orteaf::internal::execution::mps::manager::LibraryKey;
   using FunctionKey = ::orteaf::internal::execution::mps::manager::FunctionKey;
   using PipelineLease = ::orteaf::internal::execution::mps::manager::

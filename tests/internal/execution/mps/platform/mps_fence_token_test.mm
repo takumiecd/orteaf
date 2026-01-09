@@ -13,11 +13,12 @@
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_command_queue.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_device.h"
 #include "orteaf/internal/execution/mps/resource/mps_fence_token.h"
+#include "orteaf/internal/execution/mps/mps_handles.h"
 
 namespace mps_wrapper = orteaf::internal::execution::mps::platform::wrapper;
 namespace mps_res = orteaf::internal::execution::mps::resource;
 namespace mps_rt = orteaf::internal::execution::mps;
-namespace base = orteaf::internal::base;
+namespace mps = orteaf::internal::execution::mps;
 
 class MpsFenceTokenTest : public ::testing::Test {
 protected:
@@ -72,8 +73,8 @@ protected:
   mps_wrapper::MpsCommandBuffer_t command_buffer_b_{nullptr};
   mps_rt::manager::MpsFenceManager fence_pool_{};
   ::orteaf::internal::execution::mps::platform::MpsSlowOpsImpl ops_{};
-  base::CommandQueueHandle queue_id_{base::CommandQueueHandle{11}};
-  base::CommandQueueHandle queue_id_other_{base::CommandQueueHandle{42}};
+  mps::MpsCommandQueueHandle queue_id_{mps::MpsCommandQueueHandle{11}};
+  mps::MpsCommandQueueHandle queue_id_other_{mps::MpsCommandQueueHandle{42}};
 #endif
 };
 

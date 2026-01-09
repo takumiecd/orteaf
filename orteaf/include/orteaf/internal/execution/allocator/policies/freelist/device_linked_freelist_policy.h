@@ -27,6 +27,7 @@ class DeviceLinkedFreelistPolicy {
 public:
   using BufferResource =
       ::orteaf::internal::execution::allocator::ExecutionBuffer<B>;
+  using BufferViewHandle = typename BufferResource::BufferViewHandle;
   using LaunchParams =
       typename ::orteaf::internal::execution::base::ExecutionTraits<
           B>::KernelLaunchParams;
@@ -71,10 +72,8 @@ public:
     if (!view)
       return {};
     auto it = buffer_lookup_.find(view.raw());
-    const ::orteaf::internal::base::BufferViewHandle handle =
-        (it != buffer_lookup_.end())
-            ? it->second
-            : ::orteaf::internal::base::BufferViewHandle{};
+    const BufferViewHandle handle =
+        (it != buffer_lookup_.end()) ? it->second : BufferViewHandle{};
     return BufferResource{handle, view};
   }
 
@@ -100,8 +99,7 @@ public:
                                          block_size, launch_params);
   }
 
-  void
-  removeBlocksInChunk(::orteaf::internal::base::BufferViewHandle /*handle*/) {
+  void removeBlocksInChunk(BufferViewHandle /*handle*/) {
     // デバイス側のみで管理するため未対応。
   }
 
@@ -115,8 +113,7 @@ private:
   Resource *resource_{nullptr};
   ::orteaf::internal::base::HeapVector<BufferResource>
       heads_{}; // unused placeholder per size class
-  std::unordered_map<void *, ::orteaf::internal::base::BufferViewHandle>
-      buffer_lookup_{};
+  std::unordered_map<void *, BufferViewHandle> buffer_lookup_{};
 };
 
 } // namespace orteaf::internal::execution::allocator::policies

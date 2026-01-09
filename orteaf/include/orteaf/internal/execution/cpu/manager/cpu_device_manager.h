@@ -3,11 +3,11 @@
 #include <cstddef>
 
 #include "orteaf/internal/architecture/architecture.h"
-#include "orteaf/internal/base/handle.h"
 #include "orteaf/internal/base/lease/control_block/strong.h"
 #include "orteaf/internal/base/manager/lease_lifetime_registry.h"
 #include "orteaf/internal/base/manager/pool_manager.h"
 #include "orteaf/internal/base/pool/fixed_slot_store.h"
+#include "orteaf/internal/execution/cpu/cpu_handles.h"
 #include "orteaf/internal/execution/cpu/platform/cpu_slow_ops.h"
 
 namespace orteaf::internal::execution::cpu::manager {
@@ -51,7 +51,7 @@ private:
 
 struct DevicePayloadPoolTraits {
   using Payload = CpuDeviceResource;
-  using Handle = ::orteaf::internal::base::DeviceHandle;
+  using Handle = ::orteaf::internal::execution::cpu::CpuDeviceHandle;
   using SlowOps = ::orteaf::internal::execution::cpu::platform::CpuSlowOps;
 
   struct Request {
@@ -83,7 +83,7 @@ struct DeviceManagerCBTag {};
 // =============================================================================
 
 using DeviceControlBlock = ::orteaf::internal::base::StrongControlBlock<
-    ::orteaf::internal::base::DeviceHandle, CpuDeviceResource,
+    ::orteaf::internal::execution::cpu::CpuDeviceHandle, CpuDeviceResource,
     DevicePayloadPool>;
 
 // =============================================================================
@@ -94,7 +94,7 @@ struct CpuDeviceManagerTraits {
   using PayloadPool = DevicePayloadPool;
   using ControlBlock = DeviceControlBlock;
   using ControlBlockTag = DeviceManagerCBTag;
-  using PayloadHandle = ::orteaf::internal::base::DeviceHandle;
+  using PayloadHandle = ::orteaf::internal::execution::cpu::CpuDeviceHandle;
   static constexpr const char *Name = "CPU device manager";
 };
 
@@ -111,7 +111,7 @@ struct CpuDeviceManagerTraits {
 class CpuDeviceManager {
 public:
   using SlowOps = ::orteaf::internal::execution::cpu::platform::CpuSlowOps;
-  using DeviceHandle = ::orteaf::internal::base::DeviceHandle;
+  using DeviceHandle = ::orteaf::internal::execution::cpu::CpuDeviceHandle;
 
   using Core = ::orteaf::internal::base::PoolManager<CpuDeviceManagerTraits>;
   using ControlBlock = Core::ControlBlock;

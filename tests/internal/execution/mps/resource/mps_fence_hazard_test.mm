@@ -7,10 +7,11 @@
 #include <gtest/gtest.h>
 
 #include "orteaf/internal/execution/mps/resource/mps_fence_hazard.h"
+#include "orteaf/internal/execution/mps/mps_handles.h"
 
 namespace mps_res = orteaf::internal::execution::mps::resource;
 namespace mps_wrapper = orteaf::internal::execution::mps::platform::wrapper;
-namespace base = orteaf::internal::base;
+namespace mps = orteaf::internal::execution::mps;
 
 #if ORTEAF_ENABLE_MPS
 
@@ -34,7 +35,7 @@ TEST(MpsFenceResourceTest, DefaultConstructedIsReadyAndCompleted) {
   EXPECT_TRUE(fence.isCompleted());
   EXPECT_FALSE(fence.hasFence());
   EXPECT_FALSE(fence.hasCommandBuffer());
-  EXPECT_EQ(fence.commandQueueHandle(), base::CommandQueueHandle{});
+  EXPECT_EQ(fence.commandQueueHandle(), mps::MpsCommandQueueHandle{});
 }
 
 TEST(MpsFenceResourceTest, SetCommandBufferRequiresFence) {
@@ -61,13 +62,13 @@ TEST(MpsFenceResourceTest, SetCommandBufferOnlyOnce) {
 
 TEST(MpsFenceResourceTest, SetCommandQueueHandleBlockedAfterCommandBuffer) {
   mps_res::MpsFenceHazard fence;
-  base::CommandQueueHandle handle{7};
+  mps::MpsCommandQueueHandle handle{7};
 
   EXPECT_TRUE(fence.setCommandQueueHandle(handle));
   EXPECT_EQ(fence.commandQueueHandle(), handle);
   ASSERT_TRUE(fence.setFence(reinterpret_cast<mps_wrapper::MpsFence_t>(0x12)));
   EXPECT_TRUE(fence.setCommandBuffer(fakeCommandBuffer(0x3)));
-  EXPECT_FALSE(fence.setCommandQueueHandle(base::CommandQueueHandle{9}));
+  EXPECT_FALSE(fence.setCommandQueueHandle(mps::MpsCommandQueueHandle{9}));
   EXPECT_FALSE(fence.setCommandBuffer(fakeCommandBuffer(0x4)));
   EXPECT_FALSE(fence.isCompleted());
   EXPECT_EQ(fence.commandQueueHandle(), handle);

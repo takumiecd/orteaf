@@ -106,7 +106,7 @@ Architecture detectMpsArchitecture(std::string_view metal_family,
  * @copydoc orteaf::internal::architecture::detectMpsArchitectureForDeviceId
  */
 Architecture detectMpsArchitectureForDeviceId(
-    ::orteaf::internal::base::DeviceHandle device_id) {
+    ::orteaf::internal::execution::mps::MpsDeviceHandle device_id) {
 #if ORTEAF_ENABLE_MPS
   const std::uint32_t device_index = static_cast<std::uint32_t>(device_id);
   const auto execution_unavailable = diagnostics::error::makeErrorCode(

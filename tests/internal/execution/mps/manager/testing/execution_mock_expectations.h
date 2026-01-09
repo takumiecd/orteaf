@@ -10,7 +10,7 @@
 #include <gmock/gmock.h>
 
 #include <orteaf/internal/architecture/architecture.h>
-#include <orteaf/internal/base/handle.h>
+#include <orteaf/internal/execution/mps/mps_handles.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_command_queue.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_compute_pipeline_state.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_device.h>
@@ -63,7 +63,7 @@ struct ExecutionMockExpectations {
   static void expectDetectArchitectures(
       MpsExecutionOpsMock &mock,
       std::initializer_list<
-          std::pair<::orteaf::internal::base::DeviceHandle,
+          std::pair<::orteaf::internal::execution::mps::MpsDeviceHandle,
                     ::orteaf::internal::architecture::Architecture>>
           expectations) {
     for (const auto &[id, arch] : expectations) {

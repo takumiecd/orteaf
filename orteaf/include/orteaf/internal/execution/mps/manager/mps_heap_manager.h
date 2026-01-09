@@ -6,11 +6,11 @@
 #include <cstdint>
 #include <unordered_map>
 
-#include "orteaf/internal/base/handle.h"
 #include "orteaf/internal/base/lease/control_block/strong.h"
 #include "orteaf/internal/base/manager/lease_lifetime_registry.h"
 #include "orteaf/internal/base/manager/pool_manager.h"
 #include "orteaf/internal/base/pool/fixed_slot_store.h"
+#include "orteaf/internal/execution/mps/mps_handles.h"
 #include "orteaf/internal/execution/mps/manager/mps_buffer_manager.h"
 #include "orteaf/internal/execution/mps/manager/mps_library_manager.h"
 #include "orteaf/internal/execution/mps/platform/mps_slow_ops.h"
@@ -84,7 +84,7 @@ struct MpsHeapResource {
 
 struct HeapPayloadPoolTraits {
   using Payload = MpsHeapResource;
-  using Handle = ::orteaf::internal::base::HeapHandle;
+  using Handle = ::orteaf::internal::execution::mps::MpsHeapHandle;
   using DeviceType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t;
   using SlowOps = ::orteaf::internal::execution::mps::platform::MpsSlowOps;
@@ -97,7 +97,7 @@ struct HeapPayloadPoolTraits {
 
   struct Context {
     DeviceType device{nullptr};
-    ::orteaf::internal::base::DeviceHandle device_handle{};
+    ::orteaf::internal::execution::mps::MpsDeviceHandle device_handle{};
     MpsLibraryManager *library_manager{nullptr};
     SlowOps *ops{nullptr};
     BufferManager::Config buffer_config{};
@@ -117,7 +117,8 @@ using HeapPayloadPool =
 // =============================================================================
 
 using HeapControlBlock = ::orteaf::internal::base::StrongControlBlock<
-    ::orteaf::internal::base::HeapHandle, MpsHeapResource, HeapPayloadPool>;
+    ::orteaf::internal::execution::mps::MpsHeapHandle, MpsHeapResource,
+    HeapPayloadPool>;
 
 // =============================================================================
 // Traits for PoolManager
@@ -127,7 +128,7 @@ struct MpsHeapManagerTraits {
   using PayloadPool = HeapPayloadPool;
   using ControlBlock = HeapControlBlock;
   struct ControlBlockTag {};
-  using PayloadHandle = ::orteaf::internal::base::HeapHandle;
+  using PayloadHandle = ::orteaf::internal::execution::mps::MpsHeapHandle;
   static constexpr const char *Name = "MPS heap manager";
 };
 
@@ -142,7 +143,7 @@ public:
   using SlowOps = ::orteaf::internal::execution::mps::platform::MpsSlowOps;
   using DeviceType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t;
-  using HeapHandle = ::orteaf::internal::base::HeapHandle;
+  using HeapHandle = ::orteaf::internal::execution::mps::MpsHeapHandle;
   using HeapType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsHeap_t;
   using BufferManager = MpsBufferManager<
@@ -163,7 +164,7 @@ public:
 
   struct Config {
     DeviceType device{nullptr};
-    ::orteaf::internal::base::DeviceHandle device_handle{};
+    ::orteaf::internal::execution::mps::MpsDeviceHandle device_handle{};
     MpsLibraryManager *library_manager{nullptr};
     SlowOps *ops{nullptr};
     BufferManager::Config buffer_config{};
@@ -221,7 +222,7 @@ private:
   std::unordered_map<HeapDescriptorKey, std::size_t, HeapDescriptorKeyHasher>
       key_to_index_{};
   DeviceType device_{nullptr};
-  ::orteaf::internal::base::DeviceHandle device_handle_{};
+  ::orteaf::internal::execution::mps::MpsDeviceHandle device_handle_{};
   MpsLibraryManager *library_manager_{nullptr};
   SlowOps *ops_{nullptr};
   BufferManager::Config buffer_config_{};

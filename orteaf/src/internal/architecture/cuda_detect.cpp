@@ -78,7 +78,7 @@ Architecture detectCudaArchitecture(int compute_capability,
  * @copydoc orteaf::internal::architecture::detectCudaArchitectureForDeviceId
  */
 Architecture detectCudaArchitectureForDeviceId(
-    ::orteaf::internal::base::DeviceHandle device_id) {
+    ::orteaf::internal::execution::cuda::CudaDeviceHandle device_id) {
 #if ORTEAF_ENABLE_CUDA
   using execution::cuda::platform::wrapper::ComputeCapability;
   using execution::cuda::platform::wrapper::CudaDevice_t;

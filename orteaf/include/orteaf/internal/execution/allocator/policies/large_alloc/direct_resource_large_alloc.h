@@ -4,7 +4,6 @@
 
 #include <string>
 
-#include "orteaf/internal/base/handle.h"
 #include "orteaf/internal/base/heap_vector.h"
 #include "orteaf/internal/diagnostics/error/error_macros.h"
 #include "orteaf/internal/diagnostics/log/log.h"
@@ -16,9 +15,10 @@ namespace orteaf::internal::execution::allocator::policies {
 
 template <typename Resource> class DirectResourceLargeAllocPolicy {
 public:
-  using BufferViewHandle = ::orteaf::internal::base::BufferViewHandle;
-  using BufferView = Resource::BufferView;
-  using BufferBlock = Resource::BufferBlock;
+  using BufferBlock = typename Resource::BufferBlock;
+  using BufferViewHandle = typename BufferBlock::BufferViewHandle;
+  using BufferViewHandleUnderlying = typename BufferViewHandle::underlying_type;
+  using BufferView = typename Resource::BufferView;
 
   DirectResourceLargeAllocPolicy() = default;
   DirectResourceLargeAllocPolicy(const DirectResourceLargeAllocPolicy &) =
@@ -97,7 +97,7 @@ public:
 
   bool isLargeAlloc(BufferViewHandle handle) const {
     // 上位ビットでLarge/Chunkを判定
-    return (static_cast<BufferViewHandle::underlying_type>(handle) &
+    return (static_cast<BufferViewHandleUnderlying>(handle) &
             kLargeMask) != 0;
   }
 
@@ -114,9 +114,9 @@ public:
   std::size_t size() const { return entries_.size() - free_list_.size(); }
 
 private:
-  static constexpr BufferViewHandle::underlying_type kLargeMask =
-      BufferViewHandle::underlying_type{1u} << 31;
-  static constexpr BufferViewHandle::underlying_type kIndexMask = ~kLargeMask;
+  static constexpr BufferViewHandleUnderlying kLargeMask =
+      BufferViewHandleUnderlying{1u} << 31;
+  static constexpr BufferViewHandleUnderlying kIndexMask = ~kLargeMask;
 
   struct Entry {
     BufferView view{};
@@ -130,13 +130,13 @@ private:
   BufferViewHandle encodeId(std::size_t index) const {
     // Large用のビットを立てて衝突を避ける
     return BufferViewHandle{
-        static_cast<BufferViewHandle::underlying_type>(index) | kLargeMask};
+        static_cast<BufferViewHandleUnderlying>(index) | kLargeMask};
   }
 
   std::size_t indexFromId(BufferViewHandle handle) const {
     // Large判定ビットを落としてインデックスに戻す
     return static_cast<std::size_t>(
-        static_cast<BufferViewHandle::underlying_type>(handle) & kIndexMask);
+        static_cast<BufferViewHandleUnderlying>(handle) & kIndexMask);
   }
 
   std::size_t reserveSlot() {

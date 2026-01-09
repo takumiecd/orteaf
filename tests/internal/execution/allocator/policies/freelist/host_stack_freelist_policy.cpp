@@ -7,7 +7,6 @@
 #include "tests/internal/execution/allocator/testing/mock_resource.h"
 
 using ::orteaf::internal::execution::Execution;
-using ::orteaf::internal::base::BufferViewHandle;
 using ::orteaf::internal::execution::allocator::testing::MockCpuResource;
 using ::orteaf::internal::execution::allocator::testing::MockCpuResourceImpl;
 using ::orteaf::internal::execution::cpu::resource::CpuBufferView;
@@ -21,6 +20,7 @@ namespace {
 
 using Policy = policies::HostStackFreelistPolicy<MockCpuResource>;
 using BufferBlock = Policy::BufferBlock;
+using BufferViewHandle = MockCpuResource::BufferBlock::BufferViewHandle;
 
 TEST(HostStackFreelistPolicy, ConfigureInitializesStacks) {
   Policy policy;

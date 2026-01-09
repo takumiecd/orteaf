@@ -9,7 +9,6 @@
 #include <tests/internal/execution/mps/manager/testing/manager_test_fixture.h>
 #include <tests/internal/testing/error_assert.h>
 
-namespace base = orteaf::internal::base;
 namespace diag_error = orteaf::internal::diagnostics::error;
 namespace mps_rt = orteaf::internal::execution::mps::manager;
 namespace mps_wrapper = orteaf::internal::execution::mps::platform::wrapper;

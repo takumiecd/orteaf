@@ -4,9 +4,9 @@
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_compute_command_encoder.h"
 #include "orteaf/internal/execution/mps/resource/mps_fence_token.h"
 #include "orteaf/internal/execution/mps/resource/mps_kernel_launcher_impl.h"
+#include "orteaf/internal/execution/mps/mps_handles.h"
 #include "tests/internal/execution/mps/manager/testing/execution_mock.h"
-
-namespace base = orteaf::internal::base;
+namespace mps = orteaf::internal::execution::mps;
 
 namespace mps_rt = orteaf::internal::execution::mps;
 
@@ -42,7 +42,7 @@ public:
 
   // Record requests and return dummy leases.
   static PipelineLease
-  acquirePipeline(base::DeviceHandle device,
+  acquirePipeline(mps::MpsDeviceHandle device,
                   const mps_rt::manager::LibraryKey &library_key,
                   const mps_rt::manager::FunctionKey &function_key) {
     last_device = device;
@@ -52,12 +52,12 @@ public:
     return PipelineLease{};
   }
 
-  static StrongFenceLease acquireFence(base::DeviceHandle device) {
+  static StrongFenceLease acquireFence(mps::MpsDeviceHandle device) {
     last_device = device;
     return StrongFenceLease{};
   }
 
-  static inline base::DeviceHandle last_device{};
+  static inline mps::MpsDeviceHandle last_device{};
   static inline std::string last_library{};
   static inline std::string last_function{};
 };
@@ -76,13 +76,13 @@ public:
     fence_manager = manager;
   }
 
-  static PipelineLease acquirePipeline(base::DeviceHandle,
+  static PipelineLease acquirePipeline(mps::MpsDeviceHandle,
                                        const mps_rt::manager::LibraryKey &,
                                        const mps_rt::manager::FunctionKey &) {
     return PipelineLease{};
   }
 
-  static StrongFenceLease acquireFence(base::DeviceHandle) {
+  static StrongFenceLease acquireFence(mps::MpsDeviceHandle) {
     return fence_manager ? fence_manager->acquire() : StrongFenceLease{};
   }
 
@@ -168,7 +168,7 @@ TEST(MpsKernelLauncherImplTest, InitializeAcquiresPipelinesInOrder) {
   });
 
   DummyPrivateOps::reset();
-  const base::DeviceHandle device{0};
+  const mps::MpsDeviceHandle device{0};
 
   impl.initialize<DummyPrivateOps>(device);
 
@@ -346,7 +346,7 @@ TEST(MpsKernelLauncherImplTest, CreateComputeEncoderBindsPipeline) {
 
   // Initialize to populate pipelines_; DummyPrivateOps returns empty leases
   // (null pipeline is fine).
-  const base::DeviceHandle device{0};
+  const mps::MpsDeviceHandle device{0};
   impl.initialize<DummyPrivateOps>(device);
 
   MockComputeFastOps::last_command_buffer = nullptr;
@@ -370,7 +370,7 @@ TEST(MpsKernelLauncherImplTest, CreateComputeEncoderByNameAndIndex) {
       {"libB", "fnB"},
   });
 
-  const base::DeviceHandle device{0};
+  const mps::MpsDeviceHandle device{0};
   impl.initialize<DummyPrivateOps>(device);
   ASSERT_TRUE(impl.initialized(device));
   ASSERT_EQ(impl.sizeForTest(), 2u);
@@ -419,7 +419,7 @@ TEST(MpsKernelLauncherImplTest, EncoderSetBufferAndBytesForwarded) {
   });
 
   // We don't need real pipelines; just need the helpers callable.
-  const base::DeviceHandle device{0};
+  const mps::MpsDeviceHandle device{0};
   impl.initialize<DummyPrivateOps>(device);
 
   auto *encoder = MockComputeFastOps::fake_encoder;
@@ -462,7 +462,7 @@ TEST(MpsKernelLauncherImplTest, DispatchEndCommitForwarded) {
       {"lib", "fn"},
   });
 
-  const base::DeviceHandle device{0};
+  const mps::MpsDeviceHandle device{0};
   impl.initialize<DummyPrivateOps>(device);
 
   MockComputeFastOps::last_encoder = nullptr;
@@ -497,7 +497,7 @@ TEST(MpsKernelLauncherImplTest, DispatchOneShotByIndex) {
       {"lib", "fn"},
   });
 
-  const base::DeviceHandle device{0};
+  const mps::MpsDeviceHandle device{0};
   impl.initialize<DummyPrivateOps>(device);
 
   ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandQueue_t
@@ -545,7 +545,7 @@ TEST(MpsKernelLauncherImplTest, DispatchOneShotByNameMissingReturnsNullptr) {
   mps_rt::resource::MpsKernelLauncherImpl<1> impl({
       {"lib", "fn"},
   });
-  const base::DeviceHandle device{0};
+  const mps::MpsDeviceHandle device{0};
   impl.initialize<DummyPrivateOps>(device);
 
   ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandQueue_t
@@ -567,7 +567,7 @@ TEST(MpsKernelLauncherImplTest, UpdateFenceReplacesLeaseForSameQueue) {
   mps_rt::resource::MpsKernelLauncherImpl<1> impl({
       {"lib", "fn"},
   });
-  const base::DeviceHandle device{0};
+  const mps::MpsDeviceHandle device{0};
   TestFenceManager fence_manager;
   FenceRuntimeScope fence_scope(fence_manager.manager);
   impl.initialize<FenceRuntimeOps>(device);
@@ -605,7 +605,7 @@ TEST(MpsKernelLauncherImplTest, DispatchOneShotAddsFenceLeaseWhenProvided) {
   mps_rt::resource::MpsKernelLauncherImpl<1> impl({
       {"lib", "fn"},
   });
-  const base::DeviceHandle device{0};
+  const mps::MpsDeviceHandle device{0};
   TestFenceManager fence_manager;
   FenceRuntimeScope fence_scope(fence_manager.manager);
   impl.initialize<FenceRuntimeOps>(device);
@@ -645,7 +645,7 @@ TEST(MpsKernelLauncherImplTest, UpdateFenceReturnsLeaseAndEncodesUpdate) {
   mps_rt::resource::MpsKernelLauncherImpl<1> impl({
       {"lib", "fn"},
   });
-  const base::DeviceHandle device{0};
+  const mps::MpsDeviceHandle device{0};
   TestFenceManager fence_manager;
   FenceRuntimeScope fence_scope(fence_manager.manager);
   impl.initialize<FenceRuntimeOps>(device);

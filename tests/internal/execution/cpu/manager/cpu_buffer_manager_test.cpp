@@ -5,7 +5,6 @@
 
 #include <memory>
 
-namespace base = orteaf::internal::base;
 namespace cpu_rt = orteaf::internal::execution::cpu::manager;
 namespace cpu_platform = orteaf::internal::execution::cpu::platform;
 

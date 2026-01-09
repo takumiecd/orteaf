@@ -1,7 +1,7 @@
 #pragma once
 
 #include "orteaf/internal/architecture/architecture.h"
-#include "orteaf/internal/base/handle.h"
+#include "orteaf/internal/execution/cuda/cuda_handles.h"
 
 #include <cstdint>
 #include <string_view>
@@ -33,6 +33,7 @@ Architecture detectCudaArchitecture(int compute_capability, std::string_view ven
  * @param device_id Strong-typed CUDA device identifier.
  * @return The detected CUDA `Architecture`, or `Architecture::CudaGeneric` when enumeration fails.
  */
-Architecture detectCudaArchitectureForDeviceId(::orteaf::internal::base::DeviceHandle device_id);
+Architecture detectCudaArchitectureForDeviceId(
+    ::orteaf::internal::execution::cuda::CudaDeviceHandle device_id);
 
 } // namespace orteaf::internal::architecture

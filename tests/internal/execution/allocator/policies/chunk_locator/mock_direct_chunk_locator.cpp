@@ -15,10 +15,10 @@ using ::testing::Return;
 namespace allocator = ::orteaf::internal::execution::allocator;
 namespace policies = ::orteaf::internal::execution::allocator::policies;
 using Execution = ::orteaf::internal::execution::Execution;
-using BufferViewHandle = ::orteaf::internal::base::BufferViewHandle;
 using CpuView = ::orteaf::internal::execution::cpu::resource::CpuBufferView;
 using ::orteaf::internal::execution::allocator::testing::MockCpuResource;
 using ::orteaf::internal::execution::allocator::testing::MockCpuResourceImpl;
+using BufferViewHandle = MockCpuResource::BufferBlock::BufferViewHandle;
 
 namespace {
 

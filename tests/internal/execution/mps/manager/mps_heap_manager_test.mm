@@ -6,11 +6,12 @@
 
 #include <orteaf/internal/diagnostics/error/error.h>
 #include <orteaf/internal/execution/mps/manager/mps_heap_manager.h>
+#include <orteaf/internal/execution/mps/mps_handles.h>
 #include <tests/internal/execution/mps/manager/testing/execution_ops_provider.h>
 #include <tests/internal/execution/mps/manager/testing/manager_test_fixture.h>
 #include <tests/internal/testing/error_assert.h>
 
-namespace base = orteaf::internal::base;
+namespace mps = orteaf::internal::execution::mps;
 namespace diag_error = orteaf::internal::diagnostics::error;
 namespace mps_rt = orteaf::internal::execution::mps::manager;
 namespace mps_wrapper = orteaf::internal::execution::mps::platform::wrapper;
@@ -50,7 +51,7 @@ protected:
              std::size_t control_block_capacity = 0) {
     mps_rt::MpsHeapManager::Config config{};
     config.device = this->adapter().device();
-    config.device_handle = base::DeviceHandle{0};
+    config.device_handle = mps::MpsDeviceHandle{0};
     config.library_manager = nullptr;
     config.ops = this->getOps();
     config.pool.payload_capacity = payload_capacity;

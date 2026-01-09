@@ -7,8 +7,8 @@
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_device.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_heap.h"
 #include "orteaf/internal/execution/mps/resource/mps_kernel_launcher_impl.h"
+#include "orteaf/internal/execution/mps/mps_handles.h"
 
-namespace base = orteaf::internal::base;
 namespace mps_api = orteaf::internal::execution::mps::api;
 namespace mps_rt = orteaf::internal::execution::mps;
 
@@ -26,7 +26,7 @@ TEST(MpsKernelLauncherImplDeviceTest, InitializeWithEmbeddedLibraryRealDevice) {
         {"embed_test_library", "orteaf_embed_test_identity"},
     });
 
-    const base::DeviceHandle device{0};
+    const ::orteaf::internal::execution::mps::MpsDeviceHandle device{0};
     impl.initialize<mps_api::MpsRuntimeApi>(device);
 
     EXPECT_TRUE(impl.initialized(device));
@@ -101,7 +101,7 @@ TEST(MpsKernelLauncherImplDeviceTest, DispatchOneShotExecutesEmbeddedIdentity) {
         {"embed_test_library", "orteaf_embed_test_identity"},
     });
 
-    const base::DeviceHandle device{0};
+    const ::orteaf::internal::execution::mps::MpsDeviceHandle device{0};
     impl.initialize<mps_api::MpsRuntimeApi>(device);
 
     auto *command_buffer = impl.dispatchOneShot<

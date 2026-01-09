@@ -7,6 +7,7 @@
 #include "orteaf/internal/execution/mps/manager/mps_library_manager.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_device.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_heap.h"
+#include "orteaf/internal/execution/mps/mps_handles.h"
 #include "tests/internal/testing/error_assert.h"
 
 namespace orteaf::tests {
@@ -65,7 +66,7 @@ TEST(MpsResourceTest, AllocateZeroThrowsWhenInitialized) {
   MpsResource resource;
   ::orteaf::internal::execution::mps::manager::MpsLibraryManager dummy_lib_mgr;
   MpsResource::Config cfg{};
-  cfg.device_handle = ::orteaf::internal::base::DeviceHandle{0};
+  cfg.device_handle = ::orteaf::internal::execution::mps::MpsDeviceHandle{0};
   cfg.device = device;
   cfg.heap = heap;
   cfg.usage = mps::kMPSDefaultBufferUsage;

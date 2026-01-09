@@ -1,6 +1,7 @@
 #include "orteaf/internal/architecture/architecture.h"
 #include "orteaf/internal/architecture/cpu_detect.h"
 #include "orteaf/internal/execution/cpu/manager/cpu_device_manager.h"
+#include "orteaf/internal/execution/cpu/cpu_handles.h"
 #include "orteaf/internal/execution/cpu/platform/cpu_slow_ops.h"
 #include <gtest/gtest.h>
 #include <system_error>
@@ -8,7 +9,7 @@
 #include <cstdlib>
 #include <memory>
 
-namespace base = orteaf::internal::base;
+namespace cpu = orteaf::internal::execution::cpu;
 namespace cpu_rt = orteaf::internal::execution::cpu::manager;
 namespace cpu_platform = orteaf::internal::execution::cpu::platform;
 namespace architecture = orteaf::internal::architecture;
@@ -41,13 +42,13 @@ TEST_F(CpuDeviceManagerTest, ConfigurePopulatesState) {
 
   configureManager();
   EXPECT_TRUE(manager_->isConfiguredForTest());
-  EXPECT_TRUE(manager_->isAliveForTest(base::DeviceHandle{0}));
+  EXPECT_TRUE(manager_->isAliveForTest(cpu::CpuDeviceHandle{0}));
 }
 
 TEST_F(CpuDeviceManagerTest, AcquireReturnsValidLease) {
   configureManager();
 
-  auto lease = manager_->acquire(base::DeviceHandle{0});
+  auto lease = manager_->acquire(cpu::CpuDeviceHandle{0});
   EXPECT_TRUE(lease);
   EXPECT_NE(lease.payloadPtr(), nullptr);
 }
@@ -55,7 +56,7 @@ TEST_F(CpuDeviceManagerTest, AcquireReturnsValidLease) {
 TEST_F(CpuDeviceManagerTest, LeaseContainsCorrectArch) {
   configureManager();
 
-  auto lease = manager_->acquire(base::DeviceHandle{0});
+  auto lease = manager_->acquire(cpu::CpuDeviceHandle{0});
   EXPECT_TRUE(lease);
 
   // Access arch through lease
@@ -81,33 +82,33 @@ TEST_F(CpuDeviceManagerTest, ManualEnvironmentCheck) {
                     " to run this test on your environment.";
   }
   configureManager();
-  auto lease = manager_->acquire(base::DeviceHandle{0});
+  auto lease = manager_->acquire(cpu::CpuDeviceHandle{0});
   const auto arch = lease.payloadPtr()->arch;
   EXPECT_STREQ(expected_env, architecture::idOf(arch).data());
 }
 
 TEST_F(CpuDeviceManagerTest, GetArchitectureMatchesDetector) {
   configureManager();
-  auto lease = manager_->acquire(base::DeviceHandle{0});
+  auto lease = manager_->acquire(cpu::CpuDeviceHandle{0});
   EXPECT_EQ(lease.payloadPtr()->arch, architecture::detectCpuArchitecture());
 }
 
 TEST_F(CpuDeviceManagerTest, IsAliveReflectsInitialization) {
   configureManager();
-  EXPECT_TRUE(manager_->isAliveForTest(base::DeviceHandle{0}));
+  EXPECT_TRUE(manager_->isAliveForTest(cpu::CpuDeviceHandle{0}));
   manager_->shutdown();
-  EXPECT_FALSE(manager_->isAliveForTest(base::DeviceHandle{0}));
+  EXPECT_FALSE(manager_->isAliveForTest(cpu::CpuDeviceHandle{0}));
 }
 
 TEST_F(CpuDeviceManagerTest, InvalidDeviceHandleThrows) {
   configureManager();
-  EXPECT_THROW(manager_->acquire(base::DeviceHandle{1}), std::system_error);
+  EXPECT_THROW(manager_->acquire(cpu::CpuDeviceHandle{1}), std::system_error);
 }
 
 TEST_F(CpuDeviceManagerTest, LeaseReleaseWorks) {
   configureManager();
 
-  auto lease = manager_->acquire(base::DeviceHandle{0});
+  auto lease = manager_->acquire(cpu::CpuDeviceHandle{0});
   EXPECT_TRUE(lease);
   // Device manager keeps a copy in lifetime registry, so count is 2
   EXPECT_EQ(lease.strongCount(), 2u);

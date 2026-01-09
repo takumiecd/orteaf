@@ -9,11 +9,11 @@
 #include <unordered_map>
 #include <utility>
 
-#include "orteaf/internal/base/handle.h"
 #include "orteaf/internal/base/lease/control_block/strong.h"
 #include "orteaf/internal/base/manager/lease_lifetime_registry.h"
 #include "orteaf/internal/base/manager/pool_manager.h"
 #include "orteaf/internal/base/pool/fixed_slot_store.h"
+#include "orteaf/internal/execution/mps/mps_handles.h"
 #include "orteaf/internal/execution/mps/platform/mps_slow_ops.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_compute_pipeline_state.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_function.h"
@@ -60,7 +60,7 @@ struct MpsPipelineResource {
 
 struct PipelinePayloadPoolTraits {
   using Payload = MpsPipelineResource;
-  using Handle = ::orteaf::internal::base::FunctionHandle;
+  using Handle = ::orteaf::internal::execution::mps::MpsFunctionHandle;
   using DeviceType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t;
   using LibraryType =
@@ -117,14 +117,15 @@ using PipelinePayloadPool =
 struct PipelineControlBlockTag {};
 
 using PipelineControlBlock = ::orteaf::internal::base::StrongControlBlock<
-    ::orteaf::internal::base::FunctionHandle, MpsPipelineResource,
+    ::orteaf::internal::execution::mps::MpsFunctionHandle,
+    MpsPipelineResource,
     PipelinePayloadPool>;
 
 struct MpsComputePipelineStateManagerTraits {
   using PayloadPool = PipelinePayloadPool;
   using ControlBlock = PipelineControlBlock;
   struct ControlBlockTag {};
-  using PayloadHandle = ::orteaf::internal::base::FunctionHandle;
+  using PayloadHandle = ::orteaf::internal::execution::mps::MpsFunctionHandle;
   static constexpr const char *Name = "MpsComputePipelineStateManager";
 };
 
@@ -138,7 +139,7 @@ public:
       ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t;
   using LibraryType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsLibrary_t;
-  using FunctionHandle = ::orteaf::internal::base::FunctionHandle;
+  using FunctionHandle = ::orteaf::internal::execution::mps::MpsFunctionHandle;
   using PipelineState = ::orteaf::internal::execution::mps::platform::wrapper::
       MpsComputePipelineState_t;
   using ControlBlockHandle = Core::ControlBlockHandle;

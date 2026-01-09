@@ -25,10 +25,6 @@ static_assert(
     policies::ChunkLocator<DirectPolicy, DirectConfig, MockCpuResource>,
     "DirectChunkLocatorPolicy must satisfy ChunkLocator concept");
 
-// 標準の BufferViewHandle を使用している
-static_assert(policies::HasStandardBufferViewHandle<DirectPolicy>,
-              "DirectChunkLocatorPolicy must use standard BufferViewHandle");
-
 // ============================================================================
 // ランタイムテスト: concept を満たす型を使ったジェネリック関数のテスト
 // ============================================================================

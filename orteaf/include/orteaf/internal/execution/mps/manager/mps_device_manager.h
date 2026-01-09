@@ -7,12 +7,12 @@
 #include <utility>
 
 #include "orteaf/internal/architecture/architecture.h"
-#include "orteaf/internal/base/handle.h"
 #include "orteaf/internal/base/lease/control_block/strong.h"
 #include "orteaf/internal/base/manager/lease_lifetime_registry.h"
 #include "orteaf/internal/base/manager/pool_manager.h"
 #include "orteaf/internal/base/pool/fixed_slot_store.h"
 #include "orteaf/internal/diagnostics/error/error.h"
+#include "orteaf/internal/execution/mps/mps_handles.h"
 #include "orteaf/internal/execution/mps/manager/mps_command_queue_manager.h"
 #include "orteaf/internal/execution/mps/manager/mps_event_manager.h"
 #include "orteaf/internal/execution/mps/manager/mps_fence_manager.h"
@@ -94,7 +94,7 @@ private:
 
 struct DevicePayloadPoolTraits {
   using Payload = MpsDeviceResource;
-  using Handle = ::orteaf::internal::base::DeviceHandle;
+  using Handle = ::orteaf::internal::execution::mps::MpsDeviceHandle;
   using SlowOps = ::orteaf::internal::execution::mps::platform::MpsSlowOps;
 
   struct Request {
@@ -181,7 +181,7 @@ struct DeviceManagerCBTag {};
 // =============================================================================
 
 using DeviceControlBlock = ::orteaf::internal::base::StrongControlBlock<
-    ::orteaf::internal::base::DeviceHandle, MpsDeviceResource,
+    ::orteaf::internal::execution::mps::MpsDeviceHandle, MpsDeviceResource,
     DevicePayloadPool>;
 
 // =============================================================================
@@ -192,7 +192,7 @@ struct MpsDeviceManagerTraits {
   using PayloadPool = DevicePayloadPool;
   using ControlBlock = DeviceControlBlock;
   using ControlBlockTag = DeviceManagerCBTag; // Use the same tag
-  using PayloadHandle = ::orteaf::internal::base::DeviceHandle;
+  using PayloadHandle = ::orteaf::internal::execution::mps::MpsDeviceHandle;
   static constexpr const char *Name = "MPS device manager";
 };
 
@@ -203,7 +203,7 @@ struct MpsDeviceManagerTraits {
 class MpsDeviceManager {
 public:
   using SlowOps = ::orteaf::internal::execution::mps::platform::MpsSlowOps;
-  using DeviceHandle = ::orteaf::internal::base::DeviceHandle;
+  using DeviceHandle = ::orteaf::internal::execution::mps::MpsDeviceHandle;
   using DeviceType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t;
 

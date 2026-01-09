@@ -13,10 +13,11 @@
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_device.h"
 #include "orteaf/internal/execution/mps/resource/mps_reuse_hazard.h"
 #include "orteaf/internal/execution/mps/resource/mps_reuse_token.h"
+#include "orteaf/internal/execution/mps/mps_handles.h"
 
 namespace mps_wrapper = orteaf::internal::execution::mps::platform::wrapper;
 namespace mps_res = orteaf::internal::execution::mps::resource;
-namespace base = orteaf::internal::base;
+namespace mps = orteaf::internal::execution::mps;
 
 class MpsReuseTokenTest : public ::testing::Test {
 protected:
@@ -62,7 +63,7 @@ protected:
   }
 
 #if ORTEAF_ENABLE_MPS
-  mps_res::MpsReuseHazard makeHazard(base::CommandQueueHandle handle,
+  mps_res::MpsReuseHazard makeHazard(mps::MpsCommandQueueHandle handle,
                                      mps_wrapper::MpsCommandBuffer_t cb) {
     mps_res::MpsReuseHazard hazard;
     hazard.setCommandQueueHandle(handle);
@@ -74,8 +75,8 @@ protected:
   mps_wrapper::MpsCommandQueue_t queue_{nullptr};
   mps_wrapper::MpsCommandBuffer_t command_buffer_a_{nullptr};
   mps_wrapper::MpsCommandBuffer_t command_buffer_b_{nullptr};
-  base::CommandQueueHandle queue_id_{base::CommandQueueHandle{13}};
-  base::CommandQueueHandle queue_id_other_{base::CommandQueueHandle{42}};
+  mps::MpsCommandQueueHandle queue_id_{mps::MpsCommandQueueHandle{13}};
+  mps::MpsCommandQueueHandle queue_id_other_{mps::MpsCommandQueueHandle{42}};
 #endif
 };
 

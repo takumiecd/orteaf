@@ -9,7 +9,6 @@
 #include <cstddef>
 #include <type_traits>
 
-#include "orteaf/internal/base/handle.h"
 
 namespace orteaf::internal::execution::allocator::policies {
 
@@ -59,13 +58,5 @@ concept ChunkLocator =
       { locator.decrementPending(id) } -> std::same_as<void>;
       { locator.decrementPendingAndUsed(id) } -> std::same_as<void>;
     };
-
-/**
- * @brief BufferViewHandle が共通の型であることを確認する concept。
- */
-template <typename T>
-concept HasStandardBufferViewHandle =
-    std::same_as<typename T::BufferViewHandle,
-                 ::orteaf::internal::base::BufferViewHandle>;
 
 } // namespace orteaf::internal::execution::allocator::policies

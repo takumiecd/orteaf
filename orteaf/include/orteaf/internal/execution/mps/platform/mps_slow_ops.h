@@ -6,7 +6,7 @@
 
 #include "orteaf/internal/architecture/architecture.h"
 #include "orteaf/internal/architecture/mps_detect.h"
-#include "orteaf/internal/base/handle.h"
+#include "orteaf/internal/execution/mps/mps_handles.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_command_queue.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_compute_pipeline_state.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_device.h"
@@ -34,7 +34,8 @@ struct MpsSlowOps {
                     device) = 0;
 
   virtual ::orteaf::internal::architecture::Architecture
-  detectArchitecture(::orteaf::internal::base::DeviceHandle device_id) = 0;
+  detectArchitecture(
+      ::orteaf::internal::execution::mps::MpsDeviceHandle device_id) = 0;
 
   virtual ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandQueue_t
   createCommandQueue(
@@ -214,7 +215,8 @@ struct MpsSlowOpsImpl final : public MpsSlowOps {
       override;
 
   ::orteaf::internal::architecture::Architecture
-  detectArchitecture(::orteaf::internal::base::DeviceHandle device_id) override;
+  detectArchitecture(
+      ::orteaf::internal::execution::mps::MpsDeviceHandle device_id) override;
 
   ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandQueue_t
   createCommandQueue(

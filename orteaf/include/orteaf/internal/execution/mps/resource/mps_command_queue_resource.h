@@ -2,8 +2,8 @@
 
 #if ORTEAF_ENABLE_MPS
 
-#include "orteaf/internal/base/handle.h"
 #include "orteaf/internal/execution/mps/manager/mps_fence_lifetime_manager.h"
+#include "orteaf/internal/execution/mps/mps_handles.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_command_queue.h"
 
 namespace orteaf::internal::execution::mps::resource {
@@ -12,7 +12,8 @@ class MpsCommandQueueResource {
 public:
   using CommandQueueType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandQueue_t;
-  using CommandQueueHandle = ::orteaf::internal::base::CommandQueueHandle;
+  using CommandQueueHandle =
+      ::orteaf::internal::execution::mps::MpsCommandQueueHandle;
   using FenceLifetimeManager =
       ::orteaf::internal::execution::mps::manager::MpsFenceLifetimeManager;
 

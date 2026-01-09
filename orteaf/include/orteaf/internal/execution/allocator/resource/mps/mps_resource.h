@@ -5,11 +5,11 @@
 #include <cstddef>
 #include <cstdint>
 
-#include <orteaf/internal/base/handle.h>
 #include <orteaf/internal/base/heap_vector.h>
 #include <orteaf/internal/execution/allocator/execution_buffer.h>
 #include <orteaf/internal/execution/mps/manager/mps_command_queue_manager.h>
 #include <orteaf/internal/execution/mps/manager/mps_library_manager.h>
+#include <orteaf/internal/execution/mps/mps_handles.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_buffer.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_command_queue.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_device.h>
@@ -45,7 +45,7 @@ public:
   using MpsBuffer_t =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsBuffer_t;
   struct LaunchParams {
-    ::orteaf::internal::base::DeviceHandle device_handle;
+    ::orteaf::internal::execution::mps::MpsDeviceHandle device_handle;
     ::orteaf::internal::execution::mps::manager::MpsCommandQueueManager::
         CommandQueueLease command_queue;
   };
@@ -61,7 +61,7 @@ public:
   }
 
   struct Config {
-    ::orteaf::internal::base::DeviceHandle device_handle{};
+    ::orteaf::internal::execution::mps::MpsDeviceHandle device_handle{};
     ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t device{
         nullptr};
     ::orteaf::internal::execution::mps::platform::wrapper::MpsHeap_t heap{
@@ -124,7 +124,7 @@ private:
 
   ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t device_{
       nullptr};
-  ::orteaf::internal::base::DeviceHandle device_handle_{};
+  ::orteaf::internal::execution::mps::MpsDeviceHandle device_handle_{};
   ::orteaf::internal::execution::mps::platform::wrapper::MpsHeap_t heap_{
       nullptr};
   ::orteaf::internal::execution::mps::platform::wrapper::MpsBufferUsage_t

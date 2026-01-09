@@ -6,7 +6,6 @@
 #include <string>
 #include <utility>
 
-#include "orteaf/internal/base/handle.h"
 #include "orteaf/internal/base/lease/control_block/strong.h"
 #include "orteaf/internal/base/lease/strong_lease.h"
 #include "orteaf/internal/base/manager/pool_manager.h"
@@ -21,6 +20,7 @@
 #include "orteaf/internal/execution/allocator/policies/threading/threading_policies.h"
 #include "orteaf/internal/execution/allocator/pool/segregate_pool.h"
 #include "orteaf/internal/execution/execution.h"
+#include "orteaf/internal/execution/mps/mps_handles.h"
 #include "orteaf/internal/execution/mps/manager/mps_library_manager.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_device.h"
 #include "orteaf/internal/execution/mps/resource/mps_buffer_view.h"
@@ -58,7 +58,7 @@ template <typename ResourceT> struct BufferPayloadPoolTraitsT {
   using MpsBuffer =
       ::orteaf::internal::execution::allocator::ExecutionBuffer<Execution::Mps>;
   using Payload = MpsBuffer;
-  using Handle = ::orteaf::internal::base::BufferHandle;
+  using Handle = ::orteaf::internal::execution::mps::MpsBufferHandle;
   using SegregatePool = MpsBufferPoolT<ResourceT>;
   using LaunchParams = typename SegregatePool::LaunchParams;
 
@@ -124,7 +124,8 @@ using MpsBuffer =
 
 template <typename ResourceT>
 using BufferControlBlockT = ::orteaf::internal::base::StrongControlBlock<
-    ::orteaf::internal::base::BufferHandle, MpsBuffer<ResourceT>,
+    ::orteaf::internal::execution::mps::MpsBufferHandle,
+    MpsBuffer<ResourceT>,
     BufferPayloadPoolT<ResourceT>>;
 
 // ============================================================================
@@ -134,7 +135,7 @@ template <typename ResourceT> struct MpsBufferManagerTraits {
   using PayloadPool = BufferPayloadPoolT<ResourceT>;
   using ControlBlock = BufferControlBlockT<ResourceT>;
   struct ControlBlockTag {};
-  using PayloadHandle = ::orteaf::internal::base::BufferHandle;
+  using PayloadHandle = ::orteaf::internal::execution::mps::MpsBufferHandle;
   static constexpr const char *Name = "MpsBufferManager";
 };
 
@@ -146,7 +147,7 @@ public:
   using Traits = MpsBufferManagerTraits<ResourceT>;
   using Core = ::orteaf::internal::base::PoolManager<Traits>;
   using MpsBuffer = MpsBuffer<ResourceT>;
-  using BufferHandle = ::orteaf::internal::base::BufferHandle;
+  using BufferHandle = ::orteaf::internal::execution::mps::MpsBufferHandle;
   using SegregatePool = MpsBufferPoolT<ResourceT>;
   using LaunchParams = typename SegregatePool::LaunchParams;
   using Resource = ResourceT;
@@ -173,7 +174,7 @@ public:
   struct Config {
     // Dependencies
     DeviceType device{nullptr};
-    ::orteaf::internal::base::DeviceHandle device_handle{};
+    ::orteaf::internal::execution::mps::MpsDeviceHandle device_handle{};
     HeapType heap{nullptr};
     MpsLibraryManager *library_manager{nullptr};
     // SegregatePool config
@@ -335,7 +336,7 @@ private:
   // Runtime state
   SegregatePool segregate_pool_{};
   DeviceType device_{nullptr};
-  ::orteaf::internal::base::DeviceHandle device_handle_{};
+  ::orteaf::internal::execution::mps::MpsDeviceHandle device_handle_{};
   HeapType heap_{nullptr};
   LaunchParams default_params_{};
   Core core_{};

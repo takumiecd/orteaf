@@ -6,8 +6,8 @@
 
 #include <gmock/gmock.h>
 
-#include <orteaf/internal/base/handle.h>
 #include <orteaf/internal/execution/mps/platform/mps_slow_ops.h>
+#include <orteaf/internal/execution/mps/mps_handles.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_command_queue.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_compute_pipeline_state.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_event.h>
@@ -31,7 +31,8 @@ struct MpsExecutionOpsMock
       (::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t),
       (override));
   MOCK_METHOD(::orteaf::internal::architecture::Architecture,
-              detectArchitecture, (::orteaf::internal::base::DeviceHandle),
+              detectArchitecture,
+              (::orteaf::internal::execution::mps::MpsDeviceHandle),
               (override));
   MOCK_METHOD(
       ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandQueue_t,

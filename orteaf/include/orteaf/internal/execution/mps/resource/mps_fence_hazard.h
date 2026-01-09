@@ -2,11 +2,11 @@
 
 #if ORTEAF_ENABLE_MPS
 
-#include <orteaf/internal/base/handle.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_fence.h>
 
 #include <orteaf/internal/execution/mps/platform/mps_fast_ops.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_command_buffer.h>
+#include <orteaf/internal/execution/mps/mps_handles.h>
 
 namespace orteaf::internal::execution::mps::manager {
 struct FencePayloadPoolTraits;
@@ -21,7 +21,8 @@ public:
       ::orteaf::internal::execution::mps::platform::wrapper::MpsFence_t;
   using CommandBufferType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandBuffer_t;
-  using CommandQueueHandle = ::orteaf::internal::base::CommandQueueHandle;
+  using CommandQueueHandle =
+      ::orteaf::internal::execution::mps::MpsCommandQueueHandle;
 
   MpsFenceHazard() = default;
 

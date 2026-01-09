@@ -1,12 +1,13 @@
 #include "orteaf/internal/architecture/architecture.h"
 #include "orteaf/internal/architecture/cpu_detect.h"
+#include "orteaf/internal/execution/cpu/cpu_handles.h"
 #include "orteaf/internal/execution/cpu/manager/cpu_runtime_manager.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <memory>
 
-namespace base = orteaf::internal::base;
+namespace cpu = orteaf::internal::execution::cpu;
 namespace cpu_rt = orteaf::internal::execution::cpu::manager;
 namespace cpu_platform = orteaf::internal::execution::cpu::platform;
 namespace architecture = orteaf::internal::architecture;
@@ -22,7 +23,7 @@ class CpuSlowOpsMock : public cpu_platform::CpuSlowOps {
 public:
   MOCK_METHOD(int, getDeviceCount, (), (override));
   MOCK_METHOD(architecture::Architecture, detectArchitecture,
-              (base::DeviceHandle device_id), (override));
+              (cpu::CpuDeviceHandle device_id), (override));
   MOCK_METHOD(void *, allocBuffer, (std::size_t size, std::size_t alignment),
               (override));
   MOCK_METHOD(void, deallocBuffer, (void *ptr, std::size_t size), (override));
@@ -67,7 +68,7 @@ TEST_F(CpuRuntimeManagerTest, DeviceManagerReturnsCorrectArch) {
   manager_->configure();
 
   auto &device_manager = manager_->deviceManager();
-  auto lease = device_manager.acquire(base::DeviceHandle{0});
+  auto lease = device_manager.acquire(cpu::CpuDeviceHandle{0});
   EXPECT_TRUE(lease);
 
   // Access arch through lease
@@ -79,7 +80,7 @@ TEST_F(CpuRuntimeManagerTest, ConfigureWithCustomOps) {
   auto *mock_ops = new NiceMock<CpuSlowOpsMock>();
 
   ON_CALL(*mock_ops, getDeviceCount()).WillByDefault(Return(1));
-  ON_CALL(*mock_ops, detectArchitecture(base::DeviceHandle{0}))
+  ON_CALL(*mock_ops, detectArchitecture(cpu::CpuDeviceHandle{0}))
       .WillByDefault(Return(architecture::Architecture::CpuZen4));
 
   cpu_rt::CpuRuntimeManager::Config config{};
@@ -113,5 +114,5 @@ TEST_F(CpuRuntimeManagerTest, DeviceManagerIsAlive) {
   manager_->configure();
 
   auto &device_manager = manager_->deviceManager();
-  EXPECT_TRUE(device_manager.isAliveForTest(base::DeviceHandle{0}));
+  EXPECT_TRUE(device_manager.isAliveForTest(cpu::CpuDeviceHandle{0}));
 }

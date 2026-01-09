@@ -11,12 +11,13 @@
 
 #include "orteaf/internal/execution/mps/manager/mps_fence_lifetime_manager.h"
 #include "orteaf/internal/execution/mps/manager/mps_fence_manager.h"
+#include "orteaf/internal/execution/mps/mps_handles.h"
 #include "tests/internal/execution/mps/manager/testing/execution_mock.h"
 #include "tests/internal/testing/error_assert.h"
 
 namespace mps_mgr = orteaf::internal::execution::mps::manager;
 namespace mps_wrapper = orteaf::internal::execution::mps::platform::wrapper;
-namespace base = orteaf::internal::base;
+namespace mps = orteaf::internal::execution::mps;
 
 #if ORTEAF_ENABLE_MPS
 
@@ -98,8 +99,8 @@ protected:
 
 TEST_F(MpsFenceLifetimeManagerTest, SettersAllowRebindWhenEmpty) {
   mps_mgr::MpsFenceManager fence_manager_b;
-  const base::CommandQueueHandle handle_a{1};
-  const base::CommandQueueHandle handle_b{2};
+  const mps::MpsCommandQueueHandle handle_a{1};
+  const mps::MpsCommandQueueHandle handle_b{2};
 
   EXPECT_TRUE(lifetime_manager_.setFenceManager(&fence_manager_));
   EXPECT_TRUE(lifetime_manager_.setFenceManager(&fence_manager_b));
@@ -109,8 +110,8 @@ TEST_F(MpsFenceLifetimeManagerTest, SettersAllowRebindWhenEmpty) {
 
 TEST_F(MpsFenceLifetimeManagerTest,
        SettersRejectDifferentValuesWhenNotEmpty) {
-  const base::CommandQueueHandle handle_a{3};
-  const base::CommandQueueHandle handle_b{4};
+  const mps::MpsCommandQueueHandle handle_a{3};
+  const mps::MpsCommandQueueHandle handle_b{4};
   auto *command_buffer =
       reinterpret_cast<mps_wrapper::MpsCommandBuffer_t>(0x9);
 
@@ -131,7 +132,7 @@ TEST_F(MpsFenceLifetimeManagerTest,
 }
 
 TEST_F(MpsFenceLifetimeManagerTest, AcquireRequiresCommandBuffer) {
-  const base::CommandQueueHandle handle{5};
+  const mps::MpsCommandQueueHandle handle{5};
 
   ASSERT_TRUE(lifetime_manager_.setFenceManager(&fence_manager_));
   ASSERT_TRUE(lifetime_manager_.setCommandQueueHandle(handle));
@@ -142,7 +143,7 @@ TEST_F(MpsFenceLifetimeManagerTest, AcquireRequiresCommandBuffer) {
 }
 
 TEST_F(MpsFenceLifetimeManagerTest, AcquireBindsCommandBufferAndTracks) {
-  const base::CommandQueueHandle handle{6};
+  const mps::MpsCommandQueueHandle handle{6};
   auto *command_buffer =
       reinterpret_cast<mps_wrapper::MpsCommandBuffer_t>(0xA);
 
@@ -174,7 +175,7 @@ TEST_F(MpsFenceLifetimeManagerTest, ReleaseReadyRequiresQueueHandle) {
 }
 
 TEST_F(MpsFenceLifetimeManagerTest, ReleaseReadyReturnsZeroWhenNoneCompleted) {
-  const base::CommandQueueHandle handle{7};
+  const mps::MpsCommandQueueHandle handle{7};
   auto command_buffer = fakeCommandBuffer(0x20);
 
   ASSERT_TRUE(lifetime_manager_.setFenceManager(&fence_manager_));
@@ -188,7 +189,7 @@ TEST_F(MpsFenceLifetimeManagerTest, ReleaseReadyReturnsZeroWhenNoneCompleted) {
 
 TEST_F(MpsFenceLifetimeManagerTest,
        ReleaseReadyReleasesPrefixAndAdvancesOnCompletion) {
-  const base::CommandQueueHandle handle{8};
+  const mps::MpsCommandQueueHandle handle{8};
   auto command_buffer_a = fakeCommandBuffer(0x30);
   auto command_buffer_b = fakeCommandBuffer(0x31);
   auto command_buffer_c = fakeCommandBuffer(0x32);
@@ -226,7 +227,7 @@ TEST_F(MpsFenceLifetimeManagerTest,
 }
 
 TEST_F(MpsFenceLifetimeManagerTest, ClearThrowsWhenAnyIncomplete) {
-  const base::CommandQueueHandle handle{10};
+  const mps::MpsCommandQueueHandle handle{10};
   auto command_buffer_a = fakeCommandBuffer(0x50);
   auto command_buffer_b = fakeCommandBuffer(0x51);
   auto fence_b = reinterpret_cast<mps_wrapper::MpsFence_t>(0x9);
@@ -253,7 +254,7 @@ TEST_F(MpsFenceLifetimeManagerTest, ClearThrowsWhenAnyIncomplete) {
 }
 
 TEST_F(MpsFenceLifetimeManagerTest, ClearReleasesAllWhenCompleted) {
-  const base::CommandQueueHandle handle{11};
+  const mps::MpsCommandQueueHandle handle{11};
   auto command_buffer_a = fakeCommandBuffer(0x60);
   auto command_buffer_b = fakeCommandBuffer(0x61);
   auto fence_b = reinterpret_cast<mps_wrapper::MpsFence_t>(0xA);
@@ -282,7 +283,7 @@ TEST_F(MpsFenceLifetimeManagerTest, ClearReleasesAllWhenCompleted) {
 }
 
 TEST_F(MpsFenceLifetimeManagerTest, WaitUntilReadyReleasesAll) {
-  const base::CommandQueueHandle handle{12};
+  const mps::MpsCommandQueueHandle handle{12};
   auto command_buffer_a = fakeCommandBuffer(0x70);
   auto command_buffer_b = fakeCommandBuffer(0x71);
   auto fence_b = reinterpret_cast<mps_wrapper::MpsFence_t>(0xB);
@@ -308,7 +309,7 @@ TEST_F(MpsFenceLifetimeManagerTest, WaitUntilReadyReleasesAll) {
 
 TEST_F(MpsFenceLifetimeManagerTest,
        ReleaseReadySkipsCompactionWhenHeadBelowHalf) {
-  const base::CommandQueueHandle handle{9};
+  const mps::MpsCommandQueueHandle handle{9};
   auto command_buffer_a = fakeCommandBuffer(0x40);
   auto command_buffer_b = fakeCommandBuffer(0x41);
   auto command_buffer_c = fakeCommandBuffer(0x42);
@@ -354,7 +355,7 @@ TEST_F(MpsFenceLifetimeManagerTest,
 #if ORTEAF_MPS_DEBUG_ENABLED
 TEST_F(MpsFenceLifetimeManagerTest,
        ReleaseReadyThrowsWhenPrefixNotReadyInDebug) {
-  const base::CommandQueueHandle handle{13};
+  const mps::MpsCommandQueueHandle handle{13};
   auto command_buffer_a = fakeCommandBuffer(0x80);
   auto command_buffer_b = fakeCommandBuffer(0x81);
   auto fence_b = reinterpret_cast<mps_wrapper::MpsFence_t>(0xC);

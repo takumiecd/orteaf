@@ -4,11 +4,11 @@
 #include <cstdint>
 #include <utility>
 
-#include "orteaf/internal/base/handle.h"
 #include "orteaf/internal/base/lease/control_block/strong.h"
 #include "orteaf/internal/base/manager/pool_manager.h"
 #include "orteaf/internal/base/pool/slot_pool.h"
 #include "orteaf/internal/diagnostics/error/error.h"
+#include "orteaf/internal/execution/cpu/cpu_handles.h"
 #include "orteaf/internal/execution/cpu/platform/cpu_slow_ops.h"
 #include "orteaf/internal/execution/cpu/resource/cpu_buffer_view.h"
 
@@ -94,7 +94,7 @@ private:
 
 struct BufferPayloadPoolTraits {
   using Payload = CpuBufferResource;
-  using Handle = ::orteaf::internal::base::BufferHandle;
+  using Handle = ::orteaf::internal::execution::cpu::CpuBufferHandle;
   using SlowOps = ::orteaf::internal::execution::cpu::platform::CpuSlowOps;
 
   struct Request {
@@ -144,7 +144,7 @@ struct BufferManagerCBTag {};
 // =============================================================================
 
 using BufferControlBlock = ::orteaf::internal::base::StrongControlBlock<
-    ::orteaf::internal::base::BufferHandle, CpuBufferResource,
+    ::orteaf::internal::execution::cpu::CpuBufferHandle, CpuBufferResource,
     BufferPayloadPool>;
 
 // =============================================================================
@@ -155,7 +155,7 @@ struct CpuBufferManagerTraits {
   using PayloadPool = BufferPayloadPool;
   using ControlBlock = BufferControlBlock;
   struct ControlBlockTag {};
-  using PayloadHandle = ::orteaf::internal::base::BufferHandle;
+  using PayloadHandle = ::orteaf::internal::execution::cpu::CpuBufferHandle;
   static constexpr const char *Name = "CPU buffer manager";
 };
 
@@ -172,7 +172,7 @@ struct CpuBufferManagerTraits {
 class CpuBufferManager {
 public:
   using SlowOps = ::orteaf::internal::execution::cpu::platform::CpuSlowOps;
-  using BufferHandle = ::orteaf::internal::base::BufferHandle;
+  using BufferHandle = ::orteaf::internal::execution::cpu::CpuBufferHandle;
   using BufferView =
       ::orteaf::internal::execution::cpu::resource::CpuBufferView;
 

@@ -3,7 +3,6 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "orteaf/internal/base/handle.h"
 #include "orteaf/internal/base/heap_vector.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include "orteaf/internal/diagnostics/error/error_macros.h"
@@ -27,9 +26,10 @@ public:
   // ========================================================================
   // Type aliases
   // ========================================================================
-  using BufferViewHandle = ::orteaf::internal::base::BufferViewHandle;
+  using BufferBlock = typename Resource::BufferBlock;
+  using BufferViewHandle = typename BufferBlock::BufferViewHandle;
+  using BufferViewHandleUnderlying = typename BufferViewHandle::underlying_type;
   using BufferView = typename Resource::BufferView;
-  using BufferBlock = Resource::BufferBlock;
 
   DirectChunkLocatorPolicy() = default;
   DirectChunkLocatorPolicy(const DirectChunkLocatorPolicy &) = delete;
@@ -188,12 +188,12 @@ public:
 
   BufferViewHandle encodeId(std::size_t slot) const {
     return BufferViewHandle{
-        static_cast<BufferViewHandle::underlying_type>(slot) & kChunkMask};
+        static_cast<BufferViewHandleUnderlying>(slot) & kChunkMask};
   }
 
   std::size_t indexFromId(BufferViewHandle handle) const {
     return static_cast<std::size_t>(
-        static_cast<BufferViewHandle::underlying_type>(handle) & kChunkMask);
+        static_cast<BufferViewHandleUnderlying>(handle) & kChunkMask);
   }
 
 private:
@@ -212,9 +212,9 @@ private:
   // ========================================================================
   // Constants
   // ========================================================================
-  static constexpr BufferViewHandle::underlying_type kLargeMask =
-      BufferViewHandle::underlying_type{1u} << 31;
-  static constexpr BufferViewHandle::underlying_type kChunkMask = ~kLargeMask;
+  static constexpr BufferViewHandleUnderlying kLargeMask =
+      BufferViewHandleUnderlying{1u} << 31;
+  static constexpr BufferViewHandleUnderlying kChunkMask = ~kLargeMask;
 
   // ========================================================================
   // Internal methods

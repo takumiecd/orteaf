@@ -7,10 +7,11 @@
 #include <gtest/gtest.h>
 
 #include "orteaf/internal/execution/mps/resource/mps_reuse_hazard.h"
+#include "orteaf/internal/execution/mps/mps_handles.h"
 
 namespace mps_res = orteaf::internal::execution::mps::resource;
 namespace mps_wrapper = orteaf::internal::execution::mps::platform::wrapper;
-namespace base = orteaf::internal::base;
+namespace mps = orteaf::internal::execution::mps;
 
 #if ORTEAF_ENABLE_MPS
 
@@ -32,7 +33,7 @@ TEST(MpsReuseHazardTest, DefaultConstructedIsCompleted) {
   mps_res::MpsReuseHazard hazard;
   EXPECT_TRUE(hazard.isCompleted());
   EXPECT_FALSE(hazard.hasCommandBuffer());
-  EXPECT_EQ(hazard.commandQueueHandle(), base::CommandQueueHandle{});
+  EXPECT_EQ(hazard.commandQueueHandle(), mps::MpsCommandQueueHandle{});
 }
 
 TEST(MpsReuseHazardTest, SetCommandBufferOnlyOnce) {
@@ -50,12 +51,12 @@ TEST(MpsReuseHazardTest, SetCommandBufferOnlyOnce) {
 
 TEST(MpsReuseHazardTest, SetCommandQueueHandleBlockedAfterCommandBuffer) {
   mps_res::MpsReuseHazard hazard;
-  base::CommandQueueHandle handle{7};
+  mps::MpsCommandQueueHandle handle{7};
 
   EXPECT_TRUE(hazard.setCommandQueueHandle(handle));
   EXPECT_EQ(hazard.commandQueueHandle(), handle);
   EXPECT_TRUE(hazard.setCommandBuffer(fakeCommandBuffer(0x3)));
-  EXPECT_FALSE(hazard.setCommandQueueHandle(base::CommandQueueHandle{9}));
+  EXPECT_FALSE(hazard.setCommandQueueHandle(mps::MpsCommandQueueHandle{9}));
   EXPECT_FALSE(hazard.setCommandBuffer(fakeCommandBuffer(0x4)));
   EXPECT_FALSE(hazard.isCompleted<FakeFastOpsNotCompleted>());
   EXPECT_EQ(hazard.commandQueueHandle(), handle);
@@ -77,7 +78,7 @@ TEST(MpsReuseHazardTest, IsCompletedUsesFastOpsAndNailsOnCompletion) {
 
 TEST(MpsReuseHazardTest, SetCommandQueueHandleBeforeCommandBuffer) {
   mps_res::MpsReuseHazard hazard;
-  base::CommandQueueHandle handle{42};
+  mps::MpsCommandQueueHandle handle{42};
 
   EXPECT_TRUE(hazard.setCommandQueueHandle(handle));
   EXPECT_EQ(hazard.commandQueueHandle(), handle);

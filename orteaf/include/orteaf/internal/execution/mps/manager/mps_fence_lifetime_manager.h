@@ -5,12 +5,12 @@
 #include <cstddef>
 #include <utility>
 
-#include "orteaf/internal/base/handle.h"
 #include "orteaf/internal/base/heap_vector.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include "orteaf/internal/diagnostics/log/log_config.h"
 #include "orteaf/internal/execution/mps/manager/mps_fence_manager.h"
 #include "orteaf/internal/execution/mps/platform/mps_fast_ops.h"
+#include "orteaf/internal/execution/mps/mps_handles.h"
 
 namespace orteaf::internal::execution::mps::manager {
 
@@ -19,7 +19,8 @@ public:
   using FenceManager =
       ::orteaf::internal::execution::mps::manager::MpsFenceManager;
   using StrongFenceLease = FenceManager::StrongFenceLease;
-  using CommandQueueHandle = ::orteaf::internal::base::CommandQueueHandle;
+  using CommandQueueHandle =
+      ::orteaf::internal::execution::mps::MpsCommandQueueHandle;
   using CommandBufferType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandBuffer_t;
 

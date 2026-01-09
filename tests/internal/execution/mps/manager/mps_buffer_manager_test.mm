@@ -6,9 +6,10 @@
 
 #include <orteaf/internal/diagnostics/error/error.h>
 #include <orteaf/internal/execution/mps/manager/mps_buffer_manager.h>
+#include <orteaf/internal/execution/mps/mps_handles.h>
 #include <tests/internal/testing/error_assert.h>
 
-namespace base = orteaf::internal::base;
+namespace mps = orteaf::internal::execution::mps;
 namespace diag_error = orteaf::internal::diagnostics::error;
 namespace mps_rt = orteaf::internal::execution::mps::manager;
 
@@ -159,7 +160,7 @@ protected:
   void initializeManager(std::size_t capacity = 8) {
     Config cfg{};
     cfg.device = device_;
-    cfg.device_handle = base::DeviceHandle{0};
+    cfg.device_handle = mps::MpsDeviceHandle{0};
     cfg.heap = heap_;
     cfg.library_manager = &lib_manager_;
     cfg.min_block_size = 64;
@@ -362,7 +363,7 @@ protected:
   void initializeManager(std::size_t capacity = 8) {
     Config cfg{};
     cfg.device = device();
-    cfg.device_handle = base::DeviceHandle{0};
+    cfg.device_handle = mps::MpsDeviceHandle{0};
     cfg.heap = heap();
     cfg.library_manager = nullptr;
     cfg.min_block_size = 64;

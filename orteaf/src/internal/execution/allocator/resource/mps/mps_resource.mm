@@ -12,7 +12,7 @@ void MpsResource::initialize(const Config &config) {
   ORTEAF_THROW_IF_NULL(config.device, "MpsResource requires non-null device");
   ORTEAF_THROW_IF_NULL(config.heap, "MpsResource requires non-null heap");
   ORTEAF_THROW_IF(!config.device_handle.isValid(), InvalidParameter,
-                  "MpsResource requires a valid DeviceHandle");
+                  "MpsResource requires a valid MpsDeviceHandle");
   destroyFreelist();
   device_ = config.device;
   device_handle_ = config.device_handle;

@@ -9,6 +9,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <orteaf/internal/execution/mps/mps_handles.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_device.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_fence.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_heap.h>
@@ -362,7 +363,7 @@ public:
 
   void expectDetectArchitectures(
       std::initializer_list<
-          std::pair<::orteaf::internal::base::DeviceHandle,
+          std::pair<::orteaf::internal::execution::mps::MpsDeviceHandle,
                     ::orteaf::internal::architecture::Architecture>>
           expectations) {
     if constexpr (Provider::is_mock) {

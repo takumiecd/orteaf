@@ -1,6 +1,6 @@
 #include "orteaf/internal/architecture/architecture.h"
 #include "orteaf/internal/architecture/mps_detect.h"
-#include "orteaf/internal/base/handle.h"
+#include "orteaf/internal/execution/mps/mps_handles.h"
 
 #include <cstdint>
 #include <cstdlib>
@@ -21,7 +21,7 @@ TEST(MpsDetect, ManualEnvironmentCheck) {
     if (const char* index_env = std::getenv("ORTEAF_EXPECT_MPS_DEVICE_INDEX")) {
         device_index = static_cast<std::uint32_t>(std::strtoul(index_env, nullptr, 10));
     }
-    const ::orteaf::internal::base::DeviceHandle device_id(device_index);
+    const ::orteaf::internal::execution::mps::MpsDeviceHandle device_id(device_index);
 
     const auto arch = architecture::detectMpsArchitectureForDeviceId(device_id);
     ASSERT_NE(arch, architecture::Architecture::MpsGeneric)
@@ -42,7 +42,8 @@ TEST(MpsDetect, FallsBackToGenericWhenUnknown) {
 }
 
 TEST(MpsDetect, DeviceIndexOutOfRangeFallsBackToGeneric) {
-    const ::orteaf::internal::base::DeviceHandle device_id(std::numeric_limits<std::uint32_t>::max());
+    const ::orteaf::internal::execution::mps::MpsDeviceHandle device_id(
+        std::numeric_limits<std::uint32_t>::max());
     const auto arch = architecture::detectMpsArchitectureForDeviceId(device_id);
     EXPECT_EQ(arch, architecture::Architecture::MpsGeneric);
 }
@@ -53,7 +54,9 @@ TEST(MpsDetect, DetectMpsArchitectureStillMatchesMetadataWhenMpsDisabled) {
 }
 
 TEST(MpsDetect, DetectMpsArchitectureForDeviceIdIsGenericWhenMpsDisabled) {
-    const auto arch = architecture::detectMpsArchitectureForDeviceId(::orteaf::internal::base::DeviceHandle{0});
+    const auto arch =
+        architecture::detectMpsArchitectureForDeviceId(
+            ::orteaf::internal::execution::mps::MpsDeviceHandle{0});
     EXPECT_EQ(arch, architecture::Architecture::MpsGeneric);
 }
 #endif

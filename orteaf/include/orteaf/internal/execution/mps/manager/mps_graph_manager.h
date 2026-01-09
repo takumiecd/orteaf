@@ -10,11 +10,11 @@
 #include <unordered_map>
 #include <vector>
 
-#include "orteaf/internal/base/handle.h"
 #include "orteaf/internal/base/lease/control_block/strong.h"
 #include "orteaf/internal/base/lease/strong_lease.h"
 #include "orteaf/internal/base/manager/pool_manager.h"
 #include "orteaf/internal/base/pool/fixed_slot_store.h"
+#include "orteaf/internal/execution/mps/mps_handles.h"
 #include "orteaf/internal/execution/mps/platform/mps_slow_ops.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_graph.h"
 
@@ -87,7 +87,7 @@ struct MpsGraphResource {
 
 struct GraphPayloadPoolTraits {
   using Payload = MpsGraphResource;
-  using Handle = ::orteaf::internal::base::GraphHandle;
+  using Handle = ::orteaf::internal::execution::mps::MpsGraphHandle;
   using DeviceType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t;
   using SlowOps = ::orteaf::internal::execution::mps::platform::MpsSlowOps;
@@ -150,7 +150,8 @@ using GraphPayloadPool =
 struct GraphControlBlockTag {};
 
 using GraphControlBlock = ::orteaf::internal::base::StrongControlBlock<
-    ::orteaf::internal::base::GraphHandle, MpsGraphResource, GraphPayloadPool>;
+    ::orteaf::internal::execution::mps::MpsGraphHandle, MpsGraphResource,
+    GraphPayloadPool>;
 
 // =============================================================================
 // Manager Traits for PoolManager
@@ -160,7 +161,7 @@ struct MpsGraphManagerTraits {
   using PayloadPool = GraphPayloadPool;
   using ControlBlock = GraphControlBlock;
   struct ControlBlockTag {};
-  using PayloadHandle = ::orteaf::internal::base::GraphHandle;
+  using PayloadHandle = ::orteaf::internal::execution::mps::MpsGraphHandle;
   static constexpr const char *Name = "MpsGraphManager";
 };
 
@@ -175,7 +176,7 @@ public:
   using SlowOps = ::orteaf::internal::execution::mps::platform::MpsSlowOps;
   using DeviceType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t;
-  using GraphHandle = ::orteaf::internal::base::GraphHandle;
+  using GraphHandle = ::orteaf::internal::execution::mps::MpsGraphHandle;
   using ExecutableType = ::orteaf::internal::execution::mps::platform::wrapper::
       MpsGraphExecutable_t;
   using ControlBlockHandle = Core::ControlBlockHandle;

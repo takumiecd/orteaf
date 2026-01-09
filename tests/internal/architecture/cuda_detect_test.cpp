@@ -1,7 +1,7 @@
 #include "orteaf/internal/architecture/architecture.h"
 #include "orteaf/internal/architecture/cuda_detect.h"
 #include "orteaf/internal/execution/execution.h"
-#include "orteaf/internal/base/handle.h"
+#include "orteaf/internal/execution/cuda/cuda_handles.h"
 
 #include <cstdint>
 #include <cstdlib>
@@ -9,7 +9,6 @@
 
 #include <gtest/gtest.h>
 namespace architecture = orteaf::internal::architecture;
-namespace base = orteaf::internal::base;
 
 #if ORTEAF_ENABLE_CUDA
 /// Manual test hook: set ORTEAF_EXPECT_CUDA_ARCH=Sm80 and optionally ORTEAF_EXPECT_CUDA_DEVICE_INDEX.
@@ -24,7 +23,8 @@ TEST(CudaDetect, ManualEnvironmentCheck) {
         device_index = static_cast<std::uint32_t>(std::strtoul(index_env, nullptr, 10));
     }
 
-    const auto arch = architecture::detectCudaArchitectureForDeviceId(base::DeviceHandle{device_index});
+    const auto arch = architecture::detectCudaArchitectureForDeviceId(
+        ::orteaf::internal::execution::cuda::CudaDeviceHandle{device_index});
     ASSERT_NE(arch, architecture::Architecture::CudaGeneric)
         << "Generic fallback indicates CUDA execution is disabled or device index "
         << device_index << " is unavailable.";
@@ -43,7 +43,8 @@ TEST(CudaDetect, FallsBackToGenericIfNoMatch) {
 
 TEST(CudaDetect, DeviceIndexOutOfRangeFallsBackToGeneric) {
     const auto arch = architecture::detectCudaArchitectureForDeviceId(
-        base::DeviceHandle{std::numeric_limits<std::uint32_t>::max()});
+        ::orteaf::internal::execution::cuda::CudaDeviceHandle{
+            std::numeric_limits<std::uint32_t>::max()});
     EXPECT_EQ(arch, architecture::Architecture::CudaGeneric);
 }
 #else
@@ -53,7 +54,8 @@ TEST(CudaDetect, DetectCudaArchitectureStillMatchesMetadataWhenCudaDisabled) {
 }
 
 TEST(CudaDetect, DetectCudaArchitectureForDeviceIdIsGenericWhenCudaDisabled) {
-    const auto arch = architecture::detectCudaArchitectureForDeviceId(base::DeviceHandle{0});
+    const auto arch = architecture::detectCudaArchitectureForDeviceId(
+        ::orteaf::internal::execution::cuda::CudaDeviceHandle{0});
     EXPECT_EQ(arch, architecture::Architecture::CudaGeneric);
 }
 #endif

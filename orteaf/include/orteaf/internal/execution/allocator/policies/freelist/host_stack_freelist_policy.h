@@ -109,7 +109,7 @@ public:
     }
   }
 
-  void removeBlocksInChunk(::orteaf::internal::base::BufferViewHandle handle) {
+  void removeBlocksInChunk(BufferViewHandle handle) {
     for (auto &stack : stacks_) {
       if (stack.empty()) {
         continue;

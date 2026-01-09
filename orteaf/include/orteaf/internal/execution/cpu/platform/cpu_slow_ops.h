@@ -4,7 +4,7 @@
 
 #include "orteaf/internal/architecture/architecture.h"
 #include "orteaf/internal/architecture/cpu_detect.h"
-#include "orteaf/internal/base/handle.h"
+#include "orteaf/internal/execution/cpu/cpu_handles.h"
 #include "orteaf/internal/execution/cpu/platform/wrapper/cpu_alloc.h"
 
 namespace orteaf::internal::execution::cpu::platform {
@@ -40,7 +40,8 @@ struct CpuSlowOps {
    * @return Detected Architecture enum value
    */
   virtual ::orteaf::internal::architecture::Architecture
-  detectArchitecture(::orteaf::internal::base::DeviceHandle device_id) = 0;
+  detectArchitecture(
+      ::orteaf::internal::execution::cpu::CpuDeviceHandle device_id) = 0;
 
   // =========================================================================
   // Buffer operations
@@ -76,8 +77,8 @@ struct CpuSlowOpsImpl final : public CpuSlowOps {
   }
 
   ::orteaf::internal::architecture::Architecture detectArchitecture(
-      [[maybe_unused]] ::orteaf::internal::base::DeviceHandle device_id)
-      override {
+      [[maybe_unused]] ::orteaf::internal::execution::cpu::CpuDeviceHandle
+          device_id) override {
     return ::orteaf::internal::architecture::detectCpuArchitecture();
   }
 

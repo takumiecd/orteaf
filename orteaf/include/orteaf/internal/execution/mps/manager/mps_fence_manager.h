@@ -5,11 +5,11 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "orteaf/internal/base/handle.h"
 #include "orteaf/internal/base/lease/control_block/strong.h"
 #include "orteaf/internal/base/lease/strong_lease.h"
 #include "orteaf/internal/base/manager/pool_manager.h"
 #include "orteaf/internal/base/pool/slot_pool.h"
+#include "orteaf/internal/execution/mps/mps_handles.h"
 #include "orteaf/internal/execution/mps/platform/mps_slow_ops.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_fence.h"
 #include "orteaf/internal/execution/mps/resource/mps_fence_hazard.h"
@@ -22,7 +22,7 @@ namespace orteaf::internal::execution::mps::manager {
 
 struct FencePayloadPoolTraits {
   using Payload = ::orteaf::internal::execution::mps::resource::MpsFenceHazard;
-  using Handle = ::orteaf::internal::base::FenceHandle;
+  using Handle = ::orteaf::internal::execution::mps::MpsFenceHandle;
   using DeviceType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t;
   using SlowOps = ::orteaf::internal::execution::mps::platform::MpsSlowOps;
@@ -69,7 +69,7 @@ using FencePayloadPool =
 struct FenceControlBlockTag {};
 
 using FenceControlBlock = ::orteaf::internal::base::StrongControlBlock<
-    ::orteaf::internal::base::FenceHandle,
+    ::orteaf::internal::execution::mps::MpsFenceHandle,
     ::orteaf::internal::execution::mps::resource::MpsFenceHazard,
     FencePayloadPool>;
 
@@ -81,7 +81,7 @@ struct MpsFenceManagerTraits {
   using PayloadPool = FencePayloadPool;
   using ControlBlock = FenceControlBlock;
   struct ControlBlockTag {};
-  using PayloadHandle = ::orteaf::internal::base::FenceHandle;
+  using PayloadHandle = ::orteaf::internal::execution::mps::MpsFenceHandle;
   static constexpr const char *Name = "MPS fence manager";
 };
 
@@ -94,7 +94,7 @@ public:
   using SlowOps = ::orteaf::internal::execution::mps::platform::MpsSlowOps;
   using DeviceType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t;
-  using FenceHandle = ::orteaf::internal::base::FenceHandle;
+  using FenceHandle = ::orteaf::internal::execution::mps::MpsFenceHandle;
   using FenceType =
       ::orteaf::internal::execution::mps::resource::MpsFenceHazard;
 

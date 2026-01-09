@@ -2,13 +2,13 @@
 
 #if ORTEAF_ENABLE_MPS
 
-#include "orteaf/internal/base/handle.h"
 #include "orteaf/internal/base/heap_vector.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include "orteaf/internal/execution/mps/api/mps_runtime_api.h"
 #include "orteaf/internal/execution/mps/platform/mps_fast_ops.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_compute_command_encoder.h"
 #include "orteaf/internal/execution/mps/resource/mps_fence_token.h"
+#include "orteaf/internal/execution/mps/mps_handles.h"
 #include <array>
 #include <initializer_list>
 #include <limits>
@@ -63,7 +63,7 @@ public:
    * @brief Check whether pipelines are initialized for a given device.
    */
   bool
-  initialized(::orteaf::internal::base::DeviceHandle device) const noexcept {
+  initialized(::orteaf::internal::execution::mps::MpsDeviceHandle device) const noexcept {
     const auto idx = findEntryIndex(device);
     return idx != kInvalidIndex && device_pipelines_[idx].initialized;
   }
@@ -74,7 +74,7 @@ public:
    */
   template <typename RuntimeApi =
                 ::orteaf::internal::execution::mps::api::MpsRuntimeApi>
-  void initialize(::orteaf::internal::base::DeviceHandle device) {
+  void initialize(::orteaf::internal::execution::mps::MpsDeviceHandle device) {
     auto entry_idx = findEntryIndex(device);
     if (entry_idx == kInvalidIndex) {
       device_pipelines_.pushBack(DevicePipelines{device});
@@ -95,13 +95,14 @@ public:
   const std::array<Key, N> &keysForTest() const noexcept { return keys_; }
   std::size_t sizeForTest() const noexcept { return size_; }
   PipelineLease &
-  pipelineLeaseForTest(::orteaf::internal::base::DeviceHandle device,
+  pipelineLeaseForTest(
+      ::orteaf::internal::execution::mps::MpsDeviceHandle device,
                        std::size_t index) {
     auto idx = findEntryIndex(device);
     return device_pipelines_[idx].pipelines[index];
   }
   std::size_t pipelineCountForTest(
-      ::orteaf::internal::base::DeviceHandle device) const noexcept {
+      ::orteaf::internal::execution::mps::MpsDeviceHandle device) const noexcept {
     auto idx = findEntryIndex(device);
     return (idx == kInvalidIndex) ? 0 : device_pipelines_[idx].pipelines.size();
   }
@@ -125,7 +126,7 @@ public:
       MpsComputeCommandEncoder_t
       createComputeEncoder(::orteaf::internal::execution::mps::platform::
                                wrapper::MpsCommandBuffer_t command_buffer,
-                           ::orteaf::internal::base::DeviceHandle device,
+                           ::orteaf::internal::execution::mps::MpsDeviceHandle device,
                            std::size_t pipeline_index) const {
     const auto entry_idx = findEntryIndex(device);
     if (entry_idx == kInvalidIndex)
@@ -149,7 +150,7 @@ public:
       MpsComputeCommandEncoder_t
       createComputeEncoder(::orteaf::internal::execution::mps::platform::
                                wrapper::MpsCommandBuffer_t command_buffer,
-                           ::orteaf::internal::base::DeviceHandle device,
+                           ::orteaf::internal::execution::mps::MpsDeviceHandle device,
                            std::string_view library,
                            std::string_view function) const {
     const std::size_t idx = findKeyIndex(library, function);
@@ -266,7 +267,7 @@ public:
                 ::orteaf::internal::execution::mps::api::MpsRuntimeApi>
   ::orteaf::internal::execution::mps::manager::MpsFenceManager::StrongFenceLease
   updateFence(
-      ::orteaf::internal::base::DeviceHandle device,
+      ::orteaf::internal::execution::mps::MpsDeviceHandle device,
       const ::orteaf::internal::execution::mps::manager::
           MpsCommandQueueManager::CommandQueueLease &queue_lease,
       ::orteaf::internal::execution::mps::platform::wrapper::
@@ -304,7 +305,7 @@ public:
             typename RuntimeApi =
                 ::orteaf::internal::execution::mps::api::MpsRuntimeApi>
   void updateFenceAndTrack(
-      ::orteaf::internal::base::DeviceHandle device,
+      ::orteaf::internal::execution::mps::MpsDeviceHandle device,
       const ::orteaf::internal::execution::mps::manager::
           MpsCommandQueueManager::CommandQueueLease &queue_lease,
       ::orteaf::internal::execution::mps::platform::wrapper::
@@ -332,7 +333,8 @@ public:
   dispatchOneShot(
       ::orteaf::internal::execution::mps::manager::MpsCommandQueueManager::
           CommandQueueLease &queue_lease,
-      ::orteaf::internal::base::DeviceHandle device, std::size_t pipeline_index,
+      ::orteaf::internal::execution::mps::MpsDeviceHandle device,
+      std::size_t pipeline_index,
       ::orteaf::internal::execution::mps::platform::wrapper::MPSSize_t
           threadgroups,
       ::orteaf::internal::execution::mps::platform::wrapper::MPSSize_t
@@ -385,7 +387,8 @@ public:
   dispatchOneShot(
       ::orteaf::internal::execution::mps::manager::MpsCommandQueueManager::
           CommandQueueLease &queue_lease,
-      ::orteaf::internal::base::DeviceHandle device, std::string_view library,
+      ::orteaf::internal::execution::mps::MpsDeviceHandle device,
+      std::string_view library,
       std::string_view function,
       ::orteaf::internal::execution::mps::platform::wrapper::MPSSize_t
           threadgroups,
@@ -440,7 +443,8 @@ private:
   }
 
   std::size_t
-  findEntryIndex(::orteaf::internal::base::DeviceHandle device) const noexcept {
+  findEntryIndex(
+      ::orteaf::internal::execution::mps::MpsDeviceHandle device) const noexcept {
     for (std::size_t i = 0; i < device_pipelines_.size(); ++i) {
       if (device_pipelines_[i].device == device) {
         return i;
@@ -461,7 +465,7 @@ private:
   }
 
   struct DevicePipelines {
-    ::orteaf::internal::base::DeviceHandle device{};
+    ::orteaf::internal::execution::mps::MpsDeviceHandle device{};
     ::orteaf::internal::base::HeapVector<PipelineLease> pipelines{};
     bool initialized{false};
   };

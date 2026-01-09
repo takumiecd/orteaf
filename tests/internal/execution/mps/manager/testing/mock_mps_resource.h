@@ -5,11 +5,11 @@
 #include <cstddef>
 #include <gmock/gmock.h>
 
-#include <orteaf/internal/base/handle.h>
 #include <orteaf/internal/base/heap_vector.h>
 #include <orteaf/internal/execution/allocator/execution_buffer.h>
 #include <orteaf/internal/execution/base/execution_traits.h>
 #include <orteaf/internal/execution/execution.h>
+#include <orteaf/internal/execution/mps/mps_handles.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_buffer.h>
 #include <orteaf/internal/execution/mps/resource/mps_buffer_view.h>
 #include <orteaf/internal/execution/mps/resource/mps_reuse_token.h>
@@ -44,7 +44,7 @@ public:
       ::orteaf::internal::execution::mps::platform::wrapper::MpsBuffer_t;
 
   struct Config {
-    ::orteaf::internal::base::DeviceHandle device_handle{};
+    ::orteaf::internal::execution::mps::MpsDeviceHandle device_handle{};
     void *device{nullptr};
     void *heap{nullptr};
     std::size_t chunk_table_capacity{16};

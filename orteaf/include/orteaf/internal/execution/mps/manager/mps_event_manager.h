@@ -5,11 +5,11 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "orteaf/internal/base/handle.h"
 #include "orteaf/internal/base/lease/control_block/strong.h"
 #include "orteaf/internal/base/lease/strong_lease.h"
 #include "orteaf/internal/base/manager/pool_manager.h"
 #include "orteaf/internal/base/pool/slot_pool.h"
+#include "orteaf/internal/execution/mps/mps_handles.h"
 #include "orteaf/internal/execution/mps/platform/mps_slow_ops.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_event.h"
 
@@ -22,7 +22,7 @@ namespace orteaf::internal::execution::mps::manager {
 struct EventPayloadPoolTraits {
   using Payload =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsEvent_t;
-  using Handle = ::orteaf::internal::base::EventHandle;
+  using Handle = ::orteaf::internal::execution::mps::MpsEventHandle;
   using DeviceType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t;
   using SlowOps = ::orteaf::internal::execution::mps::platform::MpsSlowOps;
@@ -68,7 +68,7 @@ using EventPayloadPool =
 struct EventControlBlockTag {};
 
 using EventControlBlock = ::orteaf::internal::base::StrongControlBlock<
-    ::orteaf::internal::base::EventHandle,
+    ::orteaf::internal::execution::mps::MpsEventHandle,
     ::orteaf::internal::execution::mps::platform::wrapper::MpsEvent_t,
     EventPayloadPool>;
 
@@ -80,7 +80,7 @@ struct MpsEventManagerTraits {
   using PayloadPool = EventPayloadPool;
   using ControlBlock = EventControlBlock;
   struct ControlBlockTag {};
-  using PayloadHandle = ::orteaf::internal::base::EventHandle;
+  using PayloadHandle = ::orteaf::internal::execution::mps::MpsEventHandle;
   static constexpr const char *Name = "MPS event manager";
 };
 
@@ -93,7 +93,7 @@ public:
   using SlowOps = ::orteaf::internal::execution::mps::platform::MpsSlowOps;
   using DeviceType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t;
-  using EventHandle = ::orteaf::internal::base::EventHandle;
+  using EventHandle = ::orteaf::internal::execution::mps::MpsEventHandle;
   using EventType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsEvent_t;
 

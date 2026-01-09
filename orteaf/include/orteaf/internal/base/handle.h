@@ -68,38 +68,7 @@ struct Handle<Tag, Index, void> {
     static constexpr index_type invalid_index() noexcept { return std::numeric_limits<index_type>::max(); }
 };
 
-struct DeviceTag {};
-struct StreamTag {};
-struct ContextTag {};
-struct CommandQueueTag {};
-struct LibraryTag {};
-struct FunctionTag {};
-struct HeapTag {};
-struct BufferTag {};
-struct GraphTag {};
-struct EventTag {};
-struct FenceTag {};
-
-using DeviceHandle       = Handle<DeviceTag, uint32_t, void>;
-using StreamHandle       = Handle<StreamTag, uint32_t, uint8_t>;
-using ContextHandle      = Handle<ContextTag, uint32_t, uint8_t>;
-using CommandQueueHandle = Handle<CommandQueueTag, uint32_t, void>;
-using LibraryHandle      = Handle<LibraryTag, uint32_t, void>;
-using FunctionHandle     = Handle<FunctionTag, uint32_t, void>;
-using HeapHandle         = Handle<HeapTag, uint32_t, void>;
-using BufferHandle       = Handle<BufferTag, uint32_t, uint32_t>;
-using BufferViewHandle   = Handle<BufferTag, uint32_t, void>;
-using GraphHandle        = Handle<GraphTag, uint32_t, uint8_t>;
-using EventHandle        = Handle<EventTag, uint32_t, uint8_t>;
-using FenceHandle        = Handle<FenceTag, uint32_t, uint8_t>;
-
 template <class Tag>
 using ControlBlockHandle = Handle<Tag, uint32_t, uint8_t>;
-
-static_assert(std::is_trivially_copyable_v<DeviceHandle>);
-static_assert(std::is_trivially_copyable_v<BufferHandle>);
-static_assert(std::is_trivially_copyable_v<BufferViewHandle>);
-static_assert(std::is_trivially_copyable_v<EventHandle>);
-static_assert(std::is_trivially_copyable_v<FenceHandle>);
 
 } // namespace orteaf::internal::base

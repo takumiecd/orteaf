@@ -6,7 +6,6 @@
 
 #include <gtest/gtest.h>
 
-#include "orteaf/internal/base/handle.h"
 #include "orteaf/internal/execution/allocator/execution_buffer.h"
 #include "orteaf/internal/execution/cpu/resource/cpu_buffer_view.h"
 #include "orteaf/internal/execution/execution.h"
@@ -15,7 +14,9 @@
 namespace allocator = ::orteaf::internal::execution::allocator;
 namespace policies = ::orteaf::internal::execution::allocator::policies;
 using Execution = ::orteaf::internal::execution::Execution;
-using BufferViewHandle = ::orteaf::internal::base::BufferViewHandle;
+using BufferViewHandle =
+    ::orteaf::internal::execution::allocator::ExecutionBufferBlock<
+        Execution::Cpu>::BufferViewHandle;
 using CpuView = ::orteaf::internal::execution::cpu::resource::CpuBufferView;
 namespace {
 using CpuBuffer = allocator::ExecutionBuffer<Execution::Cpu>;

@@ -5,11 +5,11 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "orteaf/internal/base/handle.h"
 #include "orteaf/internal/base/lease/control_block/strong.h"
 #include "orteaf/internal/base/manager/lease_lifetime_registry.h"
 #include "orteaf/internal/base/manager/pool_manager.h"
 #include "orteaf/internal/base/pool/slot_pool.h"
+#include "orteaf/internal/execution/mps/mps_handles.h"
 #include "orteaf/internal/execution/mps/platform/mps_slow_ops.h"
 #include "orteaf/internal/execution/mps/platform/mps_fast_ops.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_command_queue.h"
@@ -24,7 +24,7 @@ namespace orteaf::internal::execution::mps::manager {
 struct CommandQueuePayloadPoolTraits {
   using Payload =
       ::orteaf::internal::execution::mps::resource::MpsCommandQueueResource;
-  using Handle = ::orteaf::internal::base::CommandQueueHandle;
+  using Handle = ::orteaf::internal::execution::mps::MpsCommandQueueHandle;
   using DeviceType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t;
   using SlowOps = ::orteaf::internal::execution::mps::platform::MpsSlowOps;
@@ -88,7 +88,7 @@ using CommandQueuePayloadPool =
 struct CommandQueueControlBlockTag {};
 
 using CommandQueueControlBlock = ::orteaf::internal::base::StrongControlBlock<
-    ::orteaf::internal::base::CommandQueueHandle,
+    ::orteaf::internal::execution::mps::MpsCommandQueueHandle,
     ::orteaf::internal::execution::mps::resource::MpsCommandQueueResource,
     CommandQueuePayloadPool>;
 
@@ -100,7 +100,8 @@ struct MpsCommandQueueManagerTraits {
   using PayloadPool = CommandQueuePayloadPool;
   using ControlBlock = CommandQueueControlBlock;
   struct ControlBlockTag {};
-  using PayloadHandle = ::orteaf::internal::base::CommandQueueHandle;
+  using PayloadHandle =
+      ::orteaf::internal::execution::mps::MpsCommandQueueHandle;
   static constexpr const char *Name = "MPS command queue manager";
 };
 
@@ -113,7 +114,8 @@ public:
   using SlowOps = ::orteaf::internal::execution::mps::platform::MpsSlowOps;
   using DeviceType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t;
-  using CommandQueueHandle = ::orteaf::internal::base::CommandQueueHandle;
+  using CommandQueueHandle =
+      ::orteaf::internal::execution::mps::MpsCommandQueueHandle;
   using CommandQueueType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandQueue_t;
 

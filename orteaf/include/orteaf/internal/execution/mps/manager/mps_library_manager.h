@@ -8,11 +8,11 @@
 #include <string_view>
 #include <unordered_map>
 
-#include "orteaf/internal/base/handle.h"
 #include "orteaf/internal/base/lease/control_block/strong.h"
 #include "orteaf/internal/base/manager/lease_lifetime_registry.h"
 #include "orteaf/internal/base/manager/pool_manager.h"
 #include "orteaf/internal/base/pool/fixed_slot_store.h"
+#include "orteaf/internal/execution/mps/mps_handles.h"
 #include "orteaf/internal/execution/mps/manager/mps_compute_pipeline_state_manager.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_device.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_library.h"
@@ -58,7 +58,7 @@ struct MpsLibraryResource {
 // Payload pool
 struct LibraryPayloadPoolTraits {
   using Payload = MpsLibraryResource;
-  using Handle = ::orteaf::internal::base::LibraryHandle;
+  using Handle = ::orteaf::internal::execution::mps::MpsLibraryHandle;
   using DeviceType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t;
   using SlowOps = ::orteaf::internal::execution::mps::platform::MpsSlowOps;
@@ -106,7 +106,7 @@ using LibraryPayloadPool =
 
 // ControlBlock type using StrongControlBlock
 using LibraryControlBlock = ::orteaf::internal::base::StrongControlBlock<
-    ::orteaf::internal::base::LibraryHandle, MpsLibraryResource,
+    ::orteaf::internal::execution::mps::MpsLibraryHandle, MpsLibraryResource,
     LibraryPayloadPool>;
 
 // Traits for PoolManager
@@ -114,7 +114,7 @@ struct MpsLibraryManagerTraits {
   using PayloadPool = LibraryPayloadPool;
   using ControlBlock = LibraryControlBlock;
   struct ControlBlockTag {};
-  using PayloadHandle = ::orteaf::internal::base::LibraryHandle;
+  using PayloadHandle = ::orteaf::internal::execution::mps::MpsLibraryHandle;
   static constexpr const char *Name = "MPS library manager";
 };
 
@@ -125,7 +125,7 @@ public:
   using DeviceType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t;
   using PipelineManager = MpsComputePipelineStateManager;
-  using LibraryHandle = ::orteaf::internal::base::LibraryHandle;
+  using LibraryHandle = ::orteaf::internal::execution::mps::MpsLibraryHandle;
   using ControlBlockHandle = Core::ControlBlockHandle;
   using ControlBlockPool = Core::ControlBlockPool;
   using LibraryLease = Core::StrongLeaseType;
