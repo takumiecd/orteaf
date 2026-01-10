@@ -879,11 +879,7 @@ private:
         auto existing_cb_handle = payload_pool_.getBoundControlBlock(handle);
         auto *cb_ptr = control_block_pool_.get(existing_cb_handle);
         if (cb_ptr != nullptr) {
-          if constexpr (std::is_same_v<LeaseType, WeakLeaseType>) {
-            cb_ptr->acquireWeak();
-          } else {
-            cb_ptr->acquireStrong();
-          }
+          // LeaseType constructor will increment the count
           return LeaseType{cb_ptr, &control_block_pool_, existing_cb_handle};
         }
         payload_pool_.unbindControlBlock(handle);

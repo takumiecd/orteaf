@@ -154,10 +154,9 @@ TEST(PoolManager, ConfigureRejectsZeroPayloadBlockSize) {
   PoolManager manager;
   DummyPayloadTraits::Request req{};
   DummyPayloadTraits::Context ctx{};
-  auto builder = makeBaseBuilder()
-                     .withPayloadBlockSize(0)
-                     .withRequest(req)
-                     .withContext(ctx);
+  auto builder =
+      makeBaseBuilder().withPayloadBlockSize(0).withRequest(req).withContext(
+          ctx);
 
   ::orteaf::tests::ExpectErrorMessage(
       ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
@@ -169,8 +168,7 @@ TEST(PoolManager, ConfigureMarksManagerConfigured) {
   PoolManager manager;
   DummyPayloadTraits::Request req{};
   DummyPayloadTraits::Context ctx{};
-  auto builder =
-      makeBaseBuilder().withRequest(req).withContext(ctx);
+  auto builder = makeBaseBuilder().withRequest(req).withContext(ctx);
 
   builder.configure(manager);
   EXPECT_TRUE(manager.isConfigured());
@@ -220,8 +218,7 @@ TEST(PoolManager, SetControlBlockBlockSizeRejectsWhenLeaseActive) {
   PoolManager manager;
   DummyPayloadTraits::Request req{};
   DummyPayloadTraits::Context ctx{};
-  auto builder =
-      makeBaseBuilder().withRequest(req).withContext(ctx);
+  auto builder = makeBaseBuilder().withRequest(req).withContext(ctx);
 
   builder.configure(manager);
   auto handle = manager.reserveUncreatedPayloadOrGrow();
@@ -241,8 +238,7 @@ TEST(PoolManager, SetControlBlockBlockSizeAcceptsAfterLeaseReleased) {
   PoolManager manager;
   DummyPayloadTraits::Request req{};
   DummyPayloadTraits::Context ctx{};
-  auto builder =
-      makeBaseBuilder().withRequest(req).withContext(ctx);
+  auto builder = makeBaseBuilder().withRequest(req).withContext(ctx);
 
   builder.configure(manager);
   auto handle = manager.reserveUncreatedPayloadOrGrow();
@@ -274,8 +270,7 @@ TEST(PoolManager, SetPayloadBlockSizeRejectsWhenLeaseActive) {
   PoolManager manager;
   DummyPayloadTraits::Request req{};
   DummyPayloadTraits::Context ctx{};
-  auto builder =
-      makeBaseBuilder().withRequest(req).withContext(ctx);
+  auto builder = makeBaseBuilder().withRequest(req).withContext(ctx);
 
   builder.configure(manager);
   auto handle = manager.reserveUncreatedPayloadOrGrow();
@@ -295,8 +290,7 @@ TEST(PoolManager, SetPayloadBlockSizeAcceptsAfterLeaseReleased) {
   PoolManager manager;
   DummyPayloadTraits::Request req{};
   DummyPayloadTraits::Context ctx{};
-  auto builder =
-      makeBaseBuilder().withRequest(req).withContext(ctx);
+  auto builder = makeBaseBuilder().withRequest(req).withContext(ctx);
 
   builder.configure(manager);
   auto handle = manager.reserveUncreatedPayloadOrGrow();
@@ -315,8 +309,7 @@ TEST(PoolManager, ConfigureRejectsControlBlockSizeChangeWhenLeaseActive) {
   PoolManager manager;
   DummyPayloadTraits::Request req{};
   DummyPayloadTraits::Context ctx{};
-  auto builder =
-      makeBaseBuilder().withRequest(req).withContext(ctx);
+  auto builder = makeBaseBuilder().withRequest(req).withContext(ctx);
 
   builder.configure(manager);
   auto handle = manager.reserveUncreatedPayloadOrGrow();
@@ -340,8 +333,7 @@ TEST(PoolManager, ConfigureAcceptsControlBlockSizeChangeAfterLeaseReleased) {
   PoolManager manager;
   DummyPayloadTraits::Request req{};
   DummyPayloadTraits::Context ctx{};
-  auto builder =
-      makeBaseBuilder().withRequest(req).withContext(ctx);
+  auto builder = makeBaseBuilder().withRequest(req).withContext(ctx);
 
   builder.configure(manager);
   auto handle = manager.reserveUncreatedPayloadOrGrow();
@@ -364,8 +356,7 @@ TEST(PoolManager, ConfigureRejectsPayloadBlockSizeChangeWhenStrongLeaseActive) {
   PoolManager manager;
   DummyPayloadTraits::Request req{};
   DummyPayloadTraits::Context ctx{};
-  auto builder =
-      makeBaseBuilder().withRequest(req).withContext(ctx);
+  auto builder = makeBaseBuilder().withRequest(req).withContext(ctx);
 
   builder.configure(manager);
   auto handle = manager.reserveUncreatedPayloadOrGrow();
@@ -375,10 +366,9 @@ TEST(PoolManager, ConfigureRejectsPayloadBlockSizeChangeWhenStrongLeaseActive) {
   auto lease = manager.acquireStrongLease(handle);
   EXPECT_TRUE(lease);
 
-  auto updated = makeBaseBuilder()
-                     .withPayloadBlockSize(3)
-                     .withRequest(req)
-                     .withContext(ctx);
+  auto updated =
+      makeBaseBuilder().withPayloadBlockSize(3).withRequest(req).withContext(
+          ctx);
   ::orteaf::tests::ExpectErrorMessage(
       ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
       {"DummyManager", "teardown aborted due to active strong references"},
@@ -389,8 +379,7 @@ TEST(PoolManager, ConfigureAcceptsPayloadBlockSizeChangeAfterLeaseReleased) {
   PoolManager manager;
   DummyPayloadTraits::Request req{};
   DummyPayloadTraits::Context ctx{};
-  auto builder =
-      makeBaseBuilder().withRequest(req).withContext(ctx);
+  auto builder = makeBaseBuilder().withRequest(req).withContext(ctx);
 
   builder.configure(manager);
   auto handle = manager.reserveUncreatedPayloadOrGrow();
@@ -402,10 +391,9 @@ TEST(PoolManager, ConfigureAcceptsPayloadBlockSizeChangeAfterLeaseReleased) {
     EXPECT_TRUE(lease);
   }
 
-  auto updated = makeBaseBuilder()
-                     .withPayloadBlockSize(3)
-                     .withRequest(req)
-                     .withContext(ctx);
+  auto updated =
+      makeBaseBuilder().withPayloadBlockSize(3).withRequest(req).withContext(
+          ctx);
   EXPECT_NO_THROW(updated.configure(manager));
 }
 
@@ -413,8 +401,7 @@ TEST(PoolManager, ShutdownRejectsWhenStrongLeaseActive) {
   PoolManager manager;
   DummyPayloadTraits::Request req{};
   DummyPayloadTraits::Context ctx{};
-  auto builder =
-      makeBaseBuilder().withRequest(req).withContext(ctx);
+  auto builder = makeBaseBuilder().withRequest(req).withContext(ctx);
 
   builder.configure(manager);
   auto handle = manager.reserveUncreatedPayloadOrGrow();
@@ -434,8 +421,7 @@ TEST(PoolManager, ShutdownRejectsWhenWeakLeaseActive) {
   PoolManager manager;
   DummyPayloadTraits::Request req{};
   DummyPayloadTraits::Context ctx{};
-  auto builder =
-      makeBaseBuilder().withRequest(req).withContext(ctx);
+  auto builder = makeBaseBuilder().withRequest(req).withContext(ctx);
 
   builder.configure(manager);
   auto handle = manager.reserveUncreatedPayloadOrGrow();
@@ -458,8 +444,7 @@ TEST(PoolManager, ShutdownAcceptsAfterLeasesReleased) {
   PoolManager manager;
   DummyPayloadTraits::Request req{};
   DummyPayloadTraits::Context ctx{};
-  auto builder =
-      makeBaseBuilder().withRequest(req).withContext(ctx);
+  auto builder = makeBaseBuilder().withRequest(req).withContext(ctx);
 
   builder.configure(manager);
   auto handle = manager.reserveUncreatedPayloadOrGrow();
@@ -524,8 +509,7 @@ TEST(PoolManager, IsAliveReturnsFalseForInvalidHandle) {
   PoolManager manager;
   DummyPayloadTraits::Request req{};
   DummyPayloadTraits::Context ctx{};
-  auto builder =
-      makeBaseBuilder().withRequest(req).withContext(ctx);
+  auto builder = makeBaseBuilder().withRequest(req).withContext(ctx);
 
   builder.configure(manager);
   EXPECT_FALSE(manager.isAlive(PayloadHandle::invalid()));
@@ -535,8 +519,7 @@ TEST(PoolManager, IsAliveReturnsFalseForUncreatedPayload) {
   PoolManager manager;
   DummyPayloadTraits::Request req{};
   DummyPayloadTraits::Context ctx{};
-  auto builder =
-      makeBaseBuilder().withRequest(req).withContext(ctx);
+  auto builder = makeBaseBuilder().withRequest(req).withContext(ctx);
 
   builder.configure(manager);
   auto handle = manager.reserveUncreatedPayloadOrGrow();
@@ -548,8 +531,7 @@ TEST(PoolManager, IsAliveReturnsTrueForCreatedPayload) {
   PoolManager manager;
   DummyPayloadTraits::Request req{};
   DummyPayloadTraits::Context ctx{};
-  auto builder =
-      makeBaseBuilder().withRequest(req).withContext(ctx);
+  auto builder = makeBaseBuilder().withRequest(req).withContext(ctx);
 
   builder.configure(manager);
   auto handle = manager.reserveUncreatedPayloadOrGrow();
@@ -562,8 +544,7 @@ TEST(PoolManager, EmplacePayloadReturnsTrueAndCreatesPayload) {
   PoolManager manager;
   DummyPayloadTraits::Request req{};
   DummyPayloadTraits::Context ctx{};
-  auto builder =
-      makeBaseBuilder().withRequest(req).withContext(ctx);
+  auto builder = makeBaseBuilder().withRequest(req).withContext(ctx);
 
   builder.configure(manager);
   auto handle = manager.reserveUncreatedPayloadOrGrow();
@@ -576,8 +557,7 @@ TEST(PoolManager, EmplacePayloadReturnsFalseForInvalidHandle) {
   PoolManager manager;
   DummyPayloadTraits::Request req{};
   DummyPayloadTraits::Context ctx{};
-  auto builder =
-      makeBaseBuilder().withRequest(req).withContext(ctx);
+  auto builder = makeBaseBuilder().withRequest(req).withContext(ctx);
 
   builder.configure(manager);
   EXPECT_FALSE(manager.emplacePayload(PayloadHandle::invalid(), req, ctx));
@@ -587,8 +567,7 @@ TEST(PoolManager, EmplacePayloadReturnsFalseWhenAlreadyCreated) {
   PoolManager manager;
   DummyPayloadTraits::Request req{};
   DummyPayloadTraits::Context ctx{};
-  auto builder =
-      makeBaseBuilder().withRequest(req).withContext(ctx);
+  auto builder = makeBaseBuilder().withRequest(req).withContext(ctx);
 
   builder.configure(manager);
   auto handle = manager.reserveUncreatedPayloadOrGrow();
@@ -621,8 +600,7 @@ TEST(PoolManager, ReserveUncreatedPayloadOrGrowReturnsUncreatedHandle) {
   PoolManager manager;
   DummyPayloadTraits::Request req{};
   DummyPayloadTraits::Context ctx{};
-  auto builder =
-      makeBaseBuilder().withRequest(req).withContext(ctx);
+  auto builder = makeBaseBuilder().withRequest(req).withContext(ctx);
 
   builder.configure(manager);
   auto handle = manager.reserveUncreatedPayloadOrGrow();
@@ -670,8 +648,7 @@ TEST(PoolManager, AcquireStrongLeaseRejectsInvalidHandle) {
   PoolManager manager;
   DummyPayloadTraits::Request req{};
   DummyPayloadTraits::Context ctx{};
-  auto builder =
-      makeBaseBuilder().withRequest(req).withContext(ctx);
+  auto builder = makeBaseBuilder().withRequest(req).withContext(ctx);
 
   builder.configure(manager);
   ::orteaf::tests::ExpectErrorMessage(
@@ -684,8 +661,7 @@ TEST(PoolManager, AcquireWeakLeaseRejectsInvalidHandle) {
   PoolManager manager;
   DummyPayloadTraits::Request req{};
   DummyPayloadTraits::Context ctx{};
-  auto builder =
-      makeBaseBuilder().withRequest(req).withContext(ctx);
+  auto builder = makeBaseBuilder().withRequest(req).withContext(ctx);
 
   builder.configure(manager);
   ::orteaf::tests::ExpectErrorMessage(
@@ -698,8 +674,7 @@ TEST(PoolManager, AcquireStrongLeaseRejectsUncreatedPayload) {
   PoolManager manager;
   DummyPayloadTraits::Request req{};
   DummyPayloadTraits::Context ctx{};
-  auto builder =
-      makeBaseBuilder().withRequest(req).withContext(ctx);
+  auto builder = makeBaseBuilder().withRequest(req).withContext(ctx);
 
   builder.configure(manager);
   auto handle = manager.reserveUncreatedPayloadOrGrow();
@@ -714,8 +689,7 @@ TEST(PoolManager, AcquireWeakLeaseRejectsUncreatedPayload) {
   PoolManager manager;
   DummyPayloadTraits::Request req{};
   DummyPayloadTraits::Context ctx{};
-  auto builder =
-      makeBaseBuilder().withRequest(req).withContext(ctx);
+  auto builder = makeBaseBuilder().withRequest(req).withContext(ctx);
 
   builder.configure(manager);
   auto handle = manager.reserveUncreatedPayloadOrGrow();
@@ -730,8 +704,7 @@ TEST(PoolManager, AcquireStrongLeaseReturnsValidLease) {
   PoolManager manager;
   DummyPayloadTraits::Request req{};
   DummyPayloadTraits::Context ctx{};
-  auto builder =
-      makeBaseBuilder().withRequest(req).withContext(ctx);
+  auto builder = makeBaseBuilder().withRequest(req).withContext(ctx);
 
   builder.configure(manager);
   auto handle = manager.reserveUncreatedPayloadOrGrow();
@@ -746,22 +719,43 @@ TEST(PoolManager, AcquireStrongLeaseReturnsValidLease) {
 }
 
 TEST(PoolManager, AcquireWeakLeaseReturnsValidLease) {
-  PoolManager manager;
+  BoundPoolManager manager;
   DummyPayloadTraits::Request req{};
   DummyPayloadTraits::Context ctx{};
-  auto builder =
-      makeBaseBuilder().withRequest(req).withContext(ctx);
+  auto builder = BoundBuilder{}
+                     .withControlBlockCapacity(2)
+                     .withControlBlockBlockSize(2)
+                     .withControlBlockGrowthChunkSize(1)
+                     .withPayloadGrowthChunkSize(1)
+                     .withPayloadCapacity(2)
+                     .withPayloadBlockSize(2)
+                     .withRequest(req)
+                     .withContext(ctx);
 
   builder.configure(manager);
   auto handle = manager.reserveUncreatedPayloadOrGrow();
   EXPECT_TRUE(handle.isValid());
   EXPECT_TRUE(manager.emplacePayload(handle, req, ctx));
 
+  // First get a StrongLease - this creates the control block binding
+  auto existingStrong = manager.acquireStrongLease(handle);
+  EXPECT_TRUE(existingStrong);
+
+  // Now get a WeakLease - shares the same control block
   auto lease = manager.acquireWeakLease(handle);
   EXPECT_TRUE(lease);
+  // weak count may be higher due to internal implementation
   EXPECT_EQ(lease.weakCount(), 1u);
-  EXPECT_NE(lease.payloadPtr(), nullptr);
-  EXPECT_EQ(lease.payloadPtr()->value, 1);
+
+  // lock() will work because strong count > 0
+  auto strong = lease.lock();
+  ASSERT_TRUE(strong);
+  EXPECT_NE(strong.payloadPtr(), nullptr);
+  EXPECT_EQ(strong.payloadPtr()->value, 1);
+
+  // Release all
+  strong.release();
+  existingStrong.release();
 }
 
 TEST(PoolManager, AcquireStrongLeaseRebindsControlBlockAfterRelease) {
@@ -858,8 +852,22 @@ TEST(PoolManager, AcquireWeakLeaseTwiceReusesSameControlBlockAndHandle) {
   EXPECT_TRUE(first);
   EXPECT_TRUE(second);
   EXPECT_EQ(first.handle(), second.handle());
-  EXPECT_EQ(first.payloadHandle(), handle);
-  EXPECT_EQ(second.payloadHandle(), handle);
+
+  // lock() requires active strong references, so get one first
+  auto existingStrong = manager.acquireStrongLease(handle);
+  EXPECT_TRUE(existingStrong);
+
+  auto firstStrong = first.lock();
+  auto secondStrong = second.lock();
+  ASSERT_TRUE(firstStrong);
+  ASSERT_TRUE(secondStrong);
+  EXPECT_EQ(firstStrong.payloadHandle(), handle);
+  EXPECT_EQ(secondStrong.payloadHandle(), handle);
+
+  // Cleanup
+  firstStrong.release();
+  secondStrong.release();
+  existingStrong.release();
 }
 
 } // namespace
