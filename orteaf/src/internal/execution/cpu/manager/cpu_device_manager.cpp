@@ -24,7 +24,7 @@ CpuDeviceResource::operator=(CpuDeviceResource &&other) noexcept {
 CpuDeviceResource::~CpuDeviceResource() { reset(nullptr); }
 
 void CpuDeviceResource::reset([[maybe_unused]] SlowOps *slow_ops) noexcept {
-  // Shutdown sub-managers here when added
+  buffer_manager.shutdown();
   arch = ::orteaf::internal::architecture::Architecture::CpuGeneric;
   is_alive = false;
 }
@@ -32,6 +32,7 @@ void CpuDeviceResource::reset([[maybe_unused]] SlowOps *slow_ops) noexcept {
 void CpuDeviceResource::moveFrom(CpuDeviceResource &&other) noexcept {
   arch = other.arch;
   is_alive = other.is_alive;
+  buffer_manager = std::move(other.buffer_manager);
   other.arch = ::orteaf::internal::architecture::Architecture::CpuGeneric;
   other.is_alive = false;
 }
@@ -54,7 +55,11 @@ bool DevicePayloadPoolTraits::create(Payload &payload, const Request &request,
   payload.arch = context.ops->detectArchitecture(request.handle);
   payload.is_alive = true;
 
-  // Initialize sub-managers here when added
+  CpuBufferManager::InternalConfig buffer_config{};
+  buffer_config.public_config = context.buffer_config;
+  buffer_config.ops = context.ops;
+  payload.buffer_manager.configure(buffer_config);
+
   return true;
 }
 
@@ -96,6 +101,7 @@ void CpuDeviceManager::configure(const InternalConfig &config) {
 
   DevicePayloadPoolTraits::Context context{};
   context.ops = ops_;
+  context.buffer_config = cfg.buffer_config;
 
   Core::Builder<DevicePayloadPoolTraits::Request,
                 DevicePayloadPoolTraits::Context>{}

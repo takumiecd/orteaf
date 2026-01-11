@@ -14,6 +14,7 @@
 
 namespace orteaf::internal::execution::cpu::manager {
 
+struct DevicePayloadPoolTraits;
 class CpuRuntimeManager;
 
 // =============================================================================
@@ -252,6 +253,7 @@ private:
   }
 
   friend class CpuRuntimeManager;
+  friend struct DevicePayloadPoolTraits;
 
 public:
 #if ORTEAF_ENABLE_TEST

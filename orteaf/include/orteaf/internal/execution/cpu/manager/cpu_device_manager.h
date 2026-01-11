@@ -7,13 +7,13 @@
 #include "orteaf/internal/base/manager/lease_lifetime_registry.h"
 #include "orteaf/internal/base/manager/pool_manager.h"
 #include "orteaf/internal/base/pool/fixed_slot_store.h"
+#include "orteaf/internal/execution/cpu/manager/cpu_buffer_manager.h"
 #include "orteaf/internal/execution/cpu/cpu_handles.h"
 #include "orteaf/internal/execution/cpu/platform/cpu_slow_ops.h"
 
 namespace orteaf::internal::execution::cpu::manager {
 
 // Forward declaration
-class CpuBufferManager;
 class CpuRuntimeManager;
 
 // =============================================================================
@@ -32,6 +32,7 @@ struct CpuDeviceResource {
   ::orteaf::internal::architecture::Architecture arch{
       ::orteaf::internal::architecture::Architecture::CpuGeneric};
   bool is_alive{false};
+  CpuBufferManager buffer_manager{};
 
   CpuDeviceResource() = default;
   CpuDeviceResource(const CpuDeviceResource &) = delete;
@@ -61,6 +62,7 @@ struct DevicePayloadPoolTraits {
 
   struct Context {
     SlowOps *ops{nullptr};
+    CpuBufferManager::Config buffer_config{};
   };
 
   static bool create(Payload &payload, const Request &request,
@@ -132,6 +134,7 @@ public:
     std::size_t payload_capacity{0};
     std::size_t payload_block_size{0};
     std::size_t payload_growth_chunk_size{1};
+    CpuBufferManager::Config buffer_config{};
   };
 
   CpuDeviceManager() = default;
