@@ -29,8 +29,7 @@ protected:
 
   void configureManager() {
     cpu_rt::CpuDeviceManager::Config config{};
-    config.ops = slow_ops_.get();
-    manager_->configure(config);
+    manager_->configureForTest(config, slow_ops_.get());
   }
 
   std::unique_ptr<cpu_platform::CpuSlowOpsImpl> slow_ops_;

@@ -18,6 +18,8 @@
 
 namespace orteaf::internal::execution::mps::manager {
 
+struct DevicePayloadPoolTraits;
+
 // =============================================================================
 // Heap Descriptor Key Types
 // =============================================================================
@@ -163,10 +165,6 @@ public:
   ~MpsHeapManager() = default;
 
   struct Config {
-    DeviceType device{nullptr};
-    ::orteaf::internal::execution::mps::MpsDeviceHandle device_handle{};
-    MpsLibraryManager *library_manager{nullptr};
-    SlowOps *ops{nullptr};
     BufferManager::Config buffer_config{};
     // PoolManager settings
     std::size_t control_block_capacity{0};
@@ -177,7 +175,20 @@ public:
     std::size_t payload_growth_chunk_size{1};
   };
 
-  void configure(const Config &config);
+private:
+  struct InternalConfig {
+    Config public_config{};
+    DeviceType device{nullptr};
+    ::orteaf::internal::execution::mps::MpsDeviceHandle device_handle{};
+    MpsLibraryManager *library_manager{nullptr};
+    SlowOps *ops{nullptr};
+  };
+
+  void configure(const InternalConfig &config);
+
+  friend struct DevicePayloadPoolTraits;
+
+public:
   void shutdown();
 
   HeapLease acquire(const HeapDescriptorKey &key);
@@ -188,6 +199,19 @@ public:
   BufferManager *bufferManager(const HeapDescriptorKey &key);
 
 #if ORTEAF_ENABLE_TEST
+  void configureForTest(const Config &config, DeviceType device,
+                        ::orteaf::internal::execution::mps::MpsDeviceHandle
+                            device_handle,
+                        MpsLibraryManager *library_manager, SlowOps *ops) {
+    InternalConfig internal{};
+    internal.public_config = config;
+    internal.device = device;
+    internal.device_handle = device_handle;
+    internal.library_manager = library_manager;
+    internal.ops = ops;
+    configure(internal);
+  }
+
   bool isConfiguredForTest() const noexcept { return core_.isConfigured(); }
   std::size_t payloadPoolSizeForTest() const noexcept {
     return core_.payloadPoolSizeForTest();

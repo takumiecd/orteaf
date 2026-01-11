@@ -68,7 +68,8 @@ public:
     }
 
     // Configure device manager
-    auto device_config = config.device_config;
+    MpsDeviceManager::InternalConfig device_config{};
+    device_config.public_config = config.device_config;
     device_config.ops = slow_ops_.get();
     device_manager_.configure(device_config);
   }

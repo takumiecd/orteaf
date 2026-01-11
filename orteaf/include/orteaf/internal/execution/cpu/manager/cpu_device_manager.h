@@ -14,6 +14,7 @@ namespace orteaf::internal::execution::cpu::manager {
 
 // Forward declaration
 class CpuBufferManager;
+class CpuRuntimeManager;
 
 // =============================================================================
 // Device Resource
@@ -124,7 +125,6 @@ public:
                                                                DeviceLease>;
 
   struct Config {
-    SlowOps *ops{nullptr};
     // PoolManager settings
     std::size_t control_block_capacity{0};
     std::size_t control_block_block_size{0};
@@ -145,12 +145,17 @@ public:
   // Lifecycle
   // =========================================================================
 
-  /**
-   * @brief Configure the device manager.
-   *
-   * @param config Configuration including SlowOps and pool settings
-   */
-  void configure(const Config &config);
+private:
+  struct InternalConfig {
+    Config public_config{};
+    SlowOps *ops{nullptr};
+  };
+
+  void configure(const InternalConfig &config);
+
+  friend class CpuRuntimeManager;
+
+public:
 
   /**
    * @brief Shutdown the device manager and release all resources.
@@ -170,6 +175,13 @@ public:
   DeviceLease acquire(DeviceHandle handle);
 
 #if ORTEAF_ENABLE_TEST
+  void configureForTest(const Config &config, SlowOps *ops) {
+    InternalConfig internal{};
+    internal.public_config = config;
+    internal.ops = ops;
+    configure(internal);
+  }
+
   std::size_t getDeviceCountForTest() const noexcept;
   bool isConfiguredForTest() const noexcept;
   std::size_t payloadPoolSizeForTest() const noexcept;

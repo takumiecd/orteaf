@@ -67,7 +67,7 @@ void DevicePayloadPoolTraits::destroy(Payload &payload, const Request &,
 // CpuDeviceManager Implementation
 // =============================================================================
 
-void CpuDeviceManager::configure(const Config &config) {
+void CpuDeviceManager::configure(const InternalConfig &config) {
   shutdown();
 
   if (config.ops == nullptr) {
@@ -77,16 +77,16 @@ void CpuDeviceManager::configure(const Config &config) {
   }
 
   ops_ = config.ops;
+  const auto &cfg = config.public_config;
 
   // Setup pool configuration
-  // CPU has exactly 1 device
   const std::size_t payload_capacity = 1;
   const std::size_t payload_block_size = 1;
-  std::size_t control_block_capacity = config.control_block_capacity;
+  std::size_t control_block_capacity = cfg.control_block_capacity;
   if (control_block_capacity == 0) {
     control_block_capacity = 4;
   }
-  std::size_t control_block_block_size = config.control_block_block_size;
+  std::size_t control_block_block_size = cfg.control_block_block_size;
   if (control_block_block_size == 0) {
     control_block_block_size = 4;
   }
@@ -102,10 +102,10 @@ void CpuDeviceManager::configure(const Config &config) {
       .withControlBlockCapacity(control_block_capacity)
       .withControlBlockBlockSize(control_block_block_size)
       .withControlBlockGrowthChunkSize(
-          config.control_block_growth_chunk_size)
+          cfg.control_block_growth_chunk_size)
       .withPayloadCapacity(payload_capacity)
       .withPayloadBlockSize(payload_block_size)
-      .withPayloadGrowthChunkSize(config.payload_growth_chunk_size)
+      .withPayloadGrowthChunkSize(cfg.payload_growth_chunk_size)
       .withRequest(request)
       .withContext(context)
       .configure(core_);

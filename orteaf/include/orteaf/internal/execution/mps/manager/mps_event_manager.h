@@ -15,6 +15,8 @@
 
 namespace orteaf::internal::execution::mps::manager {
 
+struct DevicePayloadPoolTraits;
+
 // =============================================================================
 // Payload Pool
 // =============================================================================
@@ -109,8 +111,6 @@ private:
 
 public:
   struct Config {
-    DeviceType device{nullptr};
-    SlowOps *ops{nullptr};
     // PoolManager settings
     std::size_t control_block_capacity{0};
     std::size_t control_block_block_size{0};
@@ -127,12 +127,32 @@ public:
   MpsEventManager &operator=(MpsEventManager &&) = default;
   ~MpsEventManager() = default;
 
-  void configure(const Config &config);
+private:
+  struct InternalConfig {
+    Config public_config{};
+    DeviceType device{nullptr};
+    SlowOps *ops{nullptr};
+  };
+
+  void configure(const InternalConfig &config);
+
+  friend struct DevicePayloadPoolTraits;
+
+public:
   void shutdown();
 
   EventLease acquire();
 
 #if ORTEAF_ENABLE_TEST
+  void configureForTest(const Config &config, DeviceType device,
+                        SlowOps *ops) {
+    InternalConfig internal{};
+    internal.public_config = config;
+    internal.device = device;
+    internal.ops = ops;
+    configure(internal);
+  }
+
   bool isConfiguredForTest() const noexcept { return core_.isConfigured(); }
 
   std::size_t payloadPoolSizeForTest() const noexcept {

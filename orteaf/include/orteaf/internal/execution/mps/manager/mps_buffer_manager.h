@@ -27,6 +27,8 @@
 
 namespace orteaf::internal::execution::mps::manager {
 
+struct HeapPayloadPoolTraits;
+
 using ::orteaf::internal::execution::Execution;
 
 // ============================================================================
@@ -169,14 +171,9 @@ public:
   using HeapType = decltype(std::declval<typename Resource::Config>().heap);
 
   // =========================================================================
-  // Config - All dependencies and settings in one struct
+  // Config - Public settings only
   // =========================================================================
   struct Config {
-    // Dependencies
-    DeviceType device{nullptr};
-    ::orteaf::internal::execution::mps::MpsDeviceHandle device_handle{};
-    HeapType heap{nullptr};
-    MpsLibraryManager *library_manager{nullptr};
     // SegregatePool config
     std::size_t chunk_size{16 * 1024 * 1024};
     std::size_t min_block_size{64};
@@ -203,7 +200,16 @@ public:
   MpsBufferManager &operator=(MpsBufferManager &&) = default;
   ~MpsBufferManager() = default;
 
-  void configure(const Config &config) {
+private:
+  struct InternalConfig {
+    Config public_config{};
+    DeviceType device{nullptr};
+    ::orteaf::internal::execution::mps::MpsDeviceHandle device_handle{};
+    HeapType heap{nullptr};
+    MpsLibraryManager *library_manager{nullptr};
+  };
+
+  void configure(const InternalConfig &config) {
     shutdown();
 
     if (config.device == nullptr) {
@@ -220,13 +226,14 @@ public:
     device_ = config.device;
     device_handle_ = config.device_handle;
     heap_ = config.heap;
+    const auto &cfg = config.public_config;
 
     // Initialize SegregatePool
     typename Resource::Config res_cfg{};
     res_cfg.device = config.device;
     res_cfg.device_handle = config.device_handle;
     res_cfg.heap = config.heap;
-    res_cfg.usage = config.usage;
+    res_cfg.usage = cfg.usage;
     res_cfg.library_manager = config.library_manager;
 
     Resource execution_resource{};
@@ -235,9 +242,9 @@ public:
     new (&segregate_pool_) SegregatePool(std::move(execution_resource));
 
     typename SegregatePool::Config pool_cfg{};
-    pool_cfg.chunk_size = config.chunk_size;
-    pool_cfg.min_block_size = config.min_block_size;
-    pool_cfg.max_block_size = config.max_block_size;
+    pool_cfg.chunk_size = cfg.chunk_size;
+    pool_cfg.min_block_size = cfg.min_block_size;
+    pool_cfg.max_block_size = cfg.max_block_size;
     pool_cfg.fast_free.resource = segregate_pool_.resource();
     pool_cfg.threading.resource = segregate_pool_.resource();
     pool_cfg.large_alloc.resource = segregate_pool_.resource();
@@ -252,17 +259,21 @@ public:
     typename Core::template Builder<
         typename BufferPayloadPoolTraitsT<ResourceT>::Request,
         typename BufferPayloadPoolTraitsT<ResourceT>::Context>{}
-        .withControlBlockCapacity(config.control_block_capacity)
-        .withControlBlockBlockSize(config.control_block_block_size)
+        .withControlBlockCapacity(cfg.control_block_capacity)
+        .withControlBlockBlockSize(cfg.control_block_block_size)
         .withControlBlockGrowthChunkSize(
-            config.control_block_growth_chunk_size)
-        .withPayloadCapacity(config.payload_capacity)
-        .withPayloadBlockSize(config.payload_block_size)
-        .withPayloadGrowthChunkSize(config.payload_growth_chunk_size)
+            cfg.control_block_growth_chunk_size)
+        .withPayloadCapacity(cfg.payload_capacity)
+        .withPayloadBlockSize(cfg.payload_block_size)
+        .withPayloadGrowthChunkSize(cfg.payload_growth_chunk_size)
         .withRequest(request)
         .withContext(context)
         .configure(core_);
   }
+
+  friend struct HeapPayloadPoolTraits;
+
+public:
 
   void shutdown() {
     if (!core_.isConfigured()) {
@@ -311,6 +322,19 @@ public:
   }
 
 #if ORTEAF_ENABLE_TEST
+  void configureForTest(const Config &config, DeviceType device,
+                        ::orteaf::internal::execution::mps::MpsDeviceHandle
+                            device_handle,
+                        HeapType heap, MpsLibraryManager *library_manager) {
+    InternalConfig internal{};
+    internal.public_config = config;
+    internal.device = device;
+    internal.device_handle = device_handle;
+    internal.heap = heap;
+    internal.library_manager = library_manager;
+    configure(internal);
+  }
+
   bool isConfiguredForTest() const noexcept { return core_.isConfigured(); }
   std::size_t payloadPoolSizeForTest() const noexcept {
     return core_.payloadPoolSizeForTest();

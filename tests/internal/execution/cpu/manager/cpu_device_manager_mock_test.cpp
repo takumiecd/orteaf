@@ -53,8 +53,7 @@ protected:
         .WillByDefault(Return(architecture::Architecture::CpuZen4));
 
     cpu_rt::CpuDeviceManager::Config config{};
-    config.ops = mock_ops_.get();
-    manager_->configure(config);
+    manager_->configureForTest(config, mock_ops_.get());
   }
 
   std::unique_ptr<NiceMock<CpuSlowOpsMock>> mock_ops_;

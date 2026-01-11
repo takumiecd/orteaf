@@ -19,6 +19,8 @@
 
 namespace orteaf::internal::execution::mps::manager {
 
+struct DevicePayloadPoolTraits;
+
 enum class LibraryKeyKind : std::uint8_t {
   kNamed,
 };
@@ -83,7 +85,8 @@ struct LibraryPayloadPoolTraits {
     if (payload.library == nullptr) {
       return false;
     }
-    auto pipeline_config = context.pipeline_config;
+    MpsComputePipelineStateManager::InternalConfig pipeline_config{};
+    pipeline_config.public_config = context.pipeline_config;
     pipeline_config.device = context.device;
     pipeline_config.library = payload.library;
     pipeline_config.ops = context.ops;
@@ -141,8 +144,6 @@ public:
   ~MpsLibraryManager() = default;
 
   struct Config {
-    DeviceType device{nullptr};
-    SlowOps *ops{nullptr};
     // PoolManager settings
     std::size_t control_block_capacity{0};
     std::size_t control_block_block_size{0};
@@ -153,7 +154,18 @@ public:
     MpsComputePipelineStateManager::Config pipeline_config{};
   };
 
-  void configure(const Config &config);
+private:
+  struct InternalConfig {
+    Config public_config{};
+    DeviceType device{nullptr};
+    SlowOps *ops{nullptr};
+  };
+
+  void configure(const InternalConfig &config);
+
+  friend struct DevicePayloadPoolTraits;
+
+public:
   void shutdown();
 
   LibraryLease acquire(const LibraryKey &key);
@@ -162,6 +174,15 @@ public:
   void release(LibraryLease &lease) noexcept { lease.release(); }
 
 #if ORTEAF_ENABLE_TEST
+  void configureForTest(const Config &config, DeviceType device,
+                        SlowOps *ops) {
+    InternalConfig internal{};
+    internal.public_config = config;
+    internal.device = device;
+    internal.ops = ops;
+    configure(internal);
+  }
+
   bool isConfiguredForTest() const noexcept { return core_.isConfigured(); }
   std::size_t payloadPoolSizeForTest() const noexcept {
     return core_.payloadPoolSizeForTest();

@@ -17,8 +17,7 @@ protected:
     manager_ = std::make_unique<cpu_manager::CpuBufferManager>();
 
     cpu_manager::CpuBufferManager::Config config{};
-    config.ops = slow_ops_.get();
-    manager_->configure(config);
+    manager_->configureForTest(config, slow_ops_.get());
   }
 
   void TearDown() override {

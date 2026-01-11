@@ -14,6 +14,8 @@
 
 namespace orteaf::internal::execution::cpu::manager {
 
+class CpuRuntimeManager;
+
 // =============================================================================
 // Buffer Resource
 // =============================================================================
@@ -184,7 +186,6 @@ public:
   using BufferLease = Core::StrongLeaseType;
 
   struct Config {
-    SlowOps *ops{nullptr};
     // PoolManager settings
     std::size_t control_block_capacity{0};
     std::size_t control_block_block_size{0};
@@ -205,27 +206,29 @@ public:
   // Lifecycle
   // =========================================================================
 
-  /**
-   * @brief Configure the buffer manager.
-   *
-   * @param config Configuration including SlowOps and pool settings
-   */
-  void configure(const Config &config) {
-    ops_ = config.ops;
+private:
+  struct InternalConfig {
+    Config public_config{};
+    SlowOps *ops{nullptr};
+  };
 
-    std::size_t payload_capacity = config.payload_capacity;
+  void configure(const InternalConfig &config) {
+    ops_ = config.ops;
+    const auto &cfg = config.public_config;
+
+    std::size_t payload_capacity = cfg.payload_capacity;
     if (payload_capacity == 0) {
       payload_capacity = 64;
     }
-    std::size_t payload_block_size = config.payload_block_size;
+    std::size_t payload_block_size = cfg.payload_block_size;
     if (payload_block_size == 0) {
       payload_block_size = 16;
     }
-    std::size_t control_block_capacity = config.control_block_capacity;
+    std::size_t control_block_capacity = cfg.control_block_capacity;
     if (control_block_capacity == 0) {
       control_block_capacity = 64;
     }
-    std::size_t control_block_block_size = config.control_block_block_size;
+    std::size_t control_block_block_size = cfg.control_block_block_size;
     if (control_block_block_size == 0) {
       control_block_block_size = 16;
     }
@@ -239,14 +242,26 @@ public:
         .withControlBlockCapacity(control_block_capacity)
         .withControlBlockBlockSize(control_block_block_size)
         .withControlBlockGrowthChunkSize(
-            config.control_block_growth_chunk_size)
+            cfg.control_block_growth_chunk_size)
         .withPayloadCapacity(payload_capacity)
         .withPayloadBlockSize(payload_block_size)
-        .withPayloadGrowthChunkSize(config.payload_growth_chunk_size)
+        .withPayloadGrowthChunkSize(cfg.payload_growth_chunk_size)
         .withRequest(request)
         .withContext(context)
         .configure(core_);
   }
+
+  friend class CpuRuntimeManager;
+
+public:
+#if ORTEAF_ENABLE_TEST
+  void configureForTest(const Config &config, SlowOps *ops) {
+    InternalConfig internal{};
+    internal.public_config = config;
+    internal.ops = ops;
+    configure(internal);
+  }
+#endif
 
   /**
    * @brief Shutdown the buffer manager and release all resources.

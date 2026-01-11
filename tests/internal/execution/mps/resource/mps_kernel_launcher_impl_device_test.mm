@@ -57,9 +57,10 @@ TEST(MpsKernelLauncherImplDeviceTest, DispatchOneShotExecutesEmbeddedIdentity) {
   ::orteaf::internal::execution::mps::platform::MpsSlowOpsImpl slow_ops{};
   ::orteaf::internal::execution::mps::manager::MpsCommandQueueManager
       queue_manager{};
-  queue_manager.configure(
+  auto queue_config =
       ::orteaf::internal::execution::mps::manager::MpsCommandQueueManager::
-          Config{device_handle, &slow_ops, 1, 1, 1, 1, 1, 1});
+          Config{1, 1, 1, 1, 1, 1};
+  queue_manager.configureForTest(queue_config, device_handle, &slow_ops);
   auto queue_lease = queue_manager.acquire();
 
   // Create a shared heap and buffer.

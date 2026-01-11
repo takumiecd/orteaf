@@ -107,8 +107,8 @@ struct TestFenceManager {
         .WillOnce(::testing::Return(fence_b));
     EXPECT_CALL(ops, destroyFence(fence_a)).Times(1);
     EXPECT_CALL(ops, destroyFence(fence_b)).Times(1);
-    manager.configure(Manager::Config{device, &ops, capacity, capacity, 1, 1,
-                                      capacity, capacity});
+    auto config = Manager::Config{capacity, capacity, 1, 1, capacity, capacity};
+    manager.configureForTest(config, device, &ops);
   }
 
   ~TestFenceManager() { manager.shutdown(); }
@@ -141,9 +141,10 @@ struct TestCommandQueueLease {
     EXPECT_CALL(ops, createCommandQueue(device))
         .WillOnce(::testing::Return(queue));
     EXPECT_CALL(ops, destroyCommandQueue(queue)).Times(1);
-    manager.configure(
+    auto config =
         ::orteaf::internal::execution::mps::manager::MpsCommandQueueManager::
-            Config{device, &ops, 1, 1, 1, 1, 1});
+            Config{1, 1, 1, 1, 1, 1};
+    manager.configureForTest(config, device, &ops);
     lease = manager.acquire();
   }
 

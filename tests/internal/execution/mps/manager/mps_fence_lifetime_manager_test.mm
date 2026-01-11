@@ -71,15 +71,13 @@ protected:
         .WillOnce(::testing::Return(fence_handle_));
 
     mps_mgr::MpsFenceManager::Config config{};
-    config.device = device_;
-    config.ops = &ops_;
-    config.pool.payload_capacity = 1;
-    config.pool.control_block_capacity = 1;
-    config.pool.payload_block_size = 1;
-    config.pool.control_block_block_size = 1;
-    config.pool.payload_growth_chunk_size = 1;
-    config.pool.control_block_growth_chunk_size = 1;
-    fence_manager_.configure(config);
+    config.payload_capacity = 1;
+    config.control_block_capacity = 1;
+    config.payload_block_size = 1;
+    config.control_block_block_size = 1;
+    config.payload_growth_chunk_size = 1;
+    config.control_block_growth_chunk_size = 1;
+    fence_manager_.configureForTest(config, device_, &ops_);
   }
 
   void TearDown() override {
