@@ -235,7 +235,6 @@ public:
 #endif
 
 private:
-  friend PipelineLease;
 
   void validateKey(const FunctionKey &key) const;
   PipelinePayloadPoolTraits::Context makePayloadContext() const noexcept;
