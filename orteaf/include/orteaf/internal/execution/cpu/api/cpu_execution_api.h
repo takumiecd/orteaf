@@ -19,13 +19,13 @@ public:
   CpuExecutionApi() = delete;
 
   static void configure(const ExecutionManager::Config &config) {
-    runtime().configure(config);
+    manager().configure(config);
   }
 
-  static void shutdown() { runtime().shutdown(); }
+  static void shutdown() { manager().shutdown(); }
 
   static DeviceLease acquireDevice(DeviceHandle device) {
-    Runtime &rt = runtime();
+    ExecutionManager &rt = manager();
     auto device_lease = rt.deviceManager().acquire(device);
     if (!device_lease.operator->()) {
       ::orteaf::internal::diagnostics::error::throwError(
@@ -36,7 +36,7 @@ public:
   }
 
 private:
-  static ExecutionManager &runtime() {
+  static ExecutionManager &manager() {
     static ExecutionManager instance{};
     return instance;
   }

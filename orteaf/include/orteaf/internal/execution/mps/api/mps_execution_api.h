@@ -35,18 +35,17 @@ public:
   MpsExecutionApi() = delete;
 
   // Configure execution manager with default configuration.
-  static void configure() { runtime().configure(); }
+  static void configure() { manager().configure(); }
 
   // Configure execution manager with the provided configuration.
   static void configure(const ExecutionManager::Config &config) {
-    runtime().configure(config);
+    manager().configure(config);
   }
 
-  static void shutdown() { runtime().shutdown(); }
+  static void shutdown() { manager().shutdown(); }
 
   static DeviceLease acquireDevice(DeviceHandle device) {
-    Runtime &rt = runtime();
-    auto device_lease = rt.deviceManager().acquire(device);
+    auto device_lease = manager().deviceManager().acquire(device);
     if (!device_lease.operator->()) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
@@ -85,7 +84,7 @@ public:
 
 private:
   // Singleton access to the execution manager (hidden from external callers).
-  static ExecutionManager &runtime() {
+  static ExecutionManager &manager() {
     static ExecutionManager instance{};
     return instance;
   }
