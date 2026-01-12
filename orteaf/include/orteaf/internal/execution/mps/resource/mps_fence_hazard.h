@@ -4,14 +4,15 @@
 
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_fence.h>
 
+#include <orteaf/internal/execution/mps/mps_handles.h>
 #include <orteaf/internal/execution/mps/platform/mps_fast_ops.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_command_buffer.h>
-#include <orteaf/internal/execution/mps/mps_handles.h>
 
 namespace orteaf::internal::execution::mps::manager {
 struct FencePayloadPoolTraits;
 class MpsFenceLifetimeManager;
-}
+struct MpsFencePayloadTraits;
+} // namespace orteaf::internal::execution::mps::manager
 
 namespace orteaf::internal::execution::mps::resource {
 
@@ -87,6 +88,8 @@ private:
       FencePayloadPoolTraits;
   friend class ::orteaf::internal::execution::mps::manager::
       MpsFenceLifetimeManager;
+  friend struct ::orteaf::internal::execution::mps::manager::
+      MpsFencePayloadTraits;
 
   FenceType fence_{nullptr};
   CommandBufferType command_buffer_{nullptr};

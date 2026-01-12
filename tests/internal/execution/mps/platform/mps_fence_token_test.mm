@@ -37,8 +37,8 @@ protected:
     if (command_buffer_a_ == nullptr || command_buffer_b_ == nullptr) {
       GTEST_SKIP() << "Failed to create command buffers";
     }
-    fence_pool_.configure(mps_rt::manager::MpsFenceManager::Config{
-        device_, &ops_, 2, 2, 2, 2, 1, 1});
+    auto config = mps_rt::manager::MpsFenceManager::Config{2, 2, 2, 2, 1, 1};
+    fence_pool_.configureForTest(config, device_, &ops_);
 #else
     GTEST_SKIP() << "MPS not enabled";
 #endif
@@ -91,8 +91,8 @@ TEST_F(MpsFenceTokenTest, AddOrReplaceLeaseAddsNew) {
   auto handle_a = fence_pool_.acquire();
   auto handle_b = fence_pool_.acquire();
 
-  auto *payload_a = handle_a.payloadPtr();
-  auto *payload_b = handle_b.payloadPtr();
+  auto *payload_a = handle_a.operator->();
+  auto *payload_b = handle_b.operator->();
   ASSERT_NE(payload_a, nullptr);
   ASSERT_NE(payload_b, nullptr);
   EXPECT_TRUE(payload_a->setCommandQueueHandle(queue_id_));
@@ -104,13 +104,13 @@ TEST_F(MpsFenceTokenTest, AddOrReplaceLeaseAddsNew) {
   token.addOrReplaceLease(std::move(handle_b));
 
   ASSERT_EQ(token.size(), 2u);
-  auto *lease_a_payload = token[0].payloadPtr();
+  auto *lease_a_payload = token[0].operator->();
   ASSERT_NE(lease_a_payload, nullptr);
   EXPECT_EQ(lease_a_payload->commandQueueHandle(), queue_id_);
   EXPECT_EQ(lease_a_payload->commandBuffer(), command_buffer_a_);
   EXPECT_TRUE(lease_a_payload->hasFence());
 
-  auto *lease_b_payload = token[1].payloadPtr();
+  auto *lease_b_payload = token[1].operator->();
   ASSERT_NE(lease_b_payload, nullptr);
   EXPECT_EQ(lease_b_payload->commandQueueHandle(), queue_id_other_);
   EXPECT_EQ(lease_b_payload->commandBuffer(), command_buffer_b_);
@@ -122,8 +122,8 @@ TEST_F(MpsFenceTokenTest, AddOrReplaceLeaseReplacesExisting) {
   auto handle_a = fence_pool_.acquire();
   auto handle_b = fence_pool_.acquire();
 
-  auto *payload_a = handle_a.payloadPtr();
-  auto *payload_b = handle_b.payloadPtr();
+  auto *payload_a = handle_a.operator->();
+  auto *payload_b = handle_b.operator->();
   ASSERT_NE(payload_a, nullptr);
   ASSERT_NE(payload_b, nullptr);
   EXPECT_TRUE(payload_a->setCommandQueueHandle(queue_id_));
@@ -133,17 +133,17 @@ TEST_F(MpsFenceTokenTest, AddOrReplaceLeaseReplacesExisting) {
 
   token.addOrReplaceLease(std::move(handle_a));
   ASSERT_EQ(token.size(), 1u);
-  EXPECT_EQ(token[0].payloadPtr()->commandBuffer(), command_buffer_a_);
+  EXPECT_EQ(token[0]->commandBuffer(), command_buffer_a_);
 
   token.addOrReplaceLease(std::move(handle_b));
   ASSERT_EQ(token.size(), 1u);
-  EXPECT_EQ(token[0].payloadPtr()->commandBuffer(), command_buffer_b_);
+  EXPECT_EQ(token[0]->commandBuffer(), command_buffer_b_);
 }
 
 TEST_F(MpsFenceTokenTest, MoveTransfersOwnership) {
   mps_res::MpsFenceToken token;
   auto handle = fence_pool_.acquire();
-  auto *payload = handle.payloadPtr();
+  auto *payload = handle.operator->();
   ASSERT_NE(payload, nullptr);
   EXPECT_TRUE(payload->setCommandQueueHandle(queue_id_));
   EXPECT_TRUE(payload->setCommandBuffer(command_buffer_a_));
@@ -160,7 +160,7 @@ TEST_F(MpsFenceTokenTest, MoveTransfersOwnership) {
 TEST_F(MpsFenceTokenTest, ClearRemovesAllLeases) {
   mps_res::MpsFenceToken token;
   auto handle = fence_pool_.acquire();
-  auto *payload = handle.payloadPtr();
+  auto *payload = handle.operator->();
   ASSERT_NE(payload, nullptr);
   EXPECT_TRUE(payload->setCommandQueueHandle(queue_id_));
   EXPECT_TRUE(payload->setCommandBuffer(command_buffer_a_));

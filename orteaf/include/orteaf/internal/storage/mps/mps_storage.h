@@ -2,8 +2,10 @@
 
 #include <utility>
 
+#include <orteaf/internal/diagnostics/error/error.h>
 #include <orteaf/internal/execution/allocator/resource/mps/mps_resource.h>
 #include <orteaf/internal/execution/mps/manager/mps_buffer_manager.h>
+#include <orteaf/internal/execution/mps/manager/mps_heap_manager.h>
 #include <orteaf/internal/execution/mps/resource/mps_fence_token.h>
 #include <orteaf/internal/storage/mps/mps_storage_layout.h>
 
@@ -17,6 +19,9 @@ public:
       ::orteaf::internal::execution::mps::manager::MpsBufferManager<
           MpsResource>;
   using BufferLease = BufferManager::StrongBufferLease;
+  using HeapManager =
+      ::orteaf::internal::execution::mps::manager::MpsHeapManager;
+  using HeapLease = HeapManager::HeapLease;
   // TODO: Re-enable fence tokens after revisiting MpsFenceToken ownership/copy
   // rules. using FenceToken =
   // ::orteaf::internal::execution::mps::resource::MpsFenceToken;
@@ -31,7 +36,7 @@ public:
    * @par Example
    * @code
    * auto storage = MpsStorage::builder()
-   *     .withManager(&buffer_manager)
+   *     .withHeapLease(heap_lease)
    *     .withSize(1024)
    *     .withLayout(layout)
    *     .build();
@@ -41,8 +46,8 @@ public:
   public:
     Builder() = default;
 
-    Builder &withManager(BufferManager *manager) {
-      buffer_manager_ = manager;
+    Builder &withHeapLease(const HeapLease &lease) {
+      heap_lease_ = lease;
       return *this;
     }
 
@@ -73,13 +78,18 @@ public:
      * @throws If buffer_manager is null or acquisition fails.
      */
     MpsStorage build() {
-      // TODO: Add validation (null check for manager, size > 0, etc.)
-      BufferLease lease = buffer_manager_->acquire(size_, alignment_);
+      if (!heap_lease_) {
+        ::orteaf::internal::diagnostics::error::throwError(
+            ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+            "MpsStorage requires a valid heap lease");
+      }
+      BufferLease lease =
+          heap_lease_->buffer_manager.acquire(size_, alignment_);
       return MpsStorage(std::move(lease), std::move(layout_));
     }
 
   private:
-    BufferManager *buffer_manager_{nullptr};
+    HeapLease heap_lease_{};
     std::size_t size_{0};
     std::size_t alignment_{0};
     Layout layout_{};

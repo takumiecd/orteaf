@@ -17,6 +17,8 @@
 
 namespace orteaf::internal::execution::mps::manager {
 
+struct DevicePayloadPoolTraits;
+
 // =============================================================================
 // Payload Pool
 // =============================================================================
@@ -135,11 +137,13 @@ private:
 
 public:
   struct Config {
-    DeviceType device{nullptr};
-    SlowOps *ops{nullptr};
-    Core::Config pool{};
-    ::orteaf::internal::execution::mps::manager::MpsFenceManager
-        *fence_manager{nullptr};
+    // PoolManager settings
+    std::size_t control_block_capacity{0};
+    std::size_t control_block_block_size{0};
+    std::size_t control_block_growth_chunk_size{1};
+    std::size_t payload_capacity{0};
+    std::size_t payload_block_size{0};
+    std::size_t payload_growth_chunk_size{1};
   };
 
   // ===========================================================================
@@ -153,7 +157,20 @@ public:
   MpsCommandQueueManager &operator=(MpsCommandQueueManager &&) = default;
   ~MpsCommandQueueManager() = default;
 
-  void configure(const Config &config);
+private:
+  struct InternalConfig {
+    Config public_config{};
+    DeviceType device{nullptr};
+    SlowOps *ops{nullptr};
+    ::orteaf::internal::execution::mps::manager::MpsFenceManager
+        *fence_manager{nullptr};
+  };
+
+  void configure(const InternalConfig &config);
+
+  friend struct DevicePayloadPoolTraits;
+
+public:
   void shutdown();
 
   // ===========================================================================
@@ -173,7 +190,7 @@ public:
       return false;
     }
     const auto handle = lease.payloadHandle();
-    auto *payload = lease.payloadPtr();
+    auto *payload = lease.operator->();
     if (payload == nullptr) {
       if (handle.isValid()) {
         lifetime_.release(handle);
@@ -206,6 +223,18 @@ public:
   }
 
 #if ORTEAF_ENABLE_TEST
+  void configureForTest(const Config &config, DeviceType device,
+                        SlowOps *ops,
+                        ::orteaf::internal::execution::mps::manager::
+                            MpsFenceManager *fence_manager = nullptr) {
+    InternalConfig internal{};
+    internal.public_config = config;
+    internal.device = device;
+    internal.ops = ops;
+    internal.fence_manager = fence_manager;
+    configure(internal);
+  }
+
   bool isConfiguredForTest() const noexcept { return core_.isConfigured(); }
 
   std::size_t payloadPoolSizeForTest() const noexcept {

@@ -71,15 +71,13 @@ protected:
         .WillOnce(::testing::Return(fence_handle_));
 
     mps_mgr::MpsFenceManager::Config config{};
-    config.device = device_;
-    config.ops = &ops_;
-    config.pool.payload_capacity = 1;
-    config.pool.control_block_capacity = 1;
-    config.pool.payload_block_size = 1;
-    config.pool.control_block_block_size = 1;
-    config.pool.payload_growth_chunk_size = 1;
-    config.pool.control_block_growth_chunk_size = 1;
-    fence_manager_.configure(config);
+    config.payload_capacity = 1;
+    config.control_block_capacity = 1;
+    config.payload_block_size = 1;
+    config.control_block_block_size = 1;
+    config.payload_growth_chunk_size = 1;
+    config.control_block_growth_chunk_size = 1;
+    fence_manager_.configureForTest(config, device_, &ops_);
   }
 
   void TearDown() override {
@@ -120,8 +118,8 @@ TEST_F(MpsFenceLifetimeManagerTest,
 
   auto lease = lifetime_manager_.acquire(command_buffer);
   ASSERT_TRUE(lease);
-  ASSERT_NE(lease.payloadPtr(), nullptr);
-  EXPECT_EQ(lease.payloadPtr()->commandBuffer(), command_buffer);
+  ASSERT_NE(lease.operator->(), nullptr);
+  EXPECT_EQ(lease->commandBuffer(), command_buffer);
 
   mps_mgr::MpsFenceManager fence_manager_b;
   EXPECT_FALSE(lifetime_manager_.setFenceManager(&fence_manager_b));
@@ -152,8 +150,8 @@ TEST_F(MpsFenceLifetimeManagerTest, AcquireBindsCommandBufferAndTracks) {
 
   auto lease = lifetime_manager_.acquire(command_buffer);
   ASSERT_TRUE(lease);
-  ASSERT_NE(lease.payloadPtr(), nullptr);
-  EXPECT_EQ(lease.payloadPtr()->commandBuffer(), command_buffer);
+  ASSERT_NE(lease.operator->(), nullptr);
+  EXPECT_EQ(lease->commandBuffer(), command_buffer);
   EXPECT_EQ(lifetime_manager_.size(), 1u);
 }
 
@@ -216,14 +214,14 @@ TEST_F(MpsFenceLifetimeManagerTest,
 
   EXPECT_EQ(lifetime_manager_.releaseReady<FakeFastOpsControlled>(), 2u);
   EXPECT_EQ(lifetime_manager_.size(), 1u);
-  ASSERT_NE(lease_c.payloadPtr(), nullptr);
-  EXPECT_EQ(lease_c.payloadPtr()->commandBuffer(), command_buffer_c);
-  EXPECT_FALSE(lease_c.payloadPtr()->isCompleted());
+  ASSERT_NE(lease_c.operator->(), nullptr);
+  EXPECT_EQ(lease_c->commandBuffer(), command_buffer_c);
+  EXPECT_FALSE(lease_c->isCompleted());
 
   CompletionTracker::markCompleted(command_buffer_c);
   EXPECT_EQ(lifetime_manager_.releaseReady<FakeFastOpsControlled>(), 1u);
   EXPECT_EQ(lifetime_manager_.size(), 0u);
-  EXPECT_TRUE(lease_c.payloadPtr()->isCompleted());
+  EXPECT_TRUE(lease_c->isCompleted());
 }
 
 TEST_F(MpsFenceLifetimeManagerTest, ClearThrowsWhenAnyIncomplete) {
@@ -276,10 +274,10 @@ TEST_F(MpsFenceLifetimeManagerTest, ClearReleasesAllWhenCompleted) {
 
   EXPECT_EQ(lifetime_manager_.size(), 0u);
   EXPECT_EQ(lifetime_manager_.storageSizeForTest(), 0u);
-  ASSERT_NE(lease_a.payloadPtr(), nullptr);
-  ASSERT_NE(lease_b.payloadPtr(), nullptr);
-  EXPECT_TRUE(lease_a.payloadPtr()->isCompleted());
-  EXPECT_TRUE(lease_b.payloadPtr()->isCompleted());
+  ASSERT_NE(lease_a.operator->(), nullptr);
+  ASSERT_NE(lease_b.operator->(), nullptr);
+  EXPECT_TRUE(lease_a->isCompleted());
+  EXPECT_TRUE(lease_b->isCompleted());
 }
 
 TEST_F(MpsFenceLifetimeManagerTest, WaitUntilReadyReleasesAll) {
@@ -301,10 +299,10 @@ TEST_F(MpsFenceLifetimeManagerTest, WaitUntilReadyReleasesAll) {
   EXPECT_EQ(lifetime_manager_.waitUntilReady<FakeFastOpsControlled>(), 2u);
   EXPECT_EQ(lifetime_manager_.size(), 0u);
   EXPECT_EQ(lifetime_manager_.storageSizeForTest(), 0u);
-  ASSERT_NE(lease_a.payloadPtr(), nullptr);
-  ASSERT_NE(lease_b.payloadPtr(), nullptr);
-  EXPECT_TRUE(lease_a.payloadPtr()->isCompleted());
-  EXPECT_TRUE(lease_b.payloadPtr()->isCompleted());
+  ASSERT_NE(lease_a.operator->(), nullptr);
+  ASSERT_NE(lease_b.operator->(), nullptr);
+  EXPECT_TRUE(lease_a->isCompleted());
+  EXPECT_TRUE(lease_b->isCompleted());
 }
 
 TEST_F(MpsFenceLifetimeManagerTest,

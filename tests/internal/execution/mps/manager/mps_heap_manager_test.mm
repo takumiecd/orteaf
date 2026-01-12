@@ -50,18 +50,21 @@ protected:
   makeConfig(std::size_t payload_capacity = 0,
              std::size_t control_block_capacity = 0) {
     mps_rt::MpsHeapManager::Config config{};
-    config.device = this->adapter().device();
-    config.device_handle = mps::MpsDeviceHandle{0};
-    config.library_manager = nullptr;
-    config.ops = this->getOps();
-    config.pool.payload_capacity = payload_capacity;
-    config.pool.control_block_capacity = control_block_capacity;
-    config.pool.payload_block_size =
+    config.buffer_config.payload_capacity = payload_capacity;
+    config.buffer_config.control_block_capacity = control_block_capacity;
+    config.buffer_config.payload_block_size =
         payload_capacity == 0 ? 1u : payload_capacity;
-    config.pool.control_block_block_size =
+    config.buffer_config.control_block_block_size =
         control_block_capacity == 0 ? 1u : control_block_capacity;
-    config.pool.payload_growth_chunk_size = 1;
-    config.pool.control_block_growth_chunk_size = 1;
+    config.buffer_config.payload_growth_chunk_size = 1;
+    config.buffer_config.control_block_growth_chunk_size = 1;
+    config.payload_capacity = payload_capacity;
+    config.control_block_capacity = control_block_capacity;
+    config.payload_block_size = payload_capacity == 0 ? 1u : payload_capacity;
+    config.control_block_block_size =
+        control_block_capacity == 0 ? 1u : control_block_capacity;
+    config.payload_growth_chunk_size = 1;
+    config.control_block_growth_chunk_size = 1;
     return config;
   }
 
@@ -112,7 +115,8 @@ TYPED_TEST(MpsHeapManagerTypedTest, DefaultGrowthChunkSizeIsOne) {
   auto config = this->makeConfig();
 
   // Act
-  manager.configure(config);
+  manager.configureForTest(config, this->adapter().device(),
+                           mps::MpsDeviceHandle{0}, nullptr, this->getOps());
 
   // Assert: Default control block growth chunk size is 1
   EXPECT_EQ(manager.controlBlockGrowthChunkSizeForTest(), 1u);
@@ -139,11 +143,13 @@ TYPED_TEST(MpsHeapManagerTypedTest, ConfigureRejectsNullDevice) {
 
   // Arrange
   auto config = this->makeConfig();
-  config.device = nullptr;
-
   // Act & Assert: Null device is rejected
   ExpectError(diag_error::OrteafErrc::InvalidArgument,
-              [&] { manager.configure(config); });
+              [&] {
+                manager.configureForTest(config, nullptr,
+                                         mps::MpsDeviceHandle{0}, nullptr,
+                                         this->getOps());
+              });
 }
 
 TYPED_TEST(MpsHeapManagerTypedTest, ConfigureRejectsNullOps) {
@@ -151,11 +157,15 @@ TYPED_TEST(MpsHeapManagerTypedTest, ConfigureRejectsNullOps) {
 
   // Arrange
   auto config = this->makeConfig();
-  config.ops = nullptr;
+  const auto device = this->adapter().device();
 
   // Act & Assert: Null ops is rejected
   ExpectError(diag_error::OrteafErrc::InvalidArgument,
-              [&] { manager.configure(config); });
+              [&] {
+                manager.configureForTest(config, device,
+                                         mps::MpsDeviceHandle{0}, nullptr,
+                                         nullptr);
+              });
 }
 
 TYPED_TEST(MpsHeapManagerTypedTest, CapacityReflectsConfiguredPool) {
@@ -165,7 +175,9 @@ TYPED_TEST(MpsHeapManagerTypedTest, CapacityReflectsConfiguredPool) {
   EXPECT_EQ(manager.payloadPoolCapacityForTest(), 0u);
 
   // After initialization: capacity is at least the configured size
-  manager.configure(this->makeConfig(2, 2));
+  manager.configureForTest(this->makeConfig(2, 2),
+                           this->adapter().device(),
+                           mps::MpsDeviceHandle{0}, nullptr, this->getOps());
   EXPECT_GE(manager.payloadPoolCapacityForTest(), 2u);
 
   // After shutdown: capacity is preserved (FixedSlotStore behavior)
@@ -182,8 +194,9 @@ TYPED_TEST(MpsHeapManagerTypedTest, GrowthChunkControlsPoolExpansion) {
 
   // Arrange
   auto config = this->makeConfig(0, 0);
-  config.pool.payload_growth_chunk_size = 3;
-  manager.configure(config);
+  config.payload_growth_chunk_size = 3;
+  manager.configureForTest(config, this->adapter().device(),
+                           mps::MpsDeviceHandle{0}, nullptr, this->getOps());
 
   const auto key = this->defaultKey();
   if constexpr (TypeParam::is_mock) {
@@ -208,7 +221,9 @@ TYPED_TEST(MpsHeapManagerTypedTest, GrowthChunkControlsPoolExpansion) {
 
 TYPED_TEST(MpsHeapManagerTypedTest, GetOrCreateCachesByDescriptor) {
   auto &manager = this->manager();
-  manager.configure(this->makeConfig(1, 1));
+  manager.configureForTest(this->makeConfig(1, 1),
+                           this->adapter().device(),
+                           mps::MpsDeviceHandle{0}, nullptr, this->getOps());
 
   // Arrange
   const auto key = this->defaultKey();
@@ -239,7 +254,9 @@ TYPED_TEST(MpsHeapManagerTypedTest, GetOrCreateCachesByDescriptor) {
 
 TYPED_TEST(MpsHeapManagerTypedTest, DistinctDescriptorsAllocateSeparateHeaps) {
   auto &manager = this->manager();
-  manager.configure(this->makeConfig(0, 0));
+  manager.configureForTest(this->makeConfig(0, 0),
+                           this->adapter().device(),
+                           mps::MpsDeviceHandle{0}, nullptr, this->getOps());
 
   // Arrange: Create two different keys
   auto key_a = this->defaultKey(0x1800);
@@ -279,7 +296,9 @@ TYPED_TEST(MpsHeapManagerTypedTest, DistinctDescriptorsAllocateSeparateHeaps) {
 
 TYPED_TEST(MpsHeapManagerTypedTest, ReleaseAllowsReuseWithoutRecreation) {
   auto &manager = this->manager();
-  manager.configure(this->makeConfig(1, 1));
+  manager.configureForTest(this->makeConfig(1, 1),
+                           this->adapter().device(),
+                           mps::MpsDeviceHandle{0}, nullptr, this->getOps());
 
   // Arrange
   const auto key = this->defaultKey();
@@ -310,7 +329,9 @@ TYPED_TEST(MpsHeapManagerTypedTest, ReleaseAllowsReuseWithoutRecreation) {
 
 TYPED_TEST(MpsHeapManagerTypedTest, ManualReleaseInvalidatesLease) {
   auto &manager = this->manager();
-  manager.configure(this->makeConfig(1, 1));
+  manager.configureForTest(this->makeConfig(1, 1),
+                           this->adapter().device(),
+                           mps::MpsDeviceHandle{0}, nullptr, this->getOps());
 
   // Arrange
   const auto key = this->defaultKey();
@@ -338,7 +359,9 @@ TYPED_TEST(MpsHeapManagerTypedTest, ManualReleaseInvalidatesLease) {
 
 TYPED_TEST(MpsHeapManagerTypedTest, DescriptorSizeMustBePositive) {
   auto &manager = this->manager();
-  manager.configure(this->makeConfig(0, 0));
+  manager.configureForTest(this->makeConfig(0, 0),
+                           this->adapter().device(),
+                           mps::MpsDeviceHandle{0}, nullptr, this->getOps());
 
   // Arrange: Create invalid key
   mps_rt::HeapDescriptorKey key{};
@@ -357,7 +380,9 @@ TYPED_TEST(MpsHeapManagerTypedTest, DescriptorSizeMustBePositive) {
 
 TYPED_TEST(MpsHeapManagerTypedTest, ShutdownDestroysRemainingHeaps) {
   auto &manager = this->manager();
-  manager.configure(this->makeConfig(1, 1));
+  manager.configureForTest(this->makeConfig(1, 1),
+                           this->adapter().device(),
+                           mps::MpsDeviceHandle{0}, nullptr, this->getOps());
 
   // Arrange
   const auto key = this->defaultKey(0x1F00);
@@ -387,7 +412,9 @@ TYPED_TEST(MpsHeapManagerTypedTest, BufferManagerAccessFromLease) {
   auto &manager = this->manager();
 
   // Arrange
-  manager.configure(this->makeConfig(1, 1));
+  manager.configureForTest(this->makeConfig(1, 1),
+                           this->adapter().device(),
+                           mps::MpsDeviceHandle{0}, nullptr, this->getOps());
 
   const auto key = this->defaultKey(0x2000);
   const auto descriptor = makeHeapDescriptor(0x2100);
@@ -416,7 +443,9 @@ TYPED_TEST(MpsHeapManagerTypedTest, BufferManagerAccessFromKey) {
   auto &manager = this->manager();
 
   // Arrange
-  manager.configure(this->makeConfig(1, 1));
+  manager.configureForTest(this->makeConfig(1, 1),
+                           this->adapter().device(),
+                           mps::MpsDeviceHandle{0}, nullptr, this->getOps());
 
   const auto key = this->defaultKey(0x3000);
   const auto descriptor = makeHeapDescriptor(0x3100);
@@ -455,7 +484,9 @@ TYPED_TEST(MpsHeapManagerTypedTest, BufferManagerAccessWithInvalidKeyThrows) {
   auto &manager = this->manager();
 
   // Arrange
-  manager.configure(this->makeConfig(1, 1));
+  manager.configureForTest(this->makeConfig(1, 1),
+                           this->adapter().device(),
+                           mps::MpsDeviceHandle{0}, nullptr, this->getOps());
 
   // Create invalid key
   mps_rt::HeapDescriptorKey key{};

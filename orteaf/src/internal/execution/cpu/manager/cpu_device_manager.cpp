@@ -24,7 +24,7 @@ CpuDeviceResource::operator=(CpuDeviceResource &&other) noexcept {
 CpuDeviceResource::~CpuDeviceResource() { reset(nullptr); }
 
 void CpuDeviceResource::reset([[maybe_unused]] SlowOps *slow_ops) noexcept {
-  // Shutdown sub-managers here when added
+  buffer_manager.shutdown();
   arch = ::orteaf::internal::architecture::Architecture::CpuGeneric;
   is_alive = false;
 }
@@ -32,6 +32,7 @@ void CpuDeviceResource::reset([[maybe_unused]] SlowOps *slow_ops) noexcept {
 void CpuDeviceResource::moveFrom(CpuDeviceResource &&other) noexcept {
   arch = other.arch;
   is_alive = other.is_alive;
+  buffer_manager = std::move(other.buffer_manager);
   other.arch = ::orteaf::internal::architecture::Architecture::CpuGeneric;
   other.is_alive = false;
 }
@@ -54,7 +55,11 @@ bool DevicePayloadPoolTraits::create(Payload &payload, const Request &request,
   payload.arch = context.ops->detectArchitecture(request.handle);
   payload.is_alive = true;
 
-  // Initialize sub-managers here when added
+  CpuBufferManager::InternalConfig buffer_config{};
+  buffer_config.public_config = context.buffer_config;
+  buffer_config.ops = context.ops;
+  payload.buffer_manager.configure(buffer_config);
+
   return true;
 }
 
@@ -67,7 +72,7 @@ void DevicePayloadPoolTraits::destroy(Payload &payload, const Request &,
 // CpuDeviceManager Implementation
 // =============================================================================
 
-void CpuDeviceManager::configure(const Config &config) {
+void CpuDeviceManager::configure(const InternalConfig &config) {
   shutdown();
 
   if (config.ops == nullptr) {
@@ -77,17 +82,18 @@ void CpuDeviceManager::configure(const Config &config) {
   }
 
   ops_ = config.ops;
+  const auto &cfg = config.public_config;
 
   // Setup pool configuration
-  auto pool_config = config.pool;
-  // CPU has exactly 1 device
-  pool_config.payload_capacity = 1;
-  pool_config.payload_block_size = 1;
-  if (pool_config.control_block_capacity == 0) {
-    pool_config.control_block_capacity = 4;
+  const std::size_t payload_capacity = 1;
+  const std::size_t payload_block_size = 1;
+  std::size_t control_block_capacity = cfg.control_block_capacity;
+  if (control_block_capacity == 0) {
+    control_block_capacity = 4;
   }
-  if (pool_config.control_block_block_size == 0) {
-    pool_config.control_block_block_size = 4;
+  std::size_t control_block_block_size = cfg.control_block_block_size;
+  if (control_block_block_size == 0) {
+    control_block_block_size = 4;
   }
 
   DevicePayloadPoolTraits::Request request{};
@@ -95,8 +101,20 @@ void CpuDeviceManager::configure(const Config &config) {
 
   DevicePayloadPoolTraits::Context context{};
   context.ops = ops_;
+  context.buffer_config = cfg.buffer_config;
 
-  core_.configure(pool_config, request, context);
+  Core::Builder<DevicePayloadPoolTraits::Request,
+                DevicePayloadPoolTraits::Context>{}
+      .withControlBlockCapacity(control_block_capacity)
+      .withControlBlockBlockSize(control_block_block_size)
+      .withControlBlockGrowthChunkSize(
+          cfg.control_block_growth_chunk_size)
+      .withPayloadCapacity(payload_capacity)
+      .withPayloadBlockSize(payload_block_size)
+      .withPayloadGrowthChunkSize(cfg.payload_growth_chunk_size)
+      .withRequest(request)
+      .withContext(context)
+      .configure(core_);
   core_.createAllPayloads(request, context);
 }
 

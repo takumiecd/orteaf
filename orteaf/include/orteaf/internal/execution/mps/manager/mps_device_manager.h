@@ -24,6 +24,8 @@
 
 namespace orteaf::internal::execution::mps::manager {
 
+class MpsRuntimeManager;
+
 // =============================================================================
 // Device Resource
 // =============================================================================
@@ -126,31 +128,41 @@ struct DevicePayloadPoolTraits {
       return false;
     }
     payload.arch = context.ops->detectArchitecture(request.handle);
-    auto fence_config = context.fence_config;
+    MpsFenceManager::InternalConfig fence_config{};
+    fence_config.public_config = context.fence_config;
     fence_config.device = device;
     fence_config.ops = context.ops;
     payload.fence_pool.configure(fence_config);
 
-    auto command_queue_config = context.command_queue_config;
+    MpsCommandQueueManager::InternalConfig command_queue_config{};
+    command_queue_config.public_config = context.command_queue_config;
     command_queue_config.device = device;
     command_queue_config.ops = context.ops;
     command_queue_config.fence_manager = &payload.fence_pool;
     payload.command_queue_manager.configure(command_queue_config);
-    auto library_config = context.library_config;
+
+    MpsLibraryManager::InternalConfig library_config{};
+    library_config.public_config = context.library_config;
     library_config.device = device;
     library_config.ops = context.ops;
     payload.library_manager.configure(library_config);
-    auto heap_config = context.heap_config;
+
+    MpsHeapManager::InternalConfig heap_config{};
+    heap_config.public_config = context.heap_config;
     heap_config.device = device;
     heap_config.device_handle = request.handle;
     heap_config.library_manager = &payload.library_manager;
     heap_config.ops = context.ops;
     payload.heap_manager.configure(heap_config);
-    auto graph_config = context.graph_config;
+
+    MpsGraphManager::InternalConfig graph_config{};
+    graph_config.public_config = context.graph_config;
     graph_config.device = device;
     graph_config.ops = context.ops;
     payload.graph_manager.configure(graph_config);
-    auto event_config = context.event_config;
+
+    MpsEventManager::InternalConfig event_config{};
+    event_config.public_config = context.event_config;
     event_config.device = device;
     event_config.ops = context.ops;
     payload.event_pool.configure(event_config);
@@ -218,8 +230,13 @@ public:
                                                                DeviceLease>;
 
   struct Config {
-    SlowOps *ops{nullptr};
-    Core::Config pool{};
+    // PoolManager settings
+    std::size_t control_block_capacity{0};
+    std::size_t control_block_block_size{0};
+    std::size_t control_block_growth_chunk_size{1};
+    std::size_t payload_capacity{0};
+    std::size_t payload_block_size{0};
+    std::size_t payload_growth_chunk_size{1};
     MpsCommandQueueManager::Config command_queue_config{};
     MpsEventManager::Config event_config{};
     MpsFenceManager::Config fence_config{};
@@ -235,10 +252,20 @@ public:
   MpsDeviceManager &operator=(MpsDeviceManager &&) = default;
   ~MpsDeviceManager() = default;
 
+private:
+  struct InternalConfig {
+    Config public_config{};
+    SlowOps *ops{nullptr};
+  };
+
+  void configure(const InternalConfig &config);
+
+  friend class MpsRuntimeManager;
+
+public:
   // =========================================================================
   // Lifecycle
   // =========================================================================
-  void configure(const Config &config);
   void shutdown();
 
   // =========================================================================
@@ -247,6 +274,13 @@ public:
   DeviceLease acquire(DeviceHandle handle);
 
 #if ORTEAF_ENABLE_TEST
+  void configureForTest(const Config &config, SlowOps *ops) {
+    InternalConfig internal{};
+    internal.public_config = config;
+    internal.ops = ops;
+    configure(internal);
+  }
+
   std::size_t getDeviceCountForTest() const noexcept {
     return core_.payloadPoolSizeForTest();
   }

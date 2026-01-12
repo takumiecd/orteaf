@@ -39,49 +39,47 @@ mps_wrapper::MpsCommandQueue_t makeQueue(std::uintptr_t value) {
 mps_rt::MpsDeviceManager::Config
 makeConfig(mps_rt::MpsDeviceManager::SlowOps *ops) {
   mps_rt::MpsDeviceManager::Config config{};
-  config.ops = ops;
   const int count = ops ? ops->getDeviceCount() : 0;
   const std::size_t capacity =
       count <= 0 ? 0u : static_cast<std::size_t>(count);
-  config.pool.payload_capacity = capacity;
-  config.pool.control_block_capacity = capacity;
-  config.pool.payload_block_size = capacity == 0 ? 1u : capacity;
-  config.pool.control_block_block_size = capacity == 0 ? 1u : capacity;
-  config.pool.payload_growth_chunk_size = 1;
-  config.pool.control_block_growth_chunk_size = 1;
-  config.command_queue_config.pool.payload_block_size = 1;
-  config.command_queue_config.pool.control_block_block_size = 1;
-  config.command_queue_config.pool.payload_growth_chunk_size = 1;
-  config.command_queue_config.pool.control_block_growth_chunk_size = 1;
-  config.event_config.pool.payload_block_size = 1;
-  config.event_config.pool.control_block_block_size = 1;
-  config.event_config.pool.payload_growth_chunk_size = 1;
-  config.event_config.pool.control_block_growth_chunk_size = 1;
-  config.fence_config.pool.payload_block_size = 1;
-  config.fence_config.pool.control_block_block_size = 1;
-  config.fence_config.pool.payload_growth_chunk_size = 1;
-  config.fence_config.pool.control_block_growth_chunk_size = 1;
-  config.graph_config.pool.payload_block_size = 1;
-  config.graph_config.pool.control_block_block_size = 1;
-  config.graph_config.pool.payload_growth_chunk_size = 1;
-  config.graph_config.pool.control_block_growth_chunk_size = 1;
-  config.library_config.pool.payload_block_size = 1;
-  config.library_config.pool.control_block_block_size = 1;
-  config.library_config.pool.payload_growth_chunk_size = 1;
-  config.library_config.pool.control_block_growth_chunk_size = 1;
-  config.library_config.pipeline_config.pool.payload_block_size = 1;
-  config.library_config.pipeline_config.pool.control_block_block_size = 1;
-  config.library_config.pipeline_config.pool.payload_growth_chunk_size = 1;
-  config.library_config.pipeline_config.pool.control_block_growth_chunk_size =
-      1;
-  config.heap_config.pool.payload_block_size = 1;
-  config.heap_config.pool.control_block_block_size = 1;
-  config.heap_config.pool.payload_growth_chunk_size = 1;
-  config.heap_config.pool.control_block_growth_chunk_size = 1;
-  config.heap_config.buffer_config.pool.payload_block_size = 1;
-  config.heap_config.buffer_config.pool.control_block_block_size = 1;
-  config.heap_config.buffer_config.pool.payload_growth_chunk_size = 1;
-  config.heap_config.buffer_config.pool.control_block_growth_chunk_size = 1;
+  config.payload_capacity = capacity;
+  config.control_block_capacity = capacity;
+  config.payload_block_size = capacity == 0 ? 1u : capacity;
+  config.control_block_block_size = capacity == 0 ? 1u : capacity;
+  config.payload_growth_chunk_size = 1;
+  config.control_block_growth_chunk_size = 1;
+  config.command_queue_config.payload_block_size = 1;
+  config.command_queue_config.control_block_block_size = 1;
+  config.command_queue_config.payload_growth_chunk_size = 1;
+  config.command_queue_config.control_block_growth_chunk_size = 1;
+  config.event_config.payload_block_size = 1;
+  config.event_config.control_block_block_size = 1;
+  config.event_config.payload_growth_chunk_size = 1;
+  config.event_config.control_block_growth_chunk_size = 1;
+  config.fence_config.payload_block_size = 1;
+  config.fence_config.control_block_block_size = 1;
+  config.fence_config.payload_growth_chunk_size = 1;
+  config.fence_config.control_block_growth_chunk_size = 1;
+  config.graph_config.payload_block_size = 1;
+  config.graph_config.control_block_block_size = 1;
+  config.graph_config.payload_growth_chunk_size = 1;
+  config.graph_config.control_block_growth_chunk_size = 1;
+  config.library_config.payload_block_size = 1;
+  config.library_config.control_block_block_size = 1;
+  config.library_config.payload_growth_chunk_size = 1;
+  config.library_config.control_block_growth_chunk_size = 1;
+  config.library_config.pipeline_config.payload_block_size = 1;
+  config.library_config.pipeline_config.control_block_block_size = 1;
+  config.library_config.pipeline_config.payload_growth_chunk_size = 1;
+  config.library_config.pipeline_config.control_block_growth_chunk_size = 1;
+  config.heap_config.payload_block_size = 1;
+  config.heap_config.control_block_block_size = 1;
+  config.heap_config.payload_growth_chunk_size = 1;
+  config.heap_config.control_block_growth_chunk_size = 1;
+  config.heap_config.buffer_config.payload_block_size = 1;
+  config.heap_config.buffer_config.control_block_block_size = 1;
+  config.heap_config.buffer_config.payload_growth_chunk_size = 1;
+  config.heap_config.buffer_config.control_block_growth_chunk_size = 1;
   return config;
 }
 
@@ -152,7 +150,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, InitializeMarksManagerInitialized) {
   }
 
   // Act
-  manager.configure(makeConfig(this->getOps()));
+  manager.configureForTest(makeConfig(this->getOps()), this->getOps());
 
   // Assert
   EXPECT_TRUE(manager.isConfiguredForTest());
@@ -173,7 +171,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, InitializeWithNullOpsThrows) {
 
   // Act & Assert
   ExpectError(diag_error::OrteafErrc::InvalidArgument,
-              [&] { manager.configure(makeConfig(nullptr)); });
+              [&] { manager.configureForTest(makeConfig(nullptr), nullptr); });
 }
 
 TYPED_TEST(MpsDeviceManagerTypedTest, InitializeWithZeroDevicesSucceeds) {
@@ -186,7 +184,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, InitializeWithZeroDevicesSucceeds) {
   this->adapter().expectGetDeviceCount(0);
 
   // Act
-  manager.configure(makeConfig(this->getOps()));
+  manager.configureForTest(makeConfig(this->getOps()), this->getOps());
 
   // Assert
   EXPECT_TRUE(manager.isConfiguredForTest());
@@ -228,7 +226,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, GetDeviceReturnsRegisteredHandle) {
       {expected_handles[0], expected_handles[1]});
 
   // Act
-  manager.configure(makeConfig(this->getOps()));
+  manager.configureForTest(makeConfig(this->getOps()), this->getOps());
   const auto count = manager.getDeviceCountForTest();
   if (expected_count >= 0) {
     EXPECT_EQ(count, static_cast<std::size_t>(expected_count));
@@ -240,7 +238,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, GetDeviceReturnsRegisteredHandle) {
   // Assert: Verify each device
   for (std::uint32_t idx = 0; idx < count; ++idx) {
     const auto device = manager.acquire(mps::MpsDeviceHandle{idx});
-    auto *resource = device.payloadPtr();
+    auto *resource = device.operator->();
     EXPECT_NE(resource, nullptr);
     EXPECT_EQ(resource->device != nullptr, static_cast<bool>(device));
     if constexpr (TypeParam::is_mock) {
@@ -280,7 +278,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, GetArchMatchesReportedArchitecture) {
   }
 
   // Act
-  manager.configure(makeConfig(this->getOps()));
+  manager.configureForTest(makeConfig(this->getOps()), this->getOps());
   const auto count = manager.getDeviceCountForTest();
   if (count == 0u) {
     GTEST_SKIP() << "No MPS devices available";
@@ -289,7 +287,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, GetArchMatchesReportedArchitecture) {
   // Assert: Verify architecture for each device
   for (std::uint32_t idx = 0; idx < count; ++idx) {
     const auto device = manager.acquire(mps::MpsDeviceHandle{idx});
-    auto *resource = device.payloadPtr();
+    auto *resource = device.operator->();
     EXPECT_NE(resource, nullptr);
     const auto arch = resource->arch;
     if constexpr (TypeParam::is_mock) {
@@ -328,7 +326,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, InvalidDeviceIdRejectsAccess) {
   });
   this->adapter().expectReleaseDevices({device0});
 
-  manager.configure(makeConfig(this->getOps()));
+  manager.configureForTest(makeConfig(this->getOps()), this->getOps());
   const auto invalid = mps::MpsDeviceHandle{
       static_cast<std::uint32_t>(manager.getDeviceCountForTest() + 1)};
 
@@ -362,7 +360,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, IsAliveReflectsReportedDeviceCount) {
   }
 
   // Act
-  manager.configure(makeConfig(this->getOps()));
+  manager.configureForTest(makeConfig(this->getOps()), this->getOps());
 
   const std::size_t count = manager.getDeviceCountForTest();
   if (const char *expected_env = std::getenv(ORTEAF_MPS_ENV_COUNT);
@@ -404,7 +402,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, DeviceNotAliveThrowsOnAccess) {
   this->adapter().expectDetectArchitectures({});
 
   // Act
-  manager.configure(makeConfig(this->getOps()));
+  manager.configureForTest(makeConfig(this->getOps()), this->getOps());
 
   // Assert
   EXPECT_EQ(manager.getDeviceCountForTest(), 1u);
@@ -437,7 +435,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, ReinitializeReleasesPreviousDevices) {
       {mps::MpsDeviceHandle{1}, architecture::Architecture::MpsM4},
   });
 
-  manager.configure(makeConfig(this->getOps()));
+  manager.configureForTest(makeConfig(this->getOps()), this->getOps());
   const auto initial_count = manager.getDeviceCountForTest();
   if (initial_count == 0u) {
     manager.shutdown();
@@ -446,7 +444,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, ReinitializeReleasesPreviousDevices) {
 
   if constexpr (TypeParam::is_mock) {
     const auto device = manager.acquire(mps::MpsDeviceHandle{0});
-    auto *resource = device.payloadPtr();
+    auto *resource = device.operator->();
     ASSERT_NE(resource, nullptr);
     EXPECT_EQ(resource->device, first0);
   }
@@ -460,14 +458,14 @@ TYPED_TEST(MpsDeviceManagerTypedTest, ReinitializeReleasesPreviousDevices) {
       {mps::MpsDeviceHandle{1}, architecture::Architecture::MpsM3},
   });
 
-  manager.configure(makeConfig(this->getOps()));
+  manager.configureForTest(makeConfig(this->getOps()), this->getOps());
 
   // Assert
   const auto reinit_count = manager.getDeviceCountForTest();
   EXPECT_EQ(reinit_count, initial_count);
   if constexpr (TypeParam::is_mock) {
     const auto device = manager.acquire(mps::MpsDeviceHandle{0});
-    auto *resource = device.payloadPtr();
+    auto *resource = device.operator->();
     ASSERT_NE(resource, nullptr);
     EXPECT_EQ(resource->device, second0);
     EXPECT_NE(second0, first0);
@@ -498,7 +496,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, ShutdownClearsDeviceState) {
     this->adapter().expectReleaseDevices({device0, device1});
   }
 
-  manager.configure(makeConfig(this->getOps()));
+  manager.configureForTest(makeConfig(this->getOps()), this->getOps());
   const auto count = manager.getDeviceCountForTest();
   if (count == 0u) {
     GTEST_SKIP() << "No MPS devices available";
@@ -530,7 +528,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, ShutdownThrowsWhenActiveLeaseExists) {
     this->adapter().expectReleaseDevices({device0});
   }
 
-  manager.configure(makeConfig(this->getOps()));
+  manager.configureForTest(makeConfig(this->getOps()), this->getOps());
   if (manager.getDeviceCountForTest() == 0u) {
     GTEST_SKIP() << "No MPS devices available";
   }
@@ -567,7 +565,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, MultipleShutdownsAreIdempotent) {
   });
   this->adapter().expectReleaseDevices({device0});
 
-  manager.configure(makeConfig(this->getOps()));
+  manager.configureForTest(makeConfig(this->getOps()), this->getOps());
   EXPECT_TRUE(manager.isConfiguredForTest());
 
   // Act & Assert: Multiple shutdowns are safe
@@ -587,17 +585,20 @@ TYPED_TEST(MpsDeviceManagerTypedTest,
   auto &manager = this->manager();
   constexpr std::size_t kCapacity = 2;
 
-  // Arrange
-  auto config = makeConfig(this->getOps());
-  config.command_queue_config.pool.payload_capacity = kCapacity;
-  config.command_queue_config.pool.control_block_capacity = kCapacity;
-  config.command_queue_config.pool.payload_block_size = kCapacity;
-  config.command_queue_config.pool.control_block_block_size = kCapacity;
-  config.command_queue_config.pool.payload_growth_chunk_size = 1;
-  config.command_queue_config.pool.control_block_growth_chunk_size = 1;
-
+  // Arrange: Set up mock expectations BEFORE makeConfig, since makeConfig
+  // queries device count to set payload_capacity
   const auto device0 = makeDevice(0x500);
   const auto device1 = makeDevice(0x600);
+  this->adapter().expectGetDeviceCount(2);
+
+  auto config = makeConfig(this->getOps());
+  config.command_queue_config.payload_capacity = kCapacity;
+  config.command_queue_config.control_block_capacity = kCapacity;
+  config.command_queue_config.payload_block_size = kCapacity;
+  config.command_queue_config.control_block_block_size = kCapacity;
+  config.command_queue_config.payload_growth_chunk_size = 1;
+  config.command_queue_config.control_block_growth_chunk_size = 1;
+
   this->adapter().expectGetDeviceCount(2);
   this->adapter().expectGetDevices({{0, device0}, {1, device1}});
   this->adapter().expectDetectArchitectures({
@@ -613,7 +614,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest,
       {makeQueue(0x900), makeQueue(0x901), makeQueue(0x902), makeQueue(0x903)});
 
   // Act
-  manager.configure(config);
+  manager.configureForTest(config, this->getOps());
   const auto count = manager.getDeviceCountForTest();
   if (count == 0u) {
     GTEST_SKIP() << "No MPS devices available";
@@ -624,7 +625,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest,
        ++index) {
     const auto id = mps::MpsDeviceHandle{index};
     const auto device = manager.acquire(id);
-    auto *resource = device.payloadPtr();
+    auto *resource = device.operator->();
     ASSERT_NE(resource, nullptr);
     EXPECT_EQ(resource->command_queue_manager.payloadPoolSizeForTest(),
               kCapacity);
@@ -639,14 +640,17 @@ TYPED_TEST(MpsDeviceManagerTypedTest,
   auto &manager = this->manager();
   constexpr std::size_t kCapacity = 4;
 
-  // Arrange
-  auto config = makeConfig(this->getOps());
-  config.heap_config.pool.payload_capacity = kCapacity;
-  config.heap_config.pool.control_block_capacity = kCapacity;
-  config.heap_config.pool.payload_block_size = kCapacity;
-  config.heap_config.pool.control_block_block_size = kCapacity;
-
+  // Arrange: Set up mock expectations BEFORE makeConfig, since makeConfig
+  // queries device count to set payload_capacity
   const auto device0 = makeDevice(0x700);
+  this->adapter().expectGetDeviceCount(1);
+
+  auto config = makeConfig(this->getOps());
+  config.heap_config.payload_capacity = kCapacity;
+  config.heap_config.control_block_capacity = kCapacity;
+  config.heap_config.payload_block_size = kCapacity;
+  config.heap_config.control_block_block_size = kCapacity;
+
   this->adapter().expectGetDeviceCount(1);
   this->adapter().expectGetDevices({{0, device0}});
   this->adapter().expectDetectArchitectures({
@@ -655,7 +659,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest,
   this->adapter().expectReleaseDevices({device0});
 
   // Act
-  manager.configure(config);
+  manager.configureForTest(config, this->getOps());
   const auto count = manager.getDeviceCountForTest();
   if (count == 0u) {
     GTEST_SKIP() << "No MPS devices available";
@@ -666,7 +670,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest,
        ++index) {
     const auto handle = mps::MpsDeviceHandle{index};
     const auto device = manager.acquire(handle);
-    auto *resource = device.payloadPtr();
+    auto *resource = device.operator->();
     ASSERT_NE(resource, nullptr);
     EXPECT_EQ(resource->heap_manager.payloadPoolSizeForTest(), kCapacity);
   }
@@ -680,14 +684,17 @@ TYPED_TEST(MpsDeviceManagerTypedTest,
   auto &manager = this->manager();
   constexpr std::size_t kCapacity = 2;
 
-  // Arrange
-  auto config = makeConfig(this->getOps());
-  config.library_config.pool.payload_capacity = kCapacity;
-  config.library_config.pool.control_block_capacity = kCapacity;
-  config.library_config.pool.payload_block_size = kCapacity;
-  config.library_config.pool.control_block_block_size = kCapacity;
-
+  // Arrange: Set up mock expectations BEFORE makeConfig, since makeConfig
+  // queries device count to set payload_capacity
   const auto device0 = makeDevice(0x750);
+  this->adapter().expectGetDeviceCount(1);
+
+  auto config = makeConfig(this->getOps());
+  config.library_config.payload_capacity = kCapacity;
+  config.library_config.control_block_capacity = kCapacity;
+  config.library_config.payload_block_size = kCapacity;
+  config.library_config.control_block_block_size = kCapacity;
+
   this->adapter().expectGetDeviceCount(1);
   this->adapter().expectGetDevices({{0, device0}});
   this->adapter().expectDetectArchitectures({
@@ -696,7 +703,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest,
   this->adapter().expectReleaseDevices({device0});
 
   // Act
-  manager.configure(config);
+  manager.configureForTest(config, this->getOps());
   const auto count = manager.getDeviceCountForTest();
   if (count == 0u) {
     GTEST_SKIP() << "No MPS devices available";
@@ -707,7 +714,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest,
        ++index) {
     const auto id = mps::MpsDeviceHandle{index};
     const auto device = manager.acquire(id);
-    auto *resource = device.payloadPtr();
+    auto *resource = device.operator->();
     ASSERT_NE(resource, nullptr);
     EXPECT_EQ(resource->library_manager.payloadPoolSizeForTest(), kCapacity);
   }
@@ -732,7 +739,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, EventPoolAccessSucceeds) {
   });
   this->adapter().expectReleaseDevices({device0});
 
-  manager.configure(makeConfig(this->getOps()));
+  manager.configureForTest(makeConfig(this->getOps()), this->getOps());
   const auto count = manager.getDeviceCountForTest();
   if (count == 0u) {
     GTEST_SKIP() << "No MPS devices available";
@@ -740,7 +747,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, EventPoolAccessSucceeds) {
 
   // Act & Assert
   auto device = manager.acquire(mps::MpsDeviceHandle{0});
-  auto *resource = device.payloadPtr();
+  auto *resource = device.operator->();
   ASSERT_NE(resource, nullptr);
   EXPECT_NE(&resource->event_pool, nullptr);
   device.release();
@@ -761,7 +768,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, FencePoolAccessSucceeds) {
   });
   this->adapter().expectReleaseDevices({device0});
 
-  manager.configure(makeConfig(this->getOps()));
+  manager.configureForTest(makeConfig(this->getOps()), this->getOps());
   const auto count = manager.getDeviceCountForTest();
   if (count == 0u) {
     GTEST_SKIP() << "No MPS devices available";
@@ -769,7 +776,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, FencePoolAccessSucceeds) {
 
   // Act & Assert
   auto device = manager.acquire(mps::MpsDeviceHandle{0});
-  auto *resource = device.payloadPtr();
+  auto *resource = device.operator->();
   ASSERT_NE(resource, nullptr);
   EXPECT_NE(&resource->fence_pool, nullptr);
   device.release();
@@ -794,11 +801,11 @@ TYPED_TEST(MpsDeviceManagerTypedTest, DirectAccessReturnsValidPointers) {
   });
   this->adapter().expectReleaseDevices({device0});
 
-  manager.configure(makeConfig(this->getOps()));
+  manager.configureForTest(makeConfig(this->getOps()), this->getOps());
 
   // Act & Assert: All accessors return valid pointers
   auto device = manager.acquire(mps::MpsDeviceHandle{0});
-  auto *resource = device.payloadPtr();
+  auto *resource = device.operator->();
   ASSERT_NE(resource, nullptr);
   if constexpr (TypeParam::is_mock) {
     EXPECT_EQ(resource->device, device0);
@@ -834,7 +841,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, LeaseCopyIncrementsStrongCount) {
   });
   this->adapter().expectReleaseDevices({device0});
 
-  manager.configure(makeConfig(this->getOps()));
+  manager.configureForTest(makeConfig(this->getOps()), this->getOps());
   const auto count = manager.getDeviceCountForTest();
   if (count == 0u) {
     GTEST_SKIP() << "No MPS devices available";
@@ -873,7 +880,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest,
   });
   this->adapter().expectReleaseDevices({device0});
 
-  manager.configure(makeConfig(this->getOps()));
+  manager.configureForTest(makeConfig(this->getOps()), this->getOps());
   const auto count = manager.getDeviceCountForTest();
   if (count == 0u) {
     GTEST_SKIP() << "No MPS devices available";
@@ -908,7 +915,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest, LeaseMoveDoesNotChangeStrongCount) {
   });
   this->adapter().expectReleaseDevices({device0});
 
-  manager.configure(makeConfig(this->getOps()));
+  manager.configureForTest(makeConfig(this->getOps()), this->getOps());
   const auto count = manager.getDeviceCountForTest();
   if (count == 0u) {
     GTEST_SKIP() << "No MPS devices available";
@@ -944,7 +951,7 @@ TYPED_TEST(MpsDeviceManagerTypedTest,
   });
   this->adapter().expectReleaseDevices({device0});
 
-  manager.configure(makeConfig(this->getOps()));
+  manager.configureForTest(makeConfig(this->getOps()), this->getOps());
   const auto count = manager.getDeviceCountForTest();
   if (count == 0u) {
     GTEST_SKIP() << "No MPS devices available";

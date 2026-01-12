@@ -18,7 +18,6 @@ concept PoolManagerTypeConcept = requires {
   typename Manager::PayloadHandle;
   typename Manager::WeakLeaseType;
   typename Manager::StrongLeaseType;
-  typename Manager::Config;
 };
 
 // =============================================================================
@@ -49,13 +48,13 @@ concept ManagerPayloadAliveCheckConcept =
 // Configuration Concept
 // =============================================================================
 
-/// @brief configure(config, request, context) をサポート
+/// @brief Builder::configure(manager) をサポート
 template <typename Manager, typename Request, typename Context>
 concept ManagerConfigurableConcept =
     PoolManagerTypeConcept<Manager> &&
-    requires(Manager &m, const typename Manager::Config &cfg,
-             const Request &req, const Context &ctx) {
-      { m.configure(cfg, req, ctx) };
+    requires(Manager &m,
+             typename Manager::template Builder<Request, Context> &builder) {
+      { builder.configure(m) };
     };
 
 // =============================================================================
@@ -115,8 +114,8 @@ concept ManagerPayloadCreateAllConcept =
 template <typename Manager, typename Request, typename Context>
 concept ManagerPayloadEmplaceConcept =
     PoolManagerTypeConcept<Manager> &&
-    requires(Manager &m, typename Manager::PayloadHandle h,
-             const Request &req, const Context &ctx) {
+    requires(Manager &m, typename Manager::PayloadHandle h, const Request &req,
+             const Context &ctx) {
       { m.emplacePayload(h, req, ctx) } -> std::convertible_to<bool>;
     };
 
@@ -134,8 +133,9 @@ concept ManagerPayloadAcquirableConcept =
 template <typename Manager>
 concept ManagerPayloadReservableConcept =
     PoolManagerTypeConcept<Manager> && requires(Manager &m) {
-      { m.reserveUncreatedPayloadOrGrow() } -> std::same_as<
-          typename Manager::PayloadHandle>;
+      {
+        m.reserveUncreatedPayloadOrGrow()
+      } -> std::same_as<typename Manager::PayloadHandle>;
     };
 
 // =============================================================================

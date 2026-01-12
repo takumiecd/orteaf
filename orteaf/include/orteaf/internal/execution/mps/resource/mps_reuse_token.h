@@ -19,7 +19,7 @@ public:
   static MpsReuseToken fromFenceToken(MpsFenceToken &&token) {
     MpsReuseToken reuse_token;
     for (const auto &lease : token) {
-      auto *payload = lease.payloadPtr();
+      auto *payload = lease.operator->();
       Hazard hazard;
       if (payload != nullptr) {
         hazard.setCommandQueueHandle(payload->commandQueueHandle());

@@ -6,7 +6,7 @@
 
 namespace orteaf::internal::execution::mps::manager {
 
-void MpsCommandQueueManager::configure(const Config &config) {
+void MpsCommandQueueManager::configure(const InternalConfig &config) {
   shutdown();
   if (config.device == nullptr) {
     ::orteaf::internal::diagnostics::error::throwError(
@@ -21,13 +21,25 @@ void MpsCommandQueueManager::configure(const Config &config) {
   device_ = config.device;
   ops_ = config.ops;
   fence_manager_ = config.fence_manager;
+  const auto &cfg = config.public_config;
   // payload block size managed by core_
   // payload growth chunk size configured via core_
 
   const CommandQueuePayloadPoolTraits::Request payload_request{};
   const CommandQueuePayloadPoolTraits::Context payload_context{device_, ops_,
                                                                fence_manager_};
-  core_.configure(config.pool, payload_request, payload_context);
+  Core::Builder<CommandQueuePayloadPoolTraits::Request,
+                CommandQueuePayloadPoolTraits::Context>{}
+      .withControlBlockCapacity(cfg.control_block_capacity)
+      .withControlBlockBlockSize(cfg.control_block_block_size)
+      .withControlBlockGrowthChunkSize(
+          cfg.control_block_growth_chunk_size)
+      .withPayloadCapacity(cfg.payload_capacity)
+      .withPayloadBlockSize(cfg.payload_block_size)
+      .withPayloadGrowthChunkSize(cfg.payload_growth_chunk_size)
+      .withRequest(payload_request)
+      .withContext(payload_context)
+      .configure(core_);
   if (!core_.createAllPayloads(payload_request, payload_context)) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
@@ -88,7 +100,7 @@ MpsCommandQueueManager::acquire(CommandQueueHandle handle) {
     return cached;
   }
   auto lease = core_.acquireStrongLease(handle);
-  const auto *payload_ptr = lease.payloadPtr();
+  const auto *payload_ptr = lease.operator->();
   if (payload_ptr == nullptr || !payload_ptr->hasQueue()) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,

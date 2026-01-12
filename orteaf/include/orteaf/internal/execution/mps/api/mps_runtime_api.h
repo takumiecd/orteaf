@@ -44,14 +44,14 @@ public:
                                        const FunctionKey &function_key) {
     Runtime &rt = runtime();
     auto device_lease = rt.deviceManager().acquire(device);
-    auto *resource = device_lease.payloadPtr();
+    auto *resource = device_lease.operator->();
     if (resource == nullptr) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
           "MPS device lease has no payload");
     }
     auto library_lease = resource->library_manager.acquire(library_key);
-    auto *library_resource = library_lease.payloadPtr();
+    auto *library_resource = library_lease.operator->();
     if (library_resource == nullptr) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
@@ -63,7 +63,7 @@ public:
   static StrongFenceLease acquireFence(DeviceHandle device) {
     Runtime &rt = runtime();
     auto device_lease = rt.deviceManager().acquire(device);
-    auto *resource = device_lease.payloadPtr();
+    auto *resource = device_lease.operator->();
     if (resource == nullptr) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,

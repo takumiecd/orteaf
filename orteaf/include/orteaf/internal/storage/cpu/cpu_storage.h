@@ -2,7 +2,8 @@
 
 #include <utility>
 
-#include <orteaf/internal/execution/cpu/manager/cpu_buffer_manager.h>
+#include <orteaf/internal/diagnostics/error/error.h>
+#include <orteaf/internal/execution/cpu/manager/cpu_device_manager.h>
 #include <orteaf/internal/storage/cpu/cpu_storage_layout.h>
 
 namespace orteaf::internal::storage::cpu {
@@ -11,6 +12,9 @@ class CpuStorage {
 public:
   using BufferManager =
       ::orteaf::internal::execution::cpu::manager::CpuBufferManager;
+  using DeviceManager =
+      ::orteaf::internal::execution::cpu::manager::CpuDeviceManager;
+  using DeviceLease = DeviceManager::DeviceLease;
   using BufferLease = BufferManager::BufferLease;
   using Layout = ::orteaf::internal::storage::cpu::CpuStorageLayout;
 
@@ -23,7 +27,7 @@ public:
    * @par Example
    * @code
    * auto storage = CpuStorage::builder()
-   *     .withManager(&buffer_manager)
+   *     .withDeviceLease(device_lease)
    *     .withSize(1024)
    *     .withAlignment(16)
    *     .withLayout(layout)
@@ -34,8 +38,8 @@ public:
   public:
     Builder() = default;
 
-    Builder &withManager(BufferManager *manager) {
-      buffer_manager_ = manager;
+    Builder &withDeviceLease(const DeviceLease &lease) {
+      device_lease_ = lease;
       return *this;
     }
 
@@ -64,13 +68,18 @@ public:
      * @throws If buffer_manager is null or acquisition fails.
      */
     CpuStorage build() {
-      // TODO: Add validation (null check for manager, size > 0, etc.)
-      BufferLease lease = buffer_manager_->acquire(size_, alignment_);
+      if (!device_lease_) {
+        ::orteaf::internal::diagnostics::error::throwError(
+            ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+            "CpuStorage requires a valid device lease");
+      }
+      BufferLease lease =
+          device_lease_->buffer_manager.acquire(size_, alignment_);
       return CpuStorage(std::move(lease), std::move(layout_));
     }
 
   private:
-    BufferManager *buffer_manager_{nullptr};
+    DeviceLease device_lease_{};
     std::size_t size_{0};
     std::size_t alignment_{0};
     Layout layout_{};

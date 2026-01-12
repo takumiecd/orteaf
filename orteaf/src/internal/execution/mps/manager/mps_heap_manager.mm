@@ -54,7 +54,8 @@ bool HeapPayloadPoolTraits::create(Payload &payload, const Request &request,
   }
 
   // Configure buffer manager
-  auto buf_cfg = context.buffer_config;
+  BufferManager::InternalConfig buf_cfg{};
+  buf_cfg.public_config = context.buffer_config;
   buf_cfg.device = context.device;
   buf_cfg.device_handle = context.device_handle;
   buf_cfg.heap = payload.heap;
@@ -80,7 +81,7 @@ void HeapPayloadPoolTraits::destroy(Payload &payload, const Request &,
 // MpsHeapManager Implementation
 // =============================================================================
 
-void MpsHeapManager::configure(const Config &config) {
+void MpsHeapManager::configure(const InternalConfig &config) {
   shutdown();
 
   if (config.device == nullptr) {
@@ -98,13 +99,25 @@ void MpsHeapManager::configure(const Config &config) {
   device_handle_ = config.device_handle;
   library_manager_ = config.library_manager;
   ops_ = config.ops;
-  buffer_config_ = config.buffer_config;
+  const auto &cfg = config.public_config;
+  buffer_config_ = cfg.buffer_config;
   key_to_index_.clear();
 
   // Configure core + payload pool
   HeapPayloadPoolTraits::Request request{};
   auto context = makePayloadContext();
-  core_.configure(config.pool, request, context);
+  Core::Builder<HeapPayloadPoolTraits::Request,
+                HeapPayloadPoolTraits::Context>{}
+      .withControlBlockCapacity(cfg.control_block_capacity)
+      .withControlBlockBlockSize(cfg.control_block_block_size)
+      .withControlBlockGrowthChunkSize(
+          cfg.control_block_growth_chunk_size)
+      .withPayloadCapacity(cfg.payload_capacity)
+      .withPayloadBlockSize(cfg.payload_block_size)
+      .withPayloadGrowthChunkSize(cfg.payload_growth_chunk_size)
+      .withRequest(request)
+      .withContext(context)
+      .configure(core_);
 
 }
 
@@ -179,7 +192,7 @@ MpsHeapManager::bufferManager(const HeapLease &lease) {
   if (!lease) {
     return nullptr;
   }
-  auto *payload = const_cast<MpsHeapResource *>(lease.payloadPtr());
+  auto *payload = const_cast<MpsHeapResource *>(lease.operator->());
   return payload ? &payload->buffer_manager : nullptr;
 }
 
@@ -198,7 +211,7 @@ MpsHeapManager::bufferManager(const HeapDescriptorKey &key) {
       lease = core_.acquireStrongLease(handle);
       lifetime_.set(lease);
     }
-    auto *payload = lease.payloadPtr();
+    auto *payload = lease.operator->();
     return payload ? &payload->buffer_manager : nullptr;
   }
 
@@ -207,7 +220,7 @@ MpsHeapManager::bufferManager(const HeapDescriptorKey &key) {
   if (!lease) {
     return nullptr;
   }
-  auto *payload = lease.payloadPtr();
+  auto *payload = lease.operator->();
   return payload ? &payload->buffer_manager : nullptr;
 }
 

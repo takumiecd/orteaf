@@ -170,13 +170,11 @@ public:
   }
 
   /**
-   * @brief Get mutable pointer to payload.
-   * @return Pointer to payload, or nullptr if invalid.
+   * @brief Access the payload like a pointer.
    *
    * Only available if ControlBlockT has a `payloadPtr()` method.
-   * Provides direct access to the managed resource.
    */
-  auto payloadPtr() noexcept
+  auto operator->() noexcept
       -> decltype(std::declval<ControlBlockT *>()->payloadPtr())
     requires requires(ControlBlockT *cb) { cb->payloadPtr(); }
   {
@@ -184,12 +182,11 @@ public:
   }
 
   /**
-   * @brief Get const pointer to payload.
-   * @return Const pointer to payload, or nullptr if invalid.
+   * @brief Access the payload like a const pointer.
    *
    * Only available if ControlBlockT has a `payloadPtr()` method.
    */
-  auto payloadPtr() const noexcept
+  auto operator->() const noexcept
       -> decltype(std::declval<const ControlBlockT *>()->payloadPtr())
     requires requires(const ControlBlockT *cb) { cb->payloadPtr(); }
   {

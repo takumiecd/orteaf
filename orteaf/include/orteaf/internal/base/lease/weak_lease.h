@@ -168,58 +168,6 @@ public:
   const HandleT &handle() const noexcept { return handle_; }
 
   /**
-   * @brief Get the payload handle from control block.
-   * @return Payload handle if valid, invalid handle otherwise.
-   *
-   * Only available if ControlBlockT has a `payloadHandle()` method.
-   * @note The payload may have been destroyed even if handle is valid.
-   */
-  auto payloadHandle() const noexcept
-      -> decltype(std::declval<const ControlBlockT *>()->payloadHandle())
-    requires requires(const ControlBlockT *cb) { cb->payloadHandle(); }
-  {
-    using PayloadHandleT =
-        decltype(std::declval<const ControlBlockT *>()->payloadHandle());
-    if (!control_block_) {
-      if constexpr (requires { PayloadHandleT::invalid(); }) {
-        return PayloadHandleT::invalid();
-      } else {
-        return PayloadHandleT{};
-      }
-    }
-    return control_block_->payloadHandle();
-  }
-
-  /**
-   * @brief Get mutable pointer to payload.
-   * @return Pointer to payload, or nullptr if invalid.
-   *
-   * Only available if ControlBlockT has a `payloadPtr()` method.
-   * @warning The payload may be destroyed even if pointer is non-null.
-   * Prefer using `lock()` for safe access.
-   */
-  auto payloadPtr() noexcept
-      -> decltype(std::declval<ControlBlockT *>()->payloadPtr())
-    requires requires(ControlBlockT *cb) { cb->payloadPtr(); }
-  {
-    return control_block_ ? control_block_->payloadPtr() : nullptr;
-  }
-
-  /**
-   * @brief Get const pointer to payload.
-   * @return Const pointer to payload, or nullptr if invalid.
-   *
-   * Only available if ControlBlockT has a `payloadPtr()` method.
-   * @warning The payload may be destroyed even if pointer is non-null.
-   */
-  auto payloadPtr() const noexcept
-      -> decltype(std::declval<const ControlBlockT *>()->payloadPtr())
-    requires requires(const ControlBlockT *cb) { cb->payloadPtr(); }
-  {
-    return control_block_ ? control_block_->payloadPtr() : nullptr;
-  }
-
-  /**
    * @brief Attempt to promote weak reference to strong ownership.
    * @return Valid StrongLease if promotion succeeded, invalid otherwise.
    *

@@ -30,11 +30,11 @@ public:
 
   // Add a lease, replacing any existing lease with the same command queue id.
   void addOrReplaceLease(StrongFenceLease &&lease) {
-    auto *payload = lease.payloadPtr();
+    auto *payload = lease.operator->();
     if (payload != nullptr) {
       const auto queue_handle = payload->commandQueueHandle();
       for (std::size_t i = 0; i < leases_.size(); ++i) {
-        auto *existing_payload = leases_[i].payloadPtr();
+        auto *existing_payload = leases_[i].operator->();
         if (existing_payload != nullptr &&
             existing_payload->commandQueueHandle() == queue_handle) {
           leases_[i] = std::move(lease);

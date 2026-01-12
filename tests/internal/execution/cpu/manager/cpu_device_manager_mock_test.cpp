@@ -53,8 +53,7 @@ protected:
         .WillByDefault(Return(architecture::Architecture::CpuZen4));
 
     cpu_rt::CpuDeviceManager::Config config{};
-    config.ops = mock_ops_.get();
-    manager_->configure(config);
+    manager_->configureForTest(config, mock_ops_.get());
   }
 
   std::unique_ptr<NiceMock<CpuSlowOpsMock>> mock_ops_;
@@ -73,7 +72,7 @@ TEST_F(CpuDeviceManagerMockTest, ConfiguresWithMockedArch) {
   auto lease = manager_->acquire(cpu::CpuDeviceHandle{0});
   EXPECT_TRUE(lease);
   // Access arch through lease
-  EXPECT_EQ(lease.payloadPtr()->arch, architecture::Architecture::CpuZen4);
+  EXPECT_EQ(lease->arch, architecture::Architecture::CpuZen4);
   EXPECT_TRUE(manager_->isAliveForTest(cpu::CpuDeviceHandle{0}));
 }
 

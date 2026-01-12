@@ -136,7 +136,7 @@ public:
       return nullptr;
     }
     auto *encoder = FastOps::createComputeCommandEncoder(command_buffer);
-    auto *pipeline_payload = entry.pipelines[pipeline_index].payloadPtr();
+    auto *pipeline_payload = entry.pipelines[pipeline_index].operator->();
     if (!pipeline_payload || !pipeline_payload->pipeline_state) {
       return nullptr;
     }
@@ -162,7 +162,7 @@ public:
       return nullptr;
     }
     auto *encoder = FastOps::createComputeCommandEncoder(command_buffer);
-    auto *pipeline_payload = entry.pipelines[idx].payloadPtr();
+    auto *pipeline_payload = entry.pipelines[idx].operator->();
     if (!pipeline_payload || !pipeline_payload->pipeline_state) {
       return nullptr;
     }
@@ -229,7 +229,7 @@ public:
                        MpsComputeCommandEncoder_t encoder,
                    ::orteaf::internal::execution::mps::manager::
                        MpsFenceManager::StrongFenceLease &fence) const {
-    FastOps::updateFence(encoder, fence.payloadPtr()->fence());
+    FastOps::updateFence(encoder, fence->fence());
   }
 
   /** @brief Encode a fence wait on the encoder using an existing fence lease.
@@ -240,7 +240,7 @@ public:
                         MpsComputeCommandEncoder_t encoder,
                     const ::orteaf::internal::execution::mps::manager::
                         MpsFenceManager::StrongFenceLease &fence) const {
-    FastOps::waitForFence(encoder, fence.payloadPtr()->fence());
+    FastOps::waitForFence(encoder, fence->fence());
   }
 
   /** @brief Encode waits for all fences stored in a fence token. */
@@ -252,7 +252,7 @@ public:
                const ::orteaf::internal::execution::mps::resource::MpsFenceToken
                    &token) const {
     for (const auto &lease : token) {
-      auto *payload = lease.payloadPtr();
+      auto *payload = lease.operator->();
       if (payload != nullptr && payload->hasFence()) {
         FastOps::waitForFence(encoder, payload->fence());
       }
@@ -275,7 +275,7 @@ public:
       ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandBuffer_t
           command_buffer) const {
     auto fence_lease = RuntimeApi::acquireFence(device);
-    auto *payload = fence_lease.payloadPtr();
+    auto *payload = fence_lease.operator->();
     if (payload == nullptr) {
       fence_lease.release();
       ::orteaf::internal::diagnostics::error::throwError(
@@ -350,14 +350,14 @@ public:
       return nullptr;
 
     // Acquire lock on command queue for safe access
-    auto *queue_ptr = queue_lease.payloadPtr();
+    auto *queue_ptr = queue_lease.operator->();
     if (!queue_ptr || !queue_ptr->hasQueue()) {
       return nullptr; // Invalid queue
     }
 
     auto *command_buffer = FastOps::createCommandBuffer(queue_ptr->queue());
     auto *encoder = FastOps::createComputeCommandEncoder(command_buffer);
-    auto *pipeline_payload = entry.pipelines[pipeline_index].payloadPtr();
+    auto *pipeline_payload = entry.pipelines[pipeline_index].operator->();
     if (!pipeline_payload || !pipeline_payload->pipeline_state) {
       return nullptr;
     }

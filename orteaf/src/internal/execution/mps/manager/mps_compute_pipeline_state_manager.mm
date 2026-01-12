@@ -6,7 +6,7 @@
 
 namespace orteaf::internal::execution::mps::manager {
 
-void MpsComputePipelineStateManager::configure(const Config &config) {
+void MpsComputePipelineStateManager::configure(const InternalConfig &config) {
   shutdown();
   if (config.device == nullptr || config.library == nullptr) {
     ::orteaf::internal::diagnostics::error::throwError(
@@ -22,11 +22,23 @@ void MpsComputePipelineStateManager::configure(const Config &config) {
   device_ = config.device;
   library_ = config.library;
   ops_ = config.ops;
+  const auto &cfg = config.public_config;
   key_to_index_.clear();
 
   const PipelinePayloadPoolTraits::Request payload_request{};
   const auto payload_context = makePayloadContext();
-  core_.configure(config.pool, payload_request, payload_context);
+  Core::Builder<PipelinePayloadPoolTraits::Request,
+                PipelinePayloadPoolTraits::Context>{}
+      .withControlBlockCapacity(cfg.control_block_capacity)
+      .withControlBlockBlockSize(cfg.control_block_block_size)
+      .withControlBlockGrowthChunkSize(
+          cfg.control_block_growth_chunk_size)
+      .withPayloadCapacity(cfg.payload_capacity)
+      .withPayloadBlockSize(cfg.payload_block_size)
+      .withPayloadGrowthChunkSize(cfg.payload_growth_chunk_size)
+      .withRequest(payload_request)
+      .withContext(payload_context)
+      .configure(core_);
 }
 
 void MpsComputePipelineStateManager::shutdown() {

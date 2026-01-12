@@ -72,7 +72,7 @@ TEST_F(CpuRuntimeManagerTest, DeviceManagerReturnsCorrectArch) {
   EXPECT_TRUE(lease);
 
   // Access arch through lease
-  auto arch = lease.payloadPtr()->arch;
+  auto arch = lease->arch;
   EXPECT_EQ(arch, architecture::detectCpuArchitecture());
 }
 

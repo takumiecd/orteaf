@@ -16,6 +16,8 @@
 
 namespace orteaf::internal::execution::mps::manager {
 
+struct DevicePayloadPoolTraits;
+
 // =============================================================================
 // Payload Pool
 // =============================================================================
@@ -107,9 +109,13 @@ public:
 
 public:
   struct Config {
-    DeviceType device{nullptr};
-    SlowOps *ops{nullptr};
-    Core::Config pool{};
+    // PoolManager settings
+    std::size_t control_block_capacity{0};
+    std::size_t control_block_block_size{0};
+    std::size_t control_block_growth_chunk_size{1};
+    std::size_t payload_capacity{0};
+    std::size_t payload_block_size{0};
+    std::size_t payload_growth_chunk_size{1};
   };
 
   MpsFenceManager() = default;
@@ -119,12 +125,32 @@ public:
   MpsFenceManager &operator=(MpsFenceManager &&) = default;
   ~MpsFenceManager() = default;
 
-  void configure(const Config &config);
+private:
+  struct InternalConfig {
+    Config public_config{};
+    DeviceType device{nullptr};
+    SlowOps *ops{nullptr};
+  };
+
+  void configure(const InternalConfig &config);
+
+  friend struct DevicePayloadPoolTraits;
+
+public:
   void shutdown();
 
   StrongFenceLease acquire();
 
 #if ORTEAF_ENABLE_TEST
+  void configureForTest(const Config &config, DeviceType device,
+                        SlowOps *ops) {
+    InternalConfig internal{};
+    internal.public_config = config;
+    internal.device = device;
+    internal.ops = ops;
+    configure(internal);
+  }
+
   bool isConfiguredForTest() const noexcept { return core_.isConfigured(); }
 
   std::size_t payloadPoolSizeForTest() const noexcept {

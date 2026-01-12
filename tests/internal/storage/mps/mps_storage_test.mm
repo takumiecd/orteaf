@@ -27,18 +27,15 @@ protected:
 
   void SetUp() override {
     Config cfg{};
-    cfg.device = device();
-    cfg.device_handle = mps::MpsDeviceHandle{0};
-    cfg.heap = heap();
-    cfg.library_manager = nullptr;
     cfg.min_block_size = 64;
     cfg.max_block_size = 1024 * 1024;
     cfg.chunk_size = 1024 * 1024;
-    cfg.pool.payload_capacity = 16;
-    cfg.pool.control_block_capacity = 16;
-    cfg.pool.payload_block_size = 1;
-    cfg.pool.control_block_block_size = 1;
-    manager_.configure(cfg);
+    cfg.payload_capacity = 16;
+    cfg.control_block_capacity = 16;
+    cfg.payload_block_size = 1;
+    cfg.control_block_block_size = 1;
+    manager_.configureForTest(cfg, device(), mps::MpsDeviceHandle{0}, heap(),
+                              nullptr);
   }
 
   void TearDown() override { manager_.shutdown(); }

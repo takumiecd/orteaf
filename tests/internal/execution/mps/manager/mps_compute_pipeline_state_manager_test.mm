@@ -36,15 +36,15 @@ mps_wrapper::MpsComputePipelineState_t makePipeline(std::uintptr_t value) {
   return reinterpret_cast<mps_wrapper::MpsComputePipelineState_t>(value);
 }
 
-template <typename PoolConfig>
-void setPoolBlockSizes(PoolConfig &pool) {
-  if (pool.payload_block_size == 0) {
-    pool.payload_block_size =
-        pool.payload_capacity == 0 ? 1u : pool.payload_capacity;
+template <typename Config>
+void setPoolBlockSizes(Config &config) {
+  if (config.payload_block_size == 0) {
+    config.payload_block_size =
+        config.payload_capacity == 0 ? 1u : config.payload_capacity;
   }
-  if (pool.control_block_block_size == 0) {
-    pool.control_block_block_size =
-        pool.control_block_capacity == 0 ? 1u : pool.control_block_capacity;
+  if (config.control_block_block_size == 0) {
+    config.control_block_block_size =
+        config.control_block_capacity == 0 ? 1u : config.control_block_capacity;
   }
 }
 
@@ -79,12 +79,10 @@ protected:
     const auto device = adapter().device();
     if (auto library = ensureLibrary()) {
       mps_rt::MpsComputePipelineStateManager::Config config{};
-      config.device = device;
-      config.library = *library;
-      config.ops = this->getOps();
-      config.pool.payload_capacity = capacity;
-      config.pool.control_block_capacity = capacity;
-      manager().configure(config);
+      config.payload_capacity = capacity;
+      config.control_block_capacity = capacity;
+      setPoolBlockSizes(config);
+      manager().configureForTest(config, device, *library, this->getOps());
       return true;
     }
     return false;
@@ -169,15 +167,12 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest,
   EXPECT_EQ(manager.controlBlockGrowthChunkSizeForTest(), 1u);
 
   mps_rt::MpsComputePipelineStateManager::Config config{};
-  config.device = device;
-  config.library = *maybe_library;
-  config.ops = this->getOps();
-  config.pool.payload_growth_chunk_size = 5;
-  config.pool.control_block_growth_chunk_size = 6;
+  config.payload_growth_chunk_size = 5;
+  config.control_block_growth_chunk_size = 6;
 
   // Act
-  setPoolBlockSizes(config.pool);
-    manager.configure(config);
+  setPoolBlockSizes(config);
+  manager.configureForTest(config, device, *maybe_library, this->getOps());
 
   // Assert
   EXPECT_EQ(manager.payloadGrowthChunkSizeForTest(), 5u);
@@ -198,21 +193,15 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest,
   // Act & Assert
   ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
     mps_rt::MpsComputePipelineStateManager::Config config{};
-    config.device = device;
-    config.library = *maybe_library;
-    config.ops = this->getOps();
-    config.pool.payload_growth_chunk_size = 0;
-    setPoolBlockSizes(config.pool);
-    manager.configure(config);
+    config.payload_growth_chunk_size = 0;
+    setPoolBlockSizes(config);
+    manager.configureForTest(config, device, *maybe_library, this->getOps());
   });
   ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
     mps_rt::MpsComputePipelineStateManager::Config config{};
-    config.device = device;
-    config.library = *maybe_library;
-    config.ops = this->getOps();
-    config.pool.control_block_growth_chunk_size = 0;
-    setPoolBlockSizes(config.pool);
-    manager.configure(config);
+    config.control_block_growth_chunk_size = 0;
+    setPoolBlockSizes(config);
+    manager.configureForTest(config, device, *maybe_library, this->getOps());
   });
 }
 
@@ -231,12 +220,9 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest,
     return;
   }
   mps_rt::MpsComputePipelineStateManager::Config config{};
-  config.device = device;
-  config.library = *maybe_library;
-  config.ops = this->getOps();
-  config.pool.payload_growth_chunk_size = 2;
-  setPoolBlockSizes(config.pool);
-    manager.configure(config);
+  config.payload_growth_chunk_size = 2;
+  setPoolBlockSizes(config);
+  manager.configureForTest(config, device, *maybe_library, this->getOps());
 
   const auto key = mps_rt::FunctionKey::Named("ChunkedFunction");
   const auto function_handle = makeFunction(0x8801);
@@ -283,13 +269,10 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest,
   // Act & Assert
   ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
     mps_rt::MpsComputePipelineStateManager::Config config{};
-    config.device = nullptr;
-    config.library = *maybe_library;
-    config.ops = this->getOps();
-    config.pool.payload_capacity = 1;
-    config.pool.control_block_capacity = 1;
-    setPoolBlockSizes(config.pool);
-    manager.configure(config);
+    config.payload_capacity = 1;
+    config.control_block_capacity = 1;
+    setPoolBlockSizes(config);
+    manager.configureForTest(config, nullptr, *maybe_library, this->getOps());
   });
 }
 
@@ -301,13 +284,10 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest,
   // Act & Assert
   ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
     mps_rt::MpsComputePipelineStateManager::Config config{};
-    config.device = device;
-    config.library = nullptr;
-    config.ops = this->getOps();
-    config.pool.payload_capacity = 1;
-    config.pool.control_block_capacity = 1;
-    setPoolBlockSizes(config.pool);
-    manager.configure(config);
+    config.payload_capacity = 1;
+    config.control_block_capacity = 1;
+    setPoolBlockSizes(config);
+    manager.configureForTest(config, device, nullptr, this->getOps());
   });
 }
 
@@ -369,8 +349,8 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest,
   // Assert: Same handle (cached)
   EXPECT_EQ(lease0.payloadHandle(), lease1.payloadHandle());
   if constexpr (TypeParam::is_mock) {
-    ASSERT_NE(lease0.payloadPtr(), nullptr);
-    EXPECT_EQ(lease0.payloadPtr()->pipeline_state, pipeline_handle);
+    ASSERT_NE(lease0.operator->(), nullptr);
+    EXPECT_EQ(lease0->pipeline_state, pipeline_handle);
   } else {
     EXPECT_TRUE(lease0);
   }
@@ -428,8 +408,8 @@ TYPED_TEST(MpsComputePipelineStateManagerTypedTest,
   auto reacquired = manager.acquire(key);
   EXPECT_EQ(reacquired.payloadHandle(), handle);
   if constexpr (TypeParam::is_mock) {
-    ASSERT_NE(reacquired.payloadPtr(), nullptr);
-    EXPECT_EQ(reacquired.payloadPtr()->pipeline_state, first_pipeline);
+    ASSERT_NE(reacquired.operator->(), nullptr);
+    EXPECT_EQ(reacquired->pipeline_state, first_pipeline);
   } else {
     EXPECT_TRUE(reacquired);
   }

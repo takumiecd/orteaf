@@ -29,8 +29,7 @@ protected:
 
   void configureManager() {
     cpu_rt::CpuDeviceManager::Config config{};
-    config.ops = slow_ops_.get();
-    manager_->configure(config);
+    manager_->configureForTest(config, slow_ops_.get());
   }
 
   std::unique_ptr<cpu_platform::CpuSlowOpsImpl> slow_ops_;
@@ -50,7 +49,7 @@ TEST_F(CpuDeviceManagerTest, AcquireReturnsValidLease) {
 
   auto lease = manager_->acquire(cpu::CpuDeviceHandle{0});
   EXPECT_TRUE(lease);
-  EXPECT_NE(lease.payloadPtr(), nullptr);
+  EXPECT_NE(lease.operator->(), nullptr);
 }
 
 TEST_F(CpuDeviceManagerTest, LeaseContainsCorrectArch) {
@@ -60,7 +59,7 @@ TEST_F(CpuDeviceManagerTest, LeaseContainsCorrectArch) {
   EXPECT_TRUE(lease);
 
   // Access arch through lease
-  auto arch = lease.payloadPtr()->arch;
+  auto arch = lease->arch;
   EXPECT_EQ(arch, architecture::detectCpuArchitecture());
 }
 
@@ -83,14 +82,14 @@ TEST_F(CpuDeviceManagerTest, ManualEnvironmentCheck) {
   }
   configureManager();
   auto lease = manager_->acquire(cpu::CpuDeviceHandle{0});
-  const auto arch = lease.payloadPtr()->arch;
+  const auto arch = lease->arch;
   EXPECT_STREQ(expected_env, architecture::idOf(arch).data());
 }
 
 TEST_F(CpuDeviceManagerTest, GetArchitectureMatchesDetector) {
   configureManager();
   auto lease = manager_->acquire(cpu::CpuDeviceHandle{0});
-  EXPECT_EQ(lease.payloadPtr()->arch, architecture::detectCpuArchitecture());
+  EXPECT_EQ(lease->arch, architecture::detectCpuArchitecture());
 }
 
 TEST_F(CpuDeviceManagerTest, IsAliveReflectsInitialization) {

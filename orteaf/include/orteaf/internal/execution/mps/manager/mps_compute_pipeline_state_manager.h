@@ -21,6 +21,8 @@
 
 namespace orteaf::internal::execution::mps::manager {
 
+struct LibraryPayloadPoolTraits;
+
 enum class FunctionKeyKind : std::uint8_t {
   kNamed,
 };
@@ -160,19 +162,44 @@ public:
   ~MpsComputePipelineStateManager() = default;
 
   struct Config {
+    // PoolManager settings
+    std::size_t control_block_capacity{0};
+    std::size_t control_block_block_size{0};
+    std::size_t control_block_growth_chunk_size{1};
+    std::size_t payload_capacity{0};
+    std::size_t payload_block_size{0};
+    std::size_t payload_growth_chunk_size{1};
+  };
+
+private:
+  struct InternalConfig {
+    Config public_config{};
     DeviceType device{nullptr};
     LibraryType library{nullptr};
     SlowOps *ops{nullptr};
-    Core::Config pool{};
   };
 
-  void configure(const Config &config);
+  void configure(const InternalConfig &config);
+
+  friend struct LibraryPayloadPoolTraits;
+
+public:
   void shutdown();
 
   PipelineLease acquire(const FunctionKey &key);
   void release(PipelineLease &lease) noexcept { lease.release(); }
 
 #if ORTEAF_ENABLE_TEST
+  void configureForTest(const Config &config, DeviceType device,
+                        LibraryType library, SlowOps *ops) {
+    InternalConfig internal{};
+    internal.public_config = config;
+    internal.device = device;
+    internal.library = library;
+    internal.ops = ops;
+    configure(internal);
+  }
+
   bool isConfiguredForTest() const noexcept { return core_.isConfigured(); }
 
   std::size_t payloadPoolSizeForTest() const noexcept {
@@ -208,7 +235,6 @@ public:
 #endif
 
 private:
-  friend PipelineLease;
 
   void validateKey(const FunctionKey &key) const;
   PipelinePayloadPoolTraits::Context makePayloadContext() const noexcept;

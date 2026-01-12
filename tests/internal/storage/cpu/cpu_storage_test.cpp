@@ -1,4 +1,4 @@
-#include "orteaf/internal/execution/cpu/manager/cpu_buffer_manager.h"
+#include "orteaf/internal/execution/cpu/manager/cpu_device_manager.h"
 #include "orteaf/internal/execution/cpu/platform/cpu_slow_ops.h"
 #include "orteaf/internal/storage/cpu/cpu_storage.h"
 
@@ -7,6 +7,7 @@
 #include <memory>
 
 namespace cpu_storage = orteaf::internal::storage::cpu;
+namespace cpu = orteaf::internal::execution::cpu;
 namespace cpu_manager = orteaf::internal::execution::cpu::manager;
 namespace cpu_platform = orteaf::internal::execution::cpu::platform;
 
@@ -14,21 +15,23 @@ class CpuStorageBuilderTest : public ::testing::Test {
 protected:
   void SetUp() override {
     slow_ops_ = std::make_unique<cpu_platform::CpuSlowOpsImpl>();
-    manager_ = std::make_unique<cpu_manager::CpuBufferManager>();
+    manager_ = std::make_unique<cpu_manager::CpuDeviceManager>();
 
-    cpu_manager::CpuBufferManager::Config config{};
-    config.ops = slow_ops_.get();
-    manager_->configure(config);
+    cpu_manager::CpuDeviceManager::Config config{};
+    manager_->configureForTest(config, slow_ops_.get());
+    device_lease_ = manager_->acquire(cpu::CpuDeviceHandle{0});
   }
 
   void TearDown() override {
+    device_lease_.release();
     manager_->shutdown();
     manager_.reset();
     slow_ops_.reset();
   }
 
   std::unique_ptr<cpu_platform::CpuSlowOpsImpl> slow_ops_;
-  std::unique_ptr<cpu_manager::CpuBufferManager> manager_;
+  std::unique_ptr<cpu_manager::CpuDeviceManager> manager_;
+  cpu_manager::CpuDeviceManager::DeviceLease device_lease_{};
 };
 
 // ============================================================
@@ -37,7 +40,7 @@ protected:
 
 TEST_F(CpuStorageBuilderTest, BuilderCreatesValidStorage) {
   auto storage = cpu_storage::CpuStorage::builder()
-                     .withManager(manager_.get())
+                     .withDeviceLease(device_lease_)
                      .withSize(1024)
                      .build();
 
@@ -48,7 +51,7 @@ TEST_F(CpuStorageBuilderTest, BuilderCreatesValidStorage) {
 
 TEST_F(CpuStorageBuilderTest, BuilderWithAlignment) {
   auto storage = cpu_storage::CpuStorage::builder()
-                     .withManager(manager_.get())
+                     .withDeviceLease(device_lease_)
                      .withSize(512)
                      .withAlignment(64)
                      .build();
@@ -59,7 +62,7 @@ TEST_F(CpuStorageBuilderTest, BuilderWithAlignment) {
 TEST_F(CpuStorageBuilderTest, BuilderWithLayout) {
   cpu_storage::CpuStorageLayout layout{};
   auto storage = cpu_storage::CpuStorage::builder()
-                     .withManager(manager_.get())
+                     .withDeviceLease(device_lease_)
                      .withSize(256)
                      .withLayout(layout)
                      .build();
@@ -70,7 +73,7 @@ TEST_F(CpuStorageBuilderTest, BuilderWithLayout) {
 TEST_F(CpuStorageBuilderTest, BuilderChainAllOptions) {
   cpu_storage::CpuStorageLayout layout{};
   auto storage = cpu_storage::CpuStorage::builder()
-                     .withManager(manager_.get())
+                     .withDeviceLease(device_lease_)
                      .withSize(1024)
                      .withAlignment(32)
                      .withLayout(layout)
@@ -82,7 +85,7 @@ TEST_F(CpuStorageBuilderTest, BuilderChainAllOptions) {
 TEST_F(CpuStorageBuilderTest, BuilderStaticMethodReturnsBuilder) {
   auto builder = cpu_storage::CpuStorage::builder();
   // Should be able to chain methods
-  builder.withManager(manager_.get()).withSize(128);
+  builder.withDeviceLease(device_lease_).withSize(128);
   auto storage = builder.build();
 
   SUCCEED();
@@ -96,7 +99,7 @@ TEST_F(CpuStorageBuilderTest, DefaultConstructedStorageIsValid) {
 
 TEST_F(CpuStorageBuilderTest, StorageIsMoveConstructible) {
   auto storage1 = cpu_storage::CpuStorage::builder()
-                      .withManager(manager_.get())
+                      .withDeviceLease(device_lease_)
                       .withSize(1024)
                       .build();
 
@@ -106,7 +109,7 @@ TEST_F(CpuStorageBuilderTest, StorageIsMoveConstructible) {
 
 TEST_F(CpuStorageBuilderTest, StorageIsMoveAssignable) {
   auto storage1 = cpu_storage::CpuStorage::builder()
-                      .withManager(manager_.get())
+                      .withDeviceLease(device_lease_)
                       .withSize(1024)
                       .build();
 

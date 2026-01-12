@@ -5,15 +5,58 @@
 #include <cstddef>
 #include <utility>
 
-#include "orteaf/internal/base/heap_vector.h"
+#include "orteaf/internal/base/manager/fifo_lease_lifetime_registry.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include "orteaf/internal/diagnostics/log/log_config.h"
 #include "orteaf/internal/execution/mps/manager/mps_fence_manager.h"
-#include "orteaf/internal/execution/mps/platform/mps_fast_ops.h"
 #include "orteaf/internal/execution/mps/mps_handles.h"
+#include "orteaf/internal/execution/mps/platform/mps_fast_ops.h"
+#include "orteaf/internal/execution/mps/resource/mps_fence_hazard.h"
 
 namespace orteaf::internal::execution::mps::manager {
 
+/**
+ * @brief PayloadTraits for MpsFenceHazard used with FifoLeaseLifetimeRegistry.
+ */
+struct MpsFencePayloadTraits {
+  using Payload = ::orteaf::internal::execution::mps::resource::MpsFenceHazard;
+
+  template <typename FastOps> static bool isReady(Payload &payload) {
+    return payload.isReady<FastOps>();
+  }
+
+  static void markCompletedUnsafe(Payload &payload) {
+    payload.markCompletedUnsafe();
+  }
+
+  template <typename FastOps>
+  static void validateBeforeRelease(Payload &payload) {
+#if ORTEAF_MPS_DEBUG_ENABLED
+    if (!payload.isReady<FastOps>()) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+          "MPS fence lifetime manager release ready aborted due to active "
+          "fences");
+    }
+#else
+    payload.markCompletedUnsafe();
+#endif
+  }
+
+  template <typename FastOps> static void waitUntilReady(Payload &payload) {
+    auto command_buffer = payload.commandBuffer();
+    if (command_buffer != nullptr) {
+      FastOps::waitUntilCompleted(command_buffer);
+    }
+  }
+};
+
+/**
+ * @brief MPS fence lifetime manager.
+ *
+ * Manages fence leases in FIFO order for a specific command queue.
+ * Wraps FifoLeaseLifetimeRegistry with MPS-specific acquire logic.
+ */
 class MpsFenceLifetimeManager {
 public:
   using FenceManager =
@@ -23,6 +66,9 @@ public:
       ::orteaf::internal::execution::mps::MpsCommandQueueHandle;
   using CommandBufferType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandBuffer_t;
+
+  using Registry = ::orteaf::internal::base::manager::FifoLeaseLifetimeRegistry<
+      StrongFenceLease, MpsFencePayloadTraits>;
 
   MpsFenceLifetimeManager() = default;
   MpsFenceLifetimeManager(const MpsFenceLifetimeManager &) = delete;
@@ -65,7 +111,7 @@ public:
           "MPS fence lifetime manager requires a command buffer");
     }
     auto lease = fence_manager_->acquire();
-    auto *payload = lease.payloadPtr();
+    auto *payload = lease.operator->();
     if (payload == nullptr) {
       lease.release();
       ::orteaf::internal::diagnostics::error::throwError(
@@ -84,136 +130,46 @@ public:
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
           "MPS fence hazard failed to bind command buffer");
     }
-    hazards_.pushBack(std::move(lease));
-    return hazards_.back();
+    registry_.push(lease);
+    return lease;
   }
 
   template <typename FastOps =
                 ::orteaf::internal::execution::mps::platform::MpsFastOps>
   std::size_t releaseReady() {
-    ensureReleaseReady();
-    if (head_ >= hazards_.size()) {
-      hazards_.clear();
-      head_ = 0;
-      return 0;
-    }
-
-    std::size_t ready_end = 0;
-    for (std::size_t i = hazards_.size(); i > head_; --i) {
-      auto &lease = hazards_[i - 1];
-      auto *payload = lease.payloadPtr();
-      if (payload == nullptr) {
-        ready_end = i;
-        break;
-      }
-      if (payload->isReady<FastOps>()) {
-        ready_end = i;
-        break;
-      }
-    }
-
-    if (ready_end == 0) {
-      return 0;
-    }
-
-    const std::size_t released = ready_end - head_;
-    for (std::size_t i = head_; i < ready_end; ++i) {
-      auto *payload = hazards_[i].payloadPtr();
-      if (payload != nullptr) {
-#if ORTEAF_MPS_DEBUG_ENABLED
-        if (!payload->isReady<FastOps>()) {
-          ::orteaf::internal::diagnostics::error::throwError(
-              ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-              "MPS fence lifetime manager release ready aborted due to active fences");
-        }
-#else
-        payload->markCompletedUnsafe();
-#endif
-      }
-      hazards_[i].release();
-    }
-    head_ = ready_end;
-    compactIfNeeded();
-    return released;
+    ensureConfigured();
+    return registry_.releaseReady<FastOps>();
   }
 
   template <typename FastOps =
                 ::orteaf::internal::execution::mps::platform::MpsFastOps>
   void clear() {
-    ensureReleaseReady();
-    if (head_ >= hazards_.size()) {
-      hazards_.clear();
-      head_ = 0;
-      return;
-    }
-
-    for (std::size_t i = head_; i < hazards_.size(); ++i) {
-      auto *payload = hazards_[i].payloadPtr();
-      if (payload == nullptr) {
-        continue;
-      }
-      if (!payload->isReady<FastOps>()) {
-        ::orteaf::internal::diagnostics::error::throwError(
-            ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-            "MPS fence lifetime manager clear aborted due to active fences");
-      }
-    }
-
-    for (std::size_t i = head_; i < hazards_.size(); ++i) {
-      hazards_[i].release();
-    }
-    hazards_.clear();
-    head_ = 0;
+    ensureConfigured();
+    registry_.clear<FastOps>();
   }
 
   template <typename FastOps =
                 ::orteaf::internal::execution::mps::platform::MpsFastOps>
   std::size_t waitUntilReady() {
-    ensureReleaseReady();
-    if (head_ >= hazards_.size()) {
-      hazards_.clear();
-      head_ = 0;
-      return 0;
-    }
-
-    for (std::size_t i = head_; i < hazards_.size(); ++i) {
-      auto *payload = hazards_[i].payloadPtr();
-      if (payload == nullptr) {
-        continue;
-      }
-      auto command_buffer = payload->commandBuffer();
-      if (command_buffer != nullptr) {
-        FastOps::waitUntilCompleted(command_buffer);
-        if (!payload->isReady<FastOps>()) {
-          ::orteaf::internal::diagnostics::error::throwError(
-              ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-              "MPS fence lifetime manager wait failed to complete fence");
-        }
-      }
-    }
-
-    const std::size_t released = hazards_.size() - head_;
-    for (std::size_t i = head_; i < hazards_.size(); ++i) {
-      hazards_[i].release();
-    }
-    hazards_.clear();
-    head_ = 0;
-    return released;
+    ensureConfigured();
+    return registry_.waitUntilReady<FastOps>();
   }
 
-  std::size_t size() const noexcept {
-    return (head_ >= hazards_.size()) ? 0 : (hazards_.size() - head_);
-  }
+  std::size_t size() const noexcept { return registry_.size(); }
 
-  bool empty() const noexcept { return size() == 0; }
+  bool empty() const noexcept { return registry_.empty(); }
 
 #if ORTEAF_ENABLE_TEST
-  std::size_t storageSizeForTest() const noexcept { return hazards_.size(); }
-  std::size_t headIndexForTest() const noexcept { return head_; }
+  std::size_t storageSizeForTest() const noexcept {
+    return registry_.storageSizeForTest();
+  }
+  std::size_t headIndexForTest() const noexcept {
+    return registry_.headIndexForTest();
+  }
 #endif
 
 private:
-  void ensureReleaseReady() const {
+  void ensureConfigured() const {
     if (fence_manager_ == nullptr) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
@@ -226,31 +182,9 @@ private:
     }
   }
 
-  void compactIfNeeded() {
-    if (head_ == 0) {
-      return;
-    }
-    if (head_ >= hazards_.size()) {
-      hazards_.clear();
-      head_ = 0;
-      return;
-    }
-    if (head_ < (hazards_.size() / 2)) {
-      return;
-    }
-
-    const std::size_t new_size = hazards_.size() - head_;
-    for (std::size_t i = 0; i < new_size; ++i) {
-      hazards_[i] = std::move(hazards_[head_ + i]);
-    }
-    hazards_.resize(new_size);
-    head_ = 0;
-  }
-
   FenceManager *fence_manager_{nullptr};
   CommandQueueHandle queue_handle_{CommandQueueHandle::invalid()};
-  ::orteaf::internal::base::HeapVector<StrongFenceLease> hazards_{};
-  std::size_t head_{0};
+  Registry registry_{};
 };
 
 } // namespace orteaf::internal::execution::mps::manager

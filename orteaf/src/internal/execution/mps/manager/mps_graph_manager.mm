@@ -6,7 +6,7 @@
 
 namespace orteaf::internal::execution::mps::manager {
 
-void MpsGraphManager::configure(const Config &config) {
+void MpsGraphManager::configure(const InternalConfig &config) {
   shutdown();
   if (config.device == nullptr) {
     ::orteaf::internal::diagnostics::error::throwError(
@@ -20,10 +20,22 @@ void MpsGraphManager::configure(const Config &config) {
   }
   device_ = config.device;
   ops_ = config.ops;
+  const auto &cfg = config.public_config;
   key_to_index_.clear();
   const GraphPayloadPoolTraits::Request payload_request{};
   const auto payload_context = makePayloadContext();
-  core_.configure(config.pool, payload_request, payload_context);
+  Core::Builder<GraphPayloadPoolTraits::Request,
+                GraphPayloadPoolTraits::Context>{}
+      .withControlBlockCapacity(cfg.control_block_capacity)
+      .withControlBlockBlockSize(cfg.control_block_block_size)
+      .withControlBlockGrowthChunkSize(
+          cfg.control_block_growth_chunk_size)
+      .withPayloadCapacity(cfg.payload_capacity)
+      .withPayloadBlockSize(cfg.payload_block_size)
+      .withPayloadGrowthChunkSize(cfg.payload_growth_chunk_size)
+      .withRequest(payload_request)
+      .withContext(payload_context)
+      .configure(core_);
 }
 
 void MpsGraphManager::shutdown() {

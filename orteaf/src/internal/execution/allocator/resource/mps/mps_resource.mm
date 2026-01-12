@@ -52,7 +52,7 @@ bool MpsResource::isCompleted(FenceToken &token) {
                   "MpsResource::isCompleted called before initialize");
   bool all_completed = true;
   for (auto &lease : token) {
-    auto *payload = lease.payloadPtr();
+    auto *payload = lease.operator->();
     if (payload == nullptr) {
       lease.release();
       continue;

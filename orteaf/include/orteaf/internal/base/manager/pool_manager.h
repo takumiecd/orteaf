@@ -82,13 +82,105 @@ public:
 
   static constexpr const char *managerName() { return Traits::Name; }
 
-  struct Config {
-    std::size_t control_block_capacity{0};
-    std::size_t control_block_block_size{0};
-    std::size_t control_block_growth_chunk_size{1};
-    std::size_t payload_growth_chunk_size{1};
-    std::size_t payload_capacity{0};
-    std::size_t payload_block_size{0};
+  // ===========================================================================
+  // Builder (Fluent API)
+  // ===========================================================================
+
+  /**
+   * @brief Fluent Builder for PoolManager configuration
+   *
+   * Usage:
+   *   PoolManager<Traits>::Builder<Request, Context>{}
+   *       .withControlBlockCapacity(4)
+   *       .withPayloadCapacity(8)
+   *       .withRequest(req)
+   *       .withContext(ctx)
+   *       .configure(manager);
+   *
+   * @tparam Request Payload作成に渡すリクエスト型
+   * @tparam Context Payload作成に渡すコンテキスト型
+   */
+  template <typename Request, typename Context> class Builder {
+  public:
+    Builder() = default;
+
+    // =========================================================================
+    // Fluent Setters
+    // =========================================================================
+
+    Builder &withControlBlockCapacity(std::size_t capacity) noexcept {
+      control_block_capacity_ = capacity;
+      return *this;
+    }
+
+    Builder &withControlBlockBlockSize(std::size_t size) noexcept {
+      control_block_block_size_ = size;
+      return *this;
+    }
+
+    Builder &withControlBlockGrowthChunkSize(std::size_t size) noexcept {
+      control_block_growth_chunk_size_ = size;
+      return *this;
+    }
+
+    Builder &withPayloadCapacity(std::size_t capacity) noexcept {
+      payload_capacity_ = capacity;
+      return *this;
+    }
+
+    Builder &withPayloadBlockSize(std::size_t size) noexcept {
+      payload_block_size_ = size;
+      return *this;
+    }
+
+    Builder &withPayloadGrowthChunkSize(std::size_t size) noexcept {
+      payload_growth_chunk_size_ = size;
+      return *this;
+    }
+
+    Builder &withRequest(const Request &request) noexcept {
+      request_ = request;
+      return *this;
+    }
+
+    Builder &withContext(const Context &context) noexcept {
+      context_ = context;
+      return *this;
+    }
+
+    // =========================================================================
+    // Configure
+    // =========================================================================
+
+    /**
+     * @brief 既存の PoolManager に設定を適用
+     *
+     * @param manager 設定対象の PoolManager
+     */
+    void configure(PoolManager &manager) const
+      requires requires(PayloadPool &pool, std::size_t capacity,
+                        std::size_t block_size, const Request &req,
+                        const Context &ctx) {
+        pool.setBlockSize(block_size);
+        pool.resize(capacity);
+        pool.clear(req, ctx);
+      }
+    {
+      manager.configureImpl(control_block_capacity_, control_block_block_size_,
+                            control_block_growth_chunk_size_, payload_capacity_,
+                            payload_block_size_, payload_growth_chunk_size_,
+                            request_, context_);
+    }
+
+  private:
+    std::size_t control_block_capacity_{0};
+    std::size_t control_block_block_size_{0};
+    std::size_t control_block_growth_chunk_size_{1};
+    std::size_t payload_capacity_{0};
+    std::size_t payload_block_size_{0};
+    std::size_t payload_growth_chunk_size_{1};
+    Request request_{};
+    Context context_{};
   };
 
   // ===========================================================================
@@ -109,9 +201,7 @@ public:
   /**
    * @brief Manager が設定済みかを返す
    */
-  bool isConfigured() const noexcept {
-    return configured_;
-  }
+  bool isConfigured() const noexcept { return configured_; }
 
   /**
    * @brief 設定済みでなければ例外をスロー
@@ -122,43 +212,6 @@ public:
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
           std::string(managerName()) + " has not been configured");
     }
-  }
-
-  // ===========================================================================
-  // Configuration
-  // ===========================================================================
-
-  template <typename Request, typename Context>
-  void configure(const Config &config, const Request &request,
-                 const Context &context)
-    requires requires(PayloadPool &pool, std::size_t capacity,
-                      std::size_t block_size, const Request &req,
-                      const Context &ctx) {
-      pool.setBlockSize(block_size);
-      pool.resize(capacity);
-      pool.clear(req, ctx);
-    }
-  {
-    validateConfig(config);
-
-    // Payload block size 変更時は shutdown が必要
-    if (isConfigured() && payload_block_size_ != config.payload_block_size &&
-        config.payload_block_size != 0) {
-      shutdownPayloadPool(request, context);
-    }
-
-    // Payload の設定
-    setPayloadBlockSize(config.payload_block_size);
-    resizePayloadPool(config.payload_capacity);
-
-    // ControlBlock の設定
-    applyControlBlockConfig(config);
-
-    // Growth chunk sizes
-    setControlBlockGrowthChunkSize(config.control_block_growth_chunk_size);
-    setPayloadGrowthChunkSize(config.payload_growth_chunk_size);
-
-    configured_ = true;
   }
 
   // ===========================================================================
@@ -478,59 +531,86 @@ private:
   // Configuration Helpers
   // ===========================================================================
 
-  static void validateConfig(const Config &config) {
-    if (config.control_block_block_size == 0) {
+  static void validateParameters(std::size_t control_block_block_size,
+                                 std::size_t control_block_growth_chunk_size,
+                                 std::size_t payload_capacity,
+                                 std::size_t payload_block_size,
+                                 std::size_t payload_growth_chunk_size) {
+    if (control_block_block_size == 0) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
           std::string(managerName()) + " control block size must be > 0");
     }
-    if (config.control_block_growth_chunk_size == 0) {
+    if (control_block_growth_chunk_size == 0) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
           std::string(managerName()) +
               " control block growth chunk size must be > 0");
     }
-    if (config.payload_growth_chunk_size == 0) {
+    if (payload_growth_chunk_size == 0) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
           std::string(managerName()) +
               " payload growth chunk size must be > 0");
     }
-    if (config.payload_capacity != 0 && config.payload_block_size == 0) {
+    if (payload_capacity != 0 && payload_block_size == 0) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
           std::string(managerName()) + " payload block size must be > 0");
     }
   }
 
-  void configureCheckedNoShutdown(const Config &config)
+  /**
+   * @brief Builder から呼ばれる設定実装
+   */
+  template <typename Request, typename Context>
+  void configureImpl(std::size_t control_block_capacity,
+                     std::size_t control_block_block_size,
+                     std::size_t control_block_growth_chunk_size,
+                     std::size_t payload_capacity,
+                     std::size_t payload_block_size,
+                     std::size_t payload_growth_chunk_size,
+                     const Request &request, const Context &context)
     requires requires(PayloadPool &pool, std::size_t capacity,
-                      std::size_t block_size) {
+                      std::size_t block_size, const Request &req,
+                      const Context &ctx) {
       pool.setBlockSize(block_size);
       pool.resize(capacity);
+      pool.clear(req, ctx);
     }
   {
-    validateConfig(config);
+    validateParameters(control_block_block_size,
+                       control_block_growth_chunk_size, payload_capacity,
+                       payload_block_size, payload_growth_chunk_size);
 
-    // Payload の設定 (setPayloadBlockSize 内で canTeardown チェック)
-    setPayloadBlockSize(config.payload_block_size);
-    resizePayloadPool(config.payload_capacity);
+    // Payload block size 変更時は shutdown が必要
+    if (isConfigured() && payload_block_size_ != payload_block_size &&
+        payload_block_size != 0) {
+      shutdownPayloadPool(request, context);
+    }
+
+    // Payload の設定
+    setPayloadBlockSize(payload_block_size);
+    resizePayloadPool(payload_capacity);
 
     // ControlBlock の設定
-    applyControlBlockConfig(config);
+    applyControlBlockConfig(control_block_capacity, control_block_block_size);
 
     // Growth chunk sizes
-    setControlBlockGrowthChunkSize(config.control_block_growth_chunk_size);
-    setPayloadGrowthChunkSize(config.payload_growth_chunk_size);
+    setControlBlockGrowthChunkSize(control_block_growth_chunk_size);
+    setPayloadGrowthChunkSize(payload_growth_chunk_size);
+
+    configured_ = true;
   }
 
-  void applyControlBlockConfig(const Config &config) {
+  void applyControlBlockConfig(std::size_t control_block_capacity,
+                               std::size_t control_block_block_size) {
     // block size 設定 (内部で canShutdown チェックと shutdown 実行)
-    setControlBlockBlockSize(config.control_block_block_size);
+    setControlBlockBlockSize(control_block_block_size);
 
     // resize してから createRange
     const std::size_t old_capacity =
-        resizeControlBlockPool(config.control_block_capacity);
+        resizeControlBlockPool(control_block_capacity);
     typename ControlBlockPoolTraits::Request request{};
     typename ControlBlockPoolTraits::Context context{};
     if (!control_block_pool_.createRange(
@@ -786,11 +866,7 @@ private:
         auto existing_cb_handle = payload_pool_.getBoundControlBlock(handle);
         auto *cb_ptr = control_block_pool_.get(existing_cb_handle);
         if (cb_ptr != nullptr) {
-          if constexpr (std::is_same_v<LeaseType, WeakLeaseType>) {
-            cb_ptr->acquireWeak();
-          } else {
-            cb_ptr->acquireStrong();
-          }
+          // LeaseType constructor will increment the count
           return LeaseType{cb_ptr, &control_block_pool_, existing_cb_handle};
         }
         payload_pool_.unbindControlBlock(handle);
