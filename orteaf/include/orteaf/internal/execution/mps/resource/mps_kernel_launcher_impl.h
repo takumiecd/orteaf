@@ -4,7 +4,7 @@
 
 #include "orteaf/internal/base/heap_vector.h"
 #include "orteaf/internal/diagnostics/error/error.h"
-#include "orteaf/internal/execution/mps/api/mps_runtime_api.h"
+#include "orteaf/internal/execution/mps/api/mps_execution_api.h"
 #include "orteaf/internal/execution/mps/platform/mps_fast_ops.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_compute_command_encoder.h"
 #include "orteaf/internal/execution/mps/resource/mps_fence_token.h"
@@ -73,7 +73,7 @@ public:
    * Reinitializing a device clears and rebuilds its cache.
    */
   template <typename RuntimeApi =
-                ::orteaf::internal::execution::mps::api::MpsRuntimeApi>
+                ::orteaf::internal::execution::mps::api::MpsExecutionApi>
   void initialize(::orteaf::internal::execution::mps::MpsDeviceHandle device) {
     auto entry_idx = findEntryIndex(device);
     if (entry_idx == kInvalidIndex) {
@@ -264,7 +264,7 @@ public:
   template <typename FastOps =
                 ::orteaf::internal::execution::mps::platform::MpsFastOps,
             typename RuntimeApi =
-                ::orteaf::internal::execution::mps::api::MpsRuntimeApi>
+                ::orteaf::internal::execution::mps::api::MpsExecutionApi>
   ::orteaf::internal::execution::mps::manager::MpsFenceManager::StrongFenceLease
   updateFence(
       ::orteaf::internal::execution::mps::MpsDeviceHandle device,
@@ -303,7 +303,7 @@ public:
   template <typename FastOps =
                 ::orteaf::internal::execution::mps::platform::MpsFastOps,
             typename RuntimeApi =
-                ::orteaf::internal::execution::mps::api::MpsRuntimeApi>
+                ::orteaf::internal::execution::mps::api::MpsExecutionApi>
   void updateFenceAndTrack(
       ::orteaf::internal::execution::mps::MpsDeviceHandle device,
       const ::orteaf::internal::execution::mps::manager::
@@ -327,7 +327,7 @@ public:
   template <typename FastOps =
                 ::orteaf::internal::execution::mps::platform::MpsFastOps,
             typename RuntimeApi =
-                ::orteaf::internal::execution::mps::api::MpsRuntimeApi,
+                ::orteaf::internal::execution::mps::api::MpsExecutionApi,
             typename Binder>
   ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandBuffer_t
   dispatchOneShot(
@@ -381,7 +381,7 @@ public:
   template <typename FastOps =
                 ::orteaf::internal::execution::mps::platform::MpsFastOps,
             typename RuntimeApi =
-                ::orteaf::internal::execution::mps::api::MpsRuntimeApi,
+                ::orteaf::internal::execution::mps::api::MpsExecutionApi,
             typename Binder>
   ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandBuffer_t
   dispatchOneShot(

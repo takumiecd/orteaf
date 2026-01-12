@@ -13,11 +13,17 @@
 
 namespace orteaf::internal::execution::mps::api {
 
-class MpsRuntimeApi {
+class MpsExecutionApi {
 public:
   using Runtime =
       ::orteaf::internal::execution::mps::manager::MpsRuntimeManager;
   using DeviceHandle = ::orteaf::internal::execution::mps::MpsDeviceHandle;
+  using DeviceLease =
+      ::orteaf::internal::execution::mps::manager::MpsDeviceManager::DeviceLease;
+  using HeapDescriptorKey =
+      ::orteaf::internal::execution::mps::manager::HeapDescriptorKey;
+  using HeapLease =
+      ::orteaf::internal::execution::mps::manager::MpsHeapManager::HeapLease;
   using LibraryKey = ::orteaf::internal::execution::mps::manager::LibraryKey;
   using FunctionKey = ::orteaf::internal::execution::mps::manager::FunctionKey;
   using PipelineLease = ::orteaf::internal::execution::mps::manager::
@@ -26,7 +32,7 @@ public:
       MpsFenceManager::StrongFenceLease;
   using SlowOps = ::orteaf::internal::execution::mps::platform::MpsSlowOps;
 
-  MpsRuntimeApi() = delete;
+  MpsExecutionApi() = delete;
 
   // Configure runtime with default configuration.
   static void configure() { runtime().configure(); }
@@ -38,18 +44,29 @@ public:
 
   static void shutdown() { runtime().shutdown(); }
 
-  // Acquire a single pipeline for the given device/library/function key trio.
-  static PipelineLease acquirePipeline(DeviceHandle device,
-                                       const LibraryKey &library_key,
-                                       const FunctionKey &function_key) {
+  static DeviceLease acquireDevice(DeviceHandle device) {
     Runtime &rt = runtime();
     auto device_lease = rt.deviceManager().acquire(device);
-    auto *resource = device_lease.operator->();
-    if (resource == nullptr) {
+    if (!device_lease.operator->()) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
           "MPS device lease has no payload");
     }
+    return device_lease;
+  }
+
+  static HeapLease acquireHeap(DeviceHandle device,
+                               const HeapDescriptorKey &key) {
+    auto device_lease = acquireDevice(device);
+    return device_lease->heap_manager.acquire(key);
+  }
+
+  // Acquire a single pipeline for the given device/library/function key trio.
+  static PipelineLease acquirePipeline(DeviceHandle device,
+                                       const LibraryKey &library_key,
+                                       const FunctionKey &function_key) {
+    auto device_lease = acquireDevice(device);
+    auto *resource = device_lease.operator->();
     auto library_lease = resource->library_manager.acquire(library_key);
     auto *library_resource = library_lease.operator->();
     if (library_resource == nullptr) {
@@ -61,14 +78,8 @@ public:
   }
 
   static StrongFenceLease acquireFence(DeviceHandle device) {
-    Runtime &rt = runtime();
-    auto device_lease = rt.deviceManager().acquire(device);
+    auto device_lease = acquireDevice(device);
     auto *resource = device_lease.operator->();
-    if (resource == nullptr) {
-      ::orteaf::internal::diagnostics::error::throwError(
-          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-          "MPS device lease has no payload");
-    }
     return resource->fence_pool.acquire();
   }
 

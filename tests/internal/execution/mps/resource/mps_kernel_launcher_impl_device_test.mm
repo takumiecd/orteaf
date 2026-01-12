@@ -1,13 +1,13 @@
 #include <gtest/gtest.h>
 
-#include "orteaf/internal/execution/mps/api/mps_runtime_api.h"
+#include "orteaf/internal/execution/mps/api/mps_execution_api.h"
+#include "orteaf/internal/execution/mps/mps_handles.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_buffer.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_command_buffer.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_command_queue.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_device.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_heap.h"
 #include "orteaf/internal/execution/mps/resource/mps_kernel_launcher_impl.h"
-#include "orteaf/internal/execution/mps/mps_handles.h"
 
 namespace mps_api = orteaf::internal::execution::mps::api;
 namespace mps_rt = orteaf::internal::execution::mps;
@@ -19,7 +19,7 @@ TEST(MpsKernelLauncherImplDeviceTest, InitializeWithEmbeddedLibraryRealDevice) {
     GTEST_SKIP() << "No MPS devices available";
   }
 
-  mps_api::MpsRuntimeApi::configure();
+  mps_api::MpsExecutionApi::configure();
 
   {
     mps_rt::resource::MpsKernelLauncherImpl<1> impl({
@@ -27,7 +27,7 @@ TEST(MpsKernelLauncherImplDeviceTest, InitializeWithEmbeddedLibraryRealDevice) {
     });
 
     const ::orteaf::internal::execution::mps::MpsDeviceHandle device{0};
-    impl.initialize<mps_api::MpsRuntimeApi>(device);
+    impl.initialize<mps_api::MpsExecutionApi>(device);
 
     EXPECT_TRUE(impl.initialized(device));
     ASSERT_EQ(impl.sizeForTest(), 1u);
@@ -40,7 +40,7 @@ TEST(MpsKernelLauncherImplDeviceTest, InitializeWithEmbeddedLibraryRealDevice) {
     }
   } // impl destroyed here, releases all leases
 
-  mps_api::MpsRuntimeApi::shutdown();
+  mps_api::MpsExecutionApi::shutdown();
 }
 
 TEST(MpsKernelLauncherImplDeviceTest, DispatchOneShotExecutesEmbeddedIdentity) {
@@ -49,7 +49,7 @@ TEST(MpsKernelLauncherImplDeviceTest, DispatchOneShotExecutesEmbeddedIdentity) {
     GTEST_SKIP() << "No MPS devices available";
   }
 
-  mps_api::MpsRuntimeApi::configure();
+  mps_api::MpsExecutionApi::configure();
 
   auto *device_handle =
       ::orteaf::internal::execution::mps::platform::wrapper::getDevice(0);
@@ -57,9 +57,8 @@ TEST(MpsKernelLauncherImplDeviceTest, DispatchOneShotExecutesEmbeddedIdentity) {
   ::orteaf::internal::execution::mps::platform::MpsSlowOpsImpl slow_ops{};
   ::orteaf::internal::execution::mps::manager::MpsCommandQueueManager
       queue_manager{};
-  auto queue_config =
-      ::orteaf::internal::execution::mps::manager::MpsCommandQueueManager::
-          Config{1, 1, 1, 1, 1, 1};
+  auto queue_config = ::orteaf::internal::execution::mps::manager::
+      MpsCommandQueueManager::Config{1, 1, 1, 1, 1, 1};
   queue_manager.configureForTest(queue_config, device_handle, &slow_ops);
   auto queue_lease = queue_manager.acquire();
 
@@ -95,7 +94,8 @@ TEST(MpsKernelLauncherImplDeviceTest, DispatchOneShotExecutesEmbeddedIdentity) {
 
   ::orteaf::internal::execution::mps::platform::wrapper::MPSSize_t tg{kCount, 1,
                                                                       1};
-  ::orteaf::internal::execution::mps::platform::wrapper::MPSSize_t tptg{1, 1, 1};
+  ::orteaf::internal::execution::mps::platform::wrapper::MPSSize_t tptg{1, 1,
+                                                                        1};
 
   {
     mps_rt::resource::MpsKernelLauncherImpl<1> impl({
@@ -103,11 +103,11 @@ TEST(MpsKernelLauncherImplDeviceTest, DispatchOneShotExecutesEmbeddedIdentity) {
     });
 
     const ::orteaf::internal::execution::mps::MpsDeviceHandle device{0};
-    impl.initialize<mps_api::MpsRuntimeApi>(device);
+    impl.initialize<mps_api::MpsExecutionApi>(device);
 
     auto *command_buffer = impl.dispatchOneShot<
         ::orteaf::internal::execution::mps::platform::MpsFastOps,
-        mps_api::MpsRuntimeApi>(
+        mps_api::MpsExecutionApi>(
         queue_lease, device, 0, tg, tptg, [&](auto *encoder) {
           impl.setBuffer<>(encoder, buffer, 0, 0);
           impl.setBytes<>(encoder, &length, sizeof(length), 1);
@@ -136,5 +136,5 @@ TEST(MpsKernelLauncherImplDeviceTest, DispatchOneShotExecutesEmbeddedIdentity) {
   ::orteaf::internal::execution::mps::platform::wrapper::deviceRelease(
       device_handle);
 
-  mps_api::MpsRuntimeApi::shutdown();
+  mps_api::MpsExecutionApi::shutdown();
 }
