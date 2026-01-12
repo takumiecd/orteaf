@@ -3,6 +3,7 @@
 #include <utility>
 
 #include <orteaf/internal/diagnostics/error/error.h>
+#include <orteaf/internal/execution/cpu/api/cpu_execution_api.h>
 #include <orteaf/internal/execution/cpu/manager/cpu_device_manager.h>
 #include <orteaf/internal/storage/cpu/cpu_storage_layout.h>
 
@@ -14,6 +15,7 @@ public:
       ::orteaf::internal::execution::cpu::manager::CpuBufferManager;
   using DeviceManager =
       ::orteaf::internal::execution::cpu::manager::CpuDeviceManager;
+  using DeviceHandle = DeviceManager::DeviceHandle;
   using DeviceLease = DeviceManager::DeviceLease;
   using BufferLease = BufferManager::BufferLease;
   using Layout = ::orteaf::internal::storage::cpu::CpuStorageLayout;
@@ -40,6 +42,12 @@ public:
 
     Builder &withDeviceLease(const DeviceLease &lease) {
       device_lease_ = lease;
+      return *this;
+    }
+
+    Builder &withDeviceHandle(DeviceHandle handle) {
+      device_lease_ = ::orteaf::internal::execution::cpu::api::
+          CpuExecutionApi::acquireDevice(handle);
       return *this;
     }
 

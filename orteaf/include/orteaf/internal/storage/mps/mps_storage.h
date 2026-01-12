@@ -3,6 +3,7 @@
 #include <utility>
 
 #include <orteaf/internal/diagnostics/error/error.h>
+#include <orteaf/internal/execution/mps/api/mps_execution_api.h>
 #include <orteaf/internal/execution/allocator/resource/mps/mps_resource.h>
 #include <orteaf/internal/execution/mps/manager/mps_buffer_manager.h>
 #include <orteaf/internal/execution/mps/manager/mps_heap_manager.h>
@@ -22,6 +23,9 @@ public:
   using HeapManager =
       ::orteaf::internal::execution::mps::manager::MpsHeapManager;
   using HeapLease = HeapManager::HeapLease;
+  using HeapDescriptorKey =
+      ::orteaf::internal::execution::mps::manager::HeapDescriptorKey;
+  using DeviceHandle = ::orteaf::internal::execution::mps::MpsDeviceHandle;
   // TODO: Re-enable fence tokens after revisiting MpsFenceToken ownership/copy
   // rules. using FenceToken =
   // ::orteaf::internal::execution::mps::resource::MpsFenceToken;
@@ -48,6 +52,13 @@ public:
 
     Builder &withHeapLease(const HeapLease &lease) {
       heap_lease_ = lease;
+      return *this;
+    }
+
+    Builder &withDeviceHandle(DeviceHandle handle,
+                              const HeapDescriptorKey &key) {
+      heap_lease_ = ::orteaf::internal::execution::mps::api::
+          MpsExecutionApi::acquireHeap(handle, key);
       return *this;
     }
 
