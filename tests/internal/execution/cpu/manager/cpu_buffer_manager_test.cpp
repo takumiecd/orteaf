@@ -46,9 +46,11 @@ TEST_F(CpuBufferManagerTest, AcquireReturnsValidLease) {
 
   auto lease = manager_->acquire(1024);
   EXPECT_TRUE(lease);
-  EXPECT_NE(lease.operator->(), nullptr);
-  EXPECT_NE(lease->data, nullptr);
-  EXPECT_EQ(lease->size, 1024u);
+  auto *buffer = lease.operator->();
+  ASSERT_NE(buffer, nullptr);
+  EXPECT_TRUE(buffer->valid());
+  EXPECT_NE(buffer->view.data(), nullptr);
+  EXPECT_EQ(buffer->view.size(), 1024u);
 }
 
 TEST_F(CpuBufferManagerTest, AcquireWithAlignmentSucceeds) {
@@ -57,10 +59,12 @@ TEST_F(CpuBufferManagerTest, AcquireWithAlignmentSucceeds) {
   constexpr std::size_t kAlignment = 64;
   auto lease = manager_->acquire(512, kAlignment);
   EXPECT_TRUE(lease);
-  EXPECT_NE(lease->data, nullptr);
+  auto *buffer = lease.operator->();
+  ASSERT_NE(buffer, nullptr);
+  EXPECT_NE(buffer->view.data(), nullptr);
 
   // Verify alignment
-  auto ptr = reinterpret_cast<std::uintptr_t>(lease->data);
+  auto ptr = reinterpret_cast<std::uintptr_t>(buffer->view.data());
   EXPECT_EQ(ptr % kAlignment, 0u);
 }
 
@@ -81,9 +85,15 @@ TEST_F(CpuBufferManagerTest, MultipleAcquiresSucceed) {
   EXPECT_TRUE(lease3);
 
   // All should have different data pointers
-  EXPECT_NE(lease1->data, lease2->data);
-  EXPECT_NE(lease2->data, lease3->data);
-  EXPECT_NE(lease1->data, lease3->data);
+  auto *buffer1 = lease1.operator->();
+  auto *buffer2 = lease2.operator->();
+  auto *buffer3 = lease3.operator->();
+  ASSERT_NE(buffer1, nullptr);
+  ASSERT_NE(buffer2, nullptr);
+  ASSERT_NE(buffer3, nullptr);
+  EXPECT_NE(buffer1->view.data(), buffer2->view.data());
+  EXPECT_NE(buffer2->view.data(), buffer3->view.data());
+  EXPECT_NE(buffer1->view.data(), buffer3->view.data());
 }
 
 TEST_F(CpuBufferManagerTest, LeaseReleaseDecreasesRefCount) {
@@ -107,12 +117,13 @@ TEST_F(CpuBufferManagerTest, BufferViewFromLeaseIsValid) {
   configureManager();
 
   auto lease = manager_->acquire(1024);
-  auto view = lease->view();
+  auto *buffer = lease.operator->();
+  ASSERT_NE(buffer, nullptr);
 
-  EXPECT_TRUE(view);
-  EXPECT_EQ(view.size(), 1024u);
-  EXPECT_EQ(view.offset(), 0u);
-  EXPECT_EQ(view.data(), lease->data);
+  EXPECT_TRUE(buffer->valid());
+  EXPECT_EQ(buffer->view.size(), 1024u);
+  EXPECT_EQ(buffer->view.offset(), 0u);
+  EXPECT_EQ(buffer->view.data(), buffer->view.raw());
 }
 
 TEST_F(CpuBufferManagerTest, NotConfiguredThrows) {

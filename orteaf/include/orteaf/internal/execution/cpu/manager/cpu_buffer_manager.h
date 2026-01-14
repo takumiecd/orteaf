@@ -8,9 +8,9 @@
 #include "orteaf/internal/base/manager/pool_manager.h"
 #include "orteaf/internal/base/pool/slot_pool.h"
 #include "orteaf/internal/diagnostics/error/error.h"
+#include "orteaf/internal/execution/cpu/resource/cpu_buffer.h"
 #include "orteaf/internal/execution/cpu/cpu_handles.h"
 #include "orteaf/internal/execution/cpu/platform/cpu_slow_ops.h"
-#include "orteaf/internal/execution/cpu/resource/cpu_buffer_view.h"
 
 namespace orteaf::internal::execution::cpu::manager {
 
@@ -18,91 +18,19 @@ struct DevicePayloadPoolTraits;
 class CpuExecutionManager;
 
 // =============================================================================
-// Buffer Resource
-// =============================================================================
-
-/**
- * @brief Resource structure holding CPU buffer state.
- *
- * Represents an allocated CPU memory buffer with size and alignment info.
- */
-struct CpuBufferResource {
-  using SlowOps = ::orteaf::internal::execution::cpu::platform::CpuSlowOps;
-
-  void *data{nullptr};
-  std::size_t size{0};
-  std::size_t alignment{0};
-
-  CpuBufferResource() = default;
-  CpuBufferResource(const CpuBufferResource &) = delete;
-  CpuBufferResource &operator=(const CpuBufferResource &) = delete;
-
-  CpuBufferResource(CpuBufferResource &&other) noexcept {
-    moveFrom(std::move(other));
-  }
-
-  CpuBufferResource &operator=(CpuBufferResource &&other) noexcept {
-    if (this != &other) {
-      reset(nullptr);
-      moveFrom(std::move(other));
-    }
-    return *this;
-  }
-
-  ~CpuBufferResource() { reset(nullptr); }
-
-  /**
-   * @brief Reset and deallocate the buffer.
-   *
-   * @param slow_ops SlowOps for deallocation (can be nullptr to skip dealloc)
-   */
-  void reset(SlowOps *slow_ops) noexcept {
-    if (data != nullptr && slow_ops != nullptr) {
-      slow_ops->deallocBuffer(data, size);
-    }
-    data = nullptr;
-    size = 0;
-    alignment = 0;
-  }
-
-  /**
-   * @brief Create a buffer view for this resource.
-   *
-   * @return CpuBufferView representing the full buffer
-   */
-  ::orteaf::internal::execution::cpu::resource::CpuBufferView view() const {
-    return ::orteaf::internal::execution::cpu::resource::CpuBufferView{data, 0,
-                                                                       size};
-  }
-
-  /**
-   * @brief Check if buffer is empty.
-   */
-  bool empty() const noexcept { return data == nullptr; }
-
-private:
-  void moveFrom(CpuBufferResource &&other) noexcept {
-    data = other.data;
-    size = other.size;
-    alignment = other.alignment;
-    other.data = nullptr;
-    other.size = 0;
-    other.alignment = 0;
-  }
-};
-
-// =============================================================================
 // Payload Pool Traits
 // =============================================================================
 
 struct BufferPayloadPoolTraits {
-  using Payload = CpuBufferResource;
+  using Payload =
+      ::orteaf::internal::execution::cpu::resource::CpuBuffer;
   using Handle = ::orteaf::internal::execution::cpu::CpuBufferHandle;
   using SlowOps = ::orteaf::internal::execution::cpu::platform::CpuSlowOps;
 
   struct Request {
     std::size_t size{0};
     std::size_t alignment{0};
+    Handle handle{Handle::invalid()};
   };
 
   struct Context {
@@ -111,7 +39,8 @@ struct BufferPayloadPoolTraits {
 
   static bool create(Payload &payload, const Request &request,
                      const Context &context) {
-    if (context.ops == nullptr || request.size == 0) {
+    if (context.ops == nullptr || request.size == 0 ||
+        !request.handle.isValid()) {
       return false;
     }
 
@@ -120,15 +49,23 @@ struct BufferPayloadPoolTraits {
       return false;
     }
 
-    payload.data = ptr;
-    payload.size = request.size;
-    payload.alignment = request.alignment;
+    const auto view_handle =
+        ::orteaf::internal::execution::cpu::CpuBufferViewHandle{
+            static_cast<::orteaf::internal::execution::cpu::CpuBufferViewHandle::
+                            underlying_type>(request.handle.index)};
+    payload.handle = view_handle;
+    payload.view =
+        ::orteaf::internal::execution::cpu::resource::CpuBufferView{ptr, 0,
+                                                                    request.size};
     return true;
   }
 
   static void destroy(Payload &payload, const Request &,
                       const Context &context) {
-    payload.reset(context.ops);
+    if (context.ops != nullptr && payload.view) {
+      context.ops->deallocBuffer(payload.view.raw(), payload.view.size());
+    }
+    payload = Payload{};
   }
 };
 
@@ -147,7 +84,8 @@ struct BufferManagerCBTag {};
 // =============================================================================
 
 using BufferControlBlock = ::orteaf::internal::base::StrongControlBlock<
-    ::orteaf::internal::execution::cpu::CpuBufferHandle, CpuBufferResource,
+    ::orteaf::internal::execution::cpu::CpuBufferHandle,
+    ::orteaf::internal::execution::cpu::resource::CpuBuffer,
     BufferPayloadPool>;
 
 // =============================================================================
@@ -177,7 +115,7 @@ public:
   using SlowOps = ::orteaf::internal::execution::cpu::platform::CpuSlowOps;
   using BufferHandle = ::orteaf::internal::execution::cpu::CpuBufferHandle;
   using BufferView =
-      ::orteaf::internal::execution::cpu::resource::CpuBufferView;
+      ::orteaf::internal::execution::cpu::resource::CpuBuffer::BufferView;
 
   using Core = ::orteaf::internal::base::PoolManager<CpuBufferManagerTraits>;
   using ControlBlock = Core::ControlBlock;

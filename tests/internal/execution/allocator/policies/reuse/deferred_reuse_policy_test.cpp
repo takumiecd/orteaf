@@ -27,6 +27,7 @@ using Policy = policies::DeferredReusePolicy<FakeResource>;
 
 struct FakeResource {
   using BufferResource = allocator::ExecutionBuffer<Execution::Cpu>;
+  using BufferBlock = allocator::ExecutionBufferBlock<Execution::Cpu>;
   using ReuseToken = typename BufferResource::ReuseToken;
 
   static constexpr Execution execution_type_static() noexcept {

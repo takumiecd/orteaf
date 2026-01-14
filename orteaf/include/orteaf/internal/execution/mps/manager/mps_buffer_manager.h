@@ -11,14 +11,8 @@
 #include "orteaf/internal/base/manager/pool_manager.h"
 #include "orteaf/internal/base/pool/slot_pool.h"
 #include "orteaf/internal/diagnostics/error/error.h"
-#include "orteaf/internal/execution/allocator/execution_buffer.h"
-#include "orteaf/internal/execution/allocator/policies/chunk_locator/direct_chunk_locator.h"
-#include "orteaf/internal/execution/allocator/policies/fast_free/fast_free_policies.h"
-#include "orteaf/internal/execution/allocator/policies/freelist/host_stack_freelist_policy.h"
-#include "orteaf/internal/execution/allocator/policies/large_alloc/direct_resource_large_alloc.h"
-#include "orteaf/internal/execution/allocator/policies/reuse/deferred_reuse_policy.h"
-#include "orteaf/internal/execution/allocator/policies/threading/threading_policies.h"
-#include "orteaf/internal/execution/allocator/pool/segregate_pool.h"
+#include "orteaf/internal/execution/mps/resource/mps_buffer.h"
+#include "orteaf/internal/execution/base/execution_traits.h"
 #include "orteaf/internal/execution/execution.h"
 #include "orteaf/internal/execution/mps/mps_handles.h"
 #include "orteaf/internal/execution/mps/manager/mps_library_manager.h"
@@ -31,25 +25,6 @@ struct HeapPayloadPoolTraits;
 
 using ::orteaf::internal::execution::Execution;
 
-// ============================================================================
-// SegregatePool type alias template (for GPU memory allocation)
-// ============================================================================
-template <typename ResourceT>
-using MpsBufferPoolT =
-    ::orteaf::internal::execution::allocator::pool::SegregatePool<
-        ResourceT,
-        ::orteaf::internal::execution::allocator::policies::FastFreePolicy,
-        ::orteaf::internal::execution::allocator::policies::
-            NoLockThreadingPolicy,
-        ::orteaf::internal::execution::allocator::policies::
-            DirectResourceLargeAllocPolicy<ResourceT>,
-        ::orteaf::internal::execution::allocator::policies::
-            DirectChunkLocatorPolicy<ResourceT>,
-        ::orteaf::internal::execution::allocator::policies::DeferredReusePolicy<
-            ResourceT>,
-        ::orteaf::internal::execution::allocator::policies::
-            HostStackFreelistPolicy<ResourceT>>;
-
 // Forward declaration
 template <typename ResourceT> class MpsBufferManager;
 
@@ -58,25 +33,26 @@ template <typename ResourceT> class MpsBufferManager;
 // ============================================================================
 template <typename ResourceT> struct BufferPayloadPoolTraitsT {
   using MpsBuffer =
-      ::orteaf::internal::execution::allocator::ExecutionBuffer<Execution::Mps>;
+      ::orteaf::internal::execution::mps::resource::MpsBuffer;
   using Payload = MpsBuffer;
   using Handle = ::orteaf::internal::execution::mps::MpsBufferHandle;
-  using SegregatePool = MpsBufferPoolT<ResourceT>;
-  using LaunchParams = typename SegregatePool::LaunchParams;
+  using BufferViewHandle =
+      ::orteaf::internal::execution::mps::MpsBufferViewHandle;
+  using Resource = ResourceT;
 
   struct Request {
     std::size_t size{0};
     std::size_t alignment{0};
+    Handle handle{Handle::invalid()};
   };
 
   struct Context {
-    SegregatePool *segregate_pool{nullptr};
-    LaunchParams *launch_params{nullptr};
+    Resource *resource{nullptr};
   };
 
   static bool create(Payload &payload, const Request &request,
                      const Context &context) {
-    if (context.segregate_pool == nullptr || context.launch_params == nullptr) {
+    if (context.resource == nullptr) {
       return false;
     }
     if (request.size == 0) {
@@ -84,12 +60,14 @@ template <typename ResourceT> struct BufferPayloadPoolTraitsT {
       payload = Payload{};
       return true;
     }
-    auto res = context.segregate_pool->allocate(request.size, request.alignment,
-                                                *context.launch_params);
-    if (!res.valid()) {
+    if (!request.handle.isValid()) {
       return false;
     }
-    payload = std::move(res);
+    auto view = context.resource->allocate(request.size, request.alignment);
+    if (!view) {
+      return false;
+    }
+    payload = Payload{BufferViewHandle{request.handle.index}, std::move(view)};
     return true;
   }
 
@@ -98,14 +76,10 @@ template <typename ResourceT> struct BufferPayloadPoolTraitsT {
     if (!payload.valid()) {
       return;
     }
-    if (context.segregate_pool == nullptr || context.launch_params == nullptr) {
-      payload = Payload{};
-      return;
+    if (context.resource != nullptr) {
+      context.resource->deallocate(payload.view, request.size,
+                                   request.alignment);
     }
-    // MpsBuffer does not store size/alignment, use 0 for deallocation
-    // (SegregatePool uses handle for lookup, not size/alignment)
-    context.segregate_pool->deallocate(std::move(payload), 0, 0,
-                                       *context.launch_params);
     payload = Payload{};
   }
 };
@@ -122,7 +96,7 @@ using BufferPayloadPoolT = ::orteaf::internal::base::pool::SlotPool<
 // ============================================================================
 template <typename ResourceT>
 using MpsBuffer =
-    ::orteaf::internal::execution::allocator::ExecutionBuffer<Execution::Mps>;
+    ::orteaf::internal::execution::mps::resource::MpsBuffer;
 
 template <typename ResourceT>
 using BufferControlBlockT = ::orteaf::internal::base::StrongControlBlock<
@@ -150,8 +124,8 @@ public:
   using Core = ::orteaf::internal::base::PoolManager<Traits>;
   using MpsBuffer = MpsBuffer<ResourceT>;
   using BufferHandle = ::orteaf::internal::execution::mps::MpsBufferHandle;
-  using SegregatePool = MpsBufferPoolT<ResourceT>;
-  using LaunchParams = typename SegregatePool::LaunchParams;
+  using LaunchParams = ::orteaf::internal::execution::base::ExecutionTraits<
+      Execution::Mps>::KernelLaunchParams;
   using Resource = ResourceT;
   using DeviceType =
       ::orteaf::internal::execution::mps::platform::wrapper::MpsDevice_t;
@@ -174,7 +148,7 @@ public:
   // Config - Public settings only
   // =========================================================================
   struct Config {
-    // SegregatePool config
+    // Buffer config
     std::size_t chunk_size{16 * 1024 * 1024};
     std::size_t min_block_size{64};
     std::size_t max_block_size{16 * 1024 * 1024};
@@ -228,7 +202,7 @@ private:
     heap_ = config.heap;
     const auto &cfg = config.public_config;
 
-    // Initialize SegregatePool
+    // Initialize resource
     typename Resource::Config res_cfg{};
     res_cfg.device = config.device;
     res_cfg.device_handle = config.device_handle;
@@ -236,22 +210,8 @@ private:
     res_cfg.usage = cfg.usage;
     res_cfg.library_manager = config.library_manager;
 
-    Resource execution_resource{};
-    execution_resource.initialize(res_cfg);
-    segregate_pool_.~SegregatePool();
-    new (&segregate_pool_) SegregatePool(std::move(execution_resource));
-
-    typename SegregatePool::Config pool_cfg{};
-    pool_cfg.chunk_size = cfg.chunk_size;
-    pool_cfg.min_block_size = cfg.min_block_size;
-    pool_cfg.max_block_size = cfg.max_block_size;
-    pool_cfg.fast_free.resource = segregate_pool_.resource();
-    pool_cfg.threading.resource = segregate_pool_.resource();
-    pool_cfg.large_alloc.resource = segregate_pool_.resource();
-    pool_cfg.chunk_locator.resource = segregate_pool_.resource();
-    pool_cfg.reuse.resource = segregate_pool_.resource();
-    pool_cfg.freelist.resource = segregate_pool_.resource();
-    segregate_pool_.initialize(pool_cfg);
+    resource_ = Resource{};
+    resource_.initialize(res_cfg);
 
     // Configure PoolManager + PayloadPool
     typename BufferPayloadPoolTraitsT<ResourceT>::Request request{};
@@ -285,10 +245,7 @@ public:
     typename BufferPayloadPoolTraitsT<ResourceT>::Request request{};
     core_.shutdown(request, context);
 
-    // Shutdown SegregatePool
-    segregate_pool_.~SegregatePool();
-    new (&segregate_pool_) SegregatePool{};
-
+    resource_ = Resource{};
     device_ = nullptr;
     heap_ = nullptr;
   }
@@ -297,11 +254,13 @@ public:
   // Acquire (allocate new buffer)
   // =========================================================================
   StrongBufferLease acquire(std::size_t size, std::size_t alignment) {
-    return acquire(size, alignment, default_params_);
+    LaunchParams params{};
+    return acquire(size, alignment, params);
   }
 
   StrongBufferLease acquire(std::size_t size, std::size_t alignment,
                             LaunchParams &params) {
+    (void)params;
     core_.ensureConfigured();
     if (size == 0) {
       return {};
@@ -310,8 +269,7 @@ public:
     // Get or grow PayloadPool slot
     typename BufferPayloadPoolTraitsT<ResourceT>::Request request{size,
                                                                   alignment};
-    auto context =
-        makePayloadContext(&params); // Build lease for the buffer payload
+    auto context = makePayloadContext(); // Build lease for the buffer payload
     auto payload_handle = core_.acquirePayloadOrGrowAndCreate(request, context);
     if (!payload_handle.isValid()) {
       ::orteaf::internal::diagnostics::error::throwError(
@@ -367,19 +325,17 @@ public:
 
 private:
   typename BufferPayloadPoolTraitsT<ResourceT>::Context
-  makePayloadContext(LaunchParams *params = nullptr) noexcept {
+  makePayloadContext() noexcept {
     typename BufferPayloadPoolTraitsT<ResourceT>::Context ctx{};
-    ctx.segregate_pool = &segregate_pool_;
-    ctx.launch_params = params ? params : &default_params_;
+    ctx.resource = &resource_;
     return ctx;
   }
 
   // Runtime state
-  SegregatePool segregate_pool_{};
+  Resource resource_{};
   DeviceType device_{nullptr};
   ::orteaf::internal::execution::mps::MpsDeviceHandle device_handle_{};
   HeapType heap_{nullptr};
-  LaunchParams default_params_{};
   Core core_{};
 };
 
@@ -393,8 +349,6 @@ private:
 namespace orteaf::internal::execution::mps::manager {
 using MpsResource =
     ::orteaf::internal::execution::allocator::resource::mps::MpsResource;
-using MpsBufferPool = MpsBufferPoolT<MpsResource>;
-using MpsBufferManagerraits = MpsBufferManagerTraits<MpsResource>;
 } // namespace orteaf::internal::execution::mps::manager
 
 #endif // ORTEAF_ENABLE_MPS

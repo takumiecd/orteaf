@@ -6,7 +6,7 @@
 #include <cstdint>
 
 #include <orteaf/internal/base/heap_vector.h>
-#include <orteaf/internal/execution/allocator/execution_buffer.h>
+#include <orteaf/internal/execution/mps/resource/mps_buffer.h>
 #include <orteaf/internal/execution/mps/manager/mps_command_queue_manager.h>
 #include <orteaf/internal/execution/mps/manager/mps_library_manager.h>
 #include <orteaf/internal/execution/mps/mps_handles.h>
@@ -30,10 +30,9 @@ public:
   using BufferView =
       ::orteaf::internal::execution::mps::resource::MpsBufferView;
   using MpsBufferBlock =
-      ::orteaf::internal::execution::allocator::ExecutionBufferBlock<
-          ExecutionType>;
+      ::orteaf::internal::execution::mps::resource::MpsBufferBlock;
   using MpsBuffer =
-      ::orteaf::internal::execution::allocator::ExecutionBuffer<ExecutionType>;
+      ::orteaf::internal::execution::mps::resource::MpsBuffer;
   // Legacy aliases for backward compatibility
   using BufferBlock = MpsBufferBlock;
   using BufferResource = MpsBuffer;

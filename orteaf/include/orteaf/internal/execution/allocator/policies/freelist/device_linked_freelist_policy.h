@@ -5,10 +5,7 @@
 
 #include <orteaf/internal/base/heap_vector.h>
 #include <orteaf/internal/diagnostics/error/error_macros.h>
-#include <orteaf/internal/execution/allocator/execution_buffer.h>
 #include <orteaf/internal/execution/allocator/policies/policy_config.h>
-#include <orteaf/internal/execution/base/execution_traits.h>
-#include <orteaf/internal/execution/execution.h>
 
 namespace orteaf::internal::execution::allocator::policies {
 
@@ -22,15 +19,11 @@ namespace orteaf::internal::execution::allocator::policies {
  * サイズクラスの計算（min/max_block_size）は SegregatePool が担当し、
  * 本ポリシーは list_index のみを扱う。
  */
-template <typename Resource, ::orteaf::internal::execution::Execution B>
-class DeviceLinkedFreelistPolicy {
+template <typename Resource> class DeviceLinkedFreelistPolicy {
 public:
-  using BufferResource =
-      ::orteaf::internal::execution::allocator::ExecutionBuffer<B>;
+  using BufferResource = typename Resource::BufferResource;
   using BufferViewHandle = typename BufferResource::BufferViewHandle;
-  using LaunchParams =
-      typename ::orteaf::internal::execution::base::ExecutionTraits<
-          B>::KernelLaunchParams;
+  using LaunchParams = typename Resource::LaunchParams;
 
   struct Config : PolicyConfig<Resource> {
     // サイズクラスの情報は SegregatePool が管理するため、

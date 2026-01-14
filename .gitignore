@@ -64,3 +64,6 @@ gha-creds-*.json
 .antigravity/
 
 .cache/
+
+# CTest
+Testing/

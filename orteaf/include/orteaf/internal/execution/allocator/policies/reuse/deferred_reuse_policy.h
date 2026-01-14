@@ -8,7 +8,6 @@
 #include <orteaf/internal/base/handle.h>
 #include <orteaf/internal/base/heap_vector.h>
 #include <orteaf/internal/diagnostics/error/error_macros.h>
-#include <orteaf/internal/execution/allocator/execution_buffer.h>
 #include <orteaf/internal/execution/allocator/policies/policy_config.h>
 #include <orteaf/internal/execution/execution.h>
 
@@ -18,9 +17,7 @@ template <typename Resource> class DeferredReusePolicy {
 public:
   static constexpr auto kExecution = Resource::execution_type_static();
   using BufferResource = typename Resource::BufferResource;
-  using BufferBlock =
-      ::orteaf::internal::execution::allocator::ExecutionBufferBlock<
-          kExecution>;
+  using BufferBlock = typename Resource::BufferBlock;
   using BufferView = typename BufferResource::BufferView;
   using BufferViewHandle = typename BufferResource::BufferViewHandle;
   using ReuseToken = typename Resource::ReuseToken;
