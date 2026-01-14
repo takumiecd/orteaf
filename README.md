@@ -8,15 +8,15 @@ The goal is to achieve high-speed, low-power computation while maintaining flexi
 
 ## 🔍 Motivation
 
-To realize the above philosophy, ORTEAF implements a custom learning algorithm called **JBB (Jacobian-Based Backpropagation)**.  
-This framework serves as the backbone for the research and engineering required to bring JBB into practical use.
+To realize the above philosophy, ORTEAF focuses on a modular core that can host multiple learning strategies via extensions.  
+This framework serves as the backbone for research and engineering required to bring new algorithms into practical use.
 
 ## 🚀 Key Features
 
 - **Unified Tensor Layer:**  
   Provides a consistent interface across CUDA, MPS, and CPU runtimes.
-- **JBB Integration:**  
-  Natively supports the JBB (Jacobian-Based Backpropagation) algorithm.
+- **Extension-ready Learning:**  
+  Exposes hooks for custom learning algorithms without coupling them to the core.
 - **SNN Optimization:**  
   Designed for high-speed inference and learning on resource-constrained devices.
 - **PyTorch-like API:**  
