@@ -188,7 +188,7 @@ public:
           "DenseTensorLayout reshape requires contiguous layout");
     }
 
-    Dim inferred = -1;
+    bool has_inferred = false;
     size_type inferred_index = 0;
     Dim known_product = 1;
     bool has_zero = false;
@@ -196,12 +196,12 @@ public:
     for (size_type i = 0; i < new_shape.size(); ++i) {
       const Dim dim = new_shape[i];
       if (dim == -1) {
-        if (inferred != -1) {
+        if (has_inferred) {
           ::orteaf::internal::diagnostics::error::throwError(
               ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
               "DenseTensorLayout reshape only allows one inferred dimension");
         }
-        inferred = dim;
+        has_inferred = true;
         inferred_index = i;
         continue;
       }
@@ -218,7 +218,7 @@ public:
     }
 
     const Dim current = numel();
-    if (inferred == -1) {
+    if (!has_inferred) {
       const Dim expected = has_zero ? Dim{0} : known_product;
       if (current != expected) {
         ::orteaf::internal::diagnostics::error::throwError(
@@ -245,7 +245,7 @@ public:
 
     Dims resolved_shape;
     resolved_shape.assign(new_shape.begin(), new_shape.end());
-    if (inferred != -1) {
+    if (has_inferred) {
       resolved_shape[inferred_index] = current / known_product;
     }
 
