@@ -43,8 +43,11 @@
  * @see StorageVariant
  */
 
+#include <cstddef>
 #include <utility>
 
+#include <orteaf/internal/dtype/dtype.h>
+#include <orteaf/internal/execution/execution.h>
 #include <orteaf/internal/storage/storage_types.h>
 
 namespace orteaf::internal::storage {
@@ -59,6 +62,9 @@ namespace orteaf::internal::storage {
  */
 class Storage {
 public:
+  using DType = ::orteaf::internal::DType;
+  using Execution = ::orteaf::internal::execution::Execution;
+
   /**
    * @brief Default constructor. Creates an invalid (uninitialized) storage.
    *
@@ -124,6 +130,75 @@ public:
    */
   bool valid() const {
     return !std::holds_alternative<std::monostate>(storage_);
+  }
+
+  /**
+   * @brief Return the execution backend for this storage.
+   *
+   * @return The Execution enum value indicating the backend.
+   * @throws If the storage is uninitialized (monostate).
+   */
+  Execution execution() const {
+    return std::visit(
+        [](const auto &s) -> Execution {
+          using T = std::decay_t<decltype(s)>;
+          if constexpr (std::is_same_v<T, std::monostate>) {
+            ::orteaf::internal::diagnostics::error::throwError(
+                ::orteaf::internal::diagnostics::error::OrteafErrc::
+                    InvalidState,
+                "Cannot get execution from uninitialized storage");
+            return Execution::Cpu; // Unreachable, but needed for compilation
+          } else {
+            return T::kExecution;
+          }
+        },
+        storage_);
+  }
+
+  /**
+   * @brief Return the data type of elements in this storage.
+   *
+   * @return The DType enum value.
+   * @throws If the storage is uninitialized (monostate).
+   */
+  DType dtype() const {
+    return std::visit(
+        [](const auto &s) -> DType {
+          using T = std::decay_t<decltype(s)>;
+          if constexpr (std::is_same_v<T, std::monostate>) {
+            ::orteaf::internal::diagnostics::error::throwError(
+                ::orteaf::internal::diagnostics::error::OrteafErrc::
+                    InvalidState,
+                "Cannot get dtype from uninitialized storage");
+            return DType::F32; // Unreachable, but needed for compilation
+          } else {
+            return s.dtype();
+          }
+        },
+        storage_);
+  }
+
+  /**
+   * @brief Return the size of the storage in bytes.
+   *
+   * @return Size in bytes.
+   * @throws If the storage is uninitialized (monostate).
+   */
+  std::size_t sizeInBytes() const {
+    return std::visit(
+        [](const auto &s) -> std::size_t {
+          using T = std::decay_t<decltype(s)>;
+          if constexpr (std::is_same_v<T, std::monostate>) {
+            ::orteaf::internal::diagnostics::error::throwError(
+                ::orteaf::internal::diagnostics::error::OrteafErrc::
+                    InvalidState,
+                "Cannot get size from uninitialized storage");
+            return 0; // Unreachable, but needed for compilation
+          } else {
+            return s.sizeInBytes();
+          }
+        },
+        storage_);
   }
 
   /**

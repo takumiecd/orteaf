@@ -3,8 +3,10 @@
 #include <utility>
 
 #include <orteaf/internal/diagnostics/error/error.h>
-#include <orteaf/internal/execution/mps/api/mps_execution_api.h>
+#include <orteaf/internal/dtype/dtype.h>
 #include <orteaf/internal/execution/allocator/resource/mps/mps_resource.h>
+#include <orteaf/internal/execution/execution.h>
+#include <orteaf/internal/execution/mps/api/mps_execution_api.h>
 #include <orteaf/internal/execution/mps/manager/mps_buffer_manager.h>
 #include <orteaf/internal/execution/mps/manager/mps_heap_manager.h>
 #include <orteaf/internal/execution/mps/resource/mps_fence_token.h>
@@ -30,6 +32,11 @@ public:
   // rules. using FenceToken =
   // ::orteaf::internal::execution::mps::resource::MpsFenceToken;
   using Layout = ::orteaf::internal::storage::mps::MpsStorageLayout;
+  using DType = ::orteaf::internal::DType;
+  using Execution = ::orteaf::internal::execution::Execution;
+
+  /// @brief The execution backend for this storage type.
+  static constexpr Execution kExecution = Execution::Mps;
 
   /**
    * @brief Builder for constructing MpsStorage instances.
@@ -41,6 +48,7 @@ public:
    * @code
    * auto storage = MpsStorage::builder()
    *     .withHeapLease(heap_lease)
+   *     .withDType(DType::F32)
    *     .withSize(1024)
    *     .withLayout(layout)
    *     .build();
@@ -60,6 +68,11 @@ public:
       heap_lease_ =
           ::orteaf::internal::execution::mps::api::MpsExecutionApi::acquireHeap(
               handle, key);
+      return *this;
+    }
+
+    Builder &withDType(DType dtype) {
+      dtype_ = dtype;
       return *this;
     }
 
@@ -97,11 +110,12 @@ public:
       }
       BufferLease lease =
           heap_lease_->buffer_manager.acquire(size_, alignment_);
-      return MpsStorage(std::move(lease), std::move(layout_));
+      return MpsStorage(std::move(lease), std::move(layout_), dtype_, size_);
     }
 
   private:
     HeapLease heap_lease_{};
+    DType dtype_{DType::F32};
     std::size_t size_{0};
     std::size_t alignment_{0};
     Layout layout_{};
@@ -121,14 +135,27 @@ public:
   MpsStorage &operator=(MpsStorage &&) = default;
   ~MpsStorage() = default;
 
+  /// @brief Return the execution backend for this storage.
+  constexpr Execution execution() const { return kExecution; }
+
+  /// @brief Return the data type of elements in this storage.
+  DType dtype() const { return dtype_; }
+
+  /// @brief Return the size of the storage in bytes.
+  std::size_t sizeInBytes() const { return size_; }
+
 private:
-  MpsStorage(BufferLease buffer_lease, Layout layout)
-      : buffer_lease_(std::move(buffer_lease)), layout_(std::move(layout)) {}
+  MpsStorage(BufferLease buffer_lease, Layout layout, DType dtype,
+             std::size_t size)
+      : buffer_lease_(std::move(buffer_lease)), layout_(std::move(layout)),
+        dtype_(dtype), size_(size) {}
 
   BufferLease buffer_lease_;
   // TODO: Re-enable once MpsFenceToken is updated.
   // FenceToken fence_token_{};
   Layout layout_;
+  DType dtype_{DType::F32};
+  std::size_t size_{0};
 };
 
 } // namespace orteaf::internal::storage::mps

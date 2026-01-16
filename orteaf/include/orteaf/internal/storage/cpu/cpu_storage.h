@@ -3,8 +3,10 @@
 #include <utility>
 
 #include <orteaf/internal/diagnostics/error/error.h>
+#include <orteaf/internal/dtype/dtype.h>
 #include <orteaf/internal/execution/cpu/api/cpu_execution_api.h>
 #include <orteaf/internal/execution/cpu/manager/cpu_device_manager.h>
+#include <orteaf/internal/execution/execution.h>
 #include <orteaf/internal/storage/cpu/cpu_storage_layout.h>
 
 namespace orteaf::internal::storage::cpu {
@@ -19,6 +21,11 @@ public:
   using DeviceLease = DeviceManager::DeviceLease;
   using BufferLease = BufferManager::BufferLease;
   using Layout = ::orteaf::internal::storage::cpu::CpuStorageLayout;
+  using DType = ::orteaf::internal::DType;
+  using Execution = ::orteaf::internal::execution::Execution;
+
+  /// @brief The execution backend for this storage type.
+  static constexpr Execution kExecution = Execution::Cpu;
 
   /**
    * @brief Builder for constructing CpuStorage instances.
@@ -30,6 +37,7 @@ public:
    * @code
    * auto storage = CpuStorage::builder()
    *     .withDeviceLease(device_lease)
+   *     .withDType(DType::F32)
    *     .withSize(1024)
    *     .withAlignment(16)
    *     .withLayout(layout)
@@ -46,9 +54,13 @@ public:
     }
 
     Builder &withDeviceHandle(DeviceHandle handle) {
-      device_lease_ =
-          ::orteaf::internal::execution::cpu::api::CpuExecutionApi::
-              acquireDevice(handle);
+      device_lease_ = ::orteaf::internal::execution::cpu::api::CpuExecutionApi::
+          acquireDevice(handle);
+      return *this;
+    }
+
+    Builder &withDType(DType dtype) {
+      dtype_ = dtype;
       return *this;
     }
 
@@ -84,11 +96,12 @@ public:
       }
       BufferLease lease =
           device_lease_->buffer_manager.acquire(size_, alignment_);
-      return CpuStorage(std::move(lease), std::move(layout_));
+      return CpuStorage(std::move(lease), std::move(layout_), dtype_, size_);
     }
 
   private:
     DeviceLease device_lease_{};
+    DType dtype_{DType::F32};
     std::size_t size_{0};
     std::size_t alignment_{0};
     Layout layout_{};
@@ -108,12 +121,25 @@ public:
   CpuStorage &operator=(CpuStorage &&) = default;
   ~CpuStorage() = default;
 
+  /// @brief Return the execution backend for this storage.
+  constexpr Execution execution() const { return kExecution; }
+
+  /// @brief Return the data type of elements in this storage.
+  DType dtype() const { return dtype_; }
+
+  /// @brief Return the size of the storage in bytes.
+  std::size_t sizeInBytes() const { return size_; }
+
 private:
-  CpuStorage(BufferLease buffer_lease, Layout layout)
-      : buffer_lease_(std::move(buffer_lease)), layout_(std::move(layout)) {}
+  CpuStorage(BufferLease buffer_lease, Layout layout, DType dtype,
+             std::size_t size)
+      : buffer_lease_(std::move(buffer_lease)), layout_(std::move(layout)),
+        dtype_(dtype), size_(size) {}
 
   BufferLease buffer_lease_;
   Layout layout_;
+  DType dtype_{DType::F32};
+  std::size_t size_{0};
 };
 
 } // namespace orteaf::internal::storage::cpu
