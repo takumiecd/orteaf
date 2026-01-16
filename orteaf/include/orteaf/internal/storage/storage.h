@@ -179,6 +179,29 @@ public:
   }
 
   /**
+   * @brief Return the number of elements in this storage.
+   *
+   * @return Number of elements.
+   * @throws If the storage is uninitialized (monostate).
+   */
+  std::size_t numel() const {
+    return std::visit(
+        [](const auto &s) -> std::size_t {
+          using T = std::decay_t<decltype(s)>;
+          if constexpr (std::is_same_v<T, std::monostate>) {
+            ::orteaf::internal::diagnostics::error::throwError(
+                ::orteaf::internal::diagnostics::error::OrteafErrc::
+                    InvalidState,
+                "Cannot get numel from uninitialized storage");
+            return 0; // Unreachable, but needed for compilation
+          } else {
+            return s.numel();
+          }
+        },
+        storage_);
+  }
+
+  /**
    * @brief Return the size of the storage in bytes.
    *
    * @return Size in bytes.

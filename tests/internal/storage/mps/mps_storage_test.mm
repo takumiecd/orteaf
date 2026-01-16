@@ -105,8 +105,7 @@ TEST(MpsStorageExecutionApiTest, BuilderWithDeviceHandleUsesExecutionApi) {
   using MockOps = testing_mps::MpsExecutionOpsMock;
   auto *mock = new ::testing::NiceMock<MockOps>();
 
-  const auto device =
-      reinterpret_cast<mps_wrapper::MpsDevice_t>(0xD1);
+  const auto device = reinterpret_cast<mps_wrapper::MpsDevice_t>(0xD1);
   const auto command_queue =
       reinterpret_cast<mps_wrapper::MpsCommandQueue_t>(0xC1);
   const auto event = reinterpret_cast<mps_wrapper::MpsEvent_t>(0xE1);
@@ -140,33 +139,25 @@ TEST(MpsStorageExecutionApiTest, BuilderWithDeviceHandleUsesExecutionApi) {
       *mock, {command_queue});
   testing_mps::ExecutionMockExpectations::expectDestroyEvents(*mock, {event});
   testing_mps::ExecutionMockExpectations::expectDestroyFences(*mock, {fence});
-  testing_mps::ExecutionMockExpectations::expectReleaseDevices(*mock,
-                                                               {device});
+  testing_mps::ExecutionMockExpectations::expectReleaseDevices(*mock, {device});
 
-  mps_rt::HeapDescriptorKey heap_key =
-      mps_rt::HeapDescriptorKey::Sized(256);
+  mps_rt::HeapDescriptorKey heap_key = mps_rt::HeapDescriptorKey::Sized(256);
   EXPECT_CALL(*mock,
               setHeapDescriptorSize(heap_descriptor, heap_key.size_bytes))
       .Times(1);
-  EXPECT_CALL(
-      *mock,
-      setHeapDescriptorResourceOptions(heap_descriptor,
-                                       heap_key.resource_options))
+  EXPECT_CALL(*mock, setHeapDescriptorResourceOptions(
+                         heap_descriptor, heap_key.resource_options))
       .Times(1);
-  EXPECT_CALL(*mock,
-              setHeapDescriptorStorageMode(heap_descriptor,
-                                           heap_key.storage_mode))
+  EXPECT_CALL(*mock, setHeapDescriptorStorageMode(heap_descriptor,
+                                                  heap_key.storage_mode))
       .Times(1);
-  EXPECT_CALL(*mock,
-              setHeapDescriptorCPUCacheMode(heap_descriptor,
-                                            heap_key.cpu_cache_mode))
+  EXPECT_CALL(*mock, setHeapDescriptorCPUCacheMode(heap_descriptor,
+                                                   heap_key.cpu_cache_mode))
       .Times(1);
-  EXPECT_CALL(*mock,
-              setHeapDescriptorHazardTrackingMode(
-                  heap_descriptor, heap_key.hazard_tracking_mode))
+  EXPECT_CALL(*mock, setHeapDescriptorHazardTrackingMode(
+                         heap_descriptor, heap_key.hazard_tracking_mode))
       .Times(1);
-  EXPECT_CALL(*mock,
-              setHeapDescriptorType(heap_descriptor, heap_key.heap_type))
+  EXPECT_CALL(*mock, setHeapDescriptorType(heap_descriptor, heap_key.heap_type))
       .Times(1);
 
   mps_api::MpsExecutionApi::ExecutionManager::Config config{};
@@ -247,7 +238,7 @@ TEST(MpsStorageExecutionApiTest, BuilderWithDeviceHandleUsesExecutionApi) {
   {
     auto storage = mps_storage::MpsStorage::builder()
                        .withDeviceHandle(mps::MpsDeviceHandle{0}, heap_key)
-                       .withSize(0)
+                       .withNumElements(0)
                        .build();
     SUCCEED();
   }

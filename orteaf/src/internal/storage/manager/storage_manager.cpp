@@ -19,11 +19,11 @@ void StoragePayloadPoolTraits::validateRequestOrThrow(const Request &request) {
                     InvalidArgument,
                 "CpuStorage request requires a valid device handle");
           }
-          if (req.size == 0) {
+          if (req.numel == 0) {
             ::orteaf::internal::diagnostics::error::throwError(
                 ::orteaf::internal::diagnostics::error::OrteafErrc::
                     InvalidArgument,
-                "CpuStorage request size must be > 0");
+                "CpuStorage request numel must be > 0");
           }
         }
 #if ORTEAF_ENABLE_MPS
@@ -34,11 +34,11 @@ void StoragePayloadPoolTraits::validateRequestOrThrow(const Request &request) {
                     InvalidArgument,
                 "MpsStorage request requires a valid device handle");
           }
-          if (req.size == 0) {
+          if (req.numel == 0) {
             ::orteaf::internal::diagnostics::error::throwError(
                 ::orteaf::internal::diagnostics::error::OrteafErrc::
                     InvalidArgument,
-                "MpsStorage request size must be > 0");
+                "MpsStorage request numel must be > 0");
           }
         }
 #endif // ORTEAF_ENABLE_MPS
@@ -47,14 +47,15 @@ void StoragePayloadPoolTraits::validateRequestOrThrow(const Request &request) {
 }
 
 bool StoragePayloadPoolTraits::create(Payload &payload, const Request &request,
-                                     const Context &) {
+                                      const Context &) {
   return std::visit(
       [&](const auto &req) -> bool {
         using RequestT = std::decay_t<decltype(req)>;
         if constexpr (std::is_same_v<RequestT, CpuStorageRequest>) {
           auto storage = ::orteaf::internal::storage::cpu::CpuStorage::builder()
                              .withDeviceHandle(req.device)
-                             .withSize(req.size)
+                             .withDType(req.dtype)
+                             .withNumElements(req.numel)
                              .withAlignment(req.alignment)
                              .withLayout(req.layout)
                              .build();
@@ -65,7 +66,8 @@ bool StoragePayloadPoolTraits::create(Payload &payload, const Request &request,
         else if constexpr (std::is_same_v<RequestT, MpsStorageRequest>) {
           auto storage = ::orteaf::internal::storage::mps::MpsStorage::builder()
                              .withDeviceHandle(req.device, req.heap_key)
-                             .withSize(req.size)
+                             .withDType(req.dtype)
+                             .withNumElements(req.numel)
                              .withAlignment(req.alignment)
                              .withLayout(req.layout)
                              .build();
@@ -81,7 +83,7 @@ bool StoragePayloadPoolTraits::create(Payload &payload, const Request &request,
 }
 
 void StoragePayloadPoolTraits::destroy(Payload &payload, const Request &,
-                                      const Context &) {
+                                       const Context &) {
   payload = Payload{};
 }
 
@@ -150,6 +152,8 @@ void StorageManager::shutdown() {
   core_.shutdown(request, context);
 }
 
-bool StorageManager::isConfigured() const noexcept { return core_.isConfigured(); }
+bool StorageManager::isConfigured() const noexcept {
+  return core_.isConfigured();
+}
 
 } // namespace orteaf::internal::storage::manager

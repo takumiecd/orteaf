@@ -39,7 +39,7 @@ protected:
 TEST_F(StorageManagerTest, AcquireCpuStorageFromUnifiedManager) {
   storage_manager::CpuStorageRequest request{};
   request.device = cpu::CpuDeviceHandle{0};
-  request.size = 256;
+  request.numel = 256;
   request.alignment = 16;
 
   auto lease = manager_.acquire(storage_manager::StorageRequest{request});
@@ -54,7 +54,7 @@ TEST_F(StorageManagerTest, AcquireCpuStorageFromUnifiedManager) {
 TEST_F(StorageManagerTest, AcquireCpuStorageFromManagerRequestAlias) {
   storage_manager::CpuStorageRequest request{};
   request.device = cpu::CpuDeviceHandle{0};
-  request.size = 128;
+  request.numel = 128;
 
   storage_manager::StorageManager::Request request_variant{request};
   auto lease = manager_.acquire(request_variant);
@@ -69,7 +69,7 @@ TEST_F(StorageManagerTest, AcquireCpuStorageFromManagerRequestAlias) {
 TEST_F(StorageManagerTest, InvalidRequestThrows) {
   storage_manager::CpuStorageRequest request{};
   request.device = cpu::CpuDeviceHandle{0};
-  request.size = 0;
+  request.numel = 0;
 
   EXPECT_THROW(manager_.acquire(storage_manager::StorageRequest{request}),
                std::system_error);
@@ -79,7 +79,7 @@ TEST(StorageManagerStandaloneTest, AcquireWithoutConfigureThrows) {
   storage_manager::StorageManager manager{};
   storage_manager::CpuStorageRequest request{};
   request.device = cpu::CpuDeviceHandle{0};
-  request.size = 64;
+  request.numel = 64;
 
   EXPECT_THROW(manager.acquire(storage_manager::StorageRequest{request}),
                std::system_error);
@@ -137,7 +137,7 @@ TEST(StorageManagerMpsTest, AcquireMpsStorageFromUnifiedManager) {
   request.heap_key =
       storage_manager::MpsStorageRequest::HeapDescriptorKey::Sized(
           kHeapSizeBytes);
-  request.size = 256;
+  request.numel = 256;
   request.alignment = 16;
 
   {

@@ -38,7 +38,7 @@ public:
    * auto storage = CpuStorage::builder()
    *     .withDeviceLease(device_lease)
    *     .withDType(DType::F32)
-   *     .withSize(1024)
+   *     .withNumElements(256)
    *     .withAlignment(16)
    *     .withLayout(layout)
    *     .build();
@@ -64,8 +64,8 @@ public:
       return *this;
     }
 
-    Builder &withSize(std::size_t size) {
-      size_ = size;
+    Builder &withNumElements(std::size_t numel) {
+      numel_ = numel;
       return *this;
     }
 
@@ -94,15 +94,17 @@ public:
             ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
             "CpuStorage requires a valid device lease");
       }
+      const std::size_t size_in_bytes =
+          numel_ * ::orteaf::internal::sizeOf(dtype_);
       BufferLease lease =
-          device_lease_->buffer_manager.acquire(size_, alignment_);
-      return CpuStorage(std::move(lease), std::move(layout_), dtype_, size_);
+          device_lease_->buffer_manager.acquire(size_in_bytes, alignment_);
+      return CpuStorage(std::move(lease), std::move(layout_), dtype_, numel_);
     }
 
   private:
     DeviceLease device_lease_{};
     DType dtype_{DType::F32};
-    std::size_t size_{0};
+    std::size_t numel_{0};
     std::size_t alignment_{0};
     Layout layout_{};
   };
@@ -127,19 +129,24 @@ public:
   /// @brief Return the data type of elements in this storage.
   DType dtype() const { return dtype_; }
 
+  /// @brief Return the number of elements in this storage.
+  std::size_t numel() const { return numel_; }
+
   /// @brief Return the size of the storage in bytes.
-  std::size_t sizeInBytes() const { return size_; }
+  std::size_t sizeInBytes() const {
+    return numel_ * ::orteaf::internal::sizeOf(dtype_);
+  }
 
 private:
   CpuStorage(BufferLease buffer_lease, Layout layout, DType dtype,
-             std::size_t size)
+             std::size_t numel)
       : buffer_lease_(std::move(buffer_lease)), layout_(std::move(layout)),
-        dtype_(dtype), size_(size) {}
+        dtype_(dtype), numel_(numel) {}
 
   BufferLease buffer_lease_;
   Layout layout_;
   DType dtype_{DType::F32};
-  std::size_t size_{0};
+  std::size_t numel_{0};
 };
 
 } // namespace orteaf::internal::storage::cpu

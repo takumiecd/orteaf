@@ -43,7 +43,7 @@ protected:
 TEST_F(CpuStorageBuilderTest, BuilderCreatesValidStorage) {
   auto storage = cpu_storage::CpuStorage::builder()
                      .withDeviceLease(device_lease_)
-                     .withSize(1024)
+                     .withNumElements(1024)
                      .build();
 
   // Storage should be constructed (we can't check internal state easily,
@@ -54,7 +54,7 @@ TEST_F(CpuStorageBuilderTest, BuilderCreatesValidStorage) {
 TEST_F(CpuStorageBuilderTest, BuilderWithAlignment) {
   auto storage = cpu_storage::CpuStorage::builder()
                      .withDeviceLease(device_lease_)
-                     .withSize(512)
+                     .withNumElements(512)
                      .withAlignment(64)
                      .build();
 
@@ -65,7 +65,7 @@ TEST_F(CpuStorageBuilderTest, BuilderWithLayout) {
   cpu_storage::CpuStorageLayout layout{};
   auto storage = cpu_storage::CpuStorage::builder()
                      .withDeviceLease(device_lease_)
-                     .withSize(256)
+                     .withNumElements(256)
                      .withLayout(layout)
                      .build();
 
@@ -76,7 +76,7 @@ TEST_F(CpuStorageBuilderTest, BuilderChainAllOptions) {
   cpu_storage::CpuStorageLayout layout{};
   auto storage = cpu_storage::CpuStorage::builder()
                      .withDeviceLease(device_lease_)
-                     .withSize(1024)
+                     .withNumElements(1024)
                      .withAlignment(32)
                      .withLayout(layout)
                      .build();
@@ -87,7 +87,7 @@ TEST_F(CpuStorageBuilderTest, BuilderChainAllOptions) {
 TEST_F(CpuStorageBuilderTest, BuilderStaticMethodReturnsBuilder) {
   auto builder = cpu_storage::CpuStorage::builder();
   // Should be able to chain methods
-  builder.withDeviceLease(device_lease_).withSize(128);
+  builder.withDeviceLease(device_lease_).withNumElements(128);
   auto storage = builder.build();
 
   SUCCEED();
@@ -102,7 +102,7 @@ TEST_F(CpuStorageBuilderTest, DefaultConstructedStorageIsValid) {
 TEST_F(CpuStorageBuilderTest, StorageIsMoveConstructible) {
   auto storage1 = cpu_storage::CpuStorage::builder()
                       .withDeviceLease(device_lease_)
-                      .withSize(1024)
+                      .withNumElements(1024)
                       .build();
 
   auto storage2 = std::move(storage1);
@@ -112,7 +112,7 @@ TEST_F(CpuStorageBuilderTest, StorageIsMoveConstructible) {
 TEST_F(CpuStorageBuilderTest, StorageIsMoveAssignable) {
   auto storage1 = cpu_storage::CpuStorage::builder()
                       .withDeviceLease(device_lease_)
-                      .withSize(1024)
+                      .withNumElements(1024)
                       .build();
 
   cpu_storage::CpuStorage storage2;
@@ -126,7 +126,7 @@ TEST(CpuStorageExecutionApiTest, BuilderWithDeviceHandleUsesExecutionApi) {
   {
     auto storage = cpu_storage::CpuStorage::builder()
                        .withDeviceHandle(cpu::CpuDeviceHandle{0})
-                       .withSize(128)
+                       .withNumElements(128)
                        .build();
     SUCCEED();
   }
