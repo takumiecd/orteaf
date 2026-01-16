@@ -1,11 +1,13 @@
 #include "orteaf/user/tensor/tensor.h"
 
 #include "orteaf/internal/diagnostics/error/error.h"
-#include "orteaf/user/tensor/tensor_api.h"
+#include "orteaf/internal/tensor/api/tensor_api.h"
 
 namespace orteaf::user::tensor {
 
 namespace {
+
+using TensorApi = ::orteaf::internal::tensor::api::TensorApi;
 
 void ensureValid(const Tensor &t) {
   if (!t.valid()) {
