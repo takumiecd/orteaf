@@ -5,6 +5,9 @@
  * @brief Core registry template for tensor implementations.
  */
 
+#include <cstring>
+#include <stdexcept>
+#include <string_view>
 #include <tuple>
 #include <variant>
 
@@ -80,6 +83,18 @@ public:
     return dispatchImpl<Lease, Impls...>(lease, std::forward<Func>(func));
   }
 
+  /// @brief Dispatch by name - calls func with the matching Impl type.
+  /// @return true if name matched, false otherwise.
+  template <typename Func>
+  bool dispatchByName(std::string_view name, Func &&func) {
+    return dispatchByNameImpl<Impls...>(name, std::forward<Func>(func));
+  }
+
+  /// @brief Check if a name is registered.
+  static bool hasName(std::string_view name) {
+    return hasNameImpl<Impls...>(name);
+  }
+
 private:
   template <typename First, typename... Rest>
   void configureImpl(const Config &config, StorageManager &storage_manager) {
@@ -109,7 +124,7 @@ private:
     return first;
   }
 
-  // Dispatch helper - find which Impl matches the Lease type
+  // Dispatch by lease type
   template <typename Lease, typename First, typename... Rest, typename Func>
   static auto dispatchImpl(const Lease &lease, Func &&func) {
     if constexpr (std::is_same_v<Lease,
@@ -118,6 +133,32 @@ private:
     } else if constexpr (sizeof...(Rest) > 0) {
       return dispatchImpl<Lease, Rest...>(lease, std::forward<Func>(func));
     }
+  }
+
+  // Dispatch by name
+  template <typename First, typename... Rest, typename Func>
+  bool dispatchByNameImpl(std::string_view name, Func &&func) {
+    if (name == TensorImplTraits<First>::name) {
+      func.template operator()<First>(
+          std::get<typename TensorImplTraits<First>::Manager>(managers_));
+      return true;
+    }
+    if constexpr (sizeof...(Rest) > 0) {
+      return dispatchByNameImpl<Rest...>(name, std::forward<Func>(func));
+    }
+    return false;
+  }
+
+  // Check name
+  template <typename First, typename... Rest>
+  static bool hasNameImpl(std::string_view name) {
+    if (name == TensorImplTraits<First>::name) {
+      return true;
+    }
+    if constexpr (sizeof...(Rest) > 0) {
+      return hasNameImpl<Rest...>(name);
+    }
+    return false;
   }
 
   ManagerTuple managers_{};

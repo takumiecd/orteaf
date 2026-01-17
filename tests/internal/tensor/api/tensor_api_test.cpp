@@ -208,4 +208,32 @@ TEST_F(TensorApiInternalTest, ChainedAutoDispatch) {
   ASSERT_FALSE(std::holds_alternative<std::monostate>(unsqueezed));
 }
 
+// =============================================================================
+// CreateByName Tests
+// =============================================================================
+
+TEST_F(TensorApiInternalTest, CreateByNameDense) {
+  std::array<int64_t, 2> shape{3, 4};
+  auto variant = tensor_api::TensorApi::createByName("dense", shape, DType::F32,
+                                                     Execution::Cpu);
+
+  ASSERT_FALSE(std::holds_alternative<std::monostate>(variant));
+}
+
+TEST_F(TensorApiInternalTest, CreateByNameUnknownThrows) {
+  std::array<int64_t, 2> shape{3, 4};
+  EXPECT_THROW(tensor_api::TensorApi::createByName("unknown", shape, DType::F32,
+                                                   Execution::Cpu),
+               std::system_error);
+}
+
+TEST_F(TensorApiInternalTest, HasImplNameDense) {
+  EXPECT_TRUE(tensor_api::TensorApi::hasImplName("dense"));
+}
+
+TEST_F(TensorApiInternalTest, HasImplNameUnknown) {
+  EXPECT_FALSE(tensor_api::TensorApi::hasImplName("unknown"));
+  EXPECT_FALSE(tensor_api::TensorApi::hasImplName("coo"));
+}
+
 } // namespace
