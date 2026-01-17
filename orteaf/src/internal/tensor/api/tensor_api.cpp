@@ -26,6 +26,11 @@ void ensureConfigured() {
   }
 }
 
+void throwInvalidState(const char *op) {
+  ::orteaf::internal::diagnostics::error::throwError(
+      ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState, op);
+}
+
 } // namespace
 
 void TensorApi::configure(const Config &config) {
@@ -62,45 +67,94 @@ TensorApi::Registry &TensorApi::registry() {
   return registrySingleton();
 }
 
-// ===== TensorImpl Manager Accessors =====
+// ===== Auto-dispatch Operations =====
 
-TensorApi::DenseTensorImplManager &TensorApi::dense() {
-  ensureConfigured();
-  return registrySingleton().get<DenseTensorImpl>();
-}
-
-// ===== Convenience methods =====
-
-TensorApi::TensorImplLease TensorApi::create(std::span<const Dim> shape,
-                                             DType dtype, Execution execution,
-                                             std::size_t alignment) {
-  return dense().create(shape, dtype, execution, alignment);
-}
-
-TensorApi::TensorImplLease
-TensorApi::transpose(const TensorImplLease &src,
+TensorApi::LeaseVariant
+TensorApi::transpose(const LeaseVariant &src,
                      std::span<const std::size_t> perm) {
-  return dense().transpose(src, perm);
+  return std::visit(
+      [&](const auto &lease) -> LeaseVariant {
+        using LeaseType = std::decay_t<decltype(lease)>;
+        if constexpr (std::is_same_v<LeaseType, std::monostate>) {
+          throwInvalidState("Cannot transpose invalid tensor");
+          return std::monostate{};
+        } else {
+          return Registry::dispatch(lease, [&]<typename Impl>(const auto &l) {
+            return registrySingleton().template get<Impl>().transpose(l, perm);
+          });
+        }
+      },
+      src);
 }
 
-TensorApi::TensorImplLease TensorApi::slice(const TensorImplLease &src,
-                                            std::span<const Dim> starts,
-                                            std::span<const Dim> sizes) {
-  return dense().slice(src, starts, sizes);
+TensorApi::LeaseVariant TensorApi::slice(const LeaseVariant &src,
+                                         std::span<const Dim> starts,
+                                         std::span<const Dim> sizes) {
+  return std::visit(
+      [&](const auto &lease) -> LeaseVariant {
+        using LeaseType = std::decay_t<decltype(lease)>;
+        if constexpr (std::is_same_v<LeaseType, std::monostate>) {
+          throwInvalidState("Cannot slice invalid tensor");
+          return std::monostate{};
+        } else {
+          return Registry::dispatch(lease, [&]<typename Impl>(const auto &l) {
+            return registrySingleton().template get<Impl>().slice(l, starts,
+                                                                  sizes);
+          });
+        }
+      },
+      src);
 }
 
-TensorApi::TensorImplLease TensorApi::reshape(const TensorImplLease &src,
-                                              std::span<const Dim> new_shape) {
-  return dense().reshape(src, new_shape);
+TensorApi::LeaseVariant TensorApi::reshape(const LeaseVariant &src,
+                                           std::span<const Dim> new_shape) {
+  return std::visit(
+      [&](const auto &lease) -> LeaseVariant {
+        using LeaseType = std::decay_t<decltype(lease)>;
+        if constexpr (std::is_same_v<LeaseType, std::monostate>) {
+          throwInvalidState("Cannot reshape invalid tensor");
+          return std::monostate{};
+        } else {
+          return Registry::dispatch(lease, [&]<typename Impl>(const auto &l) {
+            return registrySingleton().template get<Impl>().reshape(l,
+                                                                    new_shape);
+          });
+        }
+      },
+      src);
 }
 
-TensorApi::TensorImplLease TensorApi::squeeze(const TensorImplLease &src) {
-  return dense().squeeze(src);
+TensorApi::LeaseVariant TensorApi::squeeze(const LeaseVariant &src) {
+  return std::visit(
+      [&](const auto &lease) -> LeaseVariant {
+        using LeaseType = std::decay_t<decltype(lease)>;
+        if constexpr (std::is_same_v<LeaseType, std::monostate>) {
+          throwInvalidState("Cannot squeeze invalid tensor");
+          return std::monostate{};
+        } else {
+          return Registry::dispatch(lease, [&]<typename Impl>(const auto &l) {
+            return registrySingleton().template get<Impl>().squeeze(l);
+          });
+        }
+      },
+      src);
 }
 
-TensorApi::TensorImplLease TensorApi::unsqueeze(const TensorImplLease &src,
-                                                std::size_t dim) {
-  return dense().unsqueeze(src, dim);
+TensorApi::LeaseVariant TensorApi::unsqueeze(const LeaseVariant &src,
+                                             std::size_t dim) {
+  return std::visit(
+      [&](const auto &lease) -> LeaseVariant {
+        using LeaseType = std::decay_t<decltype(lease)>;
+        if constexpr (std::is_same_v<LeaseType, std::monostate>) {
+          throwInvalidState("Cannot unsqueeze invalid tensor");
+          return std::monostate{};
+        } else {
+          return Registry::dispatch(lease, [&]<typename Impl>(const auto &l) {
+            return registrySingleton().template get<Impl>().unsqueeze(l, dim);
+          });
+        }
+      },
+      src);
 }
 
 } // namespace orteaf::internal::tensor::api

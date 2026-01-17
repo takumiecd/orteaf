@@ -4,9 +4,8 @@
  * @file tensor_api.h
  * @brief Internal API for tensor management.
  *
- * TensorApi provides centralized access to StorageManager and
- * tensor impl managers via the TensorImplRegistry.
- * This is internal infrastructure - users should use the Tensor class.
+ * TensorApi provides operations that automatically dispatch to the correct
+ * manager based on the tensor impl type. Managers are not exposed.
  */
 
 #include <span>
@@ -19,89 +18,57 @@ namespace orteaf::internal::tensor::api {
 /**
  * @brief Internal API for tensor management.
  *
- * Holds StorageManager and the TensorImplRegistry which manages
- * all registered tensor impl managers.
- *
- * Must be configured before use and shutdown when done.
- *
- * @note This is internal infrastructure. Users should use Tensor class.
- *
- * @par Adding a new TensorImpl accessor
- * After registering a new impl in tensor_impl_registry.h,
- * add an accessor method here:
- * @code
- * static CooTensorImplManager& coo() { return registry().get<CooTensorImpl>();
- * }
- * @endcode
+ * Operations automatically dispatch to the correct manager based on impl type.
+ * Managers are not exposed - use the operations directly.
  */
 class TensorApi {
 public:
   using StorageManager = ::orteaf::internal::storage::manager::StorageManager;
   using Registry = ::orteaf::internal::tensor::registry::RegisteredImpls;
+  using LeaseVariant = typename Registry::LeaseVariant;
   using DenseTensorImpl = ::orteaf::extension::tensor::DenseTensorImpl;
-  using DenseTensorImplManager =
-      ::orteaf::extension::tensor::DenseTensorImplManager;
-  using TensorImplLease = DenseTensorImplManager::TensorImplLease;
   using DType = ::orteaf::internal::DType;
   using Execution = ::orteaf::internal::execution::Execution;
   using Dim = ::orteaf::extension::tensor::DenseTensorLayout::Dim;
 
   struct Config {
     StorageManager::Config storage_config{};
-    Registry::Config registry_config{};
+    typename Registry::Config registry_config{};
   };
 
   TensorApi() = delete;
 
-  /// @brief Configure the API with all managers.
   static void configure(const Config &config);
-
-  /// @brief Shutdown all managers.
   static void shutdown();
-
-  /// @brief Check if configured.
   static bool isConfigured() noexcept;
 
-  /// @brief Access the storage manager.
   static StorageManager &storage();
-
-  /// @brief Access the registry.
   static Registry &registry();
 
-  // ===== TensorImpl Manager Accessors =====
-  // Contributors: Add accessor for new impls here
+  // ===== Creation (typed) =====
 
-  /// @brief Access the dense tensor impl manager.
-  static DenseTensorImplManager &dense();
+  template <typename Impl>
+  static auto create(std::span<const Dim> shape, DType dtype,
+                     Execution execution, std::size_t alignment = 0) {
+    return registry().template get<Impl>().create(shape, dtype, execution,
+                                                  alignment);
+  }
 
-  // Future: Add more accessors
-  // static CooTensorImplManager& coo();
-  // static CsrTensorImplManager& csr();
+  // ===== Auto-dispatch Operations =====
 
-  // ===== Convenience methods for DenseTensorImpl =====
+  static LeaseVariant transpose(const LeaseVariant &src,
+                                std::span<const std::size_t> perm);
 
-  /// @brief Create a new dense tensor impl.
-  static TensorImplLease create(std::span<const Dim> shape, DType dtype,
-                                Execution execution, std::size_t alignment = 0);
+  static LeaseVariant slice(const LeaseVariant &src,
+                            std::span<const Dim> starts,
+                            std::span<const Dim> sizes);
 
-  /// @brief Create a transposed view.
-  static TensorImplLease transpose(const TensorImplLease &src,
-                                   std::span<const std::size_t> perm);
+  static LeaseVariant reshape(const LeaseVariant &src,
+                              std::span<const Dim> new_shape);
 
-  /// @brief Create a sliced view.
-  static TensorImplLease slice(const TensorImplLease &src,
-                               std::span<const Dim> starts,
-                               std::span<const Dim> sizes);
+  static LeaseVariant squeeze(const LeaseVariant &src);
 
-  /// @brief Create a reshaped view.
-  static TensorImplLease reshape(const TensorImplLease &src,
-                                 std::span<const Dim> new_shape);
-
-  /// @brief Create a squeezed view.
-  static TensorImplLease squeeze(const TensorImplLease &src);
-
-  /// @brief Create an unsqueezed view.
-  static TensorImplLease unsqueeze(const TensorImplLease &src, std::size_t dim);
+  static LeaseVariant unsqueeze(const LeaseVariant &src, std::size_t dim);
 };
 
 } // namespace orteaf::internal::tensor::api
