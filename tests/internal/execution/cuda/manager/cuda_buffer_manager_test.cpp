@@ -31,30 +31,35 @@ std::size_t normalizeAlignment(std::size_t alignment) {
   return alignment;
 }
 
-cuda_resource::CudaBufferView testAlloc(std::size_t size,
-                                        std::size_t alignment) {
-  if (size == 0) {
-    return {};
-  }
-  const std::size_t aligned = normalizeAlignment(alignment);
-  void *ptr = nullptr;
-  if (posix_memalign(&ptr, aligned, size) != 0) {
-    return {};
-  }
-  const auto raw = static_cast<cuda_wrapper::CudaDevicePtr_t>(
-      reinterpret_cast<std::uintptr_t>(ptr));
-  return cuda_resource::CudaBufferView{raw, 0, size};
-}
+struct TestCudaResource {
+  using BufferView = cuda_resource::CudaBufferView;
+  struct Config {};
 
-void testFree(cuda_resource::CudaBufferView view, std::size_t,
-              std::size_t) {
-  if (!view) {
-    return;
+  void initialize(const Config &) noexcept {}
+
+  BufferView allocate(std::size_t size, std::size_t alignment) {
+    if (size == 0) {
+      return {};
+    }
+    const std::size_t aligned = normalizeAlignment(alignment);
+    void *ptr = nullptr;
+    if (posix_memalign(&ptr, aligned, size) != 0) {
+      return {};
+    }
+    const auto raw = static_cast<cuda_wrapper::CudaDevicePtr_t>(
+        reinterpret_cast<std::uintptr_t>(ptr));
+    return cuda_resource::CudaBufferView{raw, 0, size};
   }
-  auto *ptr = reinterpret_cast<void *>(
-      static_cast<std::uintptr_t>(view.raw()));
-  std::free(ptr);
-}
+
+  void deallocate(BufferView view, std::size_t, std::size_t) {
+    if (!view) {
+      return;
+    }
+    auto *ptr = reinterpret_cast<void *>(
+        static_cast<std::uintptr_t>(view.raw()));
+    std::free(ptr);
+  }
+};
 
 class TestCudaSlowOps final : public cuda_platform::CudaSlowOps {
 public:
@@ -137,7 +142,8 @@ class CudaBufferManagerTest : public ::testing::Test {
 protected:
   void SetUp() override {
     slow_ops_ = std::make_unique<TestCudaSlowOps>();
-    manager_ = std::make_unique<cuda_rt::CudaBufferManager>();
+    manager_ =
+        std::make_unique<cuda_rt::CudaBufferManagerT<TestCudaResource>>();
     context_ = reinterpret_cast<cuda_wrapper::CudaContext_t>(0x1);
     slow_ops_->setContextForTest(context_);
   }
@@ -149,14 +155,12 @@ protected:
   }
 
   void configureManager() {
-    cuda_rt::CudaBufferManager::Config config{};
-    config.alloc = &testAlloc;
-    config.free = &testFree;
+    cuda_rt::CudaBufferManagerT<TestCudaResource>::Config config{};
     manager_->configureForTest(config, context_, slow_ops_.get());
   }
 
   std::unique_ptr<TestCudaSlowOps> slow_ops_;
-  std::unique_ptr<cuda_rt::CudaBufferManager> manager_;
+  std::unique_ptr<cuda_rt::CudaBufferManagerT<TestCudaResource>> manager_;
   cuda_wrapper::CudaContext_t context_{nullptr};
 };
 

@@ -23,7 +23,7 @@ struct ContextPayloadPoolTraits;
 // Payload Pool Traits
 // =============================================================================
 
-struct BufferPayloadPoolTraits {
+template <typename ResourceT> struct BufferPayloadPoolTraitsT {
   using Payload = ::orteaf::internal::execution::cuda::resource::CudaBuffer;
   using Handle = ::orteaf::internal::execution::cuda::CudaBufferHandle;
   using BufferView =
@@ -31,10 +31,7 @@ struct BufferPayloadPoolTraits {
   using ContextType =
       ::orteaf::internal::execution::cuda::platform::wrapper::CudaContext_t;
   using SlowOps = ::orteaf::internal::execution::cuda::platform::CudaSlowOps;
-  using Resource =
-      ::orteaf::internal::execution::cuda::resource::CudaResource;
-  using AllocFn = BufferView (*)(std::size_t, std::size_t);
-  using FreeFn = void (*)(BufferView, std::size_t, std::size_t);
+  using Resource = ResourceT;
 
   struct Request {
     std::size_t size{0};
@@ -45,14 +42,13 @@ struct BufferPayloadPoolTraits {
   struct Context {
     ContextType context{nullptr};
     SlowOps *ops{nullptr};
-    AllocFn alloc{nullptr};
-    FreeFn free{nullptr};
+    Resource *resource{nullptr};
   };
 
   static bool create(Payload &payload, const Request &request,
                      const Context &context) {
     if (context.ops == nullptr || context.context == nullptr ||
-        context.alloc == nullptr || context.free == nullptr ||
+        context.resource == nullptr ||
         !request.handle.isValid()) {
       return false;
     }
@@ -63,7 +59,7 @@ struct BufferPayloadPoolTraits {
     }
 
     context.ops->setContext(context.context);
-    auto view = context.alloc(request.size, request.alignment);
+    auto view = context.resource->allocate(request.size, request.alignment);
     if (!view) {
       return false;
     }
@@ -82,9 +78,10 @@ struct BufferPayloadPoolTraits {
       return;
     }
     if (context.ops != nullptr && context.context != nullptr &&
-        context.free != nullptr) {
+        context.resource != nullptr) {
       context.ops->setContext(context.context);
-      context.free(payload.view, request.size, request.alignment);
+      context.resource->deallocate(payload.view, request.size,
+                                   request.alignment);
     }
     payload = Payload{};
   }
@@ -94,8 +91,10 @@ struct BufferPayloadPoolTraits {
 // Payload Pool
 // =============================================================================
 
-using BufferPayloadPool =
-    ::orteaf::internal::base::pool::SlotPool<BufferPayloadPoolTraits>;
+template <typename ResourceT>
+using BufferPayloadPoolT =
+    ::orteaf::internal::base::pool::SlotPool<
+        BufferPayloadPoolTraitsT<ResourceT>>;
 
 struct BufferManagerCBTag {};
 
@@ -103,18 +102,19 @@ struct BufferManagerCBTag {};
 // ControlBlock
 // =============================================================================
 
-using BufferControlBlock = ::orteaf::internal::base::StrongControlBlock<
+template <typename ResourceT>
+using BufferControlBlockT = ::orteaf::internal::base::StrongControlBlock<
     ::orteaf::internal::execution::cuda::CudaBufferHandle,
     ::orteaf::internal::execution::cuda::resource::CudaBuffer,
-    BufferPayloadPool>;
+    BufferPayloadPoolT<ResourceT>>;
 
 // =============================================================================
 // Manager Traits
 // =============================================================================
 
-struct CudaBufferManagerTraits {
-  using PayloadPool = BufferPayloadPool;
-  using ControlBlock = BufferControlBlock;
+template <typename ResourceT> struct CudaBufferManagerTraits {
+  using PayloadPool = BufferPayloadPoolT<ResourceT>;
+  using ControlBlock = BufferControlBlockT<ResourceT>;
   struct ControlBlockTag {};
   using PayloadHandle = ::orteaf::internal::execution::cuda::CudaBufferHandle;
   static constexpr const char *Name = "CUDA buffer manager";
@@ -124,7 +124,7 @@ struct CudaBufferManagerTraits {
 // CudaBufferManager
 // =============================================================================
 
-class CudaBufferManager {
+template <typename ResourceT> class CudaBufferManagerT {
 public:
   using SlowOps = ::orteaf::internal::execution::cuda::platform::CudaSlowOps;
   using ContextType =
@@ -132,8 +132,10 @@ public:
   using BufferHandle = ::orteaf::internal::execution::cuda::CudaBufferHandle;
   using BufferView =
       ::orteaf::internal::execution::cuda::resource::CudaBuffer::BufferView;
+  using Resource = ResourceT;
 
-  using Core = ::orteaf::internal::base::PoolManager<CudaBufferManagerTraits>;
+  using Traits = CudaBufferManagerTraits<ResourceT>;
+  using Core = ::orteaf::internal::base::PoolManager<Traits>;
   using ControlBlock = Core::ControlBlock;
   using ControlBlockHandle = Core::ControlBlockHandle;
   using ControlBlockPool = Core::ControlBlockPool;
@@ -141,8 +143,7 @@ public:
   using BufferLease = Core::StrongLeaseType;
 
   struct Config {
-    BufferPayloadPoolTraits::AllocFn alloc{nullptr};
-    BufferPayloadPoolTraits::FreeFn free{nullptr};
+    typename Resource::Config resource_config{};
     std::size_t control_block_capacity{0};
     std::size_t control_block_block_size{0};
     std::size_t control_block_growth_chunk_size{1};
@@ -151,12 +152,12 @@ public:
     std::size_t payload_growth_chunk_size{1};
   };
 
-  CudaBufferManager() = default;
-  CudaBufferManager(const CudaBufferManager &) = delete;
-  CudaBufferManager &operator=(const CudaBufferManager &) = delete;
-  CudaBufferManager(CudaBufferManager &&) = default;
-  CudaBufferManager &operator=(CudaBufferManager &&) = default;
-  ~CudaBufferManager() = default;
+  CudaBufferManagerT() = default;
+  CudaBufferManagerT(const CudaBufferManagerT &) = delete;
+  CudaBufferManagerT &operator=(const CudaBufferManagerT &) = delete;
+  CudaBufferManagerT(CudaBufferManagerT &&) = default;
+  CudaBufferManagerT &operator=(CudaBufferManagerT &&) = default;
+  ~CudaBufferManagerT() = default;
 
 private:
   struct InternalConfig {
@@ -165,14 +166,93 @@ private:
     SlowOps *ops{nullptr};
   };
 
-  void configure(const InternalConfig &config);
+  void configure(const InternalConfig &config) {
+    shutdown();
+    if (config.context == nullptr) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+          "CUDA buffer manager requires a valid context");
+    }
+    if (config.ops == nullptr) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+          "CUDA buffer manager requires valid ops");
+    }
+
+    context_ = config.context;
+    ops_ = config.ops;
+    const auto &cfg = config.public_config;
+    resource_ = Resource{};
+    resource_.initialize(cfg.resource_config);
+
+    std::size_t payload_capacity = cfg.payload_capacity;
+    if (payload_capacity == 0) {
+      payload_capacity = 64;
+    }
+    std::size_t payload_block_size = cfg.payload_block_size;
+    if (payload_block_size == 0) {
+      payload_block_size = 16;
+    }
+    std::size_t control_block_capacity = cfg.control_block_capacity;
+    if (control_block_capacity == 0) {
+      control_block_capacity = 64;
+    }
+    std::size_t control_block_block_size = cfg.control_block_block_size;
+    if (control_block_block_size == 0) {
+      control_block_block_size = 16;
+    }
+
+    typename BufferPayloadPoolTraitsT<ResourceT>::Request request{};
+    auto context = makePayloadContext();
+
+    typename Core::template Builder<
+        typename BufferPayloadPoolTraitsT<ResourceT>::Request,
+        typename BufferPayloadPoolTraitsT<ResourceT>::Context>{}
+        .withControlBlockCapacity(control_block_capacity)
+        .withControlBlockBlockSize(control_block_block_size)
+        .withControlBlockGrowthChunkSize(cfg.control_block_growth_chunk_size)
+        .withPayloadCapacity(payload_capacity)
+        .withPayloadBlockSize(payload_block_size)
+        .withPayloadGrowthChunkSize(cfg.payload_growth_chunk_size)
+        .withRequest(request)
+        .withContext(context)
+        .configure(core_);
+  }
 
   friend struct ContextPayloadPoolTraits;
 
 public:
-  void shutdown();
+  void shutdown() {
+    if (!core_.isConfigured()) {
+      return;
+    }
+    typename BufferPayloadPoolTraitsT<ResourceT>::Request request{};
+    const auto context = makePayloadContext();
+    core_.shutdown(request, context);
+    resource_ = Resource{};
+    context_ = nullptr;
+    ops_ = nullptr;
+  }
 
-  BufferLease acquire(std::size_t size, std::size_t alignment = 0);
+  BufferLease acquire(std::size_t size, std::size_t alignment = 0) {
+    core_.ensureConfigured();
+    if (size == 0) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+          "CUDA buffer manager requires size > 0");
+    }
+    typename BufferPayloadPoolTraitsT<ResourceT>::Request request{};
+    request.size = size;
+    request.alignment = alignment;
+    const auto context = makePayloadContext();
+    auto handle = core_.acquirePayloadOrGrowAndCreate(request, context);
+    if (!handle.isValid()) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::OutOfRange,
+          "CUDA buffer manager has no available slots");
+    }
+    return core_.acquireStrongLease(handle);
+  }
 
 #if ORTEAF_ENABLE_TEST
   void configureForTest(const Config &config, ContextType context,
@@ -203,14 +283,24 @@ public:
 #endif
 
 private:
-  BufferPayloadPoolTraits::Context makePayloadContext() const noexcept;
+  typename BufferPayloadPoolTraitsT<ResourceT>::Context makePayloadContext()
+      noexcept {
+    typename BufferPayloadPoolTraitsT<ResourceT>::Context context{};
+    context.context = context_;
+    context.ops = ops_;
+    context.resource = &resource_;
+    return context;
+  }
 
+  Resource resource_{};
   ContextType context_{nullptr};
   SlowOps *ops_{nullptr};
-  BufferPayloadPoolTraits::AllocFn alloc_{nullptr};
-  BufferPayloadPoolTraits::FreeFn free_{nullptr};
   Core core_{};
 };
+
+using CudaBufferManager =
+    CudaBufferManagerT<
+        ::orteaf::internal::execution::cuda::resource::CudaResource>;
 
 } // namespace orteaf::internal::execution::cuda::manager
 
