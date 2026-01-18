@@ -11,7 +11,7 @@
 namespace {
 
 struct PayloadTag {};
-using PayloadHandle =
+using DummyPayloadHandle =
     ::orteaf::internal::base::Handle<PayloadTag, std::uint32_t, std::uint8_t>;
 
 struct ControlBlockTag {};
@@ -22,7 +22,7 @@ struct DummyPayload {
 
 struct DummyPayloadTraits {
   using Payload = DummyPayload;
-  using Handle = PayloadHandle;
+  using Handle = DummyPayloadHandle;
   struct Request {};
   struct Context {};
 
@@ -39,17 +39,17 @@ struct DummyPayloadTraits {
 using PayloadPool =
     ::orteaf::internal::base::pool::SlotPool<DummyPayloadTraits>;
 using ControlBlock =
-    ::orteaf::internal::base::SharedControlBlock<PayloadHandle, DummyPayload,
+    ::orteaf::internal::base::SharedControlBlock<DummyPayloadHandle, DummyPayload,
                                                  PayloadPool>;
 
 struct DummyManagerTraits {
   using PayloadPool =
       ::orteaf::internal::base::pool::SlotPool<DummyPayloadTraits>;
   using ControlBlock =
-      ::orteaf::internal::base::SharedControlBlock<PayloadHandle, DummyPayload,
+      ::orteaf::internal::base::SharedControlBlock<DummyPayloadHandle, DummyPayload,
                                                    PayloadPool>;
   struct ControlBlockTag {};
-  using PayloadHandle = ::PayloadHandle;
+  using PayloadHandle = DummyPayloadHandle;
   static constexpr const char *Name = "DummyManager";
 };
 
@@ -62,14 +62,14 @@ using BoundPayloadPool =
     ::orteaf::internal::base::pool::WithControlBlockBinding<
         PayloadPool, BoundControlBlockHandle>;
 using BoundControlBlock =
-    ::orteaf::internal::base::SharedControlBlock<PayloadHandle, DummyPayload,
+    ::orteaf::internal::base::SharedControlBlock<DummyPayloadHandle, DummyPayload,
                                                  BoundPayloadPool>;
 
 struct BoundManagerTraits {
   using PayloadPool = BoundPayloadPool;
   using ControlBlock = BoundControlBlock;
   using ControlBlockTag = BoundControlBlockTag;
-  using PayloadHandle = ::PayloadHandle;
+  using PayloadHandle = DummyPayloadHandle;
   static constexpr const char *Name = "BoundManager";
 };
 
@@ -502,7 +502,7 @@ TEST(PoolManager, SetPayloadGrowthChunkSizeUpdatesValue) {
 
 TEST(PoolManager, IsAliveReturnsFalseWhenNotConfigured) {
   PoolManager manager;
-  EXPECT_FALSE(manager.isAlive(PayloadHandle::invalid()));
+  EXPECT_FALSE(manager.isAlive(DummyPayloadHandle::invalid()));
 }
 
 TEST(PoolManager, IsAliveReturnsFalseForInvalidHandle) {
@@ -512,7 +512,7 @@ TEST(PoolManager, IsAliveReturnsFalseForInvalidHandle) {
   auto builder = makeBaseBuilder().withRequest(req).withContext(ctx);
 
   builder.configure(manager);
-  EXPECT_FALSE(manager.isAlive(PayloadHandle::invalid()));
+  EXPECT_FALSE(manager.isAlive(DummyPayloadHandle::invalid()));
 }
 
 TEST(PoolManager, IsAliveReturnsFalseForUncreatedPayload) {
@@ -560,7 +560,7 @@ TEST(PoolManager, EmplacePayloadReturnsFalseForInvalidHandle) {
   auto builder = makeBaseBuilder().withRequest(req).withContext(ctx);
 
   builder.configure(manager);
-  EXPECT_FALSE(manager.emplacePayload(PayloadHandle::invalid(), req, ctx));
+  EXPECT_FALSE(manager.emplacePayload(DummyPayloadHandle::invalid(), req, ctx));
 }
 
 TEST(PoolManager, EmplacePayloadReturnsFalseWhenAlreadyCreated) {
@@ -591,7 +591,7 @@ TEST(PoolManager, CreateAllPayloadsCreatesAllSlots) {
   EXPECT_TRUE(manager.createAllPayloads(req, ctx));
 
   for (std::size_t i = 0; i < kPayloadCapacity; ++i) {
-    auto handle = PayloadHandle{static_cast<PayloadHandle::index_type>(i), 0};
+    auto handle = DummyPayloadHandle{static_cast<DummyPayloadHandle::index_type>(i), 0};
     EXPECT_TRUE(manager.isAlive(handle));
   }
 }
@@ -654,7 +654,7 @@ TEST(PoolManager, AcquireStrongLeaseRejectsInvalidHandle) {
   ::orteaf::tests::ExpectErrorMessage(
       ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
       {"DummyManager", "handle is invalid"},
-      [&manager] { manager.acquireStrongLease(PayloadHandle::invalid()); });
+      [&manager] { manager.acquireStrongLease(DummyPayloadHandle::invalid()); });
 }
 
 TEST(PoolManager, AcquireWeakLeaseRejectsInvalidHandle) {
@@ -667,7 +667,7 @@ TEST(PoolManager, AcquireWeakLeaseRejectsInvalidHandle) {
   ::orteaf::tests::ExpectErrorMessage(
       ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
       {"DummyManager", "handle is invalid"},
-      [&manager] { manager.acquireWeakLease(PayloadHandle::invalid()); });
+      [&manager] { manager.acquireWeakLease(DummyPayloadHandle::invalid()); });
 }
 
 TEST(PoolManager, AcquireStrongLeaseRejectsUncreatedPayload) {
