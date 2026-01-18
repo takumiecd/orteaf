@@ -30,7 +30,6 @@ struct FunctionPayloadPoolTraits {
 
   struct Request {
     std::string name{};
-    Handle handle{Handle::invalid()};
   };
 
   struct Context {
@@ -42,8 +41,7 @@ struct FunctionPayloadPoolTraits {
   static bool create(Payload &payload, const Request &request,
                      const Context &context) {
     if (context.ops == nullptr || context.context == nullptr ||
-        context.module == nullptr || !request.handle.isValid() ||
-        request.name.empty()) {
+        context.module == nullptr || request.name.empty()) {
       return false;
     }
     context.ops->setContext(context.context);
