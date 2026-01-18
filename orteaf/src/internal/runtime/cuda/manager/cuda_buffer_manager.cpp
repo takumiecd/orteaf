@@ -21,6 +21,14 @@ void CudaBufferManager::configure(const InternalConfig &config) {
 
   context_ = config.context;
   ops_ = config.ops;
+  alloc_ = config.public_config.alloc;
+  free_ = config.public_config.free;
+  if (alloc_ == nullptr) {
+    alloc_ = &BufferPayloadPoolTraits::Resource::allocate;
+  }
+  if (free_ == nullptr) {
+    free_ = &BufferPayloadPoolTraits::Resource::deallocate;
+  }
   const auto &cfg = config.public_config;
 
   std::size_t payload_capacity = cfg.payload_capacity;
@@ -44,6 +52,8 @@ void CudaBufferManager::configure(const InternalConfig &config) {
   BufferPayloadPoolTraits::Context context{};
   context.context = context_;
   context.ops = ops_;
+  context.alloc = alloc_;
+  context.free = free_;
 
   Core::Builder<BufferPayloadPoolTraits::Request,
                 BufferPayloadPoolTraits::Context>{}
@@ -67,6 +77,8 @@ void CudaBufferManager::shutdown() {
   core_.shutdown(request, context);
   context_ = nullptr;
   ops_ = nullptr;
+  alloc_ = nullptr;
+  free_ = nullptr;
 }
 
 CudaBufferManager::BufferLease CudaBufferManager::acquire(std::size_t size,
@@ -92,7 +104,7 @@ CudaBufferManager::BufferLease CudaBufferManager::acquire(std::size_t size,
 
 BufferPayloadPoolTraits::Context
 CudaBufferManager::makePayloadContext() const noexcept {
-  return BufferPayloadPoolTraits::Context{context_, ops_};
+  return BufferPayloadPoolTraits::Context{context_, ops_, alloc_, free_};
 }
 
 } // namespace orteaf::internal::runtime::cuda::manager

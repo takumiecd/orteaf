@@ -15,7 +15,7 @@
 
 namespace orteaf::internal::runtime::cuda::manager {
 
-struct DevicePayloadPoolTraits;
+struct ContextPayloadPoolTraits;
 
 // =============================================================================
 // Payload Pool Traits
@@ -138,7 +138,7 @@ private:
 
   void configure(const InternalConfig &config);
 
-  friend struct DevicePayloadPoolTraits;
+  friend struct ContextPayloadPoolTraits;
 
 public:
   void shutdown();

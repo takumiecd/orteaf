@@ -16,6 +16,9 @@ void CudaContextManager::configure(const InternalConfig &config) {
   device_ = config.device;
   ops_ = config.ops;
   const auto &cfg = config.public_config;
+  buffer_config_ = cfg.buffer_config;
+  stream_config_ = cfg.stream_config;
+  event_config_ = cfg.event_config;
 
   ContextPayloadPoolTraits::Request payload_request{};
   payload_request.kind = ContextKind::Primary;
@@ -42,6 +45,9 @@ void CudaContextManager::shutdown() {
   core_.shutdown(payload_request, payload_context);
   device_ = DeviceType{};
   ops_ = nullptr;
+  buffer_config_ = {};
+  stream_config_ = {};
+  event_config_ = {};
 }
 
 CudaContextManager::ContextLease CudaContextManager::acquirePrimary() {
@@ -74,7 +80,13 @@ CudaContextManager::ContextLease CudaContextManager::acquireOwned() {
 
 ContextPayloadPoolTraits::Context
 CudaContextManager::makePayloadContext() const noexcept {
-  return ContextPayloadPoolTraits::Context{device_, ops_};
+  ContextPayloadPoolTraits::Context context{};
+  context.device = device_;
+  context.ops = ops_;
+  context.buffer_config = buffer_config_;
+  context.stream_config = stream_config_;
+  context.event_config = event_config_;
+  return context;
 }
 
 } // namespace orteaf::internal::runtime::cuda::manager

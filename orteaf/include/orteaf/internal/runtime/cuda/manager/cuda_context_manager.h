@@ -12,6 +12,9 @@
 #include "orteaf/internal/execution/cuda/cuda_handles.h"
 #include "orteaf/internal/execution/cuda/platform/cuda_slow_ops.h"
 #include "orteaf/internal/execution/cuda/platform/wrapper/cuda_context.h"
+#include "orteaf/internal/runtime/cuda/manager/cuda_buffer_manager.h"
+#include "orteaf/internal/runtime/cuda/manager/cuda_event_manager.h"
+#include "orteaf/internal/runtime/cuda/manager/cuda_stream_manager.h"
 
 namespace orteaf::internal::runtime::cuda::manager {
 
@@ -33,6 +36,9 @@ struct CudaContextResource {
   DeviceType device{};
   ContextType context{nullptr};
   bool is_primary{false};
+  CudaBufferManager buffer_manager{};
+  CudaStreamManager stream_manager{};
+  CudaEventManager event_manager{};
 
   CudaContextResource() = default;
   CudaContextResource(const CudaContextResource &) = delete;
@@ -51,6 +57,9 @@ struct CudaContextResource {
   ~CudaContextResource() { reset(nullptr); }
 
   void reset(SlowOps *ops) noexcept {
+    buffer_manager.shutdown();
+    stream_manager.shutdown();
+    event_manager.shutdown();
     if (context != nullptr && ops != nullptr) {
       if (is_primary) {
         ops->releasePrimaryContext(device);
@@ -68,6 +77,9 @@ private:
     device = other.device;
     context = other.context;
     is_primary = other.is_primary;
+    buffer_manager = std::move(other.buffer_manager);
+    stream_manager = std::move(other.stream_manager);
+    event_manager = std::move(other.event_manager);
     other.device = DeviceType{};
     other.context = nullptr;
     other.is_primary = false;
@@ -93,6 +105,9 @@ struct ContextPayloadPoolTraits {
   struct Context {
     DeviceType device{};
     SlowOps *ops{nullptr};
+    CudaBufferManager::Config buffer_config{};
+    CudaStreamManager::Config stream_config{};
+    CudaEventManager::Config event_config{};
   };
 
   static bool create(Payload &payload, const Request &request,
@@ -110,7 +125,29 @@ struct ContextPayloadPoolTraits {
     } else {
       payload.context = context.ops->createContext(context.device);
     }
-    return payload.context != nullptr;
+    if (payload.context == nullptr) {
+      return false;
+    }
+
+    CudaBufferManager::InternalConfig buffer_config{};
+    buffer_config.public_config = context.buffer_config;
+    buffer_config.context = payload.context;
+    buffer_config.ops = context.ops;
+    payload.buffer_manager.configure(buffer_config);
+
+    CudaStreamManager::InternalConfig stream_config{};
+    stream_config.public_config = context.stream_config;
+    stream_config.context = payload.context;
+    stream_config.ops = context.ops;
+    payload.stream_manager.configure(stream_config);
+
+    CudaEventManager::InternalConfig event_config{};
+    event_config.public_config = context.event_config;
+    event_config.context = payload.context;
+    event_config.ops = context.ops;
+    payload.event_manager.configure(event_config);
+
+    return true;
   }
 
   static void destroy(Payload &payload, const Request &,
@@ -175,6 +212,9 @@ public:
     std::size_t payload_capacity{0};
     std::size_t payload_block_size{0};
     std::size_t payload_growth_chunk_size{1};
+    CudaBufferManager::Config buffer_config{};
+    CudaStreamManager::Config stream_config{};
+    CudaEventManager::Config event_config{};
   };
 
   CudaContextManager() = default;
@@ -234,6 +274,9 @@ private:
 
   DeviceType device_{};
   SlowOps *ops_{nullptr};
+  CudaBufferManager::Config buffer_config_{};
+  CudaStreamManager::Config stream_config_{};
+  CudaEventManager::Config event_config_{};
   Core core_{};
 };
 

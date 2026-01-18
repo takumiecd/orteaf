@@ -40,8 +40,7 @@ to the existing MPS/CPU managers.
   - Configures and shuts down `CudaDeviceManager`.
 - `CudaDeviceManager`
   - Enumerates CUDA devices via SlowOps.
-  - Creates per-device payloads and owns sub-managers:
-    `CudaContextManager`, `CudaBufferManager`, `CudaStreamManager`, `CudaEventManager`.
+  - Creates per-device payloads and owns `CudaContextManager`.
   - Tracks device architecture metadata.
 - `CudaContextManager`
   - Creates and releases CUDA contexts for a device (initially primary context).
@@ -54,7 +53,8 @@ to the existing MPS/CPU managers.
 
 ## Manager Relationships
 - `CudaExecutionManager` -> `CudaDeviceManager`.
-- `CudaDeviceManager` -> per-device resource that holds context/stream/event managers.
+- `CudaDeviceManager` -> per-device resource that holds `CudaContextManager`.
+- `CudaContextManager` -> per-context resource that holds buffer/stream/event managers.
 - `CudaStreamManager` / `CudaEventManager` require an active CUDA context; manager
   configure step sets the context before resource creation.
 

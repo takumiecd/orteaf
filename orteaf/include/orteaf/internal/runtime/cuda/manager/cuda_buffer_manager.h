@@ -17,7 +17,7 @@
 
 namespace orteaf::internal::runtime::cuda::manager {
 
-struct DevicePayloadPoolTraits;
+struct ContextPayloadPoolTraits;
 
 // =============================================================================
 // Payload Pool Traits
@@ -26,11 +26,15 @@ struct DevicePayloadPoolTraits;
 struct BufferPayloadPoolTraits {
   using Payload = ::orteaf::internal::execution::cuda::resource::CudaBuffer;
   using Handle = ::orteaf::internal::execution::cuda::CudaBufferHandle;
+  using BufferView =
+      ::orteaf::internal::execution::cuda::resource::CudaBuffer::BufferView;
   using ContextType =
       ::orteaf::internal::execution::cuda::platform::wrapper::CudaContext_t;
   using SlowOps = ::orteaf::internal::execution::cuda::platform::CudaSlowOps;
   using Resource =
       ::orteaf::internal::execution::cuda::resource::CudaResource;
+  using AllocFn = BufferView (*)(std::size_t, std::size_t);
+  using FreeFn = void (*)(BufferView, std::size_t, std::size_t);
 
   struct Request {
     std::size_t size{0};
@@ -41,11 +45,14 @@ struct BufferPayloadPoolTraits {
   struct Context {
     ContextType context{nullptr};
     SlowOps *ops{nullptr};
+    AllocFn alloc{nullptr};
+    FreeFn free{nullptr};
   };
 
   static bool create(Payload &payload, const Request &request,
                      const Context &context) {
     if (context.ops == nullptr || context.context == nullptr ||
+        context.alloc == nullptr || context.free == nullptr ||
         !request.handle.isValid()) {
       return false;
     }
@@ -56,7 +63,7 @@ struct BufferPayloadPoolTraits {
     }
 
     context.ops->setContext(context.context);
-    auto view = Resource::allocate(request.size, request.alignment);
+    auto view = context.alloc(request.size, request.alignment);
     if (!view) {
       return false;
     }
@@ -74,9 +81,10 @@ struct BufferPayloadPoolTraits {
     if (!payload.valid()) {
       return;
     }
-    if (context.ops != nullptr && context.context != nullptr) {
+    if (context.ops != nullptr && context.context != nullptr &&
+        context.free != nullptr) {
       context.ops->setContext(context.context);
-      Resource::deallocate(payload.view, request.size, request.alignment);
+      context.free(payload.view, request.size, request.alignment);
     }
     payload = Payload{};
   }
@@ -133,6 +141,8 @@ public:
   using BufferLease = Core::StrongLeaseType;
 
   struct Config {
+    BufferPayloadPoolTraits::AllocFn alloc{nullptr};
+    BufferPayloadPoolTraits::FreeFn free{nullptr};
     std::size_t control_block_capacity{0};
     std::size_t control_block_block_size{0};
     std::size_t control_block_growth_chunk_size{1};
@@ -157,7 +167,7 @@ private:
 
   void configure(const InternalConfig &config);
 
-  friend struct DevicePayloadPoolTraits;
+  friend struct ContextPayloadPoolTraits;
 
 public:
   void shutdown();
@@ -197,6 +207,8 @@ private:
 
   ContextType context_{nullptr};
   SlowOps *ops_{nullptr};
+  BufferPayloadPoolTraits::AllocFn alloc_{nullptr};
+  BufferPayloadPoolTraits::FreeFn free_{nullptr};
   Core core_{};
 };
 

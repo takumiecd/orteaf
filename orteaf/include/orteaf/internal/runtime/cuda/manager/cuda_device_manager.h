@@ -14,10 +14,7 @@
 #include "orteaf/internal/base/pool/fixed_slot_store.h"
 #include "orteaf/internal/execution/cuda/cuda_handles.h"
 #include "orteaf/internal/execution/cuda/platform/cuda_slow_ops.h"
-#include "orteaf/internal/runtime/cuda/manager/cuda_buffer_manager.h"
 #include "orteaf/internal/runtime/cuda/manager/cuda_context_manager.h"
-#include "orteaf/internal/runtime/cuda/manager/cuda_event_manager.h"
-#include "orteaf/internal/runtime/cuda/manager/cuda_stream_manager.h"
 
 namespace orteaf::internal::runtime::cuda::manager {
 
@@ -36,10 +33,6 @@ struct CudaDeviceResource {
   ::orteaf::internal::architecture::Architecture arch{
       ::orteaf::internal::architecture::Architecture::CudaGeneric};
   CudaContextManager context_manager{};
-  CudaBufferManager buffer_manager{};
-  CudaStreamManager stream_manager{};
-  CudaEventManager event_manager{};
-  CudaContextManager::ContextLease primary_context{};
 
   CudaDeviceResource() = default;
   CudaDeviceResource(const CudaDeviceResource &) = delete;
@@ -60,10 +53,6 @@ struct CudaDeviceResource {
   ~CudaDeviceResource() { reset(nullptr); }
 
   void reset([[maybe_unused]] SlowOps *slow_ops) noexcept {
-    buffer_manager.shutdown();
-    stream_manager.shutdown();
-    event_manager.shutdown();
-    primary_context = {};
     context_manager.shutdown();
     device = DeviceType{};
     arch = ::orteaf::internal::architecture::Architecture::CudaGeneric;
@@ -74,10 +63,6 @@ private:
     device = other.device;
     arch = other.arch;
     context_manager = std::move(other.context_manager);
-    buffer_manager = std::move(other.buffer_manager);
-    stream_manager = std::move(other.stream_manager);
-    event_manager = std::move(other.event_manager);
-    primary_context = std::move(other.primary_context);
     other.device = DeviceType{};
     other.arch = ::orteaf::internal::architecture::Architecture::CudaGeneric;
   }
@@ -99,9 +84,6 @@ struct DevicePayloadPoolTraits {
   struct Context {
     SlowOps *ops{nullptr};
     CudaContextManager::Config context_config{};
-    CudaBufferManager::Config buffer_config{};
-    CudaStreamManager::Config stream_config{};
-    CudaEventManager::Config event_config{};
   };
 
   static bool create(Payload &payload, const Request &request,
@@ -166,9 +148,6 @@ public:
     std::size_t payload_block_size{0};
     std::size_t payload_growth_chunk_size{1};
     CudaContextManager::Config context_config{};
-    CudaBufferManager::Config buffer_config{};
-    CudaStreamManager::Config stream_config{};
-    CudaEventManager::Config event_config{};
   };
 
   CudaDeviceManager() = default;
