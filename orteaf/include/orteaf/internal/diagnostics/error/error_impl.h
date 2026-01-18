@@ -130,7 +130,7 @@ inline OrteafError makeError(std::error_code ec, std::string message) {
 }
 
 inline void throwError(const OrteafError& error) {
-    throw std::system_error(error.code(), error.describe());
+    throw std::system_error(error.code(), error.message());
 }
 
 inline void throwError(OrteafErrc errc, std::string message) {
