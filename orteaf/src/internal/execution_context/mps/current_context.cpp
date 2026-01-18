@@ -45,6 +45,10 @@ void setCurrent(CurrentContext state) {
   currentStateStorage() = std::move(state);
 }
 
+void setCurrentContext(Context context) {
+  currentStateStorage().current = std::move(context);
+}
+
 void reset() { currentStateStorage() = CurrentContext{}; }
 
 const Context &currentContext() {

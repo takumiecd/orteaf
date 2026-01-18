@@ -11,6 +11,7 @@ public:
 
 const CurrentContext &current();
 void setCurrent(CurrentContext state);
+void setCurrentContext(Context context);
 void reset();
 
 const Context &currentContext();
