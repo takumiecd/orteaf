@@ -2,7 +2,10 @@
 
 #if ORTEAF_ENABLE_CUDA
 
+#include <orteaf/internal/execution/cuda/platform/wrapper/cuda_types.h>
+
 #include <cstddef>
+#include <span>
 #include <string_view>
 
 #ifndef ORTEAF_EMBED_HAS_FATBIN
@@ -23,18 +26,15 @@ namespace orteaf::internal::execution::cuda::platform::wrapper::kernel_embed {
  * Each `.cu` file under `orteaf/src/extension/kernel/cuda/impl` is compiled
  * during the build and packed into the final binary as a `fatbin`, `cubin`, or
  * `ptx` blob (see `ORTEAF_CUDA_KERNEL_FORMATS`).  The helpers in this namespace
- * provide a lightweight registry that lets you discover and feed those blobs
- * into the CUDA driver without re-reading files from disk.
+ * provide a lightweight registry that lets you enumerate and load those blobs
+ * without re-reading files from disk.
  *
  * @par Usage example
  * @code{.cpp}
  * using namespace orteaf::internal::execution::cuda::platform::wrapper::kernel_embed;
  *
- * // Prefer a fatbin, but fall back to a PTX blob if fatbin generation was
- * // disabled for the current build.
- * Blob bin = findKernelData("embed_test_library",
- *                             CudaKernelFmt::Fatbin,
- *                             findKernelData("embed_test_library", CudaKernelFmt::Ptx));
+ * // Prefer a fatbin, but fall back to any available blob automatically.
+ * Blob bin = findKernelData("embed_test_library", CudaKernelFmt::Fatbin);
  * if (!bin.data) {
  *     throw std::runtime_error("Kernel not embedded in this build");
  * }
@@ -44,6 +44,9 @@ namespace orteaf::internal::execution::cuda::platform::wrapper::kernel_embed {
  * CUfunction fn{};
  * ORTEAF_CUDA_DRIVER_CHECK(cuModuleGetFunction(&fn, module, "my_kernel"));
  * // ... enqueue kernel with cuLaunchKernel/cudaLaunchKernel ...
+ *
+ * // Or, load directly from embedded data:
+ * auto embedded = createEmbeddedModule("embed_test_library");
  * @endcode
  */
 
@@ -63,11 +66,23 @@ struct Blob {
     std::size_t size;
 };
 
-Blob findKernelData(std::string_view name,
-                      CudaKernelFmt prefer = CudaKernelFmt::Fatbin,
-                      Blob fallback = {nullptr, 0});
+struct KernelEntry {
+    const char* name;
+    CudaKernelFmt fmt;
+    const unsigned char* begin;
+    const unsigned char* end;
+};
 
-bool available(std::string_view name, CudaKernelFmt fmt);
+std::span<const KernelEntry> kernels();
+
+Blob findKernelData(std::string_view name,
+                    CudaKernelFmt prefer = CudaKernelFmt::Fatbin);
+
+bool available(std::string_view name);
+
+::orteaf::internal::execution::cuda::platform::wrapper::CudaModule_t
+createEmbeddedModule(std::string_view name,
+                     CudaKernelFmt prefer = CudaKernelFmt::Fatbin);
 
 } // namespace orteaf::internal::execution::cuda::platform::wrapper::kernel_embed
 

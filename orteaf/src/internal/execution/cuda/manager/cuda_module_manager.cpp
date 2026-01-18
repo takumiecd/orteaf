@@ -25,9 +25,7 @@ bool ModulePayloadPoolTraits::create(Payload &payload, const Request &request,
     using namespace ::orteaf::internal::execution::cuda::platform::wrapper::
         kernel_embed;
     const auto preferred = request.key.preferred_format;
-    Blob fallback = findKernelData(request.key.identifier,
-                                   CudaKernelFmt::Ptx);
-    Blob blob = findKernelData(request.key.identifier, preferred, fallback);
+    Blob blob = findKernelData(request.key.identifier, preferred);
     if (blob.data == nullptr) {
       return false;
     }
@@ -207,14 +205,8 @@ CudaModuleManager::FunctionType CudaModuleManager::getFunction(
         "Module lease has no module loaded");
   }
 
-  std::string key{name};
-  if (auto it = payload->function_cache.find(key);
-      it != payload->function_cache.end()) {
-    return it->second;
-  }
-
   ops_->setContext(context_);
-  return payload->function_manager.getFunction(key);
+  return payload->function_manager.getFunction(std::string{name});
 }
 
 void CudaModuleManager::validateKey(const ModuleKey &key) const {
@@ -226,8 +218,7 @@ void CudaModuleManager::validateKey(const ModuleKey &key) const {
   if (key.kind == ModuleKeyKind::kEmbedded) {
     using namespace ::orteaf::internal::execution::cuda::platform::wrapper::
         kernel_embed;
-    if (!available(key.identifier, key.preferred_format) &&
-        !available(key.identifier, CudaKernelFmt::Ptx)) {
+    if (!available(key.identifier)) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
           "Embedded module is not available");
