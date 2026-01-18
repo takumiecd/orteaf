@@ -5,7 +5,11 @@
 
 #include <orteaf/internal/execution/mps/api/mps_execution_api.h>
 #include <orteaf/internal/execution/mps/manager/mps_buffer_manager.h>
+#include <orteaf/internal/execution/mps/manager/mps_fence_manager.h>
 #include <orteaf/internal/execution/mps/mps_handles.h>
+#include <orteaf/internal/execution/mps/platform/mps_slow_ops.h>
+#include <orteaf/internal/execution/mps/platform/wrapper/mps_command_queue.h>
+#include <orteaf/internal/execution/mps/platform/wrapper/mps_device.h>
 #include <orteaf/internal/storage/mps/mps_storage.h>
 #include <tests/internal/execution/mps/manager/testing/execution_mock_expectations.h>
 #include <tests/internal/execution/mps/manager/testing/mock_mps_resource.h>
@@ -99,6 +103,91 @@ TEST_F(MpsStorageBuilderTest, StorageIsCopyAssignable) {
   mps_storage::MpsStorage storage2;
   storage2 = storage1;
   SUCCEED();
+}
+
+// =============================================================================
+// withFenceToken Tests
+// =============================================================================
+
+class MpsStorageFenceTokenTest : public ::testing::Test {
+protected:
+  using FenceManager = mps_rt::MpsFenceManager;
+  using FenceToken = mps_storage::MpsStorage::FenceToken;
+  using SlowOps = mps::platform::MpsSlowOps;
+
+  void SetUp() override {
+    device_ = mps::platform::wrapper::getDevice();
+    if (device_ == nullptr) {
+      GTEST_SKIP() << "No Metal devices available";
+    }
+    queue_ = mps::platform::wrapper::createCommandQueue(device_);
+    if (queue_ == nullptr) {
+      GTEST_SKIP() << "Failed to create command queue";
+    }
+
+    FenceManager::Config fence_cfg{};
+    fence_cfg.control_block_capacity = 4;
+    fence_cfg.control_block_block_size = 2;
+    fence_cfg.payload_capacity = 4;
+    fence_cfg.payload_block_size = 2;
+    fence_manager_.configureForTest(fence_cfg, device_, &ops_);
+  }
+
+  void TearDown() override {
+    fence_manager_.shutdown();
+    if (queue_ != nullptr) {
+      mps::platform::wrapper::destroyCommandQueue(queue_);
+      queue_ = nullptr;
+    }
+    if (device_ != nullptr) {
+      mps::platform::wrapper::deviceRelease(device_);
+      device_ = nullptr;
+    }
+  }
+
+  FenceToken createFenceToken() {
+    FenceToken token;
+    auto lease = fence_manager_.acquire();
+    auto *payload = lease.operator->();
+    if (payload != nullptr) {
+      payload->setCommandQueueHandle(mps::MpsCommandQueueHandle{1});
+    }
+    token.addOrReplaceLease(std::move(lease));
+    return token;
+  }
+
+  mps::platform::wrapper::MpsDevice_t device_{nullptr};
+  mps::platform::wrapper::MpsCommandQueue_t queue_{nullptr};
+  FenceManager fence_manager_{};
+  mps::platform::MpsSlowOpsImpl ops_{};
+};
+
+TEST_F(MpsStorageFenceTokenTest, BuilderWithFenceTokenCreatesStorage) {
+  auto token = createFenceToken();
+  EXPECT_EQ(token.size(), 1u);
+
+  // Builder should accept the fence token
+  auto builder =
+      mps_storage::MpsStorage::builder().withFenceToken(std::move(token));
+  SUCCEED();
+}
+
+TEST_F(MpsStorageFenceTokenTest, FenceTokenCopyPreservesLeases) {
+  auto token = createFenceToken();
+  EXPECT_EQ(token.size(), 1u);
+
+  FenceToken copied = token;
+  EXPECT_EQ(copied.size(), 1u);
+  EXPECT_EQ(token.size(), 1u);
+}
+
+TEST_F(MpsStorageFenceTokenTest, FenceTokenMoveTransfersLeases) {
+  auto token = createFenceToken();
+  EXPECT_EQ(token.size(), 1u);
+
+  FenceToken moved = std::move(token);
+  EXPECT_EQ(moved.size(), 1u);
+  EXPECT_TRUE(token.empty());
 }
 
 TEST(MpsStorageExecutionApiTest, BuilderWithDeviceHandleUsesExecutionApi) {

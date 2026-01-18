@@ -28,9 +28,8 @@ public:
   using HeapDescriptorKey =
       ::orteaf::internal::execution::mps::manager::HeapDescriptorKey;
   using DeviceHandle = ::orteaf::internal::execution::mps::MpsDeviceHandle;
-  // TODO: Re-enable fence tokens after revisiting MpsFenceToken ownership/copy
-  // rules. using FenceToken =
-  // ::orteaf::internal::execution::mps::resource::MpsFenceToken;
+  using FenceToken =
+      ::orteaf::internal::execution::mps::resource::MpsFenceToken;
   using Layout = ::orteaf::internal::storage::mps::MpsStorageLayout;
   using DType = ::orteaf::internal::DType;
   using Execution = ::orteaf::internal::execution::Execution;
@@ -91,7 +90,10 @@ public:
       return *this;
     }
 
-    // TODO: Add withFenceToken once MpsFenceToken is updated.
+    Builder &withFenceToken(FenceToken token) {
+      fence_token_ = std::move(token);
+      return *this;
+    }
 
     /**
      * @brief Build the MpsStorage instance.
@@ -112,7 +114,8 @@ public:
           numel_ * ::orteaf::internal::sizeOf(dtype_);
       BufferLease lease =
           heap_lease_->buffer_manager.acquire(size_in_bytes, alignment_);
-      return MpsStorage(std::move(lease), std::move(layout_), dtype_, numel_);
+      return MpsStorage(std::move(lease), std::move(fence_token_),
+                        std::move(layout_), dtype_, numel_);
     }
 
   private:
@@ -121,6 +124,7 @@ public:
     std::size_t numel_{0};
     std::size_t alignment_{0};
     Layout layout_{};
+    FenceToken fence_token_{};
   };
 
   /**
@@ -152,14 +156,14 @@ public:
   }
 
 private:
-  MpsStorage(BufferLease buffer_lease, Layout layout, DType dtype,
-             std::size_t numel)
-      : buffer_lease_(std::move(buffer_lease)), layout_(std::move(layout)),
+  MpsStorage(BufferLease buffer_lease, FenceToken fence_token, Layout layout,
+             DType dtype, std::size_t numel)
+      : buffer_lease_(std::move(buffer_lease)),
+        fence_token_(std::move(fence_token)), layout_(std::move(layout)),
         dtype_(dtype), numel_(numel) {}
 
   BufferLease buffer_lease_;
-  // TODO: Re-enable once MpsFenceToken is updated.
-  // FenceToken fence_token_{};
+  FenceToken fence_token_{};
   Layout layout_;
   DType dtype_{DType::F32};
   std::size_t numel_{0};

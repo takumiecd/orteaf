@@ -19,8 +19,8 @@ public:
   static constexpr std::size_t kInlineCapacity = 4;
 
   MpsFenceToken() = default;
-  MpsFenceToken(const MpsFenceToken &) = delete;
-  MpsFenceToken &operator=(const MpsFenceToken &) = delete;
+  MpsFenceToken(const MpsFenceToken &) = default;
+  MpsFenceToken &operator=(const MpsFenceToken &) = default;
   MpsFenceToken(MpsFenceToken &&) noexcept = default;
   MpsFenceToken &operator=(MpsFenceToken &&) noexcept = default;
   ~MpsFenceToken() = default;

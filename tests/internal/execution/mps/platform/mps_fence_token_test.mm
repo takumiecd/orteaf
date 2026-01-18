@@ -8,12 +8,12 @@
 #include <gtest/gtest.h>
 #include <type_traits>
 
+#include "orteaf/internal/execution/mps/mps_handles.h"
 #include "orteaf/internal/execution/mps/platform/mps_slow_ops.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_command_buffer.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_command_queue.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_device.h"
 #include "orteaf/internal/execution/mps/resource/mps_fence_token.h"
-#include "orteaf/internal/execution/mps/mps_handles.h"
 
 namespace mps_wrapper = orteaf::internal::execution::mps::platform::wrapper;
 namespace mps_res = orteaf::internal::execution::mps::resource;
@@ -171,7 +171,7 @@ TEST_F(MpsFenceTokenTest, ClearRemovesAllLeases) {
   EXPECT_EQ(token.size(), 0u);
 }
 
-static_assert(!std::is_copy_constructible_v<mps_res::MpsFenceToken>);
-static_assert(!std::is_copy_assignable_v<mps_res::MpsFenceToken>);
+static_assert(std::is_copy_constructible_v<mps_res::MpsFenceToken>);
+static_assert(std::is_copy_assignable_v<mps_res::MpsFenceToken>);
 
 #endif // ORTEAF_ENABLE_MPS
