@@ -8,8 +8,8 @@
 #include <orteaf/internal/execution_context/cpu/context.h>
 #include <orteaf/internal/execution_context/cpu/current_context.h>
 #include <orteaf/internal/kernel/access.h>
-#include <orteaf/internal/storage/cpu/cpu_storage.h>
 #include <orteaf/internal/storage/cpu/cpu_storage_layout.h>
+#include <orteaf/internal/storage/registry/storage_types.h>
 
 namespace orteaf::internal::kernel::cpu {
 
@@ -19,7 +19,7 @@ namespace orteaf::internal::kernel::cpu {
  * @tparam MaxBindings Maximum number of buffer bindings.
  * @tparam Params User-defined POD parameter struct.
  *
- * Host: Non-POD, manages Storage lifetime and Context.
+ * Host: Non-POD, manages StorageLease lifetime and Context.
  * Device: POD, contains buffer views and params for kernel execution.
  */
 template <std::size_t MaxBindings, typename Params> class CpuKernelArgs {
@@ -27,7 +27,7 @@ public:
   using BufferView =
       ::orteaf::internal::execution::cpu::resource::CpuBufferView;
   using StorageLayout = ::orteaf::internal::storage::cpu::CpuStorageLayout;
-  using Storage = ::orteaf::internal::storage::cpu::CpuStorage;
+  using StorageLease = ::orteaf::internal::storage::CpuStorageLease;
   using Context = ::orteaf::internal::execution_context::cpu::Context;
 
   // ---- Device側（POD、Kernelに渡す） ----
@@ -47,7 +47,7 @@ public:
   class Host {
   public:
     struct StorageEntry {
-      Storage storage;
+      StorageLease lease;
       Access access;
     };
 
@@ -65,9 +65,9 @@ public:
     Host &operator=(Host &&) = default;
     ~Host() = default;
 
-    void addStorage(Storage storage, Access access) {
+    void addStorageLease(StorageLease lease, Access access) {
       if (count_ < MaxBindings) {
-        storages_[count_] = StorageEntry{std::move(storage), access};
+        storages_[count_] = StorageEntry{std::move(lease), access};
         ++count_;
       }
     }
@@ -88,18 +88,21 @@ public:
   };
 
   // Host から Device への変換
-  // 注: Storage から BufferView への変換は、Storage クラスに
+  // 注: StorageLease から BufferView への変換は、CpuStorage クラスに
   //     bufferView() メソッドが必要になる想定。現時点ではプレースホルダー。
   static Device toDevice(const Host &host, Params params) {
     Device device{};
     device.binding_count = host.storageCount();
     device.params = std::move(params);
-    // TODO: Storage から BufferView/Layout を抽出して bindings に設定
+    // TODO: StorageLease から BufferView/Layout を抽出して bindings に設定
     for (std::size_t i = 0; i < host.storageCount(); ++i) {
       const auto &entry = host.storageAt(i);
       device.bindings[i].access = entry.access;
-      // device.bindings[i].view = entry.storage.bufferView(); // 要実装
-      // device.bindings[i].layout = entry.storage.layout();   // 要実装
+      // Leaseからpayloadを取得してview/layoutを設定（要実装）
+      // if (auto* storage = entry.lease.operator->()) {
+      //   device.bindings[i].view = storage->bufferView();
+      //   device.bindings[i].layout = storage->layout();
+      // }
     }
     return device;
   }
