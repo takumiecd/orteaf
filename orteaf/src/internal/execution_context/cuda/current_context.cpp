@@ -65,7 +65,7 @@ void reset() { currentStateStorage() = CurrentContext{}; }
 
 const Context &currentContext() {
   auto &state = currentStateStorage();
-  ensureDefaultDevice(state);
+  ensureDefaultStream(state);
   return state.current;
 }
 
