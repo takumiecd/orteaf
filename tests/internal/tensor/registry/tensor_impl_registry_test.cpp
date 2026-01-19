@@ -2,16 +2,17 @@
 
 #include <orteaf/extension/tensor/registry/tensor_impl_types.h>
 #include <orteaf/internal/execution/cpu/api/cpu_execution_api.h>
-#include <orteaf/internal/storage/manager/storage_manager.h>
+#include <orteaf/internal/storage/registry/storage_types.h>
 
 namespace {
 
 namespace cpu_api = orteaf::internal::execution::cpu::api;
-namespace storage_mgr = orteaf::internal::storage::manager;
+namespace storage_reg = orteaf::internal::storage::registry;
 namespace registry = orteaf::internal::tensor::registry;
 using DenseTensorImpl = orteaf::extension::tensor::DenseTensorImpl;
 using DType = orteaf::internal::DType;
 using Execution = orteaf::internal::execution::Execution;
+using StorageRegistry = storage_reg::RegisteredStorages;
 
 class TensorImplRegistryTest : public ::testing::Test {
 protected:
@@ -19,20 +20,20 @@ protected:
     cpu_api::CpuExecutionApi::ExecutionManager::Config cpu_config{};
     cpu_api::CpuExecutionApi::configure(cpu_config);
 
-    storage_mgr::StorageManager::Config storage_config{};
-    storage_manager_.configure(storage_config);
+    StorageRegistry::Config storage_config{};
+    storage_registry_.configure(storage_config);
 
     registry::RegisteredImpls::Config registry_config{};
-    registry_.configure(registry_config, storage_manager_);
+    registry_.configure(registry_config, storage_registry_);
   }
 
   void TearDown() override {
     registry_.shutdown();
-    storage_manager_.shutdown();
+    storage_registry_.shutdown();
     cpu_api::CpuExecutionApi::shutdown();
   }
 
-  storage_mgr::StorageManager storage_manager_;
+  StorageRegistry storage_registry_;
   registry::RegisteredImpls registry_;
 };
 

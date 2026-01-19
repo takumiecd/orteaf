@@ -12,7 +12,7 @@
 #include <string_view>
 
 #include <orteaf/extension/tensor/registry/tensor_impl_types.h>
-#include <orteaf/internal/storage/manager/storage_manager.h>
+#include <orteaf/internal/storage/registry/storage_types.h>
 
 namespace orteaf::internal::tensor::api {
 
@@ -24,7 +24,7 @@ namespace orteaf::internal::tensor::api {
  */
 class TensorApi {
 public:
-  using StorageManager = ::orteaf::internal::storage::manager::StorageManager;
+  using StorageRegistry = ::orteaf::internal::storage::RegisteredStorages;
   using Registry = ::orteaf::internal::tensor::registry::RegisteredImpls;
   using LeaseVariant = typename Registry::LeaseVariant;
   using DenseTensorImpl = ::orteaf::extension::tensor::DenseTensorImpl;
@@ -33,7 +33,7 @@ public:
   using Dim = ::orteaf::extension::tensor::DenseTensorLayout::Dim;
 
   struct Config {
-    StorageManager::Config storage_config{};
+    StorageRegistry::Config storage_config{};
     typename Registry::Config registry_config{};
   };
 
@@ -43,7 +43,7 @@ public:
   static void shutdown();
   static bool isConfigured() noexcept;
 
-  static StorageManager &storage();
+  static StorageRegistry &storage();
   static Registry &registry();
 
   // ===== Creation (typed) =====

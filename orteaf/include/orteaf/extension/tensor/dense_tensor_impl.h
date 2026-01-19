@@ -5,7 +5,8 @@
  * @brief Dense tensor implementation holding layout and storage.
  *
  * DenseTensorImpl combines a DenseTensorLayout (shape, strides, offset)
- * with a Storage (type-erased backend storage) to represent dense tensor data.
+ * with a StorageLease (type-erased backend storage lease) to represent
+ * dense tensor data.
  */
 
 #include <cstddef>
@@ -14,8 +15,7 @@
 #include <orteaf/extension/tensor/layout/dense_tensor_layout.h>
 #include <orteaf/internal/dtype/dtype.h>
 #include <orteaf/internal/execution/execution.h>
-#include <orteaf/internal/storage/manager/storage_manager.h>
-#include <orteaf/internal/storage/storage.h>
+#include <orteaf/internal/storage/storage_lease.h>
 
 namespace orteaf::extension::tensor {
 
@@ -36,9 +36,7 @@ public:
   using Layout = DenseTensorLayout;
   using Dims = Layout::Dims;
   using Dim = Layout::Dim;
-  using Storage = ::orteaf::internal::storage::Storage;
-  using StorageLease =
-      ::orteaf::internal::storage::manager::StorageManager::StorageLease;
+  using StorageLease = ::orteaf::internal::storage::StorageLease;
   using DType = ::orteaf::internal::DType;
   using Execution = ::orteaf::internal::execution::Execution;
 
@@ -73,16 +71,16 @@ public:
   /// @brief Check if this impl is valid (has storage).
   bool valid() const noexcept { return static_cast<bool>(storage_); }
 
-  // ===== Forwarding from Storage =====
+  // ===== Forwarding from StorageLease =====
 
   /// @brief Return the data type.
-  DType dtype() const { return storage_->dtype(); }
+  DType dtype() const { return storage_.dtype(); }
 
   /// @brief Return the execution backend.
-  Execution execution() const { return storage_->execution(); }
+  Execution execution() const { return storage_.execution(); }
 
   /// @brief Return the storage size in bytes.
-  std::size_t storageSizeInBytes() const { return storage_->sizeInBytes(); }
+  std::size_t storageSizeInBytes() const { return storage_.sizeInBytes(); }
 
   // ===== Forwarding from Layout =====
 

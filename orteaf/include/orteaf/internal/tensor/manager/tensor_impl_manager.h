@@ -21,7 +21,8 @@
 #include <orteaf/internal/diagnostics/error/error.h>
 #include <orteaf/internal/dtype/dtype.h>
 #include <orteaf/internal/execution/execution.h>
-#include <orteaf/internal/storage/manager/storage_manager.h>
+#include <orteaf/internal/storage/registry/storage_types.h>
+#include <orteaf/internal/storage/storage_lease.h>
 #include <orteaf/internal/tensor/concepts/tensor_impl_concepts.h>
 
 namespace orteaf::internal::tensor {
@@ -58,8 +59,7 @@ template <typename Impl> struct TensorImplCreateRequest {
 /// @brief Request for creating a view (shares storage)
 template <typename Impl> struct TensorImplViewRequest {
   using Layout = typename Impl::Layout;
-  using StorageLease =
-      ::orteaf::internal::storage::manager::StorageManager::StorageLease;
+  using StorageLease = ::orteaf::internal::storage::StorageLease;
 
   Layout layout{};
   StorageLease storage{};
@@ -72,8 +72,7 @@ using TensorImplRequest =
 
 /// @brief Context for pool operations
 struct TensorImplContext {
-  ::orteaf::internal::storage::manager::StorageManager *storage_manager{
-      nullptr};
+  ::orteaf::internal::storage::RegisteredStorages *storage_registry{nullptr};
 };
 
 /// @brief Pool traits for generic TensorImpl
@@ -131,8 +130,8 @@ public:
   using Layout = typename Impl::Layout;
   using Dims = typename Layout::Dims;
   using Dim = typename Layout::Dim;
-  using StorageManager = ::orteaf::internal::storage::manager::StorageManager;
-  using StorageLease = StorageManager::StorageLease;
+  using StorageRegistry = ::orteaf::internal::storage::RegisteredStorages;
+  using StorageLease = ::orteaf::internal::storage::StorageLease;
   using DType = ::orteaf::internal::DType;
   using Execution = ::orteaf::internal::execution::Execution;
 
@@ -152,7 +151,7 @@ public:
   TensorImplManager &operator=(TensorImplManager &&) = default;
   ~TensorImplManager() = default;
 
-  void configure(const Config &config, StorageManager &storage_manager);
+  void configure(const Config &config, StorageRegistry &storage_registry);
   void shutdown();
   bool isConfigured() const noexcept;
 
@@ -185,7 +184,7 @@ private:
   TensorImplLease createView(Layout layout, StorageLease storage);
 
   Core core_{};
-  StorageManager *storage_manager_{nullptr};
+  StorageRegistry *storage_registry_{nullptr};
 };
 
 } // namespace orteaf::internal::tensor

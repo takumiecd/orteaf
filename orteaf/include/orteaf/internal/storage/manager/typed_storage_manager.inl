@@ -12,17 +12,21 @@ namespace orteaf::internal::storage::manager {
 template <typename Storage>
   requires concepts::StorageConcept<Storage>
 void TypedStorageManager<Storage>::configure(const Config &config) {
-  typename Core::Config core_config{};
-  core_config.control_block_capacity = config.control_block_capacity;
-  core_config.control_block_block_size = config.control_block_block_size;
-  core_config.control_block_growth_chunk_size =
-      config.control_block_growth_chunk_size;
-  core_config.payload_capacity = config.payload_capacity;
-  core_config.payload_block_size = config.payload_block_size;
-  core_config.payload_growth_chunk_size = config.payload_growth_chunk_size;
-
+  detail::TypedStorageRequest<Storage> request{};
   detail::TypedStorageContext<Storage> context{};
-  core_.configure(core_config, context);
+
+  typename Core::template Builder<detail::TypedStorageRequest<Storage>,
+                                  detail::TypedStorageContext<Storage>>
+      builder{};
+  builder.withControlBlockCapacity(config.control_block_capacity)
+      .withControlBlockBlockSize(config.control_block_block_size)
+      .withControlBlockGrowthChunkSize(config.control_block_growth_chunk_size)
+      .withPayloadCapacity(config.payload_capacity)
+      .withPayloadBlockSize(config.payload_block_size)
+      .withPayloadGrowthChunkSize(config.payload_growth_chunk_size)
+      .withRequest(request)
+      .withContext(context)
+      .configure(core_);
 }
 
 template <typename Storage>
@@ -30,13 +34,27 @@ template <typename Storage>
 typename TypedStorageManager<Storage>::StorageLease
 TypedStorageManager<Storage>::acquire(const Request &request) {
   detail::TypedStoragePoolTraits<Storage>::validateRequestOrThrow(request);
-  return core_.acquire(request);
+  core_.ensureConfigured();
+
+  detail::TypedStorageContext<Storage> context{};
+  auto payload_handle = core_.reserveUncreatedPayloadOrGrow();
+  if (!payload_handle.isValid()) {
+    ORTEAF_THROW(OutOfRange, "TypedStorageManager has no available slots");
+  }
+
+  if (!core_.emplacePayload(payload_handle, request, context)) {
+    ORTEAF_THROW(InvalidState, "TypedStorageManager failed to create storage");
+  }
+
+  return core_.acquireStrongLease(payload_handle);
 }
 
 template <typename Storage>
   requires concepts::StorageConcept<Storage>
 void TypedStorageManager<Storage>::shutdown() {
-  core_.shutdown();
+  detail::TypedStorageRequest<Storage> request{};
+  detail::TypedStorageContext<Storage> context{};
+  core_.shutdown(request, context);
 }
 
 template <typename Storage>

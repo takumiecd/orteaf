@@ -8,9 +8,12 @@
  * from different backends (CPU, MPS, etc.).
  */
 
+#include <cstddef>
 #include <utility>
 #include <variant>
 
+#include <orteaf/internal/diagnostics/error/error.h>
+#include <orteaf/internal/dtype/dtype.h>
 #include <orteaf/internal/execution/execution.h>
 #include <orteaf/internal/storage/registry/storage_types.h>
 
@@ -24,6 +27,7 @@ namespace orteaf::internal::storage {
  */
 class StorageLease {
 public:
+  using DType = ::orteaf::internal::DType;
   using Execution = ::orteaf::internal::execution::Execution;
   using CpuLease = registry::CpuStorageLease;
 #if ORTEAF_ENABLE_MPS
@@ -93,21 +97,107 @@ public:
         [](const auto &lease) -> Execution {
           using T = std::decay_t<decltype(lease)>;
           if constexpr (std::is_same_v<T, std::monostate>) {
-            return Execution::Cpu; // Default for invalid
-          } else if constexpr (std::is_same_v<T, CpuLease>) {
-            return Execution::Cpu;
-          }
-#if ORTEAF_ENABLE_MPS
-          else if constexpr (std::is_same_v<T, MpsLease>) {
-            return Execution::Mps;
-          }
-#endif
-          else {
-            return Execution::Cpu;
+            ::orteaf::internal::diagnostics::error::throwError(
+                ::orteaf::internal::diagnostics::error::OrteafErrc::
+                    InvalidState,
+                "Cannot get execution from uninitialized storage lease");
+            return Execution::Cpu; // Unreachable, but needed for compilation
+          } else {
+            if (!lease.operator->()) {
+              ::orteaf::internal::diagnostics::error::throwError(
+                  ::orteaf::internal::diagnostics::error::OrteafErrc::
+                      InvalidState,
+                  "Cannot get execution from invalid storage lease");
+              return Execution::Cpu; // Unreachable, but needed for compilation
+            }
+            return lease->execution();
           }
         },
         variant_);
   }
+
+  /**
+   * @brief Return the data type of elements in this storage lease.
+   */
+  DType dtype() const {
+    return std::visit(
+        [](const auto &lease) -> DType {
+          using T = std::decay_t<decltype(lease)>;
+          if constexpr (std::is_same_v<T, std::monostate>) {
+            ::orteaf::internal::diagnostics::error::throwError(
+                ::orteaf::internal::diagnostics::error::OrteafErrc::
+                    InvalidState,
+                "Cannot get dtype from uninitialized storage lease");
+            return DType::F32; // Unreachable, but needed for compilation
+          } else {
+            if (!lease.operator->()) {
+              ::orteaf::internal::diagnostics::error::throwError(
+                  ::orteaf::internal::diagnostics::error::OrteafErrc::
+                      InvalidState,
+                  "Cannot get dtype from invalid storage lease");
+              return DType::F32; // Unreachable, but needed for compilation
+            }
+            return lease->dtype();
+          }
+        },
+        variant_);
+  }
+
+  /**
+   * @brief Return the number of elements in this storage lease.
+   */
+  std::size_t numel() const {
+    return std::visit(
+        [](const auto &lease) -> std::size_t {
+          using T = std::decay_t<decltype(lease)>;
+          if constexpr (std::is_same_v<T, std::monostate>) {
+            ::orteaf::internal::diagnostics::error::throwError(
+                ::orteaf::internal::diagnostics::error::OrteafErrc::
+                    InvalidState,
+                "Cannot get numel from uninitialized storage lease");
+            return 0; // Unreachable, but needed for compilation
+          } else {
+            if (!lease.operator->()) {
+              ::orteaf::internal::diagnostics::error::throwError(
+                  ::orteaf::internal::diagnostics::error::OrteafErrc::
+                      InvalidState,
+                  "Cannot get numel from invalid storage lease");
+              return 0; // Unreachable, but needed for compilation
+            }
+            return lease->numel();
+          }
+        },
+        variant_);
+  }
+
+  /**
+   * @brief Return the size of the storage in bytes.
+   */
+  std::size_t sizeInBytes() const {
+    return std::visit(
+        [](const auto &lease) -> std::size_t {
+          using T = std::decay_t<decltype(lease)>;
+          if constexpr (std::is_same_v<T, std::monostate>) {
+            ::orteaf::internal::diagnostics::error::throwError(
+                ::orteaf::internal::diagnostics::error::OrteafErrc::
+                    InvalidState,
+                "Cannot get size from uninitialized storage lease");
+            return 0; // Unreachable, but needed for compilation
+          } else {
+            if (!lease.operator->()) {
+              ::orteaf::internal::diagnostics::error::throwError(
+                  ::orteaf::internal::diagnostics::error::OrteafErrc::
+                      InvalidState,
+                  "Cannot get size from invalid storage lease");
+              return 0; // Unreachable, but needed for compilation
+            }
+            return lease->sizeInBytes();
+          }
+        },
+        variant_);
+  }
+
+  explicit operator bool() const noexcept { return valid(); }
 
 private:
   explicit StorageLease(Variant v) : variant_(std::move(v)) {}

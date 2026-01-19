@@ -20,6 +20,9 @@
 #include <orteaf/internal/dtype/dtype.h>
 #include <orteaf/internal/execution/execution.h>
 #include <orteaf/internal/storage/concepts/storage_concepts.h>
+#if ORTEAF_ENABLE_MPS
+#include <orteaf/internal/storage/mps/mps_storage.h>
+#endif
 
 namespace orteaf::internal::storage::manager {
 
@@ -52,6 +55,25 @@ template <typename Storage> struct TypedStorageRequest {
   Layout layout{};
 };
 
+#if ORTEAF_ENABLE_MPS
+template <>
+struct TypedStorageRequest<::orteaf::internal::storage::mps::MpsStorage> {
+  using DeviceHandle =
+      ::orteaf::internal::storage::mps::MpsStorage::DeviceHandle;
+  using HeapDescriptorKey =
+      ::orteaf::internal::storage::mps::MpsStorage::HeapDescriptorKey;
+  using Layout = ::orteaf::internal::storage::mps::MpsStorage::Layout;
+  using DType = ::orteaf::internal::storage::mps::MpsStorage::DType;
+
+  DeviceHandle device{DeviceHandle::invalid()};
+  HeapDescriptorKey heap_key{};
+  DType dtype{DType::F32};
+  std::size_t numel{0};
+  std::size_t alignment{0};
+  Layout layout{};
+};
+#endif
+
 /// @brief Context for pool operations
 template <typename Storage> struct TypedStorageContext {};
 
@@ -66,6 +88,12 @@ template <typename Storage> struct TypedStoragePoolTraits {
   static constexpr const char *ManagerName = "TypedStorage manager";
 
   static void validateRequestOrThrow(const Request &request) {
+    if constexpr (requires { request.device.isValid(); }) {
+      if (!request.device.isValid()) {
+        ORTEAF_THROW(InvalidArgument,
+                     "Storage request requires a valid device handle");
+      }
+    }
     if (request.numel == 0) {
       ORTEAF_THROW(InvalidArgument, "Storage request requires non-zero numel");
     }
@@ -73,8 +101,33 @@ template <typename Storage> struct TypedStoragePoolTraits {
 
   static bool create(Payload &payload, const Request &request,
                      const Context & /*context*/) {
-    // Creation is delegated to Storage::Builder pattern
-    // This is a placeholder - actual creation should use the Storage's builder
+    if constexpr (requires { Payload::builder(); }) {
+      auto builder = Payload::builder();
+      if constexpr (requires {
+                      builder.withDeviceHandle(request.device,
+                                               request.heap_key);
+                    }) {
+        builder.withDeviceHandle(request.device, request.heap_key);
+      } else if constexpr (requires {
+                             builder.withDeviceHandle(request.device);
+                           }) {
+        builder.withDeviceHandle(request.device);
+      }
+      if constexpr (requires { builder.withDType(request.dtype); }) {
+        builder.withDType(request.dtype);
+      }
+      if constexpr (requires { builder.withNumElements(request.numel); }) {
+        builder.withNumElements(request.numel);
+      }
+      if constexpr (requires { builder.withAlignment(request.alignment); }) {
+        builder.withAlignment(request.alignment);
+      }
+      if constexpr (requires { builder.withLayout(request.layout); }) {
+        builder.withLayout(request.layout);
+      }
+      payload = builder.build();
+      return true;
+    }
     return false;
   }
 
