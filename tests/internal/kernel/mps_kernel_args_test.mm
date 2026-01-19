@@ -2,6 +2,10 @@
 #include "orteaf/internal/kernel/kernel_args.h"
 #include "orteaf/internal/kernel/mps/mps_kernel_args.h"
 
+#include "orteaf/internal/execution/mps/api/mps_execution_api.h"
+#include "orteaf/internal/execution/mps/platform/mps_slow_ops.h"
+#include "orteaf/internal/execution_context/mps/current_context.h"
+
 #include <gtest/gtest.h>
 #include <type_traits>
 
@@ -49,6 +53,67 @@ TEST(MpsKernelArgs, ToDeviceBasic) {
   EXPECT_FLOAT_EQ(device.params.alpha, 1.0f);
   EXPECT_FLOAT_EQ(device.params.beta, 2.0f);
   EXPECT_EQ(device.params.n, 100);
+}
+
+TEST(MpsKernelArgs, HostFromCurrentContext) {
+  // Setup: Configure MPS execution API
+  namespace mps_api = ::orteaf::internal::execution::mps::api;
+  namespace mps_context = ::orteaf::internal::execution_context::mps;
+  namespace mps_platform = ::orteaf::internal::execution::mps::platform;
+
+  auto *ops = new mps_platform::MpsSlowOpsImpl();
+  const int device_count = ops->getDeviceCount();
+  if (device_count <= 0) {
+    delete ops;
+    GTEST_SKIP() << "No MPS devices available";
+  }
+
+  mps_api::MpsExecutionApi::ExecutionManager::Config config{};
+  config.slow_ops = ops;
+
+  const auto capacity = static_cast<std::size_t>(device_count);
+  auto &device_cfg = config.device_config;
+  device_cfg.control_block_capacity = capacity;
+  device_cfg.control_block_block_size = capacity;
+  device_cfg.control_block_growth_chunk_size = 1;
+  device_cfg.payload_capacity = capacity;
+  device_cfg.payload_block_size = capacity;
+  device_cfg.payload_growth_chunk_size = 1;
+
+  auto configure_pool = [](auto &cfg) {
+    cfg.control_block_capacity = 1;
+    cfg.control_block_block_size = 1;
+    cfg.control_block_growth_chunk_size = 1;
+    cfg.payload_capacity = 1;
+    cfg.payload_block_size = 1;
+    cfg.payload_growth_chunk_size = 1;
+  };
+  configure_pool(device_cfg.command_queue_config);
+  configure_pool(device_cfg.event_config);
+  configure_pool(device_cfg.fence_config);
+  configure_pool(device_cfg.heap_config);
+  configure_pool(device_cfg.library_config);
+  configure_pool(device_cfg.graph_config);
+
+  try {
+    mps_api::MpsExecutionApi::configure(config);
+  } catch (const std::exception &ex) {
+    delete ops;
+    GTEST_SKIP() << "Failed to configure MPS: " << ex.what();
+  }
+  mps_context::reset();
+
+  {
+    // fromCurrentContext should return a Host with the current thread-local
+    // context
+    auto host = MpsArgs::Host::fromCurrentContext();
+    // Should be able to use the host normally
+    EXPECT_EQ(host.storageCount(), 0);
+  } // host destroyed here, releasing context references
+
+  // Teardown
+  mps_context::reset();
+  mps_api::MpsExecutionApi::shutdown();
 }
 
 // ============================================================

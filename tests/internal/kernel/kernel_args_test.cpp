@@ -2,6 +2,9 @@
 #include "orteaf/internal/kernel/cpu/cpu_kernel_args.h"
 #include "orteaf/internal/kernel/kernel_args.h"
 
+#include "orteaf/internal/execution/cpu/api/cpu_execution_api.h"
+#include "orteaf/internal/execution_context/cpu/current_context.h"
+
 #include <gtest/gtest.h>
 #include <type_traits>
 
@@ -60,6 +63,26 @@ TEST(CpuKernelArgs, ToDeviceBasic) {
   EXPECT_FLOAT_EQ(device.params.alpha, 1.0f);
   EXPECT_FLOAT_EQ(device.params.beta, 2.0f);
   EXPECT_EQ(device.params.n, 100);
+}
+
+TEST(CpuKernelArgs, HostFromCurrentContext) {
+  // Setup: Configure CPU execution API
+  namespace cpu_api = ::orteaf::internal::execution::cpu::api;
+  cpu_api::CpuExecutionApi::ExecutionManager::Config config{};
+  cpu_api::CpuExecutionApi::configure(config);
+  ::orteaf::internal::execution_context::cpu::reset();
+
+  {
+    // fromCurrentContext should return a Host with the current thread-local
+    // context
+    auto host = CpuArgs::Host::fromCurrentContext();
+    // Should be able to use the host normally
+    EXPECT_EQ(host.storageCount(), 0);
+  } // host destroyed here, releasing context references
+
+  // Teardown
+  ::orteaf::internal::execution_context::cpu::reset();
+  cpu_api::CpuExecutionApi::shutdown();
 }
 
 // ============================================================

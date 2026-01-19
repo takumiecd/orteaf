@@ -8,6 +8,7 @@
 
 #include <orteaf/internal/execution/mps/resource/mps_buffer_view.h>
 #include <orteaf/internal/execution_context/mps/context.h>
+#include <orteaf/internal/execution_context/mps/current_context.h>
 #include <orteaf/internal/kernel/access.h>
 #include <orteaf/internal/storage/mps/mps_storage.h>
 #include <orteaf/internal/storage/mps/mps_storage_layout.h>
@@ -54,6 +55,11 @@ public:
 
     Host() = default;
     explicit Host(Context ctx) : context_(std::move(ctx)) {}
+
+    /// @brief Create Host from current thread-local context.
+    static Host fromCurrentContext() {
+      return Host(::orteaf::internal::execution_context::mps::currentContext());
+    }
 
     Host(const Host &) = default;
     Host &operator=(const Host &) = default;

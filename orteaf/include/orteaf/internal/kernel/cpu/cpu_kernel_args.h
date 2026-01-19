@@ -6,6 +6,7 @@
 
 #include <orteaf/internal/execution/cpu/resource/cpu_buffer_view.h>
 #include <orteaf/internal/execution_context/cpu/context.h>
+#include <orteaf/internal/execution_context/cpu/current_context.h>
 #include <orteaf/internal/kernel/access.h>
 #include <orteaf/internal/storage/cpu/cpu_storage.h>
 #include <orteaf/internal/storage/cpu/cpu_storage_layout.h>
@@ -52,6 +53,11 @@ public:
 
     Host() = default;
     explicit Host(Context ctx) : context_(std::move(ctx)) {}
+
+    /// @brief Create Host from current thread-local context.
+    static Host fromCurrentContext() {
+      return Host(::orteaf::internal::execution_context::cpu::currentContext());
+    }
 
     Host(const Host &) = default;
     Host &operator=(const Host &) = default;
