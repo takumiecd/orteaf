@@ -68,11 +68,11 @@ struct CudaSlowOps {
   loadModuleFromImage(const void *image) = 0;
   virtual ::orteaf::internal::execution::cuda::platform::wrapper::CudaFunction_t
   getFunction(::orteaf::internal::execution::cuda::platform::wrapper::CudaModule_t
-                  module,
+                  cuda_module,
               const char *kernel_name) = 0;
   virtual void unloadModule(
       ::orteaf::internal::execution::cuda::platform::wrapper::CudaModule_t
-          module) = 0;
+          cuda_module) = 0;
 };
 
 // Default implementation backed by wrapper functions.
@@ -127,11 +127,11 @@ struct CudaSlowOpsImpl final : public CudaSlowOps {
   loadModuleFromImage(const void *image) override;
   ::orteaf::internal::execution::cuda::platform::wrapper::CudaFunction_t
   getFunction(::orteaf::internal::execution::cuda::platform::wrapper::CudaModule_t
-                  module,
+                  cuda_module,
               const char *kernel_name) override;
   void unloadModule(
       ::orteaf::internal::execution::cuda::platform::wrapper::CudaModule_t
-          module) override;
+          cuda_module) override;
 };
 
 } // namespace orteaf::internal::execution::cuda::platform
