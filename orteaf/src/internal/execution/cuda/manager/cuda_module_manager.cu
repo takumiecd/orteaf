@@ -17,10 +17,10 @@ bool ModulePayloadPoolTraits::create(Payload &payload, const Request &request,
 
   context.ops->setContext(context.context);
 
-  ::orteaf::internal::execution::cuda::platform::wrapper::CudaModule_t module =
+  ::orteaf::internal::execution::cuda::platform::wrapper::CudaModule_t cuda_module =
       nullptr;
   if (request.key.kind == ModuleKeyKind::kFile) {
-    module = context.ops->loadModuleFromFile(request.key.identifier.c_str());
+    cuda_module = context.ops->loadModuleFromFile(request.key.identifier.c_str());
   } else {
     using namespace ::orteaf::internal::execution::cuda::platform::wrapper::
         kernel_embed;
@@ -29,18 +29,18 @@ bool ModulePayloadPoolTraits::create(Payload &payload, const Request &request,
     if (blob.data == nullptr) {
       return false;
     }
-    module = context.ops->loadModuleFromImage(blob.data);
+    cuda_module = context.ops->loadModuleFromImage(blob.data);
   }
 
-  if (module == nullptr) {
+  if (cuda_module == nullptr) {
     return false;
   }
 
-  payload.module = module;
+  payload.module = cuda_module;
   CudaFunctionManager::InternalConfig function_config{};
   function_config.public_config = context.function_config;
   function_config.context = context.context;
-  function_config.module = module;
+  function_config.module = cuda_module;
   function_config.ops = context.ops;
   payload.function_manager.configure(function_config);
   return true;
