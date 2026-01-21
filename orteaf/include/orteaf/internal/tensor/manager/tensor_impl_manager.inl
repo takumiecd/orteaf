@@ -8,7 +8,7 @@
  * after tensor_impl_manager.h.
  */
 
-#include <orteaf/internal/storage/manager/storage_request.h>
+#include <orteaf/internal/storage/registry/storage_types.h>
 #include <orteaf/internal/tensor/manager/tensor_impl_manager.h>
 
 namespace orteaf::internal::tensor {
@@ -45,7 +45,7 @@ bool TensorImplPoolTraits<Impl>::create(Payload &payload,
       [&](const auto &req) -> bool {
         using T = std::decay_t<decltype(req)>;
         if constexpr (std::is_same_v<T, TensorImplCreateRequest<Impl>>) {
-          if (context.storage_manager == nullptr) {
+          if (context.storage_registry == nullptr) {
             return false;
           }
 
@@ -60,36 +60,48 @@ bool TensorImplPoolTraits<Impl>::create(Payload &payload,
           }
 
           // Create storage request based on execution backend
-          using namespace ::orteaf::internal::storage::manager;
+          using ::orteaf::internal::storage::StorageLease;
           using Execution = ::orteaf::internal::execution::Execution;
 
-          StorageRequest storage_request;
+          StorageLease storage_lease{};
           if (req.execution == Execution::Cpu) {
-            CpuStorageRequest cpu_req{};
-            cpu_req.device =
+            using CpuStorage = ::orteaf::internal::storage::cpu::CpuStorage;
+            using CpuStorageManager =
+                ::orteaf::internal::storage::CpuStorageManager;
+            typename CpuStorageManager::Request storage_request{};
+            storage_request.device =
                 ::orteaf::internal::execution::cpu::CpuDeviceHandle{0};
-            cpu_req.dtype = req.dtype;
-            cpu_req.numel = static_cast<std::size_t>(numel);
-            cpu_req.alignment = req.alignment;
-            storage_request = cpu_req;
+            storage_request.dtype = req.dtype;
+            storage_request.numel = static_cast<std::size_t>(numel);
+            storage_request.alignment = req.alignment;
+            storage_request.layout = typename CpuStorage::Layout{};
+            auto lease =
+                context.storage_registry->template get<CpuStorage>().acquire(
+                    storage_request);
+            storage_lease = StorageLease::erase(std::move(lease));
           }
 #if ORTEAF_ENABLE_MPS
           else if (req.execution == Execution::Mps) {
-            MpsStorageRequest mps_req{};
-            mps_req.device =
+            using MpsStorage = ::orteaf::internal::storage::mps::MpsStorage;
+            using MpsStorageManager =
+                ::orteaf::internal::storage::MpsStorageManager;
+            typename MpsStorageManager::Request storage_request{};
+            storage_request.device =
                 ::orteaf::internal::execution::mps::MpsDeviceHandle{0};
-            mps_req.dtype = req.dtype;
-            mps_req.numel = static_cast<std::size_t>(numel);
-            mps_req.alignment = req.alignment;
-            storage_request = mps_req;
+            storage_request.dtype = req.dtype;
+            storage_request.numel = static_cast<std::size_t>(numel);
+            storage_request.alignment = req.alignment;
+            storage_request.layout = typename MpsStorage::Layout{};
+            auto lease =
+                context.storage_registry->template get<MpsStorage>().acquire(
+                    storage_request);
+            storage_lease = StorageLease::erase(std::move(lease));
           }
 #endif
           else {
             return false;
           }
 
-          auto storage_lease =
-              context.storage_manager->acquire(storage_request);
           using Layout = typename Impl::Layout;
           auto layout = Layout::contiguous(req.shape);
           payload = Impl(std::move(layout), std::move(storage_lease));
@@ -120,11 +132,11 @@ void TensorImplPoolTraits<Impl>::destroy(Payload &payload, const Request &,
 template <typename Impl>
   requires TensorImplConcept<Impl>
 void TensorImplManager<Impl>::configure(const Config &config,
-                                        StorageManager &storage_manager) {
-  storage_manager_ = &storage_manager;
+                                        StorageRegistry &storage_registry) {
+  storage_registry_ = &storage_registry;
 
   detail::TensorImplRequest<Impl> request{};
-  detail::TensorImplContext context{storage_manager_};
+  detail::TensorImplContext context{storage_registry_};
 
   typename Core::template Builder<detail::TensorImplRequest<Impl>,
                                   detail::TensorImplContext>
@@ -144,9 +156,9 @@ template <typename Impl>
   requires TensorImplConcept<Impl>
 void TensorImplManager<Impl>::shutdown() {
   detail::TensorImplRequest<Impl> request{};
-  detail::TensorImplContext context{storage_manager_};
+  detail::TensorImplContext context{storage_registry_};
   core_.shutdown(request, context);
-  storage_manager_ = nullptr;
+  storage_registry_ = nullptr;
 }
 
 template <typename Impl>
@@ -169,7 +181,7 @@ TensorImplManager<Impl>::create(std::span<const Dim> shape, DType dtype,
   req.alignment = alignment;
 
   detail::TensorImplRequest<Impl> request{req};
-  detail::TensorImplContext context{storage_manager_};
+  detail::TensorImplContext context{storage_registry_};
 
   auto payload_handle = core_.reserveUncreatedPayloadOrGrow();
   if (!payload_handle.isValid()) {
@@ -198,7 +210,7 @@ TensorImplManager<Impl>::createView(Layout layout, StorageLease storage) {
   req.storage = std::move(storage);
 
   detail::TensorImplRequest<Impl> request{req};
-  detail::TensorImplContext context{storage_manager_};
+  detail::TensorImplContext context{storage_registry_};
 
   auto payload_handle = core_.reserveUncreatedPayloadOrGrow();
   if (!payload_handle.isValid()) {

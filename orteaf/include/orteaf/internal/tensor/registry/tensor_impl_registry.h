@@ -11,7 +11,7 @@
 #include <tuple>
 #include <variant>
 
-#include <orteaf/internal/storage/manager/storage_manager.h>
+#include <orteaf/internal/storage/registry/storage_types.h>
 #include <orteaf/internal/tensor/manager/tensor_impl_manager.h>
 #include <orteaf/internal/tensor/manager/tensor_impl_manager.inl>
 
@@ -33,7 +33,7 @@ template <typename Impl> struct TensorImplTraits {
 
 template <typename... Impls> class TensorImplRegistry {
 public:
-  using StorageManager = ::orteaf::internal::storage::manager::StorageManager;
+  using StorageRegistry = ::orteaf::internal::storage::RegisteredStorages;
   using ManagerTuple = std::tuple<typename TensorImplTraits<Impls>::Manager...>;
 
   using LeaseVariant =
@@ -61,8 +61,8 @@ public:
   TensorImplRegistry(TensorImplRegistry &&) = default;
   TensorImplRegistry &operator=(TensorImplRegistry &&) = default;
 
-  void configure(const Config &config, StorageManager &storage_manager) {
-    configureImpl<Impls...>(config, storage_manager);
+  void configure(const Config &config, StorageRegistry &storage_registry) {
+    configureImpl<Impls...>(config, storage_registry);
   }
 
   void shutdown() { shutdownImpl<Impls...>(); }
@@ -97,13 +97,13 @@ public:
 
 private:
   template <typename First, typename... Rest>
-  void configureImpl(const Config &config, StorageManager &storage_manager) {
+  void configureImpl(const Config &config, StorageRegistry &storage_registry) {
     std::get<typename TensorImplTraits<First>::Manager>(managers_).configure(
         std::get<typename TensorImplTraits<First>::Manager::Config>(
             config.configs),
-        storage_manager);
+        storage_registry);
     if constexpr (sizeof...(Rest) > 0) {
-      configureImpl<Rest...>(config, storage_manager);
+      configureImpl<Rest...>(config, storage_registry);
     }
   }
 

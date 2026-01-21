@@ -8,8 +8,8 @@ namespace {
 
 bool g_configured = false;
 
-TensorApi::StorageManager &storageManagerSingleton() {
-  static TensorApi::StorageManager instance;
+TensorApi::StorageRegistry &storageRegistrySingleton() {
+  static TensorApi::StorageRegistry instance;
   return instance;
 }
 
@@ -40,9 +40,9 @@ void TensorApi::configure(const Config &config) {
         "TensorApi is already configured");
   }
 
-  storageManagerSingleton().configure(config.storage_config);
+  storageRegistrySingleton().configure(config.storage_config);
   registrySingleton().configure(config.registry_config,
-                                storageManagerSingleton());
+                                storageRegistrySingleton());
   g_configured = true;
 }
 
@@ -51,15 +51,15 @@ void TensorApi::shutdown() {
     return;
   }
   registrySingleton().shutdown();
-  storageManagerSingleton().shutdown();
+  storageRegistrySingleton().shutdown();
   g_configured = false;
 }
 
 bool TensorApi::isConfigured() noexcept { return g_configured; }
 
-TensorApi::StorageManager &TensorApi::storage() {
+TensorApi::StorageRegistry &TensorApi::storage() {
   ensureConfigured();
-  return storageManagerSingleton();
+  return storageRegistrySingleton();
 }
 
 TensorApi::Registry &TensorApi::registry() {
