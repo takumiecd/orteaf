@@ -16,43 +16,108 @@ namespace kernel = orteaf::internal::kernel;
 // ============================================================
 
 struct MpsTestParams {
+  static constexpr std::uint64_t kTypeId = 2;
   float alpha{0.0f};
   float beta{0.0f};
   int n{0};
 };
 static_assert(std::is_trivially_copyable_v<MpsTestParams>);
 
+// OtherMpsParams for type mismatch testing
+struct OtherMpsParams {
+  static constexpr std::uint64_t kTypeId = 888;
+  float x{0.0f};
+};
+static_assert(std::is_trivially_copyable_v<OtherMpsParams>);
+
 // ============================================================
 // MpsKernelArgs tests
 // ============================================================
 
-using MpsArgs = kernel::mps::MpsKernelArgs<4, MpsTestParams>;
-
-TEST(MpsKernelArgs, DeviceIsPOD) {
-  static_assert(std::is_trivially_copyable_v<MpsArgs::Device>);
-  static_assert(std::is_trivially_copyable_v<MpsArgs::Device::Binding>);
-}
+using MpsArgs = kernel::mps::MpsKernelArgs;
 
 TEST(MpsKernelArgs, HostDefaultConstruct) {
-  MpsArgs::Host host;
+  MpsArgs host;
   EXPECT_EQ(host.storageCount(), 0);
 }
 
-TEST(MpsKernelArgs, DeviceDefaultConstruct) {
-  MpsArgs::Device device{};
-  EXPECT_EQ(device.binding_count, 0);
-  EXPECT_FLOAT_EQ(device.params.alpha, 0.0f);
-}
-
-TEST(MpsKernelArgs, ToDeviceBasic) {
-  MpsArgs::Host host;
+TEST(MpsKernelArgs, SetAndGetParams) {
+  MpsArgs args;
   MpsTestParams params{1.0f, 2.0f, 100};
 
-  auto device = MpsArgs::toDevice(host, params);
-  EXPECT_EQ(device.binding_count, 0);
-  EXPECT_FLOAT_EQ(device.params.alpha, 1.0f);
-  EXPECT_FLOAT_EQ(device.params.beta, 2.0f);
-  EXPECT_EQ(device.params.n, 100);
+  EXPECT_TRUE(args.setParams(params));
+  EXPECT_EQ(args.paramsSize(), sizeof(MpsTestParams));
+  EXPECT_EQ(args.paramsTypeId(), MpsTestParams::kTypeId);
+
+  MpsTestParams retrieved{};
+  EXPECT_TRUE(args.getParams(retrieved));
+  EXPECT_FLOAT_EQ(retrieved.alpha, 1.0f);
+  EXPECT_FLOAT_EQ(retrieved.beta, 2.0f);
+  EXPECT_EQ(retrieved.n, 100);
+}
+
+TEST(MpsKernelArgs, StorageManagement) {
+  MpsArgs args;
+  EXPECT_EQ(args.storageCount(), 0);
+  EXPECT_EQ(args.storageCapacity(), MpsArgs::kMaxBindings);
+
+  // Test clearing
+  args.clearStorages();
+  EXPECT_EQ(args.storageCount(), 0);
+}
+
+TEST(MpsKernelArgs, AddStorageLease) {
+  MpsArgs args;
+
+  // Add a storage lease (using default-constructed lease for now)
+  kernel::mps::MpsKernelArgs::StorageLease lease;
+  args.addStorageLease(std::move(lease), kernel::Access::Read);
+
+  EXPECT_EQ(args.storageCount(), 1);
+  EXPECT_EQ(args.storageAccessAt(0), kernel::Access::Read);
+}
+
+TEST(MpsKernelArgs, ParamsRawAccessors) {
+  MpsArgs args;
+  MpsTestParams params{3.14f, 2.71f, 42};
+
+  EXPECT_TRUE(args.setParams(params));
+
+  // Test raw data access
+  const std::byte *data = args.paramsData();
+  EXPECT_NE(data, nullptr);
+  EXPECT_EQ(args.paramsSize(), sizeof(MpsTestParams));
+  EXPECT_EQ(args.paramsCapacity(), MpsArgs::kParamBytes);
+
+  // Test non-const data access
+  std::byte *mutable_data = args.paramsData();
+  EXPECT_NE(mutable_data, nullptr);
+}
+
+TEST(MpsKernelArgs, SetParamsRaw) {
+  MpsArgs args;
+  MpsTestParams params{1.5f, 2.5f, 99};
+
+  EXPECT_TRUE(args.setParamsRaw(&params, sizeof(MpsTestParams),
+                                MpsTestParams::kTypeId));
+  EXPECT_EQ(args.paramsSize(), sizeof(MpsTestParams));
+  EXPECT_EQ(args.paramsTypeId(), MpsTestParams::kTypeId);
+
+  // Verify we can retrieve the params
+  MpsTestParams retrieved{};
+  EXPECT_TRUE(args.getParams(retrieved));
+  EXPECT_FLOAT_EQ(retrieved.alpha, 1.5f);
+  EXPECT_FLOAT_EQ(retrieved.beta, 2.5f);
+  EXPECT_EQ(retrieved.n, 99);
+}
+
+TEST(MpsKernelArgs, GetParamsFailsWithWrongType) {
+  MpsArgs args;
+  MpsTestParams params{1.0f, 2.0f, 100};
+  args.setParams(params);
+
+  OtherMpsParams other{};
+  EXPECT_FALSE(args.getParams(other));
 }
 
 TEST(MpsKernelArgs, HostFromCurrentContext) {
@@ -104,12 +169,10 @@ TEST(MpsKernelArgs, HostFromCurrentContext) {
   mps_context::reset();
 
   {
-    // fromCurrentContext should return a Host with the current thread-local
-    // context
-    auto host = MpsArgs::Host::fromCurrentContext();
-    // Should be able to use the host normally
-    EXPECT_EQ(host.storageCount(), 0);
-  } // host destroyed here, releasing context references
+    // Test basic MPS kernel args usage
+    MpsArgs args;
+    EXPECT_EQ(args.storageCount(), 0);
+  }
 
   // Teardown
   mps_context::reset();
@@ -120,7 +183,7 @@ TEST(MpsKernelArgs, HostFromCurrentContext) {
 // Type-erased KernelArgs with MPS tests
 // ============================================================
 
-using TypeErasedArgs = kernel::KernelArgs<4, MpsTestParams>;
+using TypeErasedArgs = kernel::KernelArgs;
 
 TEST(KernelArgsMps, EraseFromMpsKernelArgs) {
   MpsArgs mps_args;
@@ -159,7 +222,7 @@ TEST(KernelArgsMps, VisitPattern) {
 }
 
 TEST(KernelArgsMps, TryAsWrongTypeReturnsNull) {
-  using CpuArgs = kernel::cpu::CpuKernelArgs<4, MpsTestParams>;
+  using CpuArgs = kernel::cpu::CpuKernelArgs;
 
   MpsArgs mps_args;
   TypeErasedArgs args = TypeErasedArgs::erase(std::move(mps_args));

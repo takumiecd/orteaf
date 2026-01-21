@@ -15,11 +15,19 @@ namespace kernel = orteaf::internal::kernel;
 // ============================================================
 
 struct TestParams {
+  static constexpr std::uint64_t kTypeId = 1;
   float alpha{0.0f};
   float beta{0.0f};
   int n{0};
 };
 static_assert(std::is_trivially_copyable_v<TestParams>);
+
+// OtherParams for type mismatch testing
+struct OtherParams {
+  static constexpr std::uint64_t kTypeId = 999;
+  int value{0};
+};
+static_assert(std::is_trivially_copyable_v<OtherParams>);
 
 // ============================================================
 // Access enum tests
@@ -36,33 +44,90 @@ TEST(Access, EnumValues) {
 // CpuKernelArgs tests
 // ============================================================
 
-using CpuArgs = kernel::cpu::CpuKernelArgs<4, TestParams>;
-
-TEST(CpuKernelArgs, DeviceIsPOD) {
-  static_assert(std::is_trivially_copyable_v<CpuArgs::Device>);
-  static_assert(std::is_trivially_copyable_v<CpuArgs::Device::Binding>);
-}
+using CpuArgs = kernel::cpu::CpuKernelArgs;
 
 TEST(CpuKernelArgs, HostDefaultConstruct) {
-  CpuArgs::Host host;
+  CpuArgs host;
   EXPECT_EQ(host.storageCount(), 0);
 }
 
-TEST(CpuKernelArgs, DeviceDefaultConstruct) {
-  CpuArgs::Device device{};
-  EXPECT_EQ(device.binding_count, 0);
-  EXPECT_FLOAT_EQ(device.params.alpha, 0.0f);
-}
-
-TEST(CpuKernelArgs, ToDeviceBasic) {
-  CpuArgs::Host host;
+TEST(CpuKernelArgs, SetAndGetParams) {
+  CpuArgs args;
   TestParams params{1.0f, 2.0f, 100};
 
-  auto device = CpuArgs::toDevice(host, params);
-  EXPECT_EQ(device.binding_count, 0);
-  EXPECT_FLOAT_EQ(device.params.alpha, 1.0f);
-  EXPECT_FLOAT_EQ(device.params.beta, 2.0f);
-  EXPECT_EQ(device.params.n, 100);
+  EXPECT_TRUE(args.setParams(params));
+  EXPECT_EQ(args.paramsSize(), sizeof(TestParams));
+  EXPECT_EQ(args.paramsTypeId(), TestParams::kTypeId);
+
+  TestParams retrieved{};
+  EXPECT_TRUE(args.getParams(retrieved));
+  EXPECT_FLOAT_EQ(retrieved.alpha, 1.0f);
+  EXPECT_FLOAT_EQ(retrieved.beta, 2.0f);
+  EXPECT_EQ(retrieved.n, 100);
+}
+
+TEST(CpuKernelArgs, StorageManagement) {
+  CpuArgs args;
+  EXPECT_EQ(args.storageCount(), 0);
+  EXPECT_EQ(args.storageCapacity(), CpuArgs::kMaxBindings);
+
+  // Test clearing
+  args.clearStorages();
+  EXPECT_EQ(args.storageCount(), 0);
+}
+
+TEST(CpuKernelArgs, AddStorageLease) {
+  CpuArgs args;
+
+  // Add a storage lease (using default-constructed lease for now)
+  kernel::cpu::CpuKernelArgs::StorageLease lease;
+  args.addStorageLease(std::move(lease), kernel::Access::ReadWrite);
+
+  EXPECT_EQ(args.storageCount(), 1);
+  EXPECT_EQ(args.storageAccessAt(0), kernel::Access::ReadWrite);
+}
+
+TEST(CpuKernelArgs, ParamsRawAccessors) {
+  CpuArgs args;
+  TestParams params{3.14f, 2.71f, 42};
+
+  EXPECT_TRUE(args.setParams(params));
+
+  // Test raw data access
+  const std::byte *data = args.paramsData();
+  EXPECT_NE(data, nullptr);
+  EXPECT_EQ(args.paramsSize(), sizeof(TestParams));
+  EXPECT_EQ(args.paramsCapacity(), CpuArgs::kParamBytes);
+
+  // Test non-const data access
+  std::byte *mutable_data = args.paramsData();
+  EXPECT_NE(mutable_data, nullptr);
+}
+
+TEST(CpuKernelArgs, SetParamsRaw) {
+  CpuArgs args;
+  TestParams params{1.5f, 2.5f, 99};
+
+  EXPECT_TRUE(
+      args.setParamsRaw(&params, sizeof(TestParams), TestParams::kTypeId));
+  EXPECT_EQ(args.paramsSize(), sizeof(TestParams));
+  EXPECT_EQ(args.paramsTypeId(), TestParams::kTypeId);
+
+  // Verify we can retrieve the params
+  TestParams retrieved{};
+  EXPECT_TRUE(args.getParams(retrieved));
+  EXPECT_FLOAT_EQ(retrieved.alpha, 1.5f);
+  EXPECT_FLOAT_EQ(retrieved.beta, 2.5f);
+  EXPECT_EQ(retrieved.n, 99);
+}
+
+TEST(CpuKernelArgs, GetParamsFailsWithWrongType) {
+  CpuArgs args;
+  TestParams params{1.0f, 2.0f, 100};
+  args.setParams(params);
+
+  OtherParams other{};
+  EXPECT_FALSE(args.getParams(other));
 }
 
 TEST(CpuKernelArgs, HostFromCurrentContext) {
@@ -73,12 +138,10 @@ TEST(CpuKernelArgs, HostFromCurrentContext) {
   ::orteaf::internal::execution_context::cpu::reset();
 
   {
-    // fromCurrentContext should return a Host with the current thread-local
-    // context
-    auto host = CpuArgs::Host::fromCurrentContext();
-    // Should be able to use the host normally
-    EXPECT_EQ(host.storageCount(), 0);
-  } // host destroyed here, releasing context references
+    // fromCurrentContext should work with CPU args
+    CpuArgs args;
+    EXPECT_EQ(args.storageCount(), 0);
+  }
 
   // Teardown
   ::orteaf::internal::execution_context::cpu::reset();
@@ -89,7 +152,7 @@ TEST(CpuKernelArgs, HostFromCurrentContext) {
 // Type-erased KernelArgs tests
 // ============================================================
 
-using TypeErasedArgs = kernel::KernelArgs<4, TestParams>;
+using TypeErasedArgs = kernel::KernelArgs;
 
 TEST(KernelArgs, DefaultConstructedIsInvalid) {
   TypeErasedArgs args;
