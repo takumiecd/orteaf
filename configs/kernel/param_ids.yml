@@ -1,0 +1,43 @@
+schema_version: "1.0"
+
+# Kernel parameter definitions
+# Each parameter has an ID, value, C++ type, and description
+params:
+  # Scalar parameters
+  - id: Alpha
+    cpp_type: "float"
+    description: "Alpha scalar parameter (float)"
+  
+  - id: Beta
+    cpp_type: "float"
+    description: "Beta scalar parameter (float)"
+  
+  - id: Scale
+    cpp_type: "double"
+    description: "Scale scalar parameter (double)"
+  
+  - id: Epsilon
+    cpp_type: "float"
+    description: "Epsilon scalar parameter (float)"
+  
+  # Integer parameters
+  - id: Axis
+    cpp_type: "int"
+    description: "Axis parameter (int)"
+  
+  - id: Dim
+    cpp_type: "std::size_t"
+    description: "Dimension parameter (size_t)"
+  
+  - id: Count
+    cpp_type: "std::size_t"
+    description: "Count parameter (size_t)"
+  
+  # Pointer parameters
+  - id: BufferPtr
+    cpp_type: "void*"
+    description: "Generic buffer pointer"
+  
+  - id: DataPtr
+    cpp_type: "void*"
+    description: "Data pointer"

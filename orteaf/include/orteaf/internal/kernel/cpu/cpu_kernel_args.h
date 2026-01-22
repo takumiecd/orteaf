@@ -1,101 +1,163 @@
 #pragma once
 
-#include <array>
 #include <cstddef>
-#include <cstdint>
 #include <cstring>
-#include <type_traits>
 #include <utility>
 
+#include <orteaf/internal/base/small_vector.h>
+#include <orteaf/internal/kernel/param.h>
+
+#include <orteaf/internal/execution_context/cpu/context.h>
 #include <orteaf/internal/kernel/access.h>
+#include <orteaf/internal/kernel/cpu/cpu_storage_binding.h>
+#include <orteaf/internal/kernel/kernel_key.h>
+#include <orteaf/internal/kernel/storage_id.h>
 #include <orteaf/internal/storage/registry/storage_types.h>
 
 namespace orteaf::internal::kernel::cpu {
 
 /**
  * @brief CPU kernel arguments container.
+ *
+ * Manages storage bindings and parameters for CPU kernel execution.
+ * Uses structured storage bindings with StorageId for type-safe management.
+ * Holds execution context for device and resource management.
  */
 class CpuKernelArgs {
 public:
+  using Context = ::orteaf::internal::execution_context::cpu::Context;
   using StorageLease = ::orteaf::internal::storage::CpuStorageLease;
 
+  // Inline capacities; SmallVector can grow beyond these values.
   static constexpr std::size_t kMaxBindings = 16;
-  static constexpr std::size_t kParamBytes = 1024;
+  static constexpr std::size_t kMaxParams = 16;
 
-  template <typename Params>
-  bool setParams(const Params &params) {
-    static_assert(std::is_trivially_copyable_v<Params>,
-                  "Params must be trivially copyable.");
-    return setParamsRaw(&params, sizeof(Params), Params::kTypeId);
+  /**
+   * @brief Create kernel args from current execution context.
+   */
+  static CpuKernelArgs fromCurrentContext();
+
+  /**
+   * @brief Default constructor (uses current context).
+   */
+  CpuKernelArgs();
+
+  /**
+   * @brief Construct with explicit context.
+   */
+  explicit CpuKernelArgs(Context context);
+
+  /**
+   * @brief Get the execution context.
+   */
+  const Context &context() const { return context_; }
+
+  /**
+   * @brief Get the execution context (mutable).
+   */
+  Context &context() { return context_; }
+
+  /**
+   * @brief Add a storage binding with the specified ID.
+   *
+   * @param id Storage identifier (contains access pattern metadata)
+   * @param lease Storage lease to bind
+   */
+  void addStorage(StorageId id, StorageLease lease) {
+    storages_.pushBack(CpuStorageBinding{id, std::move(lease)});
   }
 
-  template <typename Params> bool getParams(Params &out) const {
-    static_assert(std::is_trivially_copyable_v<Params>,
-                  "Params must be trivially copyable.");
-    if (params_type_id_ != Params::kTypeId || params_size_ != sizeof(Params)) {
-      return false;
+  /**
+   * @brief Find a storage binding by ID.
+   *
+   * @param id Storage identifier to search for
+   * @return Pointer to CpuStorageBinding if found, nullptr otherwise
+   */
+  const CpuStorageBinding *findStorage(StorageId id) const {
+    for (const auto &binding : storages_) {
+      if (binding.id == id) {
+        return &binding;
+      }
     }
-    std::memcpy(&out, params_.data(), sizeof(Params));
-    return true;
+    return nullptr;
   }
 
-  void addStorageLease(StorageLease lease, Access access) {
-    if (storage_count_ >= kMaxBindings) {
-      return;
+  /**
+   * @brief Find a storage binding by ID (mutable version).
+   */
+  CpuStorageBinding *findStorage(StorageId id) {
+    for (auto &binding : storages_) {
+      if (binding.id == id) {
+        return &binding;
+      }
     }
-    storage_leases_[storage_count_] = std::move(lease);
-    storage_accesses_[storage_count_] = access;
-    ++storage_count_;
+    return nullptr;
   }
 
-  std::size_t storageCount() const { return storage_count_; }
+  /**
+   * @brief Get the list of all storage bindings.
+   */
+  const auto &storageList() const { return storages_; }
 
-  std::size_t storageCapacity() const { return kMaxBindings; }
+  /**
+   * @brief Get the number of storage bindings.
+   */
+  std::size_t storageCount() const { return storages_.size(); }
 
-  const StorageLease &storageLeaseAt(std::size_t index) const {
-    return storage_leases_[index];
-  }
+  /**
+   * @brief Get the current storage capacity (may exceed inline capacity).
+   */
+  std::size_t storageCapacity() const { return storages_.capacity(); }
 
-  Access storageAccessAt(std::size_t index) const {
-    return storage_accesses_[index];
-  }
+  /**
+   * @brief Clear all storage bindings.
+   */
+  void clearStorages() { storages_.clear(); }
 
-  void clearStorages() {
-    for (std::size_t i = 0; i < storage_count_; ++i) {
-      storage_leases_[i] = StorageLease{};
-      storage_accesses_[i] = Access::None;
+  /**
+   * @brief Add a parameter.
+   */
+  void addParam(Param param) { params_.pushBack(std::move(param)); }
+
+  /**
+   * @brief Find a parameter by ID.
+   */
+  const Param *findParam(ParamId id) const {
+    for (const auto &p : params_) {
+      if (p.id() == id) {
+        return &p;
+      }
     }
-    storage_count_ = 0;
+    return nullptr;
   }
 
-  bool setParamsRaw(const void *data, std::size_t size,
-                    std::uint64_t type_id) {
-    if (size > kParamBytes) {
-      return false;
+  /**
+   * @brief Find a parameter by ID (mutable version).
+   */
+  Param *findParam(ParamId id) {
+    for (auto &p : params_) {
+      if (p.id() == id) {
+        return &p;
+      }
     }
-    params_size_ = size;
-    params_type_id_ = type_id;
-    if (size > 0) {
-      std::memcpy(params_.data(), data, size);
-    }
-    return true;
+    return nullptr;
   }
 
-  std::size_t paramsSize() const { return params_size_; }
-  std::uint64_t paramsTypeId() const { return params_type_id_; }
+  /**
+   * @brief Get the list of all parameters.
+   */
+  const auto &paramList() const { return params_; }
 
-  std::size_t paramsCapacity() const { return kParamBytes; }
-
-  const std::byte *paramsData() const { return params_.data(); }
-  std::byte *paramsData() { return params_.data(); }
+  /**
+   * @brief Clear all parameters.
+   */
+  void clearParams() { params_.clear(); }
 
 private:
-  std::array<StorageLease, kMaxBindings> storage_leases_{};
-  std::array<Access, kMaxBindings> storage_accesses_{};
-  std::size_t storage_count_{0};
-  alignas(std::max_align_t) std::array<std::byte, kParamBytes> params_{};
-  std::size_t params_size_{0};
-  std::uint64_t params_type_id_{0};
+  Context context_;
+  ::orteaf::internal::base::SmallVector<CpuStorageBinding, kMaxBindings>
+      storages_{};
+  ::orteaf::internal::base::SmallVector<Param, kMaxParams> params_{};
 };
 
 } // namespace orteaf::internal::kernel::cpu

@@ -47,8 +47,14 @@ public:
 
   struct Hash {
     std::size_t operator()(const CudaBufferView &h) const {
-      return std::hash<pointer>{}(h.base_) ^
-             (h.offset_ + 0x9e3779b97f4a7c15ULL);
+      // Combine base pointer and offset (boost::hash_combine style).
+      std::size_t h1 = std::hash<pointer>{}(h.base_);
+      std::size_t h2 = std::hash<std::size_t>{}(h.offset_);
+      constexpr std::size_t kHashMix =
+          static_cast<std::size_t>(0x9e3779b97f4a7c15ULL);
+      std::size_t seed = h1;
+      seed ^= h2 + kHashMix + (seed << 6) + (seed >> 2);
+      return seed;
     }
   };
 

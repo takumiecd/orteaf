@@ -52,3 +52,21 @@ target_link_libraries(gen_devices
 )
 
 target_compile_features(gen_devices PRIVATE cxx_std_20)
+
+add_executable(gen_param_ids gen_param_ids.cpp)
+
+target_link_libraries(gen_param_ids
+    PRIVATE
+        "${YAML_CPP_TARGET}"
+)
+
+target_compile_features(gen_param_ids PRIVATE cxx_std_20)
+
+add_executable(gen_storage_ids gen_storage_ids.cpp)
+
+target_link_libraries(gen_storage_ids
+    PRIVATE
+        "${YAML_CPP_TARGET}"
+)
+
+target_compile_features(gen_storage_ids PRIVATE cxx_std_20)
