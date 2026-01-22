@@ -2,7 +2,6 @@
 
 #if ORTEAF_ENABLE_MPS
 
-#include <array>
 #include <cstddef>
 #include <cstring>
 #include <utility>
