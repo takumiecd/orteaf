@@ -55,10 +55,10 @@ public:
     storage_count_ = 0;
   }
 
-  void addParam(Param param) { param_list_.pushBack(std::move(param)); }
+  void addParam(Param param) { params.pushBack(std::move(param)); }
 
   const Param *findParam(ParamId id) const {
-    for (const auto &p : param_list_) {
+    for (const auto &p : params) {
       if (p.id() == id) {
         return &p;
       }
@@ -67,7 +67,7 @@ public:
   }
 
   Param *findParam(ParamId id) {
-    for (auto &p : param_list_) {
+    for (auto &p : params) {
       if (p.id() == id) {
         return &p;
       }
@@ -75,15 +75,15 @@ public:
     return nullptr;
   }
 
-  const auto &paramList() const { return param_list_; }
+  const auto &paramList() const { return params; }
 
-  void clearParams() { param_list_.clear(); }
+  void clearParams() { params.clear(); }
 
 private:
   std::array<StorageLease, kMaxBindings> storage_leases_{};
   std::array<Access, kMaxBindings> storage_accesses_{};
   std::size_t storage_count_{0};
-  ::orteaf::internal::base::SmallVector<Param, kMaxParams> param_list_{};
+  ::orteaf::internal::base::SmallVector<Param, kMaxParams> params{};
 };
 
 } // namespace orteaf::internal::kernel::mps
