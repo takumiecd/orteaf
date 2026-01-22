@@ -12,12 +12,17 @@
 
 #include <orteaf/internal/kernel/access.h>
 #include <orteaf/internal/kernel/kernel_key.h>
+#include <orteaf/internal/kernel/mps/mps_storage_binding.h>
+#include <orteaf/internal/kernel/storage_id.h>
 #include <orteaf/internal/storage/registry/storage_types.h>
 
 namespace orteaf::internal::kernel::mps {
 
 /**
  * @brief MPS kernel arguments container.
+ *
+ * Manages storage bindings and parameters for MPS kernel execution.
+ * Uses structured storage bindings with StorageId for type-safe management.
  */
 class MpsKernelArgs {
 public:
@@ -26,39 +31,76 @@ public:
   static constexpr std::size_t kMaxBindings = 16;
   static constexpr std::size_t kMaxParams = 16;
 
-  void addStorageLease(StorageLease lease, Access access) {
-    if (storage_count_ >= kMaxBindings) {
+  /**
+   * @brief Add a storage binding with the specified ID.
+   *
+   * @param id Storage identifier (contains access pattern metadata)
+   * @param lease Storage lease to bind
+   */
+  void addStorage(StorageId id, StorageLease lease) {
+    if (storages_.size() >= kMaxBindings) {
       return;
     }
-    storage_leases_[storage_count_] = std::move(lease);
-    storage_accesses_[storage_count_] = access;
-    ++storage_count_;
+    storages_.pushBack(MpsStorageBinding{id, std::move(lease)});
   }
 
-  std::size_t storageCount() const { return storage_count_; }
+  /**
+   * @brief Find a storage binding by ID.
+   *
+   * @param id Storage identifier to search for
+   * @return Pointer to MpsStorageBinding if found, nullptr otherwise
+   */
+  const MpsStorageBinding *findStorage(StorageId id) const {
+    for (const auto &binding : storages_) {
+      if (binding.id == id) {
+        return &binding;
+      }
+    }
+    return nullptr;
+  }
 
+  /**
+   * @brief Find a storage binding by ID (mutable version).
+   */
+  MpsStorageBinding *findStorage(StorageId id) {
+    for (auto &binding : storages_) {
+      if (binding.id == id) {
+        return &binding;
+      }
+    }
+    return nullptr;
+  }
+
+  /**
+   * @brief Get the list of all storage bindings.
+   */
+  const auto &storageList() const { return storages_; }
+
+  /**
+   * @brief Get the number of storage bindings.
+   */
+  std::size_t storageCount() const { return storages_.size(); }
+
+  /**
+   * @brief Get the maximum number of storage bindings.
+   */
   std::size_t storageCapacity() const { return kMaxBindings; }
 
-  const StorageLease &storageLeaseAt(std::size_t index) const {
-    return storage_leases_[index];
-  }
+  /**
+   * @brief Clear all storage bindings.
+   */
+  void clearStorages() { storages_.clear(); }
 
-  Access storageAccessAt(std::size_t index) const {
-    return storage_accesses_[index];
-  }
+  /**
+   * @brief Add a parameter.
+   */
+  void addParam(Param param) { params_.pushBack(std::move(param)); }
 
-  void clearStorages() {
-    for (std::size_t i = 0; i < storage_count_; ++i) {
-      storage_leases_[i] = StorageLease{};
-      storage_accesses_[i] = Access::None;
-    }
-    storage_count_ = 0;
-  }
-
-  void addParam(Param param) { params.pushBack(std::move(param)); }
-
+  /**
+   * @brief Find a parameter by ID.
+   */
   const Param *findParam(ParamId id) const {
-    for (const auto &p : params) {
+    for (const auto &p : params_) {
       if (p.id() == id) {
         return &p;
       }
@@ -66,8 +108,11 @@ public:
     return nullptr;
   }
 
+  /**
+   * @brief Find a parameter by ID (mutable version).
+   */
   Param *findParam(ParamId id) {
-    for (auto &p : params) {
+    for (auto &p : params_) {
       if (p.id() == id) {
         return &p;
       }
@@ -75,15 +120,20 @@ public:
     return nullptr;
   }
 
-  const auto &paramList() const { return params; }
+  /**
+   * @brief Get the list of all parameters.
+   */
+  const auto &paramList() const { return params_; }
 
-  void clearParams() { params.clear(); }
+  /**
+   * @brief Clear all parameters.
+   */
+  void clearParams() { params_.clear(); }
 
 private:
-  std::array<StorageLease, kMaxBindings> storage_leases_{};
-  std::array<Access, kMaxBindings> storage_accesses_{};
-  std::size_t storage_count_{0};
-  ::orteaf::internal::base::SmallVector<Param, kMaxParams> params{};
+  ::orteaf::internal::base::SmallVector<MpsStorageBinding, kMaxBindings>
+      storages_{};
+  ::orteaf::internal::base::SmallVector<Param, kMaxParams> params_{};
 };
 
 } // namespace orteaf::internal::kernel::mps
