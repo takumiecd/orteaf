@@ -1,7 +1,8 @@
 #include "orteaf/internal/kernel/access.h"
 #include "orteaf/internal/kernel/cpu/cpu_kernel_args.h"
 #include "orteaf/internal/kernel/kernel_args.h"
-#include "orteaf/internal/kernel/kernel_key.h"
+#include "orteaf/internal/kernel/param.h"
+#include "orteaf/internal/kernel/param_id.h"
 
 #include "orteaf/internal/execution/cpu/api/cpu_execution_api.h"
 #include "orteaf/internal/execution_context/cpu/current_context.h"
@@ -10,29 +11,9 @@
 #include <type_traits>
 
 namespace kernel = orteaf::internal::kernel;
-namespace kk = kernel::kernel_key;
 using Execution = orteaf::internal::execution::Execution;
 using DType = orteaf::internal::DType;
 using Op = orteaf::internal::ops::Op;
-
-// ============================================================
-// Test Params struct (POD)
-// ============================================================
-
-struct TestParams {
-  static constexpr std::uint64_t kTypeId = 1;
-  float alpha{0.0f};
-  float beta{0.0f};
-  int n{0};
-};
-static_assert(std::is_trivially_copyable_v<TestParams>);
-
-// OtherParams for type mismatch testing
-struct OtherParams {
-  static constexpr std::uint64_t kTypeId = 999;
-  int value{0};
-};
-static_assert(std::is_trivially_copyable_v<OtherParams>);
 
 // ============================================================
 // Access enum tests
@@ -54,25 +35,48 @@ using CpuArgs = kernel::cpu::CpuKernelArgs;
 TEST(CpuKernelArgs, HostDefaultConstruct) {
   CpuArgs host;
   EXPECT_EQ(host.storageCount(), 0);
+  EXPECT_EQ(host.paramList().size(), 0);
 }
 
-TEST(CpuKernelArgs, SetAndGetParams) {
+TEST(CpuKernelArgs, AddAndFindParams) {
   CpuArgs args;
-  TestParams params{1.0f, 2.0f, 100};
 
-  auto key = kk::make(static_cast<Op>(1), Execution::Cpu,
-                      static_cast<kernel::Layout>(0), DType::F32,
-                      static_cast<kernel::Variant>(0));
+  args.addParam(kernel::Param(kernel::ParamId::Alpha, 1.5f));
+  args.addParam(kernel::Param(kernel::ParamId::Beta, 2.5f));
+  args.addParam(kernel::Param(kernel::ParamId::Count, 100));
 
-  EXPECT_TRUE(args.setParams(params, key));
-  EXPECT_EQ(args.paramsSize(), sizeof(TestParams));
-  EXPECT_EQ(args.kernelKey(), key);
+  EXPECT_EQ(args.paramList().size(), 3);
 
-  TestParams retrieved{};
-  EXPECT_TRUE(args.getParams(retrieved, key));
-  EXPECT_FLOAT_EQ(retrieved.alpha, 1.0f);
-  EXPECT_FLOAT_EQ(retrieved.beta, 2.0f);
-  EXPECT_EQ(retrieved.n, 100);
+  const auto *alpha_param = args.findParam(kernel::ParamId::Alpha);
+  ASSERT_NE(alpha_param, nullptr);
+  EXPECT_FLOAT_EQ(*alpha_param->tryGet<float>(), 1.5f);
+
+  const auto *beta_param = args.findParam(kernel::ParamId::Beta);
+  ASSERT_NE(beta_param, nullptr);
+  EXPECT_FLOAT_EQ(*beta_param->tryGet<float>(), 2.5f);
+
+  const auto *count_param = args.findParam(kernel::ParamId::Count);
+  ASSERT_NE(count_param, nullptr);
+  EXPECT_EQ(*count_param->tryGet<int>(), 100);
+}
+
+TEST(CpuKernelArgs, FindNonExistentParam) {
+  CpuArgs args;
+  args.addParam(kernel::Param(kernel::ParamId::Alpha, 1.0f));
+
+  const auto *param = args.findParam(kernel::ParamId::Beta);
+  EXPECT_EQ(param, nullptr);
+}
+
+TEST(CpuKernelArgs, ClearParams) {
+  CpuArgs args;
+  args.addParam(kernel::Param(kernel::ParamId::Alpha, 1.0f));
+  args.addParam(kernel::Param(kernel::ParamId::Beta, 2.0f));
+
+  EXPECT_EQ(args.paramList().size(), 2);
+
+  args.clearParams();
+  EXPECT_EQ(args.paramList().size(), 0);
 }
 
 TEST(CpuKernelArgs, StorageManagement) {
@@ -96,63 +100,17 @@ TEST(CpuKernelArgs, AddStorageLease) {
   EXPECT_EQ(args.storageAccessAt(0), kernel::Access::ReadWrite);
 }
 
-TEST(CpuKernelArgs, ParamsRawAccessors) {
+TEST(CpuKernelArgs, ParamListIteration) {
   CpuArgs args;
-  TestParams params{3.14f, 2.71f, 42};
+  args.addParam(kernel::Param(kernel::ParamId::Alpha, 1.0f));
+  args.addParam(kernel::Param(kernel::ParamId::Beta, 2.0f));
+  args.addParam(kernel::Param(kernel::ParamId::Count, 42));
 
-  auto key = kk::make(static_cast<Op>(1), Execution::Cpu,
-                      static_cast<kernel::Layout>(0), DType::F32,
-                      static_cast<kernel::Variant>(0));
-
-  EXPECT_TRUE(args.setParams(params, key));
-
-  // Test raw data access
-  const std::byte *data = args.paramsData();
-  EXPECT_NE(data, nullptr);
-  EXPECT_EQ(args.paramsSize(), sizeof(TestParams));
-  EXPECT_EQ(args.paramsCapacity(), CpuArgs::kParamBytes);
-
-  // Test non-const data access
-  std::byte *mutable_data = args.paramsData();
-  EXPECT_NE(mutable_data, nullptr);
-}
-
-TEST(CpuKernelArgs, SetParamsRaw) {
-  CpuArgs args;
-  TestParams params{1.5f, 2.5f, 99};
-
-  auto key = kk::make(static_cast<Op>(2), Execution::Cpu,
-                      static_cast<kernel::Layout>(0), DType::F32,
-                      static_cast<kernel::Variant>(0));
-
-  EXPECT_TRUE(args.setParamsRaw(&params, sizeof(TestParams), key));
-  EXPECT_EQ(args.paramsSize(), sizeof(TestParams));
-  EXPECT_EQ(args.kernelKey(), key);
-
-  // Verify we can retrieve the params
-  TestParams retrieved{};
-  EXPECT_TRUE(args.getParams(retrieved, key));
-  EXPECT_FLOAT_EQ(retrieved.alpha, 1.5f);
-  EXPECT_FLOAT_EQ(retrieved.beta, 2.5f);
-  EXPECT_EQ(retrieved.n, 99);
-}
-
-TEST(CpuKernelArgs, GetParamsFailsWithWrongType) {
-  CpuArgs args;
-  TestParams params{1.0f, 2.0f, 100};
-
-  auto key1 = kk::make(static_cast<Op>(1), Execution::Cpu,
-                       static_cast<kernel::Layout>(0), DType::F32,
-                       static_cast<kernel::Variant>(0));
-
-  auto key2 = kk::make(static_cast<Op>(2), // Different OpId
-                       Execution::Cpu, static_cast<kernel::Layout>(0),
-                       DType::F32, static_cast<kernel::Variant>(0));
-
-  args.setParams(params, key1);
-
-  OtherParams other{};
-  EXPECT_FALSE(args.getParams(other, key2)); // Wrong key
+  int count = 0;
+  for (const auto &param : args.paramList()) {
+    ++count;
+  }
+  EXPECT_EQ(count, 3);
 }
 
 TEST(CpuKernelArgs, HostFromCurrentContext) {
@@ -166,6 +124,7 @@ TEST(CpuKernelArgs, HostFromCurrentContext) {
     // fromCurrentContext should work with CPU args
     CpuArgs args;
     EXPECT_EQ(args.storageCount(), 0);
+    EXPECT_EQ(args.paramList().size(), 0);
   }
 
   // Teardown
