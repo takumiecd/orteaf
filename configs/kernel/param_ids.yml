@@ -1,0 +1,78 @@
+schema_version: "1.0"
+
+# Kernel parameter definitions
+# Each parameter has an ID, value, C++ type, and description
+params:
+  # Tensor parameters
+  - id: Input
+    value: 0
+    cpp_type: "Tensor"
+    description: "Input tensor parameter"
+  
+  - id: Output
+    value: 1
+    cpp_type: "Tensor"
+    description: "Output tensor parameter"
+  
+  - id: Input0
+    value: 2
+    cpp_type: "Tensor"
+    description: "First input tensor parameter"
+  
+  - id: Input1
+    value: 3
+    cpp_type: "Tensor"
+    description: "Second input tensor parameter"
+  
+  - id: Input2
+    value: 4
+    cpp_type: "Tensor"
+    description: "Third input tensor parameter"
+  
+  # Scalar parameters
+  - id: Alpha
+    value: 10
+    cpp_type: "float"
+    description: "Alpha scalar parameter (float)"
+  
+  - id: Beta
+    value: 11
+    cpp_type: "float"
+    description: "Beta scalar parameter (float)"
+  
+  - id: Scale
+    value: 12
+    cpp_type: "double"
+    description: "Scale scalar parameter (double)"
+  
+  - id: Epsilon
+    value: 13
+    cpp_type: "float"
+    description: "Epsilon scalar parameter (float)"
+  
+  # Integer parameters
+  - id: Axis
+    value: 20
+    cpp_type: "int"
+    description: "Axis parameter (int)"
+  
+  - id: Dim
+    value: 21
+    cpp_type: "std::size_t"
+    description: "Dimension parameter (size_t)"
+  
+  - id: Count
+    value: 22
+    cpp_type: "std::size_t"
+    description: "Count parameter (size_t)"
+  
+  # Pointer parameters
+  - id: BufferPtr
+    value: 30
+    cpp_type: "void*"
+    description: "Generic buffer pointer"
+  
+  - id: DataPtr
+    value: 31
+    cpp_type: "void*"
+    description: "Data pointer"
