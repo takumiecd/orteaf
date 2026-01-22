@@ -7,6 +7,7 @@
 #include <orteaf/internal/base/small_vector.h>
 #include <orteaf/internal/kernel/param.h>
 
+#include <orteaf/internal/execution_context/cpu/context.h>
 #include <orteaf/internal/kernel/access.h>
 #include <orteaf/internal/kernel/cpu/cpu_storage_binding.h>
 #include <orteaf/internal/kernel/kernel_key.h>
@@ -20,13 +21,40 @@ namespace orteaf::internal::kernel::cpu {
  *
  * Manages storage bindings and parameters for CPU kernel execution.
  * Uses structured storage bindings with StorageId for type-safe management.
+ * Holds execution context for device and resource management.
  */
 class CpuKernelArgs {
 public:
+  using Context = ::orteaf::internal::execution_context::cpu::Context;
   using StorageLease = ::orteaf::internal::storage::CpuStorageLease;
 
   static constexpr std::size_t kMaxBindings = 16;
   static constexpr std::size_t kMaxParams = 16;
+
+  /**
+   * @brief Create kernel args from current execution context.
+   */
+  static CpuKernelArgs fromCurrentContext();
+
+  /**
+   * @brief Default constructor (uses current context).
+   */
+  CpuKernelArgs();
+
+  /**
+   * @brief Construct with explicit context.
+   */
+  explicit CpuKernelArgs(Context context);
+
+  /**
+   * @brief Get the execution context.
+   */
+  const Context &context() const { return context_; }
+
+  /**
+   * @brief Get the execution context (mutable).
+   */
+  Context &context() { return context_; }
 
   /**
    * @brief Add a storage binding with the specified ID.
@@ -128,6 +156,7 @@ public:
   void clearParams() { params_.clear(); }
 
 private:
+  Context context_;
   ::orteaf::internal::base::SmallVector<CpuStorageBinding, kMaxBindings>
       storages_{};
   ::orteaf::internal::base::SmallVector<Param, kMaxParams> params_{};

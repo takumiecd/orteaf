@@ -9,6 +9,7 @@
 #include <orteaf/internal/base/small_vector.h>
 #include <orteaf/internal/kernel/param.h>
 
+#include <orteaf/internal/execution_context/mps/context.h>
 #include <orteaf/internal/kernel/access.h>
 #include <orteaf/internal/kernel/kernel_key.h>
 #include <orteaf/internal/kernel/mps/mps_storage_binding.h>
@@ -22,13 +23,40 @@ namespace orteaf::internal::kernel::mps {
  *
  * Manages storage bindings and parameters for MPS kernel execution.
  * Uses structured storage bindings with StorageId for type-safe management.
+ * Holds execution context for device and resource management.
  */
 class MpsKernelArgs {
 public:
+  using Context = ::orteaf::internal::execution_context::mps::Context;
   using StorageLease = ::orteaf::internal::storage::MpsStorageLease;
 
   static constexpr std::size_t kMaxBindings = 16;
   static constexpr std::size_t kMaxParams = 16;
+
+  /**
+   * @brief Create kernel args from current execution context.
+   */
+  static MpsKernelArgs fromCurrentContext();
+
+  /**
+   * @brief Default constructor (uses current context).
+   */
+  MpsKernelArgs();
+
+  /**
+   * @brief Construct with explicit context.
+   */
+  explicit MpsKernelArgs(Context context);
+
+  /**
+   * @brief Get the execution context.
+   */
+  const Context &context() const { return context_; }
+
+  /**
+   * @brief Get the execution context (mutable).
+   */
+  Context &context() { return context_; }
 
   /**
    * @brief Add a storage binding with the specified ID.
@@ -130,6 +158,7 @@ public:
   void clearParams() { params_.clear(); }
 
 private:
+  Context context_;
   ::orteaf::internal::base::SmallVector<MpsStorageBinding, kMaxBindings>
       storages_{};
   ::orteaf::internal::base::SmallVector<Param, kMaxParams> params_{};
