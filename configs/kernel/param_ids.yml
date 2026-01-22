@@ -3,32 +3,6 @@ schema_version: "1.0"
 # Kernel parameter definitions
 # Each parameter has an ID, value, C++ type, and description
 params:
-  # Tensor parameters
-  - id: Input
-    value: 0
-    cpp_type: "Tensor"
-    description: "Input tensor parameter"
-  
-  - id: Output
-    value: 1
-    cpp_type: "Tensor"
-    description: "Output tensor parameter"
-  
-  - id: Input0
-    value: 2
-    cpp_type: "Tensor"
-    description: "First input tensor parameter"
-  
-  - id: Input1
-    value: 3
-    cpp_type: "Tensor"
-    description: "Second input tensor parameter"
-  
-  - id: Input2
-    value: 4
-    cpp_type: "Tensor"
-    description: "Third input tensor parameter"
-  
   # Scalar parameters
   - id: Alpha
     value: 10

@@ -238,7 +238,9 @@ GeneratedData GenerateOutputs(const ResolvedConfig &resolved) {
   header_stream << "#include <array>\n";
   header_stream << "#include <cstddef>\n";
   header_stream << "#include <cstdint>\n";
-  header_stream << "#include <string_view>\n\n";
+  header_stream << "#include <string_view>\n";
+  header_stream << "#include <variant>\n";
+  header_stream << "#include <orteaf/internal/kernel/array_view.h>\n\n";
   header_stream << "namespace orteaf::internal::kernel {\n";
   header_stream << "enum class ParamId : std::uint64_t;\n";
   header_stream << "}  // namespace orteaf::internal::kernel\n\n";
@@ -279,6 +281,50 @@ GeneratedData GenerateOutputs(const ResolvedConfig &resolved) {
                   << EscapeStringLiteral(param.description) << "\";\n";
     header_stream << "};\n\n";
   }
+
+  // Collect unique C++ types (excluding "Tensor")
+  std::unordered_set<std::string> unique_types;
+  for (const auto &param : resolved.params) {
+    if (param.cpp_type != "Tensor") {
+      unique_types.insert(param.cpp_type);
+    }
+  }
+
+  // Generate ParamValue variant
+  header_stream << "// Type-erased parameter value variant\n";
+
+  header_stream << "using ParamValue = std::variant<\n";
+
+  // Add primitive types
+  std::vector<std::string> variant_types;
+  if (unique_types.count("float"))
+    variant_types.push_back("  float");
+  if (unique_types.count("double"))
+    variant_types.push_back("  double");
+  if (unique_types.count("int"))
+    variant_types.push_back("  int");
+  if (unique_types.count("std::size_t"))
+    variant_types.push_back("  std::size_t");
+  if (unique_types.count("void*"))
+    variant_types.push_back("  void*");
+
+  // Add ArrayView types for common numeric types
+  variant_types.push_back("  ::orteaf::internal::kernel::ArrayView<const int>");
+  variant_types.push_back(
+      "  ::orteaf::internal::kernel::ArrayView<const std::size_t>");
+  variant_types.push_back(
+      "  ::orteaf::internal::kernel::ArrayView<const float>");
+  variant_types.push_back(
+      "  ::orteaf::internal::kernel::ArrayView<const double>");
+
+  // Output variant types
+  for (std::size_t i = 0; i < variant_types.size(); ++i) {
+    header_stream << variant_types[i];
+    if (i < variant_types.size() - 1) {
+      header_stream << ",\n";
+    }
+  }
+  header_stream << "\n>;\n\n";
 
   header_stream << "}  // namespace orteaf::generated::param_id_tables\n";
 
