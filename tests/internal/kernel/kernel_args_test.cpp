@@ -13,6 +13,7 @@ namespace kernel = orteaf::internal::kernel;
 namespace kk = kernel::kernel_key;
 using Execution = orteaf::internal::execution::Execution;
 using DType = orteaf::internal::DType;
+using Op = orteaf::internal::ops::Op;
 
 // ============================================================
 // Test Params struct (POD)
@@ -59,7 +60,7 @@ TEST(CpuKernelArgs, SetAndGetParams) {
   CpuArgs args;
   TestParams params{1.0f, 2.0f, 100};
 
-  auto key = kk::make(static_cast<kernel::OpId>(1), Execution::Cpu,
+  auto key = kk::make(static_cast<Op>(1), Execution::Cpu,
                       static_cast<kernel::Layout>(0), DType::F32,
                       static_cast<kernel::Variant>(0));
 
@@ -99,7 +100,7 @@ TEST(CpuKernelArgs, ParamsRawAccessors) {
   CpuArgs args;
   TestParams params{3.14f, 2.71f, 42};
 
-  auto key = kk::make(static_cast<kernel::OpId>(1), Execution::Cpu,
+  auto key = kk::make(static_cast<Op>(1), Execution::Cpu,
                       static_cast<kernel::Layout>(0), DType::F32,
                       static_cast<kernel::Variant>(0));
 
@@ -120,7 +121,7 @@ TEST(CpuKernelArgs, SetParamsRaw) {
   CpuArgs args;
   TestParams params{1.5f, 2.5f, 99};
 
-  auto key = kk::make(static_cast<kernel::OpId>(2), Execution::Cpu,
+  auto key = kk::make(static_cast<Op>(2), Execution::Cpu,
                       static_cast<kernel::Layout>(0), DType::F32,
                       static_cast<kernel::Variant>(0));
 
@@ -140,11 +141,11 @@ TEST(CpuKernelArgs, GetParamsFailsWithWrongType) {
   CpuArgs args;
   TestParams params{1.0f, 2.0f, 100};
 
-  auto key1 = kk::make(static_cast<kernel::OpId>(1), Execution::Cpu,
+  auto key1 = kk::make(static_cast<Op>(1), Execution::Cpu,
                        static_cast<kernel::Layout>(0), DType::F32,
                        static_cast<kernel::Variant>(0));
 
-  auto key2 = kk::make(static_cast<kernel::OpId>(2), // Different OpId
+  auto key2 = kk::make(static_cast<Op>(2), // Different OpId
                        Execution::Cpu, static_cast<kernel::Layout>(0),
                        DType::F32, static_cast<kernel::Variant>(0));
 

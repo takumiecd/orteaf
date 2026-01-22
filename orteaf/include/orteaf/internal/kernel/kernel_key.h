@@ -6,8 +6,8 @@
 #include <orteaf/internal/dtype/dtype.h>
 #include <orteaf/internal/execution/execution.h>
 #include <orteaf/internal/kernel/layout.h>
-#include <orteaf/internal/kernel/op_id.h>
 #include <orteaf/internal/kernel/variant.h>
+#include <orteaf/internal/ops/ops.h>
 
 namespace orteaf::internal::kernel {
 
@@ -53,7 +53,7 @@ inline constexpr std::uint64_t kVariantMask = 0xFF;
  * @param variant Optimization variant
  * @return Packed KernelKey
  */
-constexpr KernelKey make(OpId op_id,
+constexpr KernelKey make(::orteaf::internal::ops::Op op_id,
                          ::orteaf::internal::execution::Execution execution,
                          Layout layout, ::orteaf::internal::DType dtype,
                          Variant variant) noexcept {
@@ -74,11 +74,12 @@ constexpr KernelKey make(OpId op_id,
 }
 
 /**
- * @brief Extract OpId from a KernelKey.
+ * @brief Extract Op from a KernelKey.
  */
-constexpr OpId getOpId(KernelKey key) noexcept {
+constexpr ::orteaf::internal::ops::Op getOpId(KernelKey key) noexcept {
   const std::uint64_t value = static_cast<std::uint64_t>(key);
-  return static_cast<OpId>((value >> kOpIdShift) & kOpIdMask);
+  return static_cast<::orteaf::internal::ops::Op>((value >> kOpIdShift) &
+                                                  kOpIdMask);
 }
 
 /**

@@ -9,13 +9,14 @@ namespace kernel = orteaf::internal::kernel;
 namespace kk = kernel::kernel_key;
 using Execution = orteaf::internal::execution::Execution;
 using DType = orteaf::internal::DType;
+using Op = orteaf::internal::ops::Op;
 
 // ============================================================
 // KernelKey encoding tests
 // ============================================================
 
 TEST(KernelKey, MakeEncodesAllFields) {
-  auto key = kk::make(static_cast<kernel::OpId>(123), Execution::Cpu,
+  auto key = kk::make(static_cast<Op>(123), Execution::Cpu,
                       static_cast<kernel::Layout>(5), DType::F32,
                       static_cast<kernel::Variant>(7));
 
@@ -23,7 +24,7 @@ TEST(KernelKey, MakeEncodesAllFields) {
 }
 
 TEST(KernelKey, RoundTripPreservesValues) {
-  const auto op_id = static_cast<kernel::OpId>(42);
+  const auto op_id = static_cast<Op>(42);
   const auto execution = Execution::Cpu;
   const auto layout = static_cast<kernel::Layout>(3);
   const auto dtype = DType::F32;
@@ -43,7 +44,7 @@ TEST(KernelKey, RoundTripPreservesValues) {
 // ============================================================
 
 TEST(KernelKey, GetOpIdExtractsCorrectBits) {
-  auto key = kk::make(static_cast<kernel::OpId>(0xABCD), Execution::Cpu,
+  auto key = kk::make(static_cast<Op>(0xABCD), Execution::Cpu,
                       static_cast<kernel::Layout>(0), DType::F32,
                       static_cast<kernel::Variant>(0));
 
@@ -51,7 +52,7 @@ TEST(KernelKey, GetOpIdExtractsCorrectBits) {
 }
 
 TEST(KernelKey, GetExecutionExtractsCorrectBits) {
-  auto key = kk::make(static_cast<kernel::OpId>(0), Execution::Cpu,
+  auto key = kk::make(static_cast<Op>(0), Execution::Cpu,
                       static_cast<kernel::Layout>(0), DType::F32,
                       static_cast<kernel::Variant>(0));
 
@@ -59,7 +60,7 @@ TEST(KernelKey, GetExecutionExtractsCorrectBits) {
 }
 
 TEST(KernelKey, GetLayoutExtractsCorrectBits) {
-  auto key = kk::make(static_cast<kernel::OpId>(0), Execution::Cpu,
+  auto key = kk::make(static_cast<Op>(0), Execution::Cpu,
                       static_cast<kernel::Layout>(0x42), DType::F32,
                       static_cast<kernel::Variant>(0));
 
@@ -67,7 +68,7 @@ TEST(KernelKey, GetLayoutExtractsCorrectBits) {
 }
 
 TEST(KernelKey, GetDTypeExtractsCorrectBits) {
-  auto key = kk::make(static_cast<kernel::OpId>(0), Execution::Cpu,
+  auto key = kk::make(static_cast<Op>(0), Execution::Cpu,
                       static_cast<kernel::Layout>(0), DType::I32,
                       static_cast<kernel::Variant>(0));
 
@@ -75,7 +76,7 @@ TEST(KernelKey, GetDTypeExtractsCorrectBits) {
 }
 
 TEST(KernelKey, GetVariantExtractsCorrectBits) {
-  auto key = kk::make(static_cast<kernel::OpId>(0), Execution::Cpu,
+  auto key = kk::make(static_cast<Op>(0), Execution::Cpu,
                       static_cast<kernel::Layout>(0), DType::F32,
                       static_cast<kernel::Variant>(0x99));
 
@@ -87,15 +88,15 @@ TEST(KernelKey, GetVariantExtractsCorrectBits) {
 // ============================================================
 
 TEST(KernelKey, EqualityOperator) {
-  auto key1 = kk::make(static_cast<kernel::OpId>(1), Execution::Cpu,
+  auto key1 = kk::make(static_cast<Op>(1), Execution::Cpu,
                        static_cast<kernel::Layout>(0), DType::F32,
                        static_cast<kernel::Variant>(0));
 
-  auto key2 = kk::make(static_cast<kernel::OpId>(1), Execution::Cpu,
+  auto key2 = kk::make(static_cast<Op>(1), Execution::Cpu,
                        static_cast<kernel::Layout>(0), DType::F32,
                        static_cast<kernel::Variant>(0));
 
-  auto key3 = kk::make(static_cast<kernel::OpId>(2), Execution::Cpu,
+  auto key3 = kk::make(static_cast<Op>(2), Execution::Cpu,
                        static_cast<kernel::Layout>(0), DType::F32,
                        static_cast<kernel::Variant>(0));
 
@@ -104,11 +105,11 @@ TEST(KernelKey, EqualityOperator) {
 }
 
 TEST(KernelKey, InequalityOperator) {
-  auto key1 = kk::make(static_cast<kernel::OpId>(1), Execution::Cpu,
+  auto key1 = kk::make(static_cast<Op>(1), Execution::Cpu,
                        static_cast<kernel::Layout>(0), DType::F32,
                        static_cast<kernel::Variant>(0));
 
-  auto key2 = kk::make(static_cast<kernel::OpId>(2), Execution::Cpu,
+  auto key2 = kk::make(static_cast<Op>(2), Execution::Cpu,
                        static_cast<kernel::Layout>(0), DType::F32,
                        static_cast<kernel::Variant>(0));
 
@@ -117,11 +118,11 @@ TEST(KernelKey, InequalityOperator) {
 }
 
 TEST(KernelKey, LessThanOperator) {
-  auto key1 = kk::make(static_cast<kernel::OpId>(1), Execution::Cpu,
+  auto key1 = kk::make(static_cast<Op>(1), Execution::Cpu,
                        static_cast<kernel::Layout>(0), DType::F32,
                        static_cast<kernel::Variant>(0));
 
-  auto key2 = kk::make(static_cast<kernel::OpId>(2), Execution::Cpu,
+  auto key2 = kk::make(static_cast<Op>(2), Execution::Cpu,
                        static_cast<kernel::Layout>(0), DType::F32,
                        static_cast<kernel::Variant>(0));
 
@@ -134,15 +135,15 @@ TEST(KernelKey, LessThanOperator) {
 // ============================================================
 
 TEST(KernelKey, HashSupport) {
-  auto key1 = kk::make(static_cast<kernel::OpId>(1), Execution::Cpu,
+  auto key1 = kk::make(static_cast<Op>(1), Execution::Cpu,
                        static_cast<kernel::Layout>(0), DType::F32,
                        static_cast<kernel::Variant>(0));
 
-  auto key2 = kk::make(static_cast<kernel::OpId>(1), Execution::Cpu,
+  auto key2 = kk::make(static_cast<Op>(1), Execution::Cpu,
                        static_cast<kernel::Layout>(0), DType::F32,
                        static_cast<kernel::Variant>(0));
 
-  auto key3 = kk::make(static_cast<kernel::OpId>(2), Execution::Cpu,
+  auto key3 = kk::make(static_cast<Op>(2), Execution::Cpu,
                        static_cast<kernel::Layout>(0), DType::F32,
                        static_cast<kernel::Variant>(0));
 
@@ -155,11 +156,11 @@ TEST(KernelKey, HashSupport) {
 TEST(KernelKey, UnorderedMapUsage) {
   std::unordered_map<kernel::KernelKey, std::string> kernel_map;
 
-  auto key1 = kk::make(static_cast<kernel::OpId>(1), Execution::Cpu,
+  auto key1 = kk::make(static_cast<Op>(1), Execution::Cpu,
                        static_cast<kernel::Layout>(0), DType::F32,
                        static_cast<kernel::Variant>(0));
 
-  auto key2 = kk::make(static_cast<kernel::OpId>(2), Execution::Cpu,
+  auto key2 = kk::make(static_cast<Op>(2), Execution::Cpu,
                        static_cast<kernel::Layout>(1), DType::I32,
                        static_cast<kernel::Variant>(1));
 
@@ -174,11 +175,11 @@ TEST(KernelKey, UnorderedMapUsage) {
 TEST(KernelKey, UnorderedSetUsage) {
   std::unordered_set<kernel::KernelKey> kernel_set;
 
-  auto key1 = kk::make(static_cast<kernel::OpId>(1), Execution::Cpu,
+  auto key1 = kk::make(static_cast<Op>(1), Execution::Cpu,
                        static_cast<kernel::Layout>(0), DType::F32,
                        static_cast<kernel::Variant>(0));
 
-  auto key2 = kk::make(static_cast<kernel::OpId>(1), Execution::Cpu,
+  auto key2 = kk::make(static_cast<Op>(1), Execution::Cpu,
                        static_cast<kernel::Layout>(0), DType::F32,
                        static_cast<kernel::Variant>(0));
 
@@ -194,7 +195,7 @@ TEST(KernelKey, UnorderedSetUsage) {
 
 TEST(KernelKey, MaxValuesBoundary) {
   auto key =
-      kk::make(static_cast<kernel::OpId>(0xFFFF), static_cast<Execution>(0xF),
+      kk::make(static_cast<Op>(0xFFFF), static_cast<Execution>(0xF),
                static_cast<kernel::Layout>(0xFF), static_cast<DType>(0xFFFF),
                static_cast<kernel::Variant>(0xFF));
 
@@ -206,7 +207,7 @@ TEST(KernelKey, MaxValuesBoundary) {
 }
 
 TEST(KernelKey, ZeroValues) {
-  auto key = kk::make(static_cast<kernel::OpId>(0), static_cast<Execution>(0),
+  auto key = kk::make(static_cast<Op>(0), static_cast<Execution>(0),
                       static_cast<kernel::Layout>(0), static_cast<DType>(0),
                       static_cast<kernel::Variant>(0));
 
@@ -223,7 +224,7 @@ TEST(KernelKey, ZeroValues) {
 // ============================================================
 
 TEST(KernelKey, ConstexprSupport) {
-  constexpr auto key = kk::make(static_cast<kernel::OpId>(42), Execution::Cpu,
+  constexpr auto key = kk::make(static_cast<Op>(42), Execution::Cpu,
                                 static_cast<kernel::Layout>(3), DType::F32,
                                 static_cast<kernel::Variant>(1));
 
@@ -251,7 +252,7 @@ TEST(KernelKey, PracticalUseCaseExample) {
 
   // Register different kernel variants
   auto cpu_f32_add_baseline =
-      kk::make(static_cast<kernel::OpId>(1), // Add
+      kk::make(static_cast<Op>(1), // Add
                Execution::Cpu,
                static_cast<kernel::Layout>(0), // RowMajor
                DType::F32,
@@ -259,7 +260,7 @@ TEST(KernelKey, PracticalUseCaseExample) {
       );
 
   auto cpu_f32_add_optimized =
-      kk::make(static_cast<kernel::OpId>(1), // Add
+      kk::make(static_cast<Op>(1), // Add
                Execution::Cpu,
                static_cast<kernel::Layout>(0), // RowMajor
                DType::F32,
