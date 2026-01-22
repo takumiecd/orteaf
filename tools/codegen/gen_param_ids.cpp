@@ -156,12 +156,14 @@ ParsedConfig ParseConfig(const fs::path &yaml_path) {
       Fail(oss.str());
     }
 
-    param.value = ReadInt(node, "value", true, context);
+    // Value is now optional - auto-assign based on index if not specified
+    param.value = ReadInt(node, "value", false, context);
     if (param.value < 0) {
-      std::ostringstream oss;
-      oss << "Key 'value' must be non-negative (" << context << ")";
-      Fail(oss.str());
+      // Auto-assign: use current index as value
+      param.value = static_cast<int>(idx);
     }
+
+    // Check for duplicate values
     if (!seen_values.insert(param.value).second) {
       std::ostringstream oss;
       oss << "Duplicate param value " << param.value;

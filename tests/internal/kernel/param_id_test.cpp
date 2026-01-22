@@ -40,26 +40,26 @@ TEST(ParamId, StaticCastToInteger) {
 // ============================================================
 
 TEST(ParamId, GeneratedEnumValuesExist) {
-  // Test that generated enum values can be used
+  // Test that generated enum values can be used (auto-numbered 0, 1, 2...)
   kernel::ParamId alpha = kernel::ParamId::Alpha;
   kernel::ParamId beta = kernel::ParamId::Beta;
   kernel::ParamId scale = kernel::ParamId::Scale;
 
-  EXPECT_EQ(static_cast<std::uint64_t>(alpha), 10);
-  EXPECT_EQ(static_cast<std::uint64_t>(beta), 11);
-  EXPECT_EQ(static_cast<std::uint64_t>(scale), 12);
+  EXPECT_EQ(static_cast<std::uint64_t>(alpha), 0);
+  EXPECT_EQ(static_cast<std::uint64_t>(beta), 1);
+  EXPECT_EQ(static_cast<std::uint64_t>(scale), 2);
 }
 
 TEST(ParamId, AllDefinedParametersHaveCorrectValues) {
-  EXPECT_EQ(static_cast<std::uint64_t>(kernel::ParamId::Alpha), 10);
-  EXPECT_EQ(static_cast<std::uint64_t>(kernel::ParamId::Beta), 11);
-  EXPECT_EQ(static_cast<std::uint64_t>(kernel::ParamId::Scale), 12);
-  EXPECT_EQ(static_cast<std::uint64_t>(kernel::ParamId::Epsilon), 13);
-  EXPECT_EQ(static_cast<std::uint64_t>(kernel::ParamId::Axis), 20);
-  EXPECT_EQ(static_cast<std::uint64_t>(kernel::ParamId::Dim), 21);
-  EXPECT_EQ(static_cast<std::uint64_t>(kernel::ParamId::Count), 22);
-  EXPECT_EQ(static_cast<std::uint64_t>(kernel::ParamId::BufferPtr), 30);
-  EXPECT_EQ(static_cast<std::uint64_t>(kernel::ParamId::DataPtr), 31);
+  EXPECT_EQ(static_cast<std::uint64_t>(kernel::ParamId::Alpha), 0);
+  EXPECT_EQ(static_cast<std::uint64_t>(kernel::ParamId::Beta), 1);
+  EXPECT_EQ(static_cast<std::uint64_t>(kernel::ParamId::Scale), 2);
+  EXPECT_EQ(static_cast<std::uint64_t>(kernel::ParamId::Epsilon), 3);
+  EXPECT_EQ(static_cast<std::uint64_t>(kernel::ParamId::Axis), 4);
+  EXPECT_EQ(static_cast<std::uint64_t>(kernel::ParamId::Dim), 5);
+  EXPECT_EQ(static_cast<std::uint64_t>(kernel::ParamId::Count), 6);
+  EXPECT_EQ(static_cast<std::uint64_t>(kernel::ParamId::BufferPtr), 7);
+  EXPECT_EQ(static_cast<std::uint64_t>(kernel::ParamId::DataPtr), 8);
 }
 
 // ============================================================
@@ -185,10 +185,10 @@ TEST(ParamId, ConstexprSupport) {
   static_assert(static_cast<std::uint64_t>(param_id1) == 0);
 
   constexpr kernel::ParamId param_id2 = kernel::ParamId::Alpha;
-  static_assert(static_cast<std::uint64_t>(param_id2) == 10);
+  static_assert(static_cast<std::uint64_t>(param_id2) == 0);
 
   constexpr kernel::ParamId param_id3 = kernel::ParamId::Alpha;
-  static_assert(static_cast<std::uint64_t>(param_id3) == 10);
+  static_assert(static_cast<std::uint64_t>(param_id3) == 0);
 
   static_assert(param_id2 == kernel::ParamId::Alpha);
   static_assert(!(param_id2 != kernel::ParamId::Alpha));
