@@ -51,6 +51,9 @@ inline constexpr std::uint64_t kVariantMask = 0xFF;
  * @param layout Memory layout pattern
  * @param dtype Data type
  * @param variant Optimization variant
+ *
+ * Values are masked to the bit widths shown above; higher bits are truncated
+ * in the packed key.
  * @return Packed KernelKey
  */
 constexpr KernelKey make(::orteaf::internal::ops::Op op,

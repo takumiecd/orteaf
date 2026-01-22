@@ -136,11 +136,22 @@ TEST_F(MpsKernelArgsTest, ClearParams) {
 TEST_F(MpsKernelArgsTest, StorageManagement) {
   MpsArgs args;
   EXPECT_EQ(args.storageCount(), 0);
-  EXPECT_EQ(args.storageCapacity(), MpsArgs::kMaxBindings);
+  EXPECT_GE(args.storageCapacity(), MpsArgs::kMaxBindings);
 
   // Test clearing
   args.clearStorages();
   EXPECT_EQ(args.storageCount(), 0);
+}
+
+TEST_F(MpsKernelArgsTest, AddStorageBeyondInlineCapacity) {
+  MpsArgs args;
+  const std::size_t count = MpsArgs::kMaxBindings + 4;
+  for (std::size_t i = 0; i < count; ++i) {
+    MpsArgs::StorageLease lease;
+    args.addStorage(kernel::StorageId::Input0, std::move(lease));
+  }
+  EXPECT_EQ(args.storageCount(), count);
+  EXPECT_GE(args.storageCapacity(), count);
 }
 
 TEST_F(MpsKernelArgsTest, AddStorageLease) {
@@ -169,6 +180,17 @@ TEST_F(MpsKernelArgsTest, ParamListIteration) {
     ++count;
   }
   EXPECT_EQ(count, 3);
+}
+
+TEST_F(MpsKernelArgsTest, AddParamBeyondInlineCapacity) {
+  MpsArgs args;
+  const std::size_t count = MpsArgs::kMaxParams + 4;
+  for (std::size_t i = 0; i < count; ++i) {
+    args.addParam(kernel::Param(kernel::ParamId::Alpha,
+                                static_cast<float>(i)));
+  }
+  EXPECT_EQ(args.paramList().size(), count);
+  EXPECT_GE(args.paramList().capacity(), count);
 }
 
 TEST_F(MpsKernelArgsTest, HostFromCurrentContext) {

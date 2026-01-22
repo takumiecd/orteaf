@@ -105,11 +105,22 @@ TEST_F(CpuKernelArgsTest, ClearParams) {
 TEST_F(CpuKernelArgsTest, StorageManagement) {
   CpuArgs args;
   EXPECT_EQ(args.storageCount(), 0);
-  EXPECT_EQ(args.storageCapacity(), CpuArgs::kMaxBindings);
+  EXPECT_GE(args.storageCapacity(), CpuArgs::kMaxBindings);
 
   // Test clearing
   args.clearStorages();
   EXPECT_EQ(args.storageCount(), 0);
+}
+
+TEST_F(CpuKernelArgsTest, AddStorageBeyondInlineCapacity) {
+  CpuArgs args;
+  const std::size_t count = CpuArgs::kMaxBindings + 4;
+  for (std::size_t i = 0; i < count; ++i) {
+    CpuArgs::StorageLease lease;
+    args.addStorage(kernel::StorageId::InOut, std::move(lease));
+  }
+  EXPECT_EQ(args.storageCount(), count);
+  EXPECT_GE(args.storageCapacity(), count);
 }
 
 TEST_F(CpuKernelArgsTest, AddStorageLease) {
@@ -138,6 +149,17 @@ TEST_F(CpuKernelArgsTest, ParamListIteration) {
     ++count;
   }
   EXPECT_EQ(count, 3);
+}
+
+TEST_F(CpuKernelArgsTest, AddParamBeyondInlineCapacity) {
+  CpuArgs args;
+  const std::size_t count = CpuArgs::kMaxParams + 4;
+  for (std::size_t i = 0; i < count; ++i) {
+    args.addParam(
+        kernel::Param(kernel::ParamId::Alpha, static_cast<float>(i)));
+  }
+  EXPECT_EQ(args.paramList().size(), count);
+  EXPECT_GE(args.paramList().capacity(), count);
 }
 
 TEST_F(CpuKernelArgsTest, HostFromCurrentContext) {
