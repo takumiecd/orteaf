@@ -119,31 +119,17 @@ public:
   /**
    * @brief Add a parameter.
    */
-  void addParam(Param param) { params_.pushBack(std::move(param)); }
+  void addParam(Param param) { params_.add(std::move(param)); }
 
   /**
    * @brief Find a parameter by ID.
    */
-  const Param *findParam(ParamId id) const {
-    for (const auto &p : params_) {
-      if (p.id() == id) {
-        return &p;
-      }
-    }
-    return nullptr;
-  }
+  const Param *findParam(ParamId id) const { return params_.find(id); }
 
   /**
    * @brief Find a parameter by ID (mutable version).
    */
-  Param *findParam(ParamId id) {
-    for (auto &p : params_) {
-      if (p.id() == id) {
-        return &p;
-      }
-    }
-    return nullptr;
-  }
+  Param *findParam(ParamId id) { return params_.find(id); }
 
   /**
    * @brief Get the list of all parameters.
@@ -159,7 +145,7 @@ private:
   Context context_;
   ::orteaf::internal::base::SmallVector<MpsStorageBinding, kMaxBindings>
       storages_{};
-  ::orteaf::internal::base::SmallVector<Param, kMaxParams> params_{};
+  ParamList params_{};
 };
 
 } // namespace orteaf::internal::kernel::mps
