@@ -33,6 +33,10 @@ void setBytes(MpsComputeCommandEncoder_t compute_command_encoder,
 void setThreadgroups(MpsComputeCommandEncoder_t compute_command_encoder,
                      MpsSize_t threadgroups,
                      MpsSize_t threads_per_threadgroup);
+/** Dispatch threads with the specified grid size (grid-stride). */
+void dispatchThreads(MpsComputeCommandEncoder_t compute_command_encoder,
+                     MpsSize_t threads_per_grid,
+                     MpsSize_t threads_per_threadgroup);
 
 } // namespace orteaf::internal::execution::mps::platform::wrapper
 

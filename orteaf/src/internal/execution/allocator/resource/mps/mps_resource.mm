@@ -51,19 +51,38 @@ bool MpsResource::isCompleted(FenceToken &token) {
   ORTEAF_THROW_IF(!initialized_, InvalidState,
                   "MpsResource::isCompleted called before initialize");
   bool all_completed = true;
-  for (auto &lease : token) {
+  
+  // Check write fence
+  if (token.hasWriteFence()) {
+    auto &lease = token.writeFence();
     auto *payload = lease.operator->();
     if (payload == nullptr) {
       lease.release();
-      continue;
-    }
-    if (payload->isReady<
-            ::orteaf::internal::execution::mps::platform::MpsFastOps>()) {
+    } else if (payload->isReady<
+                   ::orteaf::internal::execution::mps::platform::MpsFastOps>()) {
       lease.release();
-      continue;
+    } else {
+      all_completed = false;
     }
-    all_completed = false;
-    break;
+  }
+  
+  // Check read fences
+  if (all_completed) {
+    for (std::size_t i = 0; i < token.readFenceCount(); ++i) {
+      auto &lease = token.readFence(i);
+      auto *payload = lease.operator->();
+      if (payload == nullptr) {
+        lease.release();
+        continue;
+      }
+      if (payload->isReady<
+              ::orteaf::internal::execution::mps::platform::MpsFastOps>()) {
+        lease.release();
+        continue;
+      }
+      all_completed = false;
+      break;
+    }
   }
 
   return all_completed;

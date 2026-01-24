@@ -130,4 +130,45 @@ void waitUntilCompleted(MpsCommandBuffer_t command_buffer) {
   [objc_command_buffer waitUntilCompleted];
 }
 
+/**
+ * @copydoc orteaf::internal::execution::mps::getGPUStartTime
+ */
+double getGPUStartTime(MpsCommandBuffer_t command_buffer) {
+  if (command_buffer == nullptr) {
+    return 0.0;
+  }
+  id<MTLCommandBuffer> objc_command_buffer =
+      objcFromOpaqueNoown<id<MTLCommandBuffer>>(command_buffer);
+  return objc_command_buffer.GPUStartTime;
+}
+
+/**
+ * @copydoc orteaf::internal::execution::mps::getGPUEndTime
+ */
+double getGPUEndTime(MpsCommandBuffer_t command_buffer) {
+  if (command_buffer == nullptr) {
+    return 0.0;
+  }
+  id<MTLCommandBuffer> objc_command_buffer =
+      objcFromOpaqueNoown<id<MTLCommandBuffer>>(command_buffer);
+  return objc_command_buffer.GPUEndTime;
+}
+
+/**
+ * @copydoc orteaf::internal::execution::mps::getGPUDuration
+ */
+double getGPUDuration(MpsCommandBuffer_t command_buffer) {
+  if (command_buffer == nullptr) {
+    return 0.0;
+  }
+  id<MTLCommandBuffer> objc_command_buffer =
+      objcFromOpaqueNoown<id<MTLCommandBuffer>>(command_buffer);
+  const double start = objc_command_buffer.GPUStartTime;
+  const double end = objc_command_buffer.GPUEndTime;
+  if (start > 0.0 && end > 0.0) {
+    return end - start;
+  }
+  return 0.0;
+}
+
 } // namespace orteaf::internal::execution::mps::platform::wrapper

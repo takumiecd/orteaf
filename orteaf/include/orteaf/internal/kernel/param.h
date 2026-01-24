@@ -1,10 +1,13 @@
 #pragma once
 
+#include <cstddef>
 #include <functional>
+#include <utility>
+#include <variant>
+
 #include <orteaf/internal/kernel/array_view.h>
 #include <orteaf/internal/kernel/param_id.h>
 #include <orteaf/kernel/param_id_tables.h>
-#include <variant>
 
 namespace orteaf::internal::kernel {
 
@@ -41,6 +44,11 @@ public:
    * @brief Construct a parameter with a size_t value.
    */
   Param(ParamId id, std::size_t value) noexcept : id_(id), value_(value) {}
+
+  /**
+   * @brief Construct a parameter with a uint32_t value.
+   */
+  Param(ParamId id, std::uint32_t value) noexcept : id_(id), value_(value) {}
 
   /**
    * @brief Construct a parameter with a void* value.

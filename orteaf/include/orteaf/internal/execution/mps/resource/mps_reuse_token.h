@@ -18,8 +18,10 @@ public:
 
   static MpsReuseToken fromFenceToken(MpsFenceToken &&token) {
     MpsReuseToken reuse_token;
-    for (const auto &lease : token) {
-      auto *payload = lease.operator->();
+    
+    // Convert write fence if present
+    if (token.hasWriteFence()) {
+      auto *payload = token.writeFence().operator->();
       Hazard hazard;
       if (payload != nullptr) {
         hazard.setCommandQueueHandle(payload->commandQueueHandle());
@@ -27,6 +29,18 @@ public:
       }
       reuse_token.addOrReplaceHazard(std::move(hazard));
     }
+    
+    // Convert all read fences
+    for (std::size_t i = 0; i < token.readFenceCount(); ++i) {
+      auto *payload = token.readFence(i).operator->();
+      Hazard hazard;
+      if (payload != nullptr) {
+        hazard.setCommandQueueHandle(payload->commandQueueHandle());
+        hazard.setCommandBuffer(payload->commandBuffer());
+      }
+      reuse_token.addOrReplaceHazard(std::move(hazard));
+    }
+    
     token.clear();
     return reuse_token;
   }

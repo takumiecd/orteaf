@@ -50,6 +50,36 @@ bool isCompleted(MpsCommandBuffer_t command_buffer);
  */
 void waitUntilCompleted(MpsCommandBuffer_t command_buffer);
 
+/**
+ * @brief Get the GPU start time of the command buffer (in seconds).
+ * 
+ * Returns the time when the GPU started executing this command buffer.
+ * Only valid after the command buffer has been scheduled.
+ * 
+ * @return GPU start time in seconds, or 0.0 if not available
+ */
+double getGPUStartTime(MpsCommandBuffer_t command_buffer);
+
+/**
+ * @brief Get the GPU end time of the command buffer (in seconds).
+ * 
+ * Returns the time when the GPU finished executing this command buffer.
+ * Only valid after the command buffer has completed.
+ * 
+ * @return GPU end time in seconds, or 0.0 if not available
+ */
+double getGPUEndTime(MpsCommandBuffer_t command_buffer);
+
+/**
+ * @brief Get the GPU execution duration of the command buffer (in seconds).
+ * 
+ * Returns the elapsed time between GPU start and end.
+ * Only valid after the command buffer has completed.
+ * 
+ * @return GPU execution duration in seconds, or 0.0 if not available
+ */
+double getGPUDuration(MpsCommandBuffer_t command_buffer);
+
 } // namespace orteaf::internal::execution::mps::platform::wrapper
 
 #endif  // ORTEAF_ENABLE_MPS

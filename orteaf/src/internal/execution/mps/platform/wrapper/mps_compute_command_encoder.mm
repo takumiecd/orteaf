@@ -144,4 +144,28 @@ void setThreadgroups(MpsComputeCommandEncoder_t compute_command_encoder,
                threadsPerThreadgroup:objc_threads_per_threadgroup];
 }
 
+/**
+ * @copydoc orteaf::internal::execution::mps::dispatchThreads
+ */
+void dispatchThreads(MpsComputeCommandEncoder_t compute_command_encoder,
+                     MPSSize_t threads_per_grid,
+                     MPSSize_t threads_per_threadgroup) {
+  if (compute_command_encoder == nullptr) {
+    using namespace orteaf::internal::diagnostics::error;
+    throwError(OrteafErrc::NullPointer,
+               "dispatchThreads: compute_command_encoder cannot be nullptr");
+  }
+  id<MTLComputeCommandEncoder> objc_encoder =
+      objcFromOpaqueNoown<id<MTLComputeCommandEncoder>>(
+          compute_command_encoder);
+  const MTLSize objc_threads_per_grid =
+      orteaf::internal::execution::mps::platform::wrapper::toMtlSize(
+          threads_per_grid);
+  const MTLSize objc_threads_per_threadgroup =
+      orteaf::internal::execution::mps::platform::wrapper::toMtlSize(
+          threads_per_threadgroup);
+  [objc_encoder dispatchThreads:objc_threads_per_grid
+          threadsPerThreadgroup:objc_threads_per_threadgroup];
+}
+
 } // namespace orteaf::internal::execution::mps::platform::wrapper

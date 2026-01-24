@@ -307,6 +307,8 @@ GeneratedData GenerateOutputs(const ResolvedConfig &resolved) {
     variant_types.push_back("  int");
   if (unique_types.count("std::size_t"))
     variant_types.push_back("  std::size_t");
+  if (unique_types.count("std::uint32_t"))
+    variant_types.push_back("  std::uint32_t");
   if (unique_types.count("void*"))
     variant_types.push_back("  void*");
 

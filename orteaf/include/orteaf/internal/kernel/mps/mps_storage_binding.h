@@ -2,33 +2,21 @@
 
 #if ORTEAF_ENABLE_MPS
 
-#include <orteaf/internal/kernel/storage_id.h>
+#include <orteaf/internal/kernel/storage_binding.h>
 #include <orteaf/internal/storage/registry/storage_types.h>
 
 namespace orteaf::internal::kernel::mps {
 
 /**
- * @brief MPS storage binding structure for kernel arguments.
+ * @brief MPS storage binding type alias.
  *
  * Represents a bound MPS storage resource with its identifier and lease.
  * Access pattern information is available through the StorageId metadata.
+ *
+ * This is a specialization of the generic StorageBinding template for MPS execution.
  */
-struct MpsStorageBinding {
-  /**
-   * @brief Storage identifier.
-   *
-   * Identifies the semantic role of this storage (e.g., Input0, Output).
-   * Access pattern can be queried via StorageTypeInfo<id>::kAccess.
-   */
-  StorageId id;
-
-  /**
-   * @brief MPS storage lease.
-   *
-   * Holds the actual MPS storage resource.
-   */
-  ::orteaf::internal::storage::MpsStorageLease lease;
-};
+using MpsStorageBinding = ::orteaf::internal::kernel::StorageBinding<
+    ::orteaf::internal::storage::MpsStorageLease>;
 
 } // namespace orteaf::internal::kernel::mps
 
