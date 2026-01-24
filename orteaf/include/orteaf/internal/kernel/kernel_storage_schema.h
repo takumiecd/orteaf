@@ -3,6 +3,7 @@
 #include <orteaf/internal/diagnostics/error/error.h>
 #include <orteaf/internal/kernel/storage_id.h>
 #include <orteaf/internal/kernel/storage_list.h>
+#include <orteaf/kernel/storage_id_tables.h>
 
 #include <utility>
 
@@ -72,6 +73,13 @@ struct StorageField {
           "Required storage binding not found");
     }
     return const_cast<StorageBinding *>(static_cast<const StorageBinding *>(binding_))->lease;
+  }
+
+  /**
+   * @brief Get the access pattern for this storage.
+   */
+  static constexpr ::orteaf::internal::kernel::Access access() {
+    return ::orteaf::generated::storage_id_tables::StorageTypeInfo<kId>::kAccess;
   }
 
   /**
@@ -158,6 +166,13 @@ struct OptionalStorageField {
   }
 
   /**
+   * @brief Get the access pattern for this storage.
+   */
+  static constexpr ::orteaf::internal::kernel::Access access() {
+    return ::orteaf::generated::storage_id_tables::StorageTypeInfo<kId>::kAccess;
+  }
+
+  /**
    * @brief Extract storage binding from storage list (optional).
    *
    * Does not throw if storage not found.
@@ -234,23 +249,31 @@ template <typename KernelArgs, typename... Fields>
 void extractStorages(const KernelArgs &args, Fields &...fields) {
   (fields.extract(args), ...);
 }
+
+// Helper for binding all storages
+template <typename Base, typename Encoder, typename... Fields>
+void bindAllStorages(const Base &base, Encoder encoder, std::size_t start_index, Fields &...fields) {
+  std::size_t idx = start_index;
+  (base.setBuffer(encoder, fields, idx++), ...);
+}
+
 } // namespace detail
 
 } // namespace orteaf::internal::kernel
 
 /**
- * @brief Macro to generate extractAllStorages() and bindAll() implementations.
+ * @brief Macro to generate extractAllStorages() and bindAll().
  *
  * Automatically generates the extraction logic for all listed storage fields,
- * and a bindAll() method to bind all storages to an encoder at once.
- * Each field's extract() method is called in sequence during extraction.
- * Fields are bound to sequential indices starting from start_index.
+ * and a helper method for binding all storages to the encoder.
+ * - extractAllStorages: Extract all fields from kernel arguments
+ * - bindAll: Bind all storages to encoder at sequential indices
  *
  * Usage:
  * @code
  * struct MyStorages : StorageSchema<MyStorages> {
  *   StorageField<StorageId::Input0> input;
- *   StorageField<StorageId::Output0> output;
+ *   StorageField<StorageId::Output> output;
  *   OptionalStorageField<StorageId::Workspace> workspace;
  *
  *   ORTEAF_EXTRACT_STORAGES(input, output, workspace)
@@ -267,6 +290,5 @@ void extractStorages(const KernelArgs &args, Fields &...fields) {
   }                                                                             \
   template <typename Base, typename Encoder>                                   \
   void bindAll(const Base &base, Encoder encoder, std::size_t start_index = 0) const { \
-    std::size_t _orteaf_idx = start_index;                                     \
-    ((base.setBuffer(encoder, __VA_ARGS__, _orteaf_idx++)), ...);              \
+    ::orteaf::internal::kernel::detail::bindAllStorages(base, encoder, start_index, __VA_ARGS__); \
   }

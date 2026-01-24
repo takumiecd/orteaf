@@ -224,6 +224,13 @@ template <typename KernelArgs, typename... Fields>
 void extractFields(const KernelArgs &args, Fields &...fields) {
   extractFieldsFromList(args.paramList(), fields...);
 }
+
+// Helper for binding all parameters
+template <typename Base, typename Encoder, typename... Fields>
+void bindAllParams(const Base &base, Encoder encoder, std::size_t start_index, Fields &...fields) {
+  std::size_t idx = start_index;
+  (base.setParam(encoder, fields, idx++), ...);
+}
 } // namespace detail
 
 } // namespace orteaf::internal::kernel
@@ -257,6 +264,5 @@ void extractFields(const KernelArgs &args, Fields &...fields) {
   }                                                                             \
   template <typename Base, typename Encoder>                                   \
   void bindAll(const Base &base, Encoder encoder, std::size_t start_index = 0) const { \
-    std::size_t _orteaf_idx = start_index;                                     \
-    ((base.setParam(encoder, __VA_ARGS__, _orteaf_idx++)), ...);               \
+    ::orteaf::internal::kernel::detail::bindAllParams(base, encoder, start_index, __VA_ARGS__); \
   }

@@ -200,6 +200,58 @@ public:
     return view ? view.offset() : 0;
   }
 
+  /**
+   * @brief Get the fence token.
+   * @return Reference to the fence token
+   */
+  FenceToken &fenceToken() { return fence_token_; }
+
+  /**
+   * @brief Get the fence token (const).
+   * @return Const reference to the fence token
+   */
+  const FenceToken &fenceToken() const { return fence_token_; }
+
+  /**
+   * @brief Get the reuse token from the buffer.
+   * @return Reference to the reuse token
+   * @throws OrteafErrc::InvalidParameter if buffer lease is invalid
+   */
+  auto &reuseToken() {
+    if (!buffer_lease_) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+          "Storage has no buffer lease");
+    }
+    auto *payload = buffer_lease_.operator->();
+    if (!payload) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+          "Buffer lease has no payload");
+    }
+    return payload->reuse_token;
+  }
+
+  /**
+   * @brief Get the reuse token from the buffer (const).
+   * @return Const reference to the reuse token
+   * @throws OrteafErrc::InvalidParameter if buffer lease is invalid
+   */
+  const auto &reuseToken() const {
+    if (!buffer_lease_) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+          "Storage has no buffer lease");
+    }
+    auto *payload = buffer_lease_.operator->();
+    if (!payload) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+          "Buffer lease has no payload");
+    }
+    return payload->reuse_token;
+  }
+
 private:
   MpsStorage(BufferLease buffer_lease, FenceToken fence_token, Layout layout,
              DType dtype, std::size_t numel)

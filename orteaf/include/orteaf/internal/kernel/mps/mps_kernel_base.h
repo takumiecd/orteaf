@@ -13,6 +13,7 @@
 #include "orteaf/internal/execution/mps/mps_handles.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_command_buffer.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_compute_command_encoder.h"
+#include "orteaf/internal/execution/mps/platform/wrapper/mps_fence.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_size.h"
 #include "orteaf/internal/execution_context/mps/context.h"
 #include "orteaf/internal/kernel/param.h"
@@ -210,6 +211,73 @@ struct MpsKernelBase {
     }
     ::orteaf::internal::execution::mps::platform::wrapper::waitUntilCompleted(
         command_buffer);
+  }
+
+  /**
+   * @brief Acquire a fence lease from the context.
+   *
+   * Acquires a fence from the fence manager associated with the command queue.
+   * The fence is used for synchronization between kernel executions.
+   *
+   * @param context Execution context containing the command queue lease
+   * @param command_buffer Command buffer to associate with the fence
+   * @return Strong fence lease
+   */
+  ::orteaf::internal::execution::mps::manager::MpsFenceManager::StrongFenceLease
+  acquireFence(
+      ::orteaf::internal::execution_context::mps::Context &context,
+      ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandBuffer_t
+          command_buffer) const {
+    if (!context.command_queue) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+          "Context has no command queue");
+    }
+    auto *queue_resource = context.command_queue.operator->();
+    if (queue_resource == nullptr) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+          "Command queue lease has no resource");
+    }
+    return queue_resource->lifetime().acquire(command_buffer);
+  }
+
+  /**
+   * @brief Update a fence on the compute command encoder.
+   *
+   * Encodes a fence update signal on the encoder. This fence will be signaled
+   * when all preceding commands in the command buffer have completed.
+   *
+   * @param encoder Compute command encoder to update the fence on
+   * @param fence Fence to update
+   */
+  void updateFence(
+      ::orteaf::internal::execution::mps::platform::wrapper::MpsComputeCommandEncoder_t
+          encoder,
+      ::orteaf::internal::execution::mps::platform::wrapper::MpsFence_t fence) const {
+    if (encoder == nullptr || fence == nullptr) {
+      return;
+    }
+    ::orteaf::internal::execution::mps::platform::wrapper::updateFence(encoder, fence);
+  }
+
+  /**
+   * @brief Wait for a fence on the compute command encoder.
+   *
+   * Encodes a fence wait on the encoder. The encoder will wait until the fence
+   * has been signaled before executing subsequent commands.
+   *
+   * @param encoder Compute command encoder to wait on
+   * @param fence Fence to wait for
+   */
+  void waitForFence(
+      ::orteaf::internal::execution::mps::platform::wrapper::MpsComputeCommandEncoder_t
+          encoder,
+      ::orteaf::internal::execution::mps::platform::wrapper::MpsFence_t fence) const {
+    if (encoder == nullptr || fence == nullptr) {
+      return;
+    }
+    ::orteaf::internal::execution::mps::platform::wrapper::waitForFence(encoder, fence);
   }
 
   /**
@@ -534,6 +602,47 @@ struct MpsKernelBase {
                         static_cast<std::size_t>(grid_depth));
   }
 
+  /**
+   * @brief Wait for all storage dependencies before kernel execution.
+   *
+   * Waits for fences on all input storages (Read/ReadWrite access patterns).
+   * This ensures that previous operations writing to these storages have completed.
+   *
+   * @tparam StorageBinding The storage binding type (MpsStorageBinding)
+   * @tparam Fields Storage field types
+   * @param encoder Compute command encoder to wait on
+   * @param fields Storage fields to check for dependencies
+   */
+  template <typename StorageBinding, typename... Fields>
+  void waitAllStorageDependencies(
+      ::orteaf::internal::execution::mps::platform::wrapper::MpsComputeCommandEncoder_t
+          encoder,
+      Fields &...fields) const {
+    (waitStorageDependency<StorageBinding>(encoder, fields), ...);
+  }
+
+  /**
+   * @brief Update fence and reuse tokens for all output storages after kernel execution.
+   *
+   * Updates tokens on all output storages (Write/ReadWrite access patterns).
+   * This ensures that subsequent operations will wait for this kernel to complete.
+   *
+   * @tparam StorageBinding The storage binding type (MpsStorageBinding)
+   * @tparam FenceLease Fence lease type
+   * @tparam Fields Storage field types
+   * @param fence_lease Fence lease acquired for this kernel
+   * @param command_buffer Command buffer being executed
+   * @param fields Storage fields to update tokens on
+   */
+  template <typename StorageBinding, typename FenceLease, typename... Fields>
+  void updateAllStorageTokens(
+      FenceLease &fence_lease,
+      ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandBuffer_t
+          command_buffer,
+      Fields &...fields) const {
+    (updateStorageToken<StorageBinding>(fence_lease, command_buffer, fields), ...);
+  }
+
 #if ORTEAF_ENABLE_TESTING
   ::orteaf::internal::base::HeapVector<Key> &keysForTest() noexcept {
     return keys_;
@@ -559,6 +668,88 @@ private:
       }
     }
     return kInvalidIndex;
+  }
+
+  /**
+   * @brief Wait for a single storage's dependencies.
+   *
+   * Helper for waitAllStorageDependencies. Waits for fences if the storage
+   * has Read or ReadWrite access pattern.
+   *
+   * @tparam StorageBinding The storage binding type
+   * @tparam Field Storage field type
+   * @param encoder Compute command encoder to wait on
+   * @param field Storage field to check for dependencies
+   */
+  template <typename StorageBinding, typename Field>
+  void waitStorageDependency(
+      ::orteaf::internal::execution::mps::platform::wrapper::MpsComputeCommandEncoder_t
+          encoder,
+      const Field &field) const {
+    using Access = ::orteaf::internal::kernel::Access;
+    constexpr auto access = Field::access();
+    
+    // Wait only for Read and ReadWrite storages (inputs)
+    if constexpr (access == Access::Read || access == Access::ReadWrite) {
+      if (!field) {
+        return; // Optional field not present
+      }
+      
+      auto &storage = field.template lease<StorageBinding>();
+      auto &fence_token = storage.fenceToken();
+      for (const auto &fence_lease : fence_token) {
+        auto *payload = fence_lease.operator->();
+        if (payload && payload->hasFence()) {
+          waitForFence(encoder, payload->fence());
+        }
+      }
+    }
+  }
+
+  /**
+   * @brief Update a single storage's tokens.
+   *
+   * Helper for updateAllStorageTokens. Updates fence and reuse tokens if the storage
+   * has Write or ReadWrite access pattern.
+   *
+   * @tparam StorageBinding The storage binding type
+   * @tparam FenceLease Fence lease type
+   * @tparam Field Storage field type
+   * @param fence_lease Fence lease acquired for this kernel
+   * @param command_buffer Command buffer being executed
+   * @param field Storage field to update tokens on
+   */
+  template <typename StorageBinding, typename FenceLease, typename Field>
+  void updateStorageToken(
+      FenceLease &fence_lease,
+      ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandBuffer_t
+          command_buffer,
+      Field &field) const {
+    using Access = ::orteaf::internal::kernel::Access;
+    constexpr auto access = Field::access();
+    
+    // Update only Write and ReadWrite storages (outputs)
+    if constexpr (access == Access::Write || access == Access::ReadWrite) {
+      if (!field) {
+        return; // Optional field not present
+      }
+      
+      auto &storage = field.template lease<StorageBinding>();
+      
+      // Update fence token
+      auto &fence_token = storage.fenceToken();
+      fence_token.addOrReplaceLease(FenceLease(fence_lease));
+      
+      // Update reuse token
+      auto &reuse_token = storage.reuseToken();
+      auto *payload = fence_lease.operator->();
+      if (payload) {
+        typename decltype(reuse_token)::Hazard hazard;
+        hazard.setCommandQueueHandle(payload->commandQueueHandle());
+        hazard.setCommandBuffer(command_buffer);
+        reuse_token.addOrReplaceHazard(std::move(hazard));
+      }
+    }
   }
 
   ::orteaf::internal::base::HeapVector<DevicePipelines> device_pipelines_{};
