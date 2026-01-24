@@ -631,16 +631,13 @@ struct MpsKernelBase {
    * @tparam FenceLease Fence lease type
    * @tparam Fields Storage field types
    * @param fence_lease Fence lease acquired for this kernel
-   * @param command_buffer Command buffer being executed
    * @param fields Storage fields to update tokens on
    */
   template <typename StorageBinding, typename FenceLease, typename... Fields>
   void updateAllStorageTokens(
       FenceLease &fence_lease,
-      ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandBuffer_t
-          command_buffer,
       Fields &...fields) const {
-    (updateStorageToken<StorageBinding>(fence_lease, command_buffer, fields), ...);
+    (updateStorageToken<StorageBinding>(fence_lease, fields), ...);
   }
 
 #if ORTEAF_ENABLE_TESTING
@@ -736,14 +733,11 @@ private:
    * @tparam FenceLease Fence lease type
    * @tparam Field Storage field type
    * @param fence_lease Fence lease acquired for this kernel
-   * @param command_buffer Command buffer being executed
    * @param field Storage field to update tokens on
    */
   template <typename StorageBinding, typename FenceLease, typename Field>
   void updateStorageToken(
       FenceLease &fence_lease,
-      ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandBuffer_t
-          command_buffer,
       Field &field) const {
     using Access = ::orteaf::internal::kernel::Access;
     constexpr auto access = Field::access();
@@ -775,7 +769,7 @@ private:
     if (payload) {
       typename decltype(reuse_token)::Hazard hazard;
       hazard.setCommandQueueHandle(payload->commandQueueHandle());
-      hazard.setCommandBuffer(command_buffer);
+      hazard.setCommandBuffer(payload->commandBuffer());
       reuse_token.addOrReplaceHazard(std::move(hazard));
     }
   }
