@@ -34,23 +34,7 @@ struct MpsKernelBase {
       ::orteaf::internal::execution::mps::manager::FunctionKey;
   using Key = std::pair<LibraryKey, FunctionKey>;
 
-  struct KeyLiteral {
-    const char *library;
-    const char *function;
-  };
-
   MpsKernelBase() = default;
-
-  /**
-   * @brief Construct with library/function pairs.
-   */
-  explicit MpsKernelBase(std::initializer_list<KeyLiteral> keys) {
-    keys_.reserve(keys.size());
-    for (const auto &k : keys) {
-      keys_.pushBack(Key{LibraryKey::Named(std::string(k.library)),
-                         FunctionKey::Named(std::string(k.function))});
-    }
-  }
 
   MpsKernelBase(const MpsKernelBase &) = delete;
   MpsKernelBase &operator=(const MpsKernelBase &) = delete;
@@ -59,25 +43,25 @@ struct MpsKernelBase {
   ~MpsKernelBase() = default;
 
   /**
-   * @brief Check if pipelines are initialized for the given device.
+   * @brief Check if pipelines are configured for the given device.
    */
-  bool initialized(
+  bool configured(
       ::orteaf::internal::execution::mps::MpsDeviceHandle device) const
       noexcept {
     const auto idx = findDeviceIndex(device);
-    return idx != kInvalidIndex && device_pipelines_[idx].initialized;
+    return idx != kInvalidIndex && device_pipelines_[idx].configured;
   }
 
   /**
-   * @brief Initialize all pipeline leases for the given device.
+   * @brief Configure all pipeline leases for the given device.
    *
    * Uses RuntimeApi to acquire pipeline leases for each kernel function.
-   * If already initialized for this device, clears and re-initializes.
+   * If already configured for this device, clears and re-configures.
    *
    * @tparam RuntimeApi API providing acquirePipeline(device, lib, func)
    */
   template <typename RuntimeApi>
-  void initialize(
+  void configure(
       ::orteaf::internal::execution::mps::MpsDeviceHandle device) {
     auto entry_idx = findDeviceIndex(device);
     if (entry_idx == kInvalidIndex) {
@@ -92,7 +76,7 @@ struct MpsKernelBase {
       entry.pipelines.pushBack(
           RuntimeApi::acquirePipeline(device, key.first, key.second));
     }
-    entry.initialized = true;
+    entry.configured = true;
   }
 
   /**
@@ -107,7 +91,7 @@ struct MpsKernelBase {
     if (idx == kInvalidIndex)
       return nullptr;
     auto &entry = device_pipelines_[idx];
-    if (!entry.initialized || index >= entry.pipelines.size())
+    if (!entry.configured || index >= entry.pipelines.size())
       return nullptr;
     return &entry.pipelines[index];
   }
@@ -122,7 +106,7 @@ struct MpsKernelBase {
     if (idx == kInvalidIndex)
       return nullptr;
     const auto &entry = device_pipelines_[idx];
-    if (!entry.initialized || index >= entry.pipelines.size())
+    if (!entry.configured || index >= entry.pipelines.size())
       return nullptr;
     return &entry.pipelines[index];
   }
@@ -158,7 +142,7 @@ private:
   struct DevicePipelines {
     ::orteaf::internal::execution::mps::MpsDeviceHandle device{};
     ::orteaf::internal::base::HeapVector<PipelineLease> pipelines{};
-    bool initialized{false};
+    bool configured{false};
   };
 
   std::size_t findDeviceIndex(

@@ -9,15 +9,14 @@ namespace orteaf::internal::kernel::mps {
 
 bool MpsKernelBaseManager::PayloadPoolTraits::create(
     Payload &payload, const Request &request, const Context &) {
-  if (request.keys == nullptr || request.key_count == 0) {
+  if (request.key.kernels.empty()) {
     return false;
   }
   // Create KernelBase with the provided keys
   payload = KernelBase{};
-  payload.reserveKeys(request.key_count);
-  for (std::size_t i = 0; i < request.key_count; ++i) {
-    const auto &k = request.keys[i];
-    payload.addKey(k.library, k.function);
+  payload.reserveKeys(request.key.kernels.size());
+  for (const auto &[lib, func] : request.key.kernels) {
+    payload.addKey(lib.c_str(), func.c_str());
   }
   return true;
 }
@@ -57,10 +56,8 @@ void MpsKernelBaseManager::shutdown() {
 }
 
 MpsKernelBaseManager::KernelBaseLease
-MpsKernelBaseManager::acquire(const KernelBaseKey &key,
-                              KernelBase::KeyLiteral *keys,
-                              std::size_t key_count) {
-  if (!configured_ || keys == nullptr || key_count == 0) {
+MpsKernelBaseManager::acquire(const KernelBaseKey &key) {
+  if (!configured_ || key.kernels.empty()) {
     return KernelBaseLease{};
   }
 
@@ -81,8 +78,6 @@ MpsKernelBaseManager::acquire(const KernelBaseKey &key,
 
   PayloadPoolTraits::Request request{};
   request.key = key;
-  request.keys = keys;
-  request.key_count = key_count;
   const PayloadPoolTraits::Context context{};
 
   auto handle = core_.reserveUncreatedPayloadOrGrow();

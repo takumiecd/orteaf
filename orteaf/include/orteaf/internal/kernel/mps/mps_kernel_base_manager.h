@@ -5,6 +5,8 @@
 #include <cstddef>
 #include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "orteaf/internal/base/handle.h"
 #include "orteaf/internal/base/lease/control_block/strong.h"
@@ -21,13 +23,16 @@ struct MpsKernelBaseTag {};
 using MpsKernelBaseHandle =
     ::orteaf::internal::base::Handle<MpsKernelBaseTag, uint32_t, void>;
 
-// Key for identifying a kernel base (can be extended later)
+// Key for identifying a kernel base using library/function names
 struct KernelBaseKey {
-  std::string identifier{};
+  std::vector<std::pair<std::string, std::string>> kernels{};
 
-  static KernelBaseKey Named(std::string name) {
+  static KernelBaseKey Create(
+      std::initializer_list<std::pair<const char *, const char *>> kernel_pairs) {
     KernelBaseKey key{};
-    key.identifier = std::move(name);
+    for (const auto &[lib, func] : kernel_pairs) {
+      key.kernels.emplace_back(lib, func);
+    }
     return key;
   }
 
@@ -37,7 +42,12 @@ struct KernelBaseKey {
 
 struct KernelBaseKeyHasher {
   std::size_t operator()(const KernelBaseKey &key) const noexcept {
-    return std::hash<std::string>{}(key.identifier);
+    std::size_t hash = 0;
+    for (const auto &[lib, func] : key.kernels) {
+      hash ^= std::hash<std::string>{}(lib) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+      hash ^= std::hash<std::string>{}(func) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+    }
+    return hash;
   }
 };
 
@@ -59,8 +69,6 @@ public:
 
     struct Request {
       KernelBaseKey key{};
-      KernelBase::KeyLiteral *keys{nullptr};
-      std::size_t key_count{0};
     };
 
     struct Context {
@@ -123,11 +131,9 @@ public:
    * @brief Acquire a KernelBase by key.
    *
    * If the key already exists, returns cached lease. Otherwise creates
-   * a new KernelBase with the provided kernel function keys.
+   * a new KernelBase with the kernel functions specified in the key.
    */
-  KernelBaseLease acquire(const KernelBaseKey &key,
-                          KernelBase::KeyLiteral *keys,
-                          std::size_t key_count);
+  KernelBaseLease acquire(const KernelBaseKey &key);
 
   /**
    * @brief Acquire an existing KernelBase by handle.

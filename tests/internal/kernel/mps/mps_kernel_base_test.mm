@@ -14,7 +14,7 @@ namespace mps_exec = orteaf::internal::execution::mps;
 
 namespace {
 
-// Mock RuntimeApi for testing initialize()
+// Mock RuntimeApi for testing configure()
 struct MockRuntimeApi {
   using PipelineLease = mps_kernel::MpsKernelBase::PipelineLease;
   using LibraryKey = mps_kernel::MpsKernelBase::LibraryKey;
@@ -33,8 +33,10 @@ TEST(MpsKernelBaseTest, DefaultConstruction) {
   EXPECT_EQ(base.kernelCount(), 0u);
 }
 
-TEST(MpsKernelBaseTest, InitializerListConstruction) {
-  mps_kernel::MpsKernelBase base({{"lib1", "func1"}, {"lib2", "func2"}});
+TEST(MpsKernelBaseTest, AddMultipleKeys) {
+  mps_kernel::MpsKernelBase base;
+  base.addKey("lib1", "func1");
+  base.addKey("lib2", "func2");
   EXPECT_EQ(base.kernelCount(), 2u);
 }
 
@@ -60,82 +62,93 @@ TEST(MpsKernelBaseTest, ReserveKeys) {
   EXPECT_EQ(base.kernelCount(), 10u);
 }
 
-TEST(MpsKernelBaseTest, InitializedReturnsFalseForUninitializedDevice) {
-  mps_kernel::MpsKernelBase base({{"lib1", "func1"}});
+TEST(MpsKernelBaseTest, ConfiguredReturnsFalseForUnconfiguredDevice) {
+  mps_kernel::MpsKernelBase base;
+  base.addKey("lib1", "func1");
   auto device = mps_exec::MpsDeviceHandle{42};
-  EXPECT_FALSE(base.initialized(device));
+  EXPECT_FALSE(base.configured(device));
 }
 
-TEST(MpsKernelBaseTest, InitializeMarksDeviceAsInitialized) {
-  mps_kernel::MpsKernelBase base({{"lib1", "func1"}});
+TEST(MpsKernelBaseTest, ConfigureMarksDeviceAsConfigured) {
+  mps_kernel::MpsKernelBase base;
+  base.addKey("lib1", "func1");
   auto device = mps_exec::MpsDeviceHandle{42};
 
-  EXPECT_FALSE(base.initialized(device));
-  base.initialize<MockRuntimeApi>(device);
-  EXPECT_TRUE(base.initialized(device));
+  EXPECT_FALSE(base.configured(device));
+  base.configure<MockRuntimeApi>(device);
+  EXPECT_TRUE(base.configured(device));
 }
 
-TEST(MpsKernelBaseTest, InitializeWithMultipleKernels) {
-  mps_kernel::MpsKernelBase base({{"lib1", "func1"}, {"lib2", "func2"}});
+TEST(MpsKernelBaseTest, ConfigureWithMultipleKernels) {
+  mps_kernel::MpsKernelBase base;
+  base.addKey("lib1", "func1");
+  base.addKey("lib2", "func2");
   auto device = mps_exec::MpsDeviceHandle{42};
 
-  base.initialize<MockRuntimeApi>(device);
-  EXPECT_TRUE(base.initialized(device));
+  base.configure<MockRuntimeApi>(device);
+  EXPECT_TRUE(base.configured(device));
   EXPECT_EQ(base.kernelCount(), 2u);
 }
 
-TEST(MpsKernelBaseTest, InitializeMultipleDevices) {
-  mps_kernel::MpsKernelBase base({{"lib1", "func1"}});
+TEST(MpsKernelBaseTest, ConfigureMultipleDevices) {
+  mps_kernel::MpsKernelBase base;
+  base.addKey("lib1", "func1");
   auto device1 = mps_exec::MpsDeviceHandle{42};
   auto device2 = mps_exec::MpsDeviceHandle{43};
 
-  base.initialize<MockRuntimeApi>(device1);
-  base.initialize<MockRuntimeApi>(device2);
+  base.configure<MockRuntimeApi>(device1);
+  base.configure<MockRuntimeApi>(device2);
 
-  EXPECT_TRUE(base.initialized(device1));
-  EXPECT_TRUE(base.initialized(device2));
+  EXPECT_TRUE(base.configured(device1));
+  EXPECT_TRUE(base.configured(device2));
 }
 
-TEST(MpsKernelBaseTest, GetPipelineReturnsNullptrForUninitializedDevice) {
-  mps_kernel::MpsKernelBase base({{"lib1", "func1"}});
+TEST(MpsKernelBaseTest, GetPipelineReturnsNullptrForUnconfiguredDevice) {
+  mps_kernel::MpsKernelBase base;
+  base.addKey("lib1", "func1");
   auto device = mps_exec::MpsDeviceHandle{42};
 
   EXPECT_EQ(base.getPipeline(device, 0), nullptr);
 }
 
 TEST(MpsKernelBaseTest, GetPipelineReturnsNullptrForInvalidIndex) {
-  mps_kernel::MpsKernelBase base({{"lib1", "func1"}});
+  mps_kernel::MpsKernelBase base;
+  base.addKey("lib1", "func1");
   auto device = mps_exec::MpsDeviceHandle{42};
 
-  base.initialize<MockRuntimeApi>(device);
+  base.configure<MockRuntimeApi>(device);
   EXPECT_EQ(base.getPipeline(device, 999), nullptr);
 }
 
-TEST(MpsKernelBaseTest, GetPipelineReturnsValidPointerAfterInitialize) {
-  mps_kernel::MpsKernelBase base({{"lib1", "func1"}});
+TEST(MpsKernelBaseTest, GetPipelineReturnsValidPointerAfterConfigure) {
+  mps_kernel::MpsKernelBase base;
+  base.addKey("lib1", "func1");
   auto device = mps_exec::MpsDeviceHandle{42};
 
-  base.initialize<MockRuntimeApi>(device);
+  base.configure<MockRuntimeApi>(device);
   auto *pipeline = base.getPipeline(device, 0);
   EXPECT_NE(pipeline, nullptr);
 }
 
 TEST(MpsKernelBaseTest, GetPipelineConstVersion) {
-  mps_kernel::MpsKernelBase base({{"lib1", "func1"}});
+  mps_kernel::MpsKernelBase base;
+  base.addKey("lib1", "func1");
   auto device = mps_exec::MpsDeviceHandle{42};
 
-  base.initialize<MockRuntimeApi>(device);
+  base.configure<MockRuntimeApi>(device);
   const auto &const_base = base;
   const auto *pipeline = const_base.getPipeline(device, 0);
   EXPECT_NE(pipeline, nullptr);
 }
 
 TEST(MpsKernelBaseTest, GetPipelineForMultipleKernels) {
-  mps_kernel::MpsKernelBase base(
-      {{"lib1", "func1"}, {"lib2", "func2"}, {"lib3", "func3"}});
+  mps_kernel::MpsKernelBase base;
+  base.addKey("lib1", "func1");
+  base.addKey("lib2", "func2");
+  base.addKey("lib3", "func3");
   auto device = mps_exec::MpsDeviceHandle{42};
 
-  base.initialize<MockRuntimeApi>(device);
+  base.configure<MockRuntimeApi>(device);
 
   auto *pipeline0 = base.getPipeline(device, 0);
   auto *pipeline1 = base.getPipeline(device, 1);
@@ -146,30 +159,33 @@ TEST(MpsKernelBaseTest, GetPipelineForMultipleKernels) {
   EXPECT_NE(pipeline2, nullptr);
 }
 
-TEST(MpsKernelBaseTest, ReinitializeClearsAndRecreatesPipelines) {
-  mps_kernel::MpsKernelBase base({{"lib1", "func1"}});
+TEST(MpsKernelBaseTest, ReconfigureClearsAndRecreatesPipelines) {
+  mps_kernel::MpsKernelBase base;
+  base.addKey("lib1", "func1");
   auto device = mps_exec::MpsDeviceHandle{42};
 
-  base.initialize<MockRuntimeApi>(device);
-  EXPECT_TRUE(base.initialized(device));
+  base.configure<MockRuntimeApi>(device);
+  EXPECT_TRUE(base.configured(device));
 
-  // Re-initialize should work
-  base.initialize<MockRuntimeApi>(device);
-  EXPECT_TRUE(base.initialized(device));
+  // Re-configure should work
+  base.configure<MockRuntimeApi>(device);
+  EXPECT_TRUE(base.configured(device));
 }
 
 #if ORTEAF_ENABLE_TESTING
 TEST(MpsKernelBaseTest, TestingHelpers) {
-  mps_kernel::MpsKernelBase base({{"lib1", "func1"}, {"lib2", "func2"}});
+  mps_kernel::MpsKernelBase base;
+  base.addKey("lib1", "func1");
+  base.addKey("lib2", "func2");
   auto device1 = mps_exec::MpsDeviceHandle{42};
   auto device2 = mps_exec::MpsDeviceHandle{43};
 
   EXPECT_EQ(base.deviceCountForTest(), 0u);
 
-  base.initialize<MockRuntimeApi>(device1);
+  base.configure<MockRuntimeApi>(device1);
   EXPECT_EQ(base.deviceCountForTest(), 1u);
 
-  base.initialize<MockRuntimeApi>(device2);
+  base.configure<MockRuntimeApi>(device2);
   EXPECT_EQ(base.deviceCountForTest(), 2u);
 
   auto &keys = base.keysForTest();
