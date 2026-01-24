@@ -1,4 +1,4 @@
-#include "orteaf/internal/kernel/mps/mps_kernel_param_schema.h"
+#include "orteaf/internal/kernel/kernel_param_schema.h"
 
 #include <gtest/gtest.h>
 
@@ -11,9 +11,6 @@
 
 namespace kernel = orteaf::internal::kernel;
 namespace mps_kernel = orteaf::internal::kernel::mps;
-
-// Note: Now using generic kernel::Field and kernel::ParamSchema
-// The mps namespace re-exports these for convenience
 
 // ============================================================
 // Test Fixture
@@ -82,13 +79,13 @@ protected:
 // ============================================================
 
 TEST_F(MpsKernelParamSchemaTest, FieldDefaultConstruction) {
-  mps_kernel::Field<kernel::ParamId::Alpha, float> field;
+  kernel::Field<kernel::ParamId::Alpha, float> field;
   EXPECT_FLOAT_EQ(field.value, 0.0f);
   EXPECT_FLOAT_EQ(field.get(), 0.0f);
 }
 
 TEST_F(MpsKernelParamSchemaTest, FieldImplicitConversion) {
-  mps_kernel::Field<kernel::ParamId::Alpha, float> field;
+  kernel::Field<kernel::ParamId::Alpha, float> field;
   field.value = 3.14f;
 
   float value = field; // Implicit conversion
@@ -96,7 +93,7 @@ TEST_F(MpsKernelParamSchemaTest, FieldImplicitConversion) {
 }
 
 TEST_F(MpsKernelParamSchemaTest, FieldExplicitGet) {
-  mps_kernel::Field<kernel::ParamId::Beta, float> field;
+  kernel::Field<kernel::ParamId::Beta, float> field;
   field.value = 2.71f;
 
   EXPECT_FLOAT_EQ(field.get(), 2.71f);
@@ -109,7 +106,7 @@ TEST_F(MpsKernelParamSchemaTest, FieldExtractSuccess) {
   mps_kernel::MpsKernelArgs args;
   args.addParam(kernel::Param(kernel::ParamId::Alpha, 5.0f));
 
-  mps_kernel::Field<kernel::ParamId::Alpha, float> field;
+  kernel::Field<kernel::ParamId::Alpha, float> field;
   field.extract(args);
 
   EXPECT_FLOAT_EQ(field.value, 5.0f);
@@ -118,7 +115,7 @@ TEST_F(MpsKernelParamSchemaTest, FieldExtractSuccess) {
 TEST_F(MpsKernelParamSchemaTest, FieldExtractMissingThrows) {
   mps_kernel::MpsKernelArgs args;
 
-  mps_kernel::Field<kernel::ParamId::Alpha, float> field;
+  kernel::Field<kernel::ParamId::Alpha, float> field;
   EXPECT_THROW(field.extract(args), std::runtime_error);
 }
 
@@ -126,7 +123,7 @@ TEST_F(MpsKernelParamSchemaTest, FieldExtractTypeMismatchThrows) {
   mps_kernel::MpsKernelArgs args;
   args.addParam(kernel::Param(kernel::ParamId::Alpha, 42)); // int, not float
 
-  mps_kernel::Field<kernel::ParamId::Alpha, float> field;
+  kernel::Field<kernel::ParamId::Alpha, float> field;
   EXPECT_THROW(field.extract(args), std::runtime_error);
 }
 
@@ -135,13 +132,13 @@ TEST_F(MpsKernelParamSchemaTest, FieldExtractTypeMismatchThrows) {
 // ============================================================
 
 TEST_F(MpsKernelParamSchemaTest, OptionalFieldDefaultConstruction) {
-  mps_kernel::OptionalField<kernel::ParamId::Alpha, float> field;
+  kernel::OptionalField<kernel::ParamId::Alpha, float> field;
   EXPECT_FLOAT_EQ(field.value, 0.0f);
   EXPECT_FALSE(field.present);
 }
 
 TEST_F(MpsKernelParamSchemaTest, OptionalFieldWithDefaultValue) {
-  mps_kernel::OptionalField<kernel::ParamId::Scale, double> field(1.0);
+  kernel::OptionalField<kernel::ParamId::Scale, double> field(1.0);
   EXPECT_DOUBLE_EQ(field.value, 1.0);
   EXPECT_FALSE(field.present);
 }
@@ -150,7 +147,7 @@ TEST_F(MpsKernelParamSchemaTest, OptionalFieldExtractSuccess) {
   mps_kernel::MpsKernelArgs args;
   args.addParam(kernel::Param(kernel::ParamId::Epsilon, 0.001f));
 
-  mps_kernel::OptionalField<kernel::ParamId::Epsilon, float> field;
+  kernel::OptionalField<kernel::ParamId::Epsilon, float> field;
   field.extract(args);
 
   EXPECT_FLOAT_EQ(field.value, 0.001f);
@@ -161,7 +158,7 @@ TEST_F(MpsKernelParamSchemaTest, OptionalFieldExtractSuccess) {
 TEST_F(MpsKernelParamSchemaTest, OptionalFieldExtractMissingDoesNotThrow) {
   mps_kernel::MpsKernelArgs args;
 
-  mps_kernel::OptionalField<kernel::ParamId::Epsilon, float> field(1e-5f);
+  kernel::OptionalField<kernel::ParamId::Epsilon, float> field(1e-5f);
   field.extract(args);
 
   EXPECT_FLOAT_EQ(field.value, 1e-5f); // Keeps default value
@@ -170,7 +167,7 @@ TEST_F(MpsKernelParamSchemaTest, OptionalFieldExtractMissingDoesNotThrow) {
 }
 
 TEST_F(MpsKernelParamSchemaTest, OptionalFieldValueOr) {
-  mps_kernel::OptionalField<kernel::ParamId::Scale, double> field;
+  kernel::OptionalField<kernel::ParamId::Scale, double> field;
 
   // Not present
   EXPECT_DOUBLE_EQ(field.valueOr(2.0), 2.0);
@@ -186,10 +183,10 @@ TEST_F(MpsKernelParamSchemaTest, OptionalFieldValueOr) {
 // ============================================================
 
 // Simple schema definition
-struct SimpleSchema : mps_kernel::ParamSchema<SimpleSchema> {
-  mps_kernel::Field<kernel::ParamId::Alpha, float> alpha;
-  mps_kernel::Field<kernel::ParamId::Beta, float> beta;
-  mps_kernel::Field<kernel::ParamId::Dim, std::size_t> dim;
+struct SimpleSchema : kernel::ParamSchema<SimpleSchema> {
+  kernel::Field<kernel::ParamId::Alpha, float> alpha;
+  kernel::Field<kernel::ParamId::Beta, float> beta;
+  kernel::Field<kernel::ParamId::Dim, std::size_t> dim;
 
   ORTEAF_EXTRACT_FIELDS(alpha, beta, dim)
 };
@@ -234,10 +231,10 @@ TEST_F(MpsKernelParamSchemaTest, SchemaMissingParamThrows) {
 }
 
 // Schema with optional fields
-struct MixedSchema : mps_kernel::ParamSchema<MixedSchema> {
-  mps_kernel::Field<kernel::ParamId::Epsilon, float> epsilon;
-  mps_kernel::Field<kernel::ParamId::Axis, int> axis;
-  mps_kernel::OptionalField<kernel::ParamId::Scale, double> scale{1.0};
+struct MixedSchema : kernel::ParamSchema<MixedSchema> {
+  kernel::Field<kernel::ParamId::Epsilon, float> epsilon;
+  kernel::Field<kernel::ParamId::Axis, int> axis;
+  kernel::OptionalField<kernel::ParamId::Scale, double> scale{1.0};
 
   ORTEAF_EXTRACT_FIELDS(epsilon, axis, scale)
 };
@@ -270,11 +267,11 @@ TEST_F(MpsKernelParamSchemaTest, MixedSchemaOptionalMissing) {
 }
 
 // Schema with various types
-struct MultiTypeSchema : mps_kernel::ParamSchema<MultiTypeSchema> {
-  mps_kernel::Field<kernel::ParamId::Alpha, float> alpha;
-  mps_kernel::Field<kernel::ParamId::Scale, double> scale;
-  mps_kernel::Field<kernel::ParamId::Count, std::size_t> count;
-  mps_kernel::Field<kernel::ParamId::Axis, int> axis;
+struct MultiTypeSchema : kernel::ParamSchema<MultiTypeSchema> {
+  kernel::Field<kernel::ParamId::Alpha, float> alpha;
+  kernel::Field<kernel::ParamId::Scale, double> scale;
+  kernel::Field<kernel::ParamId::Count, std::size_t> count;
+  kernel::Field<kernel::ParamId::Axis, int> axis;
 
   ORTEAF_EXTRACT_FIELDS(alpha, scale, count, axis)
 };
@@ -299,12 +296,12 @@ TEST_F(MpsKernelParamSchemaTest, MultiTypeSchemaExtract) {
 // ============================================================
 
 // Simulate a real kernel parameter schema
-struct NormalizationKernelParams : mps_kernel::ParamSchema<NormalizationKernelParams> {
-  mps_kernel::Field<kernel::ParamId::Epsilon, float> epsilon;
-  mps_kernel::Field<kernel::ParamId::Axis, int> axis;
-  mps_kernel::Field<kernel::ParamId::Dim, std::size_t> dim;
-  mps_kernel::OptionalField<kernel::ParamId::Scale, double> scale{1.0};
-  mps_kernel::OptionalField<kernel::ParamId::Beta, float> beta{0.0f};
+struct NormalizationKernelParams : kernel::ParamSchema<NormalizationKernelParams> {
+  kernel::Field<kernel::ParamId::Epsilon, float> epsilon;
+  kernel::Field<kernel::ParamId::Axis, int> axis;
+  kernel::Field<kernel::ParamId::Dim, std::size_t> dim;
+  kernel::OptionalField<kernel::ParamId::Scale, double> scale{1.0};
+  kernel::OptionalField<kernel::ParamId::Beta, float> beta{0.0f};
 
   ORTEAF_EXTRACT_FIELDS(epsilon, axis, dim, scale, beta)
 };
