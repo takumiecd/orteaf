@@ -13,6 +13,7 @@
 #include "orteaf/internal/execution/mps/mps_handles.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_command_buffer.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_compute_command_encoder.h"
+#include "orteaf/internal/execution/mps/platform/wrapper/mps_size.h"
 #include "orteaf/internal/execution_context/mps/context.h"
 #include "orteaf/internal/kernel/param.h"
 #include "orteaf/internal/storage/mps/mps_storage.h"
@@ -231,6 +232,29 @@ struct MpsKernelBase {
       ::orteaf::internal::execution::mps::platform::wrapper::setBytes(
           encoder, &value, sizeof(T), index);
     });
+  }
+
+  /**
+   * @brief Dispatch threadgroups for compute kernel execution.
+   *
+   * Configures the grid dimensions for kernel execution.
+   * Both parameters specify 3D sizes (width, height, depth).
+   *
+   * @param encoder Compute command encoder to dispatch on
+   * @param threadgroups Number of threadgroups to dispatch
+   * @param threads_per_threadgroup Number of threads in each threadgroup
+   */
+  void dispatchThreadgroups(
+      ::orteaf::internal::execution::mps::platform::wrapper::MpsComputeCommandEncoder_t
+          encoder,
+      ::orteaf::internal::execution::mps::platform::wrapper::MpsSize_t threadgroups,
+      ::orteaf::internal::execution::mps::platform::wrapper::MpsSize_t
+          threads_per_threadgroup) const {
+    if (encoder == nullptr) {
+      return;
+    }
+    ::orteaf::internal::execution::mps::platform::wrapper::setThreadgroups(
+        encoder, threadgroups, threads_per_threadgroup);
   }
 
 #if ORTEAF_ENABLE_TESTING

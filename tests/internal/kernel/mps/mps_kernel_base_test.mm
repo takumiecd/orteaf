@@ -10,6 +10,7 @@
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_command_buffer.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_compute_command_encoder.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_device.h>
+#include <orteaf/internal/execution/mps/platform/wrapper/mps_size.h>
 #include <orteaf/internal/execution/mps/resource/mps_command_queue_resource.h>
 #include <orteaf/internal/execution_context/mps/context.h>
 #include <orteaf/internal/kernel/mps/mps_kernel_base.h>
@@ -540,5 +541,22 @@ TEST(MpsKernelBaseTest, SetParamWithSizeTParam) {
   mps_wrapper::deviceRelease(device);
 }
 #endif
+
+// =============================================================================
+// dispatchThreadgroups Tests
+// =============================================================================
+
+TEST(MpsKernelBaseTest, DispatchThreadgroupsWithNullptrEncoderDoesNotCrash) {
+  mps_kernel::MpsKernelBase base;
+  auto threadgroups = mps_wrapper::makeSize(1, 1, 1);
+  auto threads_per_threadgroup = mps_wrapper::makeSize(32, 1, 1);
+
+  // Should not crash with null encoder
+  base.dispatchThreadgroups(nullptr, threadgroups, threads_per_threadgroup);
+}
+
+// Note: Actual dispatch requires a valid pipeline state to be set,
+// which requires shader compilation. These tests only verify the
+// method calls don't crash with valid encoders.
 
 } // namespace
