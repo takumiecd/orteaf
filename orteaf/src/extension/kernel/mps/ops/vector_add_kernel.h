@@ -5,13 +5,12 @@
 #include <cstddef>
 #include <cstdint>
 
-#include <orteaf/internal/execution_context/mps/context.h>
 #include <orteaf/internal/kernel/kernel_param_schema.h>
 #include <orteaf/internal/kernel/kernel_storage_schema.h>
 #include <orteaf/internal/kernel/mps/mps_kernel_args.h>
 #include <orteaf/internal/kernel/mps/mps_kernel_base.h>
 #include <orteaf/internal/kernel/mps/mps_kernel_entry.h>
-#include <orteaf/internal/kernel/mps/mps_storage_binding.h>
+#include <orteaf/internal/kernel/mps/mps_kernel_session.h>
 #include <orteaf/internal/kernel/param_id.h>
 #include <orteaf/internal/kernel/storage_id.h>
 
@@ -59,66 +58,23 @@ struct VectorAddParams : kernel::ParamSchema<VectorAddParams> {
  */
 inline void vectorAddExecute(mps_kernel::MpsKernelBase &base,
                              mps_kernel::MpsKernelArgs &args) {
-  // Extract storages and params from args using schemas
+  // Extract storages and params
   auto storages = VectorAddStorages::extract(args);
   auto params = VectorAddParams::extract(args);
 
-  // Create command buffer and encoder
-  auto command_buffer = base.createCommandBuffer(args.context());
-  if (!command_buffer) {
+  // Begin session (auto cleanup on scope exit)
+  auto session = mps_kernel::MpsKernelSession::begin(base, args, 0);
+  if (!session)
     return;
-  }
 
-  auto encoder = base.createComputeCommandEncoder(command_buffer);
-  if (!encoder) {
-    return;
-  }
-
-  // Wait for storage dependencies (RAW hazards)
-  base.waitAllStorageDependencies<mps_kernel::MpsStorageBinding>(
-      encoder, storages.a, storages.b, storages.c);
-
-  // Get pipeline state and set it on encoder
-  auto *pipeline = base.getPipeline(args.context().device.payloadHandle(), 0);
-  if (!pipeline) {
-    base.endEncoding(encoder);
-    return;
-  }
-  base.setPipelineState(encoder, *pipeline);
-
-  // Bind buffers with explicit indices matching Metal shader [[buffer(N)]]
-  // buffer(0) = a, buffer(1) = b, buffer(2) = c
-  base.bindStoragesAt(encoder, mps_kernel::MpsKernelBase::Indices<0, 1, 2>{},
-                      storages.a, storages.b, storages.c);
-
-  // Bind parameters with explicit index
-  // buffer(3) = num_elements
-  base.bindParamsAt(encoder, mps_kernel::MpsKernelBase::Indices<3>{},
-                    params.num_elements);
-
-  // Calculate thread dimensions
-  const std::size_t num_elements = params.num_elements;
-  constexpr std::size_t kThreadsPerThreadgroup = 256;
-
-  auto threads_per_grid = mps_kernel::MpsKernelBase::makeGridSize(num_elements);
-  auto threads_per_threadgroup =
-      mps_kernel::MpsKernelBase::makeThreadsPerThreadgroup(
-          kThreadsPerThreadgroup);
-
-  // Dispatch threads
-  base.dispatchThreads(encoder, threads_per_grid, threads_per_threadgroup);
-
-  // Update storage tokens for WAW/WAR hazards
-  // Note: If fence acquisition fails, we still end encoding and commit.
-  // The storage tokens won't be updated but kernel execution continues.
-  [[maybe_unused]] bool fence_ok =
-      base.updateAllStorageTokens<mps_kernel::MpsStorageBinding>(
-          args.context(), command_buffer, encoder, storages.a, storages.b,
-          storages.c);
-
-  // End encoding and commit
-  base.endEncoding(encoder);
-  base.commit(command_buffer);
+  // Wait for input dependencies, bind, dispatch, update tokens
+  session->waitDependencies(storages.a, storages.b, storages.c);
+  session->bindStorages<0, 1, 2>(storages.a, storages.b, storages.c);
+  session->bindParams<3>(params.num_elements);
+  session->dispatch1D(params.num_elements);
+  [[maybe_unused]] bool ok =
+      session->updateTokens(storages.a, storages.b, storages.c);
+  // RAII: auto endEncoding + commit
 }
 
 /**
@@ -132,7 +88,6 @@ inline mps_kernel::MpsKernelEntry createVectorAddKernel() {
   mps_kernel::MpsKernelEntry entry;
 
   // Register the Metal library and function
-  // Library name should match the embedded library name
   entry.base.addKey("vector_add", "orteaf_vector_add");
 
   // Set the execute function
