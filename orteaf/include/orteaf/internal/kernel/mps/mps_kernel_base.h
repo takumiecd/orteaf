@@ -11,6 +11,7 @@
 #include "orteaf/internal/execution/mps/manager/mps_compute_pipeline_state_manager.h"
 #include "orteaf/internal/execution/mps/manager/mps_library_manager.h"
 #include "orteaf/internal/execution/mps/mps_handles.h"
+#include "orteaf/internal/execution_context/mps/context.h"
 
 namespace orteaf::internal::kernel::mps {
 
@@ -53,31 +54,15 @@ struct MpsKernelBase {
   }
 
   /**
-   * @brief Configure all pipeline leases for the given device.
+   * @brief Configure all pipeline leases for the given context's device.
    *
-   * Uses RuntimeApi to acquire pipeline leases for each kernel function.
+   * Acquires pipeline leases from the device resource's library and pipeline managers.
    * If already configured for this device, clears and re-configures.
    *
-   * @tparam RuntimeApi API providing acquirePipeline(device, lib, func)
+   * @param context Execution context containing device lease
    */
-  template <typename RuntimeApi>
   void configure(
-      ::orteaf::internal::execution::mps::MpsDeviceHandle device) {
-    auto entry_idx = findDeviceIndex(device);
-    if (entry_idx == kInvalidIndex) {
-      device_pipelines_.pushBack(DevicePipelines{device});
-      entry_idx = device_pipelines_.size() - 1;
-    }
-    auto &entry = device_pipelines_[entry_idx];
-    entry.pipelines.clear();
-    entry.pipelines.reserve(keys_.size());
-    for (std::size_t i = 0; i < keys_.size(); ++i) {
-      const auto &key = keys_[i];
-      entry.pipelines.pushBack(
-          RuntimeApi::acquirePipeline(device, key.first, key.second));
-    }
-    entry.configured = true;
-  }
+      ::orteaf::internal::execution_context::mps::Context &context);
 
   /**
    * @brief Get a mutable pipeline lease for the specified device and kernel index.
