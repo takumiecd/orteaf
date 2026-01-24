@@ -13,6 +13,8 @@
 #include <orteaf/internal/execution/mps/resource/mps_command_queue_resource.h>
 #include <orteaf/internal/execution_context/mps/context.h>
 #include <orteaf/internal/kernel/mps/mps_kernel_base.h>
+#include <orteaf/internal/kernel/param.h>
+#include <orteaf/internal/kernel/param_id.h>
 #include <orteaf/internal/storage/mps/mps_storage.h>
 
 namespace mps_kernel = orteaf::internal::kernel::mps;
@@ -386,6 +388,150 @@ TEST(MpsKernelBaseTest, SetBytesWithValidEncoder) {
   // Test with actual data
   int data = 42;
   base.setBytes(encoder, &data, sizeof(data), 0);
+
+  // Cleanup
+  mps_wrapper::destroyComputeCommandEncoder(encoder);
+  mps_wrapper::destroyCommandBuffer(cmd_buffer);
+  mps_wrapper::destroyCommandQueue(queue);
+  mps_wrapper::deviceRelease(device);
+}
+#endif
+
+// =============================================================================
+// setParam Tests
+// =============================================================================
+
+TEST(MpsKernelBaseTest, SetParamWithNullptrEncoderDoesNotCrash) {
+  mps_kernel::MpsKernelBase base;
+  auto param = ::orteaf::internal::kernel::Param(
+      ::orteaf::internal::kernel::ParamId{0}, 42);
+
+  // Should not crash with null encoder
+  base.setParam(nullptr, param, 0);
+}
+
+#if ORTEAF_ENABLE_MPS
+TEST(MpsKernelBaseTest, SetParamWithIntParam) {
+  mps_kernel::MpsKernelBase base;
+
+  // Create a real device
+  auto device = mps_wrapper::getDevice();
+  if (device == nullptr) {
+    GTEST_SKIP() << "No Metal devices available";
+  }
+
+  // Create command queue and buffer
+  auto queue = mps_wrapper::createCommandQueue(device);
+  if (queue == nullptr) {
+    mps_wrapper::deviceRelease(device);
+    GTEST_SKIP() << "Failed to create command queue";
+  }
+
+  auto cmd_buffer = mps_wrapper::createCommandBuffer(queue);
+  if (cmd_buffer == nullptr) {
+    mps_wrapper::destroyCommandQueue(queue);
+    mps_wrapper::deviceRelease(device);
+    GTEST_SKIP() << "Failed to create command buffer";
+  }
+
+  auto encoder = mps_wrapper::createComputeCommandEncoder(cmd_buffer);
+  if (encoder == nullptr) {
+    mps_wrapper::destroyCommandBuffer(cmd_buffer);
+    mps_wrapper::destroyCommandQueue(queue);
+    mps_wrapper::deviceRelease(device);
+    GTEST_SKIP() << "Failed to create encoder";
+  }
+
+  // Test with int param
+  auto param = ::orteaf::internal::kernel::Param(
+      ::orteaf::internal::kernel::ParamId{0}, 42);
+  base.setParam(encoder, param, 0);
+
+  // Cleanup
+  mps_wrapper::destroyComputeCommandEncoder(encoder);
+  mps_wrapper::destroyCommandBuffer(cmd_buffer);
+  mps_wrapper::destroyCommandQueue(queue);
+  mps_wrapper::deviceRelease(device);
+}
+
+TEST(MpsKernelBaseTest, SetParamWithFloatParam) {
+  mps_kernel::MpsKernelBase base;
+
+  // Create a real device
+  auto device = mps_wrapper::getDevice();
+  if (device == nullptr) {
+    GTEST_SKIP() << "No Metal devices available";
+  }
+
+  // Create command queue and buffer
+  auto queue = mps_wrapper::createCommandQueue(device);
+  if (queue == nullptr) {
+    mps_wrapper::deviceRelease(device);
+    GTEST_SKIP() << "Failed to create command queue";
+  }
+
+  auto cmd_buffer = mps_wrapper::createCommandBuffer(queue);
+  if (cmd_buffer == nullptr) {
+    mps_wrapper::destroyCommandQueue(queue);
+    mps_wrapper::deviceRelease(device);
+    GTEST_SKIP() << "Failed to create command buffer";
+  }
+
+  auto encoder = mps_wrapper::createComputeCommandEncoder(cmd_buffer);
+  if (encoder == nullptr) {
+    mps_wrapper::destroyCommandBuffer(cmd_buffer);
+    mps_wrapper::destroyCommandQueue(queue);
+    mps_wrapper::deviceRelease(device);
+    GTEST_SKIP() << "Failed to create encoder";
+  }
+
+  // Test with float param
+  auto param = ::orteaf::internal::kernel::Param(
+      ::orteaf::internal::kernel::ParamId{1}, 3.14f);
+  base.setParam(encoder, param, 0);
+
+  // Cleanup
+  mps_wrapper::destroyComputeCommandEncoder(encoder);
+  mps_wrapper::destroyCommandBuffer(cmd_buffer);
+  mps_wrapper::destroyCommandQueue(queue);
+  mps_wrapper::deviceRelease(device);
+}
+
+TEST(MpsKernelBaseTest, SetParamWithSizeTParam) {
+  mps_kernel::MpsKernelBase base;
+
+  // Create a real device
+  auto device = mps_wrapper::getDevice();
+  if (device == nullptr) {
+    GTEST_SKIP() << "No Metal devices available";
+  }
+
+  // Create command queue and buffer
+  auto queue = mps_wrapper::createCommandQueue(device);
+  if (queue == nullptr) {
+    mps_wrapper::deviceRelease(device);
+    GTEST_SKIP() << "Failed to create command queue";
+  }
+
+  auto cmd_buffer = mps_wrapper::createCommandBuffer(queue);
+  if (cmd_buffer == nullptr) {
+    mps_wrapper::destroyCommandQueue(queue);
+    mps_wrapper::deviceRelease(device);
+    GTEST_SKIP() << "Failed to create command buffer";
+  }
+
+  auto encoder = mps_wrapper::createComputeCommandEncoder(cmd_buffer);
+  if (encoder == nullptr) {
+    mps_wrapper::destroyCommandBuffer(cmd_buffer);
+    mps_wrapper::destroyCommandQueue(queue);
+    mps_wrapper::deviceRelease(device);
+    GTEST_SKIP() << "Failed to create encoder";
+  }
+
+  // Test with size_t param
+  auto param = ::orteaf::internal::kernel::Param(
+      ::orteaf::internal::kernel::ParamId{2}, std::size_t{1024});
+  base.setParam(encoder, param, 0);
 
   // Cleanup
   mps_wrapper::destroyComputeCommandEncoder(encoder);

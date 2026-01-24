@@ -14,6 +14,7 @@
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_command_buffer.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_compute_command_encoder.h"
 #include "orteaf/internal/execution_context/mps/context.h"
+#include "orteaf/internal/kernel/param.h"
 #include "orteaf/internal/storage/mps/mps_storage.h"
 
 namespace orteaf::internal::kernel::mps {
@@ -204,6 +205,32 @@ struct MpsKernelBase {
     }
     ::orteaf::internal::execution::mps::platform::wrapper::setBytes(
         encoder, bytes, length, index);
+  }
+
+  /**
+   * @brief Set a parameter on the compute command encoder.
+   *
+   * Binds parameter data to the encoder at the specified index.
+   * Useful for passing small constant data directly without creating a buffer.
+   * The parameter value is automatically converted to bytes based on its type.
+   *
+   * @param encoder Compute command encoder to bind the bytes to
+   * @param param Parameter containing the data to bind
+   * @param index Binding index for the data
+   */
+  void setParam(
+      ::orteaf::internal::execution::mps::platform::wrapper::MpsComputeCommandEncoder_t
+          encoder,
+      const ::orteaf::internal::kernel::Param &param,
+      std::size_t index) const {
+    if (encoder == nullptr) {
+      return;
+    }
+    param.visit([encoder, index](const auto &value) {
+      using T = std::decay_t<decltype(value)>;
+      ::orteaf::internal::execution::mps::platform::wrapper::setBytes(
+          encoder, &value, sizeof(T), index);
+    });
   }
 
 #if ORTEAF_ENABLE_TESTING
