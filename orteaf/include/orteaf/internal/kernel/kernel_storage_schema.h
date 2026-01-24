@@ -24,8 +24,7 @@ namespace orteaf::internal::kernel {
  * auto& lease = input.lease();
  * @endcode
  */
-template <StorageId ID>
-struct StorageField {
+template <StorageId ID> struct StorageField {
   static constexpr StorageId kId = ID;
 
   /**
@@ -38,8 +37,7 @@ struct StorageField {
    *
    * @throws std::runtime_error if binding not found
    */
-  template <typename StorageBinding>
-  const StorageBinding &binding() const {
+  template <typename StorageBinding> const StorageBinding &binding() const {
     if (!binding_) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
@@ -51,11 +49,11 @@ struct StorageField {
   /**
    * @brief Get the storage lease.
    *
-   * @tparam StorageBinding The storage binding type (MpsStorageBinding, CpuStorageBinding)
+   * @tparam StorageBinding The storage binding type (MpsStorageBinding,
+   * CpuStorageBinding)
    * @throws std::runtime_error if binding not found
    */
-  template <typename StorageBinding>
-  auto &lease() const {
+  template <typename StorageBinding> auto &lease() const {
     return binding<StorageBinding>().lease;
   }
 
@@ -65,21 +63,23 @@ struct StorageField {
    * @tparam StorageBinding The storage binding type
    * @throws std::runtime_error if binding not found
    */
-  template <typename StorageBinding>
-  auto &lease() {
+  template <typename StorageBinding> auto &lease() {
     if (!binding_) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
           "Required storage binding not found");
     }
-    return const_cast<StorageBinding *>(static_cast<const StorageBinding *>(binding_))->lease;
+    return const_cast<StorageBinding *>(
+               static_cast<const StorageBinding *>(binding_))
+        ->lease;
   }
 
   /**
    * @brief Get the access pattern for this storage.
    */
   static constexpr ::orteaf::internal::kernel::Access access() {
-    return ::orteaf::generated::storage_id_tables::StorageTypeInfo<kId>::kAccess;
+    return ::orteaf::generated::storage_id_tables::StorageTypeInfo<
+        kId>::kAccess;
   }
 
   /**
@@ -102,13 +102,14 @@ struct StorageField {
   /**
    * @brief Extract storage binding from kernel arguments.
    *
-   * @tparam KernelArgs The kernel arguments type (CpuKernelArgs, MpsKernelArgs, etc.)
+   * @tparam KernelArgs The kernel arguments type (CpuKernelArgs, MpsKernelArgs,
+   * etc.)
    * @param args Kernel arguments containing storage bindings
    * @throws std::runtime_error if storage not found
    */
-  template <typename KernelArgs>
-  void extract(const KernelArgs &args) {
-    using StorageBinding = typename KernelArgs::StorageListType::Storage::value_type;
+  template <typename KernelArgs> void extract(const KernelArgs &args) {
+    using StorageBinding =
+        typename KernelArgs::StorageListType::Storage::value_type;
     extract<StorageBinding>(args.storageList());
   }
 
@@ -123,8 +124,7 @@ private:
  *
  * @tparam ID Storage identifier
  */
-template <StorageId ID>
-struct OptionalStorageField {
+template <StorageId ID> struct OptionalStorageField {
   static constexpr StorageId kId = ID;
 
   /**
@@ -144,7 +144,8 @@ struct OptionalStorageField {
    * @return Pointer to binding, or nullptr if not present
    */
   template <typename StorageBinding>
-  const StorageBinding *bindingOr(const StorageBinding *defaultValue = nullptr) const {
+  const StorageBinding *
+  bindingOr(const StorageBinding *defaultValue = nullptr) const {
     if (!binding_) {
       return defaultValue;
     }
@@ -160,7 +161,8 @@ struct OptionalStorageField {
   template <typename StorageBinding>
   auto *leaseOr(decltype(nullptr) = nullptr) const {
     if (!binding_) {
-      return static_cast<decltype(&static_cast<const StorageBinding *>(nullptr)->lease)>(nullptr);
+      return static_cast<decltype(&static_cast<const StorageBinding *>(nullptr)
+                                       ->lease)>(nullptr);
     }
     return &static_cast<const StorageBinding *>(binding_)->lease;
   }
@@ -169,7 +171,8 @@ struct OptionalStorageField {
    * @brief Get the access pattern for this storage.
    */
   static constexpr ::orteaf::internal::kernel::Access access() {
-    return ::orteaf::generated::storage_id_tables::StorageTypeInfo<kId>::kAccess;
+    return ::orteaf::generated::storage_id_tables::StorageTypeInfo<
+        kId>::kAccess;
   }
 
   /**
@@ -193,9 +196,9 @@ struct OptionalStorageField {
    * @tparam KernelArgs The kernel arguments type
    * @param args Kernel arguments containing storage bindings
    */
-  template <typename KernelArgs>
-  void extract(const KernelArgs &args) {
-    using StorageBinding = typename KernelArgs::StorageListType::Storage::value_type;
+  template <typename KernelArgs> void extract(const KernelArgs &args) {
+    using StorageBinding =
+        typename KernelArgs::StorageListType::Storage::value_type;
     extract<StorageBinding>(args.storageList());
   }
 
@@ -223,8 +226,7 @@ private:
  * auto storages = MyStorages::extract(args);
  * @endcode
  */
-template <typename Derived>
-struct StorageSchema {
+template <typename Derived> struct StorageSchema {
   /**
    * @brief Extract all storage fields from kernel arguments.
    *
@@ -250,24 +252,17 @@ void extractStorages(const KernelArgs &args, Fields &...fields) {
   (fields.extract(args), ...);
 }
 
-// Helper for binding all storages
-template <typename Base, typename Encoder, typename... Fields>
-void bindAllStorages(const Base &base, Encoder encoder, std::size_t start_index, Fields &...fields) {
-  std::size_t idx = start_index;
-  (base.setBuffer(encoder, fields, idx++), ...);
-}
-
 } // namespace detail
 
 } // namespace orteaf::internal::kernel
 
 /**
- * @brief Macro to generate extractAllStorages() and bindAll().
+ * @brief Macro to generate extractAllStorages().
  *
- * Automatically generates the extraction logic for all listed storage fields,
- * and a helper method for binding all storages to the encoder.
- * - extractAllStorages: Extract all fields from kernel arguments
- * - bindAll: Bind all storages to encoder at sequential indices
+ * Automatically generates the extraction logic for all listed storage fields.
+ *
+ * Note: For binding storages to encoder, use MpsKernelBase::bindStoragesAt()
+ * with explicit indices to ensure type safety with Metal shader bindings.
  *
  * Usage:
  * @code
@@ -280,15 +275,12 @@ void bindAllStorages(const Base &base, Encoder encoder, std::size_t start_index,
  * };
  *
  * auto storages = MyStorages::extract(args);
- * storages.bindAll(base, encoder, 0);  // Binds input@0, output@1, workspace@2
+ * base.bindStoragesAt(encoder, base.Indices<0, 1, 2>{},
+ *                     storages.input, storages.output, storages.workspace);
  * @endcode
  */
 #define ORTEAF_EXTRACT_STORAGES(...)                                           \
   template <typename KernelArgs>                                               \
   void extractAllStorages(const KernelArgs &args) {                            \
-    ::orteaf::internal::kernel::detail::extractStorages(args, __VA_ARGS__);   \
-  }                                                                             \
-  template <typename Base, typename Encoder>                                   \
-  void bindAll(const Base &base, Encoder encoder, std::size_t start_index = 0) const { \
-    ::orteaf::internal::kernel::detail::bindAllStorages(base, encoder, start_index, __VA_ARGS__); \
+    ::orteaf::internal::kernel::detail::extractStorages(args, __VA_ARGS__);    \
   }

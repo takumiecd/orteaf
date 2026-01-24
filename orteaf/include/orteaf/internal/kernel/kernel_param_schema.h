@@ -2,8 +2,8 @@
 
 #include <orteaf/internal/base/small_vector.h>
 #include <orteaf/internal/diagnostics/error/error.h>
-#include <orteaf/internal/kernel/param_list.h>
 #include <orteaf/internal/kernel/param_id.h>
+#include <orteaf/internal/kernel/param_list.h>
 
 #include <utility>
 
@@ -32,8 +32,7 @@ inline const Param *findParamInList(const ParamList &params, ParamId id) {
  * float value = alpha;  // Implicit conversion
  * @endcode
  */
-template <ParamId ID, typename T>
-struct Field {
+template <ParamId ID, typename T> struct Field {
   static constexpr ParamId kId = ID;
   using Type = T;
   T value{};
@@ -83,12 +82,12 @@ struct Field {
   /**
    * @brief Extract value from kernel arguments.
    *
-   * @tparam KernelArgs The kernel arguments type (CpuKernelArgs, MpsKernelArgs, etc.)
+   * @tparam KernelArgs The kernel arguments type (CpuKernelArgs, MpsKernelArgs,
+   * etc.)
    * @param args Kernel arguments containing parameters
    * @throws std::runtime_error if parameter not found or type mismatch
    */
-  template <typename KernelArgs>
-  void extract(const KernelArgs &args) {
+  template <typename KernelArgs> void extract(const KernelArgs &args) {
     extract(args.paramList());
   }
 };
@@ -101,8 +100,7 @@ struct Field {
  * @tparam ID Parameter identifier
  * @tparam T Parameter value type
  */
-template <ParamId ID, typename T>
-struct OptionalField {
+template <ParamId ID, typename T> struct OptionalField {
   static constexpr ParamId kId = ID;
   using Type = T;
   T value{};
@@ -162,11 +160,11 @@ struct OptionalField {
    *
    * Sets present flag if parameter found and type matches.
    *
-   * @tparam KernelArgs The kernel arguments type (CpuKernelArgs, MpsKernelArgs, etc.)
+   * @tparam KernelArgs The kernel arguments type (CpuKernelArgs, MpsKernelArgs,
+   * etc.)
    * @param args Kernel arguments containing parameters
    */
-  template <typename KernelArgs>
-  void extract(const KernelArgs &args) {
+  template <typename KernelArgs> void extract(const KernelArgs &args) {
     extract(args.paramList());
   }
 };
@@ -192,8 +190,7 @@ struct OptionalField {
  * auto params = MyParams::extract(args);
  * @endcode
  */
-template <typename Derived>
-struct ParamSchema {
+template <typename Derived> struct ParamSchema {
   /**
    * @brief Extract all fields from kernel arguments.
    *
@@ -225,23 +222,18 @@ void extractFields(const KernelArgs &args, Fields &...fields) {
   extractFieldsFromList(args.paramList(), fields...);
 }
 
-// Helper for binding all parameters
-template <typename Base, typename Encoder, typename... Fields>
-void bindAllParams(const Base &base, Encoder encoder, std::size_t start_index, Fields &...fields) {
-  std::size_t idx = start_index;
-  (base.setParam(encoder, fields, idx++), ...);
-}
 } // namespace detail
 
 } // namespace orteaf::internal::kernel
 
 /**
- * @brief Macro to generate extractAllFields() and bindAll() implementations.
+ * @brief Macro to generate extractAllFields() implementation.
  *
- * Automatically generates the extraction logic for all listed fields,
- * and a bindAll() method to bind all parameters to an encoder at once.
+ * Automatically generates the extraction logic for all listed fields.
  * Each field's extract() method is called in sequence during extraction.
- * Fields are bound to sequential indices starting from start_index.
+ *
+ * Note: For binding parameters to encoder, use MpsKernelBase::bindParamsAt()
+ * with explicit indices to ensure type safety with Metal shader bindings.
  *
  * Usage:
  * @code
@@ -254,15 +246,12 @@ void bindAllParams(const Base &base, Encoder encoder, std::size_t start_index, F
  * };
  *
  * auto params = MyParams::extract(args);
- * params.bindAll(base, encoder, 0);  // Binds alpha@0, beta@1, dim@2
+ * base.bindParamsAt(encoder, base.Indices<0, 1, 2>{},
+ *                   params.alpha, params.beta, params.dim);
  * @endcode
  */
 #define ORTEAF_EXTRACT_FIELDS(...)                                             \
   template <typename KernelArgs>                                               \
   void extractAllFields(const KernelArgs &args) {                              \
-    ::orteaf::internal::kernel::detail::extractFields(args, __VA_ARGS__);     \
-  }                                                                             \
-  template <typename Base, typename Encoder>                                   \
-  void bindAll(const Base &base, Encoder encoder, std::size_t start_index = 0) const { \
-    ::orteaf::internal::kernel::detail::bindAllParams(base, encoder, start_index, __VA_ARGS__); \
+    ::orteaf::internal::kernel::detail::extractFields(args, __VA_ARGS__);      \
   }
