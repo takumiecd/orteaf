@@ -280,6 +280,127 @@ TEST(MpsKernelBaseTest, CreateComputeCommandEncoderSucceeds) {
 #endif
 
 // =============================================================================
+// endEncoding Tests
+// =============================================================================
+
+TEST(MpsKernelBaseTest, EndEncodingWithNullptrEncoderDoesNotCrash) {
+  mps_kernel::MpsKernelBase base;
+
+  // Should not crash with null encoder
+  base.endEncoding(nullptr);
+}
+
+#if ORTEAF_ENABLE_MPS
+TEST(MpsKernelBaseTest, EndEncodingWithValidEncoder) {
+  mps_kernel::MpsKernelBase base;
+
+  // Create a real device
+  auto device = mps_wrapper::getDevice();
+  if (device == nullptr) {
+    GTEST_SKIP() << "No Metal devices available";
+  }
+
+  // Create command queue and buffer
+  auto queue = mps_wrapper::createCommandQueue(device);
+  if (queue == nullptr) {
+    mps_wrapper::deviceRelease(device);
+    GTEST_SKIP() << "Failed to create command queue";
+  }
+
+  auto cmd_buffer = mps_wrapper::createCommandBuffer(queue);
+  if (cmd_buffer == nullptr) {
+    mps_wrapper::destroyCommandQueue(queue);
+    mps_wrapper::deviceRelease(device);
+    GTEST_SKIP() << "Failed to create command buffer";
+  }
+
+  auto encoder = mps_wrapper::createComputeCommandEncoder(cmd_buffer);
+  if (encoder == nullptr) {
+    mps_wrapper::destroyCommandBuffer(cmd_buffer);
+    mps_wrapper::destroyCommandQueue(queue);
+    mps_wrapper::deviceRelease(device);
+    GTEST_SKIP() << "Failed to create encoder";
+  }
+
+  // End encoding should succeed
+  base.endEncoding(encoder);
+
+  // Cleanup
+  mps_wrapper::destroyComputeCommandEncoder(encoder);
+  mps_wrapper::destroyCommandBuffer(cmd_buffer);
+  mps_wrapper::destroyCommandQueue(queue);
+  mps_wrapper::deviceRelease(device);
+}
+#endif
+
+// =============================================================================
+// commit Tests
+// =============================================================================
+
+TEST(MpsKernelBaseTest, CommitWithNullptrBufferDoesNotCrash) {
+  mps_kernel::MpsKernelBase base;
+
+  // Should not crash with null buffer
+  base.commit(nullptr);
+}
+
+// =============================================================================
+// waitUntilCompleted Tests
+// =============================================================================
+
+TEST(MpsKernelBaseTest, WaitUntilCompletedWithNullptrBufferDoesNotCrash) {
+  mps_kernel::MpsKernelBase base;
+
+  // Should not crash with null buffer
+  base.waitUntilCompleted(nullptr);
+}
+
+#if ORTEAF_ENABLE_MPS
+TEST(MpsKernelBaseTest, CommitAndWaitWithValidBuffer) {
+  mps_kernel::MpsKernelBase base;
+
+  // Create a real device
+  auto device = mps_wrapper::getDevice();
+  if (device == nullptr) {
+    GTEST_SKIP() << "No Metal devices available";
+  }
+
+  // Create command queue and buffer
+  auto queue = mps_wrapper::createCommandQueue(device);
+  if (queue == nullptr) {
+    mps_wrapper::deviceRelease(device);
+    GTEST_SKIP() << "Failed to create command queue";
+  }
+
+  auto cmd_buffer = mps_wrapper::createCommandBuffer(queue);
+  if (cmd_buffer == nullptr) {
+    mps_wrapper::destroyCommandQueue(queue);
+    mps_wrapper::deviceRelease(device);
+    GTEST_SKIP() << "Failed to create command buffer";
+  }
+
+  auto encoder = mps_wrapper::createComputeCommandEncoder(cmd_buffer);
+  if (encoder == nullptr) {
+    mps_wrapper::destroyCommandBuffer(cmd_buffer);
+    mps_wrapper::destroyCommandQueue(queue);
+    mps_wrapper::deviceRelease(device);
+    GTEST_SKIP() << "Failed to create encoder";
+  }
+
+  // End encoding, commit, and wait
+  base.endEncoding(encoder);
+  base.commit(cmd_buffer);
+  base.waitUntilCompleted(cmd_buffer);
+
+  // Cleanup
+  mps_wrapper::destroyComputeCommandEncoder(encoder);
+  mps_wrapper::destroyCommandBuffer(cmd_buffer);
+  mps_wrapper::destroyCommandQueue(queue);
+  mps_wrapper::deviceRelease(device);
+}
+#endif
+
+// =============================================================================
 // setBuffer Tests
 // =============================================================================
 

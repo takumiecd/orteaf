@@ -157,6 +157,59 @@ struct MpsKernelBase {
   }
 
   /**
+   * @brief End encoding on a compute command encoder.
+   *
+   * Finalizes the encoder and makes it ready for execution.
+   * Must be called before committing the command buffer.
+   *
+   * @param encoder Compute command encoder to end encoding on
+   */
+  void endEncoding(
+      ::orteaf::internal::execution::mps::platform::wrapper::MpsComputeCommandEncoder_t
+          encoder) const {
+    if (encoder == nullptr) {
+      return;
+    }
+    ::orteaf::internal::execution::mps::platform::wrapper::endEncoding(encoder);
+  }
+
+  /**
+   * @brief Commit a command buffer for execution.
+   *
+   * Submits the command buffer to the GPU for execution.
+   * The command buffer will be executed asynchronously.
+   *
+   * @param command_buffer Command buffer to commit
+   */
+  void commit(
+      ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandBuffer_t
+          command_buffer) const {
+    if (command_buffer == nullptr) {
+      return;
+    }
+    ::orteaf::internal::execution::mps::platform::wrapper::commit(
+        command_buffer);
+  }
+
+  /**
+   * @brief Wait until a command buffer has completed execution.
+   *
+   * Blocks the current thread until the GPU has finished executing
+   * the command buffer.
+   *
+   * @param command_buffer Command buffer to wait for
+   */
+  void waitUntilCompleted(
+      ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandBuffer_t
+          command_buffer) const {
+    if (command_buffer == nullptr) {
+      return;
+    }
+    ::orteaf::internal::execution::mps::platform::wrapper::waitUntilCompleted(
+        command_buffer);
+  }
+
+  /**
    * @brief Set a buffer on the compute command encoder.
    *
    * Retrieves the buffer from the storage and binds it to the encoder
