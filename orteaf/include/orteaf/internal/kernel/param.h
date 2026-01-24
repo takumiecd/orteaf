@@ -46,6 +46,11 @@ public:
   Param(ParamId id, std::size_t value) noexcept : id_(id), value_(value) {}
 
   /**
+   * @brief Construct a parameter with a uint32_t value.
+   */
+  Param(ParamId id, std::uint32_t value) noexcept : id_(id), value_(value) {}
+
+  /**
    * @brief Construct a parameter with a void* value.
    */
   Param(ParamId id, void *value) noexcept : id_(id), value_(value) {}

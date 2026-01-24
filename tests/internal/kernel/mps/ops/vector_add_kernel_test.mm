@@ -125,13 +125,25 @@ TEST_F(VectorAddKernelIntegrationTest, ExecuteFunctionSignatureIsCorrect) {
 // =============================================================================
 
 TEST(VectorAddKernelTest, ExecuteFunctionThrowsWithoutConfiguredRuntime) {
-  // DISCOVERED ISSUE: MpsKernelArgs default constructor requires MPS runtime
-  // to be configured. This is not obvious from the API and makes unit testing
-  // difficult without full runtime setup.
-  //
-  // This test documents this behavior: constructing MpsKernelArgs throws
-  // when MPS device manager is not configured.
+  // Default constructor requires MPS runtime to be configured
   EXPECT_THROW({ mps_kernel::MpsKernelArgs args; }, std::runtime_error);
+}
+
+TEST(VectorAddKernelTest, NoInitAllowsConstructionWithoutRuntime) {
+  // NoInit allows construction without MPS runtime (for testing)
+  mps_kernel::MpsKernelArgs args{mps_kernel::MpsKernelArgs::NoInit{}};
+
+  // Context has null leases, but construction succeeds
+  EXPECT_FALSE(args.context().device);
+  EXPECT_FALSE(args.context().command_queue);
+}
+
+TEST(VectorAddKernelTest, ExecuteFunctionThrowsWhenStoragesNotBound) {
+  auto entry = vector_add::createVectorAddKernel();
+  mps_kernel::MpsKernelArgs args{mps_kernel::MpsKernelArgs::NoInit{}};
+
+  // Execute throws because required storage bindings are not set
+  EXPECT_THROW({ entry.execute(entry.base, args); }, std::runtime_error);
 }
 
 } // namespace

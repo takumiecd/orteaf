@@ -43,7 +43,7 @@ struct VectorAddStorages : kernel::StorageSchema<VectorAddStorages> {
  * - NumElements: Number of elements to process
  */
 struct VectorAddParams : kernel::ParamSchema<VectorAddParams> {
-  kernel::Field<kernel::ParamId::NumElements, std::size_t> num_elements;
+  kernel::Field<kernel::ParamId::NumElements, std::uint32_t> num_elements;
 
   ORTEAF_EXTRACT_FIELDS(num_elements)
 };

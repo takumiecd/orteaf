@@ -52,6 +52,24 @@ public:
   explicit MpsKernelArgs(Context context);
 
   /**
+   * @brief Tag type for no-init construction.
+   *
+   * Use this tag to construct MpsKernelArgs without initializing the context.
+   * Primarily intended for testing purposes where full runtime setup is not
+   * needed.
+   */
+  struct NoInit {};
+
+  /**
+   * @brief Construct without initializing context (for testing).
+   *
+   * Creates an MpsKernelArgs with an empty context. The context will have
+   * null device and command_queue leases. Useful for unit testing kernel
+   * schemas without requiring full MPS runtime configuration.
+   */
+  explicit MpsKernelArgs(NoInit) noexcept {}
+
+  /**
    * @brief Get the execution context.
    */
   const Context &context() const { return context_; }
@@ -84,9 +102,7 @@ public:
   /**
    * @brief Find a storage binding by ID (mutable version).
    */
-  MpsStorageBinding *findStorage(StorageId id) {
-    return storages_.find(id);
-  }
+  MpsStorageBinding *findStorage(StorageId id) { return storages_.find(id); }
 
   /**
    * @brief Get the list of all storage bindings.
