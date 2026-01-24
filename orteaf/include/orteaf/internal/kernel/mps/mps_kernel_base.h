@@ -328,8 +328,11 @@ struct MpsKernelBase {
       return;
     }
     const auto &binding = field.template binding<MpsStorageBinding>();
-    const auto &storage = binding.lease;
-    setBuffer(encoder, storage, index);
+    const auto &storage_lease = binding.lease;
+    auto *storage_ptr = storage_lease.operator->();
+    if (storage_ptr) {
+      setBuffer(encoder, *storage_ptr, index);
+    }
   }
 
   /**
@@ -706,8 +709,12 @@ private:
       return; // Optional field not present
     }
     
-    auto &storage = field.template lease<StorageBinding>();
-    auto &fence_token = storage.fenceToken();
+    auto &storage_lease = field.template lease<StorageBinding>();
+    auto *storage_ptr = storage_lease.operator->();
+    if (!storage_ptr) {
+      return; // Invalid storage lease
+    }
+    auto &fence_token = storage_ptr->fenceToken();
     
     // For Read: wait for the last write (RAW hazard)
     // For Write: wait for the last write (WAW hazard) and all reads (WAR hazard)
@@ -762,8 +769,12 @@ private:
       return; // Optional field not present
     }
     
-    auto &storage = field.template lease<StorageBinding>();
-    auto &fence_token = storage.fenceToken();
+    auto &storage_lease = field.template lease<StorageBinding>();
+    auto *storage_ptr = storage_lease.operator->();
+    if (!storage_ptr) {
+      return; // Invalid storage lease
+    }
+    auto &fence_token = storage_ptr->fenceToken();
     
     // Update fence token based on access pattern:
     // - Read: Add to read fences (for WAR hazard detection)
@@ -780,10 +791,10 @@ private:
     }
     
     // Update reuse token for all access patterns
-    auto &reuse_token = storage.reuseToken();
+    auto &reuse_token = storage_ptr->reuseToken();
     auto *payload = fence_lease.operator->();
     if (payload) {
-      typename decltype(reuse_token)::Hazard hazard;
+      typename std::remove_reference_t<decltype(reuse_token)>::Hazard hazard;
       hazard.setCommandQueueHandle(payload->commandQueueHandle());
       hazard.setCommandBuffer(payload->commandBuffer());
       reuse_token.addOrReplaceHazard(std::move(hazard));

@@ -33,6 +33,10 @@ params:
     cpp_type: "std::size_t"
     description: "Count parameter (size_t)"
   
+  - id: NumElements
+    cpp_type: "std::uint32_t"
+    description: "Number of elements parameter (uint32_t)"
+  
   # Pointer parameters
   - id: BufferPtr
     cpp_type: "void*"
