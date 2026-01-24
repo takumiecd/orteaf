@@ -11,6 +11,7 @@
 #include "orteaf/internal/execution/mps/manager/mps_compute_pipeline_state_manager.h"
 #include "orteaf/internal/execution/mps/manager/mps_library_manager.h"
 #include "orteaf/internal/execution/mps/mps_handles.h"
+#include "orteaf/internal/execution/mps/platform/wrapper/mps_command_buffer.h"
 #include "orteaf/internal/execution_context/mps/context.h"
 
 namespace orteaf::internal::kernel::mps {
@@ -113,6 +114,26 @@ struct MpsKernelBase {
    * @brief Get the total number of kernel functions registered.
    */
   std::size_t kernelCount() const noexcept { return keys_.size(); }
+
+  /**
+   * @brief Create a command buffer from the context's command queue.
+   *
+   * @param context Execution context containing the command queue lease
+   * @return Opaque command buffer handle, or nullptr when unavailable/disabled
+   */
+  ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandBuffer_t
+  createCommandBuffer(
+      ::orteaf::internal::execution_context::mps::Context &context) const {
+    if (!context.command_queue) {
+      return nullptr;
+    }
+    auto *queue_resource = context.command_queue.operator->();
+    if (queue_resource == nullptr || !queue_resource->hasQueue()) {
+      return nullptr;
+    }
+    return ::orteaf::internal::execution::mps::platform::wrapper::
+        createCommandBuffer(queue_resource->queue());
+  }
 
 #if ORTEAF_ENABLE_TESTING
   ::orteaf::internal::base::HeapVector<Key> &keysForTest() noexcept {
