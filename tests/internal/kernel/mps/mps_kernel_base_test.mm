@@ -543,6 +543,29 @@ TEST(MpsKernelBaseTest, SetParamWithSizeTParam) {
 #endif
 
 // =============================================================================
+// setPipelineState Tests
+// =============================================================================
+
+TEST(MpsKernelBaseTest, SetPipelineStateWithNullptrEncoderDoesNotCrash) {
+  mps_kernel::MpsKernelBase base;
+  mps_kernel::MpsKernelBase::PipelineLease pipeline;
+
+  // Should not crash with null encoder
+  base.setPipelineState(nullptr, pipeline);
+}
+
+TEST(MpsKernelBaseTest, SetPipelineStateWithEmptyLeaseDoesNotCrash) {
+  mps_kernel::MpsKernelBase base;
+
+  // Create a mock encoder (non-null pointer)
+  auto fake_encoder = reinterpret_cast<mps_wrapper::MpsComputeCommandEncoder_t>(0x1);
+  mps_kernel::MpsKernelBase::PipelineLease empty_pipeline;
+
+  // Should not crash with empty pipeline lease
+  base.setPipelineState(fake_encoder, empty_pipeline);
+}
+
+// =============================================================================
 // dispatchThreadgroups Tests
 // =============================================================================
 

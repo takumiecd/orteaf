@@ -235,6 +235,33 @@ struct MpsKernelBase {
   }
 
   /**
+   * @brief Set compute pipeline state on the encoder from a pipeline lease.
+   *
+   * Binds the compute pipeline state to the encoder for kernel execution.
+   * The pipeline lease must be valid and configured.
+   *
+   * @param encoder Compute command encoder to bind the pipeline state to
+   * @param pipeline Pipeline lease containing the pipeline state
+   */
+  void setPipelineState(
+      ::orteaf::internal::execution::mps::platform::wrapper::MpsComputeCommandEncoder_t
+          encoder,
+      const PipelineLease &pipeline) const {
+    if (encoder == nullptr) {
+      return;
+    }
+    if (!pipeline) {
+      return;
+    }
+    auto *resource = pipeline.operator->();
+    if (resource == nullptr || resource->pipeline_state == nullptr) {
+      return;
+    }
+    ::orteaf::internal::execution::mps::platform::wrapper::setPipelineState(
+        encoder, resource->pipeline_state);
+  }
+
+  /**
    * @brief Dispatch threadgroups for compute kernel execution.
    *
    * Configures the grid dimensions for kernel execution.
