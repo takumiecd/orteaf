@@ -31,6 +31,9 @@ public:
 
   /**
    * @brief Statistics for cache performance monitoring.
+   *
+   * Stats collection is controlled by ORTEAF_STATS_LEVEL_CORE_VALUE.
+   * If ORTEAF_STATS_LEVEL_CORE_VALUE <= 4, stats are collected.
    */
   struct Stats {
     std::size_t cache_hits{0};
@@ -38,6 +41,31 @@ public:
     std::size_t secondary_hits{0};
     std::size_t misses{0};
   };
+
+private:
+  // Helper for conditional stats update
+  void recordCacheHit() noexcept {
+#if defined(ORTEAF_STATS_LEVEL_CORE_VALUE) && ORTEAF_STATS_LEVEL_CORE_VALUE <= 4
+    ++stats_.cache_hits;
+#endif
+  }
+  void recordMainMemoryHit() noexcept {
+#if defined(ORTEAF_STATS_LEVEL_CORE_VALUE) && ORTEAF_STATS_LEVEL_CORE_VALUE <= 4
+    ++stats_.main_memory_hits;
+#endif
+  }
+  void recordSecondaryHit() noexcept {
+#if defined(ORTEAF_STATS_LEVEL_CORE_VALUE) && ORTEAF_STATS_LEVEL_CORE_VALUE <= 4
+    ++stats_.secondary_hits;
+#endif
+  }
+  void recordMiss() noexcept {
+#if defined(ORTEAF_STATS_LEVEL_CORE_VALUE) && ORTEAF_STATS_LEVEL_CORE_VALUE <= 4
+    ++stats_.misses;
+#endif
+  }
+
+public:
 
   /**
    * @brief Construct registry with default configuration.
@@ -68,25 +96,25 @@ public:
   Entry *lookup(Key key) {
     // Try Cache first
     if (auto *entry = lookupCache(key)) {
-      ++stats_.cache_hits;
+      recordCacheHit();
       return entry;
     }
 
     // Try Main Memory
     if (auto *entry = lookupMainMemory(key)) {
-      ++stats_.main_memory_hits;
+      recordMainMemoryHit();
       promoteToCache(key, entry);
       return entry;
     }
 
     // Try Secondary Storage (rebuilds entry)
     if (auto *entry = lookupSecondaryStorage(key)) {
-      ++stats_.secondary_hits;
+      recordSecondaryHit();
       promoteToCache(key, entry);
       return entry;
     }
 
-    ++stats_.misses;
+    recordMiss();
     return nullptr;
   }
 
@@ -321,7 +349,11 @@ private:
   std::unordered_map<Key, Metadata> secondary_storage_;
 
   KernelRegistryConfig config_;
+#if defined(ORTEAF_STATS_LEVEL_CORE_VALUE) && ORTEAF_STATS_LEVEL_CORE_VALUE <= 4
   Stats stats_;
+#else
+  Stats stats_{}; // Empty, never updated
+#endif
 };
 
 } // namespace orteaf::internal::kernel::registry
