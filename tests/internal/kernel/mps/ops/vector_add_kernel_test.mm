@@ -13,9 +13,9 @@
 #include <orteaf/internal/kernel/mps/mps_kernel_args.h>
 #include <orteaf/internal/kernel/mps/mps_kernel_base.h>
 #include <orteaf/internal/kernel/mps/mps_kernel_entry.h>
-#include <orteaf/internal/kernel/param.h>
-#include <orteaf/internal/kernel/param_id.h>
-#include <orteaf/internal/kernel/storage_id.h>
+#include <orteaf/internal/kernel/param/param.h>
+#include <orteaf/internal/kernel/param/param_id.h>
+#include <orteaf/internal/kernel/storage/storage_id.h>
 
 // Include the kernel under test
 #include "orteaf/src/extension/kernel/mps/ops/vector_add_kernel.h"

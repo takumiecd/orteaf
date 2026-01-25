@@ -4,7 +4,7 @@
 #include <unordered_map>
 
 #include "orteaf/internal/base/lru_list.h"
-#include "orteaf/internal/kernel/kernel_key.h"
+#include "orteaf/internal/kernel/core/kernel_key.h"
 #include "orteaf/internal/kernel/registry/kernel_entry_traits.h"
 #include "orteaf/internal/kernel/registry/kernel_registry_config.h"
 

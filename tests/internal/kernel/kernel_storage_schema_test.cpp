@@ -1,10 +1,10 @@
-#include <orteaf/internal/kernel/kernel_storage_schema.h>
+#include <orteaf/internal/kernel/schema/kernel_storage_schema.h>
 
 #include <gtest/gtest.h>
 
 #include <orteaf/internal/kernel/cpu/cpu_kernel_args.h>
 #include <orteaf/internal/kernel/cpu/cpu_storage_binding.h>
-#include <orteaf/internal/kernel/storage_id.h>
+#include <orteaf/internal/kernel/storage/storage_id.h>
 
 #include <orteaf/internal/execution/cpu/api/cpu_execution_api.h>
 #include <orteaf/internal/execution_context/cpu/current_context.h>

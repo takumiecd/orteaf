@@ -16,10 +16,10 @@
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_fence.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_size.h"
 #include "orteaf/internal/execution_context/mps/context.h"
-#include "orteaf/internal/kernel/kernel_param_schema.h"
-#include "orteaf/internal/kernel/kernel_storage_schema.h"
+#include "orteaf/internal/kernel/schema/kernel_param_schema.h"
+#include "orteaf/internal/kernel/schema/kernel_storage_schema.h"
 #include "orteaf/internal/kernel/mps/mps_storage_binding.h"
-#include "orteaf/internal/kernel/param.h"
+#include "orteaf/internal/kernel/param/param.h"
 #include "orteaf/internal/storage/mps/mps_storage.h"
 
 namespace orteaf::internal::kernel::mps {

@@ -14,8 +14,8 @@
 #include <orteaf/internal/execution/mps/resource/mps_command_queue_resource.h>
 #include <orteaf/internal/execution_context/mps/context.h>
 #include <orteaf/internal/kernel/mps/mps_kernel_base.h>
-#include <orteaf/internal/kernel/param.h>
-#include <orteaf/internal/kernel/param_id.h>
+#include <orteaf/internal/kernel/param/param.h>
+#include <orteaf/internal/kernel/param/param_id.h>
 #include <orteaf/internal/storage/mps/mps_storage.h>
 
 namespace mps_kernel = orteaf::internal::kernel::mps;

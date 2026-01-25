@@ -4,14 +4,14 @@
 #include <cstring>
 #include <utility>
 
-#include <orteaf/internal/kernel/param_list.h>
-#include <orteaf/internal/kernel/storage_list.h>
+#include <orteaf/internal/kernel/param/param_list.h>
+#include <orteaf/internal/kernel/storage/storage_list.h>
 
 #include <orteaf/internal/execution_context/cpu/context.h>
-#include <orteaf/internal/kernel/access.h>
+#include <orteaf/internal/kernel/core/access.h>
 #include <orteaf/internal/kernel/cpu/cpu_storage_binding.h>
-#include <orteaf/internal/kernel/kernel_key.h>
-#include <orteaf/internal/kernel/storage_id.h>
+#include <orteaf/internal/kernel/core/kernel_key.h>
+#include <orteaf/internal/kernel/storage/storage_id.h>
 #include <orteaf/internal/storage/registry/storage_types.h>
 
 namespace orteaf::internal::kernel::cpu {

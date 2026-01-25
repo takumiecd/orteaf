@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-#include "orteaf/internal/kernel/kernel_key.h"
+#include "orteaf/internal/kernel/core/kernel_key.h"
 #include "orteaf/internal/kernel/mps/mps_kernel_metadata.h"
 #include "orteaf/internal/kernel/registry/kernel_registry_config.h"
 

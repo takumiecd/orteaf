@@ -1,4 +1,4 @@
-#include "orteaf/internal/kernel/layout.h"
+#include "orteaf/internal/kernel/core/layout.h"
 
 #include <gtest/gtest.h>
 

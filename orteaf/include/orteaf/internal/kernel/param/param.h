@@ -5,8 +5,8 @@
 #include <utility>
 #include <variant>
 
-#include <orteaf/internal/kernel/array_view.h>
-#include <orteaf/internal/kernel/param_id.h>
+#include <orteaf/internal/kernel/core/array_view.h>
+#include <orteaf/internal/kernel/param/param_id.h>
 #include <orteaf/kernel/param_id_tables.h>
 
 namespace orteaf::internal::kernel {

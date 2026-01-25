@@ -1,8 +1,8 @@
 #pragma once
 
 #include <orteaf/internal/diagnostics/error/error.h>
-#include <orteaf/internal/kernel/storage_id.h>
-#include <orteaf/internal/kernel/storage_list.h>
+#include <orteaf/internal/kernel/storage/storage_id.h>
+#include <orteaf/internal/kernel/storage/storage_list.h>
 #include <orteaf/kernel/storage_id_tables.h>
 
 #include <utility>

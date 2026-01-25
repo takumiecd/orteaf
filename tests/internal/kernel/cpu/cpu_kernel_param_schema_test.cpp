@@ -1,4 +1,4 @@
-#include "orteaf/internal/kernel/kernel_param_schema.h"
+#include "orteaf/internal/kernel/schema/kernel_param_schema.h"
 #include "orteaf/internal/kernel/cpu/cpu_kernel_args.h"
 
 #include <gtest/gtest.h>

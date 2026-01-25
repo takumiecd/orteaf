@@ -18,7 +18,7 @@
 ### 1. スキーマ構造体を定義
 
 ```cpp
-#include <orteaf/internal/kernel/kernel_param_schema.h>
+#include <orteaf/internal/kernel/schema/kernel_param_schema.h>
 
 namespace orteaf::internal::kernel::cpu {
 
@@ -129,7 +129,7 @@ struct MyKernelParams : ParamSchema<MyKernelParams> {
 全バックエンド（CPU/MPS/CUDA）で共通のスキーマを定義できます。
 
 ```cpp
-// orteaf/include/orteaf/internal/kernel/common_schemas.h
+// orteaf/include/orteaf/internal/kernel/schema/common_schemas.h
 namespace orteaf::internal::kernel {
 
 // 汎用的なスケーリングパラメータ
@@ -251,7 +251,7 @@ void executeKernel(auto& args) {
 ### 1. ストレージスキーマ構造体を定義
 
 ```cpp
-#include <orteaf/internal/kernel/kernel_storage_schema.h>
+#include <orteaf/internal/kernel/schema/kernel_storage_schema.h>
 
 namespace orteaf::internal::kernel::mps {
 
@@ -336,7 +336,7 @@ void executeConvolution(auto& args) {  // CPU/MPS どれでもOK
 ## バックエンド共通ストレージスキーマ
 
 ```cpp
-// orteaf/include/orteaf/internal/kernel/common_schemas.h
+// orteaf/include/orteaf/internal/kernel/schema/common_schemas.h
 namespace orteaf::internal::kernel {
 
 // 汎用的な入出力ストレージ
@@ -442,8 +442,8 @@ void extract(const KernelArgs &args) {
 ## 完全なカーネル実装例
 
 ```cpp
-#include <orteaf/internal/kernel/kernel_param_schema.h>
-#include <orteaf/internal/kernel/kernel_storage_schema.h>
+#include <orteaf/internal/kernel/schema/kernel_param_schema.h>
+#include <orteaf/internal/kernel/schema/kernel_storage_schema.h>
 
 namespace orteaf::internal::kernel::mps {
 
@@ -498,7 +498,7 @@ void executeNormalization(MpsKernelBase& base, MpsKernelArgs& args) {
 ## バックエンド共通カーネル定義
 
 ```cpp
-// orteaf/include/orteaf/internal/kernel/normalization_schema.h
+// orteaf/include/orteaf/internal/kernel/schema/normalization_schema.h
 namespace orteaf::internal::kernel {
 
 // 全バックエンド共通のパラメータ

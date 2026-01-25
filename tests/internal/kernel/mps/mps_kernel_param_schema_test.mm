@@ -1,4 +1,4 @@
-#include "orteaf/internal/kernel/kernel_param_schema.h"
+#include "orteaf/internal/kernel/schema/kernel_param_schema.h"
 
 #include <gtest/gtest.h>
 
@@ -6,8 +6,8 @@
 #include "orteaf/internal/execution/mps/platform/mps_slow_ops.h"
 #include "orteaf/internal/execution_context/mps/current_context.h"
 #include "orteaf/internal/kernel/mps/mps_kernel_args.h"
-#include "orteaf/internal/kernel/param.h"
-#include "orteaf/internal/kernel/param_id.h"
+#include "orteaf/internal/kernel/param/param.h"
+#include "orteaf/internal/kernel/param/param_id.h"
 
 namespace kernel = orteaf::internal::kernel;
 namespace mps_kernel = orteaf::internal::kernel::mps;
