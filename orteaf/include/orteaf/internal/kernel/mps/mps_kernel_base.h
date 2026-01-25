@@ -122,6 +122,18 @@ struct MpsKernelBase {
   std::size_t kernelCount() const noexcept { return keys_.size(); }
 
   /**
+   * @brief Get the registered library/function key pairs.
+   *
+   * Used by KernelRegistry to extract metadata when demoting entries
+   * from Main Memory to Secondary Storage.
+   *
+   * @return Const reference to the keys vector
+   */
+  const ::orteaf::internal::base::HeapVector<Key> &keys() const noexcept {
+    return keys_;
+  }
+
+  /**
    * @brief Create a command buffer from the context's command queue.
    *
    * @param context Execution context containing the command queue lease
