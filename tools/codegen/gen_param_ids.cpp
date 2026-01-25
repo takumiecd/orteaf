@@ -242,7 +242,7 @@ GeneratedData GenerateOutputs(const ResolvedConfig &resolved) {
   header_stream << "#include <cstdint>\n";
   header_stream << "#include <string_view>\n";
   header_stream << "#include <variant>\n";
-  header_stream << "#include <orteaf/internal/kernel/array_view.h>\n\n";
+  header_stream << "#include <orteaf/internal/kernel/core/array_view.h>\n\n";
   header_stream << "namespace orteaf::internal::kernel {\n";
   header_stream << "enum class ParamId : std::uint64_t;\n";
   header_stream << "}  // namespace orteaf::internal::kernel\n\n";

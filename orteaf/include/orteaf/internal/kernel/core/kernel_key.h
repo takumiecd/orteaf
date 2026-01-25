@@ -5,8 +5,8 @@
 
 #include <orteaf/internal/dtype/dtype.h>
 #include <orteaf/internal/execution/execution.h>
-#include <orteaf/internal/kernel/layout.h>
-#include <orteaf/internal/kernel/variant.h>
+#include <orteaf/internal/kernel/core/layout.h>
+#include <orteaf/internal/kernel/core/variant.h>
 #include <orteaf/internal/ops/ops.h>
 
 namespace orteaf::internal::kernel {

@@ -2,7 +2,7 @@
 
 #if ORTEAF_ENABLE_MPS
 
-#include <orteaf/internal/kernel/storage_binding.h>
+#include <orteaf/internal/kernel/storage/storage_binding.h>
 #include <orteaf/internal/storage/registry/storage_types.h>
 
 namespace orteaf::internal::kernel::mps {

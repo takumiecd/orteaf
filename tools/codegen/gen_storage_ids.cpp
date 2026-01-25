@@ -281,7 +281,7 @@ GeneratedData GenerateOutputs(const ResolvedConfig &resolved) {
   header_stream << "#include <cstddef>\n";
   header_stream << "#include <cstdint>\n";
   header_stream << "#include <string_view>\n\n";
-  header_stream << "#include <orteaf/internal/kernel/access.h>\n\n";
+  header_stream << "#include <orteaf/internal/kernel/core/access.h>\n\n";
   header_stream << "namespace orteaf::internal::kernel {\n";
   header_stream << "enum class StorageId : std::uint64_t;\n";
   header_stream << "}  // namespace orteaf::internal::kernel\n\n";

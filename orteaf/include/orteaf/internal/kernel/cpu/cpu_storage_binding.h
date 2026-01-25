@@ -1,6 +1,6 @@
 #pragma once
 
-#include <orteaf/internal/kernel/storage_binding.h>
+#include <orteaf/internal/kernel/storage/storage_binding.h>
 #include <orteaf/internal/storage/registry/storage_types.h>
 
 namespace orteaf::internal::kernel::cpu {

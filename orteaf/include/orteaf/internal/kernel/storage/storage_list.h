@@ -1,7 +1,7 @@
 #pragma once
 
 #include <orteaf/internal/base/small_vector.h>
-#include <orteaf/internal/kernel/storage_id.h>
+#include <orteaf/internal/kernel/storage/storage_id.h>
 
 #include <cstddef>
 

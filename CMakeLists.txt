@@ -224,7 +224,13 @@ endif()
 enable_testing()
 
 # Statistics level configuration (shared by library and tests)
-set(ORTEAF_STATS_LEVEL "OFF" CACHE STRING
+# When ENABLE_TEST is ON, default to STATS_EXTENDED for comprehensive instrumentation
+if(ENABLE_TEST)
+    set(_orteaf_default_stats_level "STATS_EXTENDED")
+else()
+    set(_orteaf_default_stats_level "OFF")
+endif()
+set(ORTEAF_STATS_LEVEL "${_orteaf_default_stats_level}" CACHE STRING
     "Default statistics level (STATS_BASIC, STATS_EXTENDED, OFF)")
 set_property(CACHE ORTEAF_STATS_LEVEL PROPERTY STRINGS STATS_BASIC STATS_EXTENDED OFF)
 

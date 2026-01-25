@@ -2,8 +2,8 @@
 
 #include <orteaf/internal/base/small_vector.h>
 #include <orteaf/internal/diagnostics/error/error.h>
-#include <orteaf/internal/kernel/param_id.h>
-#include <orteaf/internal/kernel/param_list.h>
+#include <orteaf/internal/kernel/param/param_id.h>
+#include <orteaf/internal/kernel/param/param_list.h>
 
 #include <utility>
 

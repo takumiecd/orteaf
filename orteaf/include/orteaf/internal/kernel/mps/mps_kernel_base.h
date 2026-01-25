@@ -16,10 +16,10 @@
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_fence.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_size.h"
 #include "orteaf/internal/execution_context/mps/context.h"
-#include "orteaf/internal/kernel/kernel_param_schema.h"
-#include "orteaf/internal/kernel/kernel_storage_schema.h"
+#include "orteaf/internal/kernel/schema/kernel_param_schema.h"
+#include "orteaf/internal/kernel/schema/kernel_storage_schema.h"
 #include "orteaf/internal/kernel/mps/mps_storage_binding.h"
-#include "orteaf/internal/kernel/param.h"
+#include "orteaf/internal/kernel/param/param.h"
 #include "orteaf/internal/storage/mps/mps_storage.h"
 
 namespace orteaf::internal::kernel::mps {
@@ -120,6 +120,18 @@ struct MpsKernelBase {
    * @brief Get the total number of kernel functions registered.
    */
   std::size_t kernelCount() const noexcept { return keys_.size(); }
+
+  /**
+   * @brief Get the registered library/function key pairs.
+   *
+   * Used by KernelRegistry to extract metadata when demoting entries
+   * from Main Memory to Secondary Storage.
+   *
+   * @return Const reference to the keys vector
+   */
+  const ::orteaf::internal::base::HeapVector<Key> &keys() const noexcept {
+    return keys_;
+  }
 
   /**
    * @brief Create a command buffer from the context's command queue.

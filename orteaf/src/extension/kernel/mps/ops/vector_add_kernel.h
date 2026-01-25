@@ -5,14 +5,14 @@
 #include <cstddef>
 #include <cstdint>
 
-#include <orteaf/internal/kernel/kernel_param_schema.h>
-#include <orteaf/internal/kernel/kernel_storage_schema.h>
+#include <orteaf/internal/kernel/schema/kernel_param_schema.h>
+#include <orteaf/internal/kernel/schema/kernel_storage_schema.h>
 #include <orteaf/internal/kernel/mps/mps_kernel_args.h>
 #include <orteaf/internal/kernel/mps/mps_kernel_base.h>
 #include <orteaf/internal/kernel/mps/mps_kernel_entry.h>
 #include <orteaf/internal/kernel/mps/mps_kernel_session.h>
-#include <orteaf/internal/kernel/param_id.h>
-#include <orteaf/internal/kernel/storage_id.h>
+#include <orteaf/internal/kernel/param/param_id.h>
+#include <orteaf/internal/kernel/storage/storage_id.h>
 
 namespace orteaf::extension::kernel::mps::ops {
 
