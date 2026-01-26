@@ -66,4 +66,33 @@ constexpr KernelKey makeKey(const FixedKeyComponents &fixed,
                           variable.variant);
 }
 
+// Forward declaration for KernelArgs
+class KernelArgs;
+
+/**
+ * @brief Predicate function type for rule verification.
+ *
+ * Returns true if the rule is applicable for the given args.
+ */
+using KeyPredicate = bool (*)(const KernelArgs &);
+
+/**
+ * @brief Rule combining variable components with optional custom predicate.
+ *
+ * If predicate is nullptr, the default verification logic is used.
+ * Otherwise, the custom predicate takes precedence.
+ */
+struct KeyRule {
+  VariableKeyComponents components;
+  KeyPredicate predicate = nullptr; // null = use default logic
+
+  constexpr bool operator==(const KeyRule &other) const noexcept {
+    return components == other.components && predicate == other.predicate;
+  }
+
+  constexpr bool operator!=(const KeyRule &other) const noexcept {
+    return !(*this == other);
+  }
+};
+
 } // namespace orteaf::internal::kernel
