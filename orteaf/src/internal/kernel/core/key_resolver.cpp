@@ -19,15 +19,6 @@ ResolveContext buildContext(const KeyRequest &request) {
   // Get all architectures for this execution backend
   auto architectures = arch::architecturesOf(execution);
 
-  // Find the index of the requested architecture
-  std::size_t request_arch_index = 0;
-  for (std::size_t i = 0; i < architectures.size(); ++i) {
-    if (architectures[i] == request.architecture) {
-      request_arch_index = i;
-      break;
-    }
-  }
-
   // Add rules: requested architecture first, then fallback to less specific
   // Order: requested arch → other specific archs → generic (index 0)
 
