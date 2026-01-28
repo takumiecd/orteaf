@@ -4,8 +4,8 @@
 #include "orteaf/internal/kernel/param/param.h"
 #include "orteaf/internal/kernel/param/param_id.h"
 #include "orteaf/internal/kernel/param/param_key.h"
-#include "orteaf/internal/kernel/storage/storage_key.h"
 #include "orteaf/internal/kernel/storage/storage_id.h"
+#include "orteaf/internal/kernel/storage/storage_key.h"
 
 #include "orteaf/internal/execution/mps/api/mps_execution_api.h"
 #include "orteaf/internal/execution/mps/platform/mps_slow_ops.h"
@@ -17,7 +17,6 @@
 namespace kernel = orteaf::internal::kernel;
 using Execution = orteaf::internal::execution::Execution;
 using DType = orteaf::internal::DType;
-using Op = orteaf::internal::ops::Op;
 
 // ============================================================
 // Test Fixture for KernelArgs (MPS context)
@@ -204,8 +203,7 @@ TEST_F(KernelArgsMpsContextTest, AddParamBeyondInlineCapacity) {
   KernelArgsType args;
   const std::size_t count = 24;
   for (std::size_t i = 0; i < count; ++i) {
-    args.addParam(kernel::Param(kernel::ParamId::Alpha,
-                                static_cast<float>(i)));
+    args.addParam(kernel::Param(kernel::ParamId::Alpha, static_cast<float>(i)));
   }
   EXPECT_EQ(args.paramList().size(), count);
   EXPECT_GE(args.paramList().capacity(), count);
@@ -213,8 +211,8 @@ TEST_F(KernelArgsMpsContextTest, AddParamBeyondInlineCapacity) {
 
 TEST_F(KernelArgsMpsContextTest, HostFromCurrentContext) {
   // Build KernelArgs from the current MPS context
-  auto ctx =
-      kernel::ContextAny::erase(::orteaf::internal::execution_context::mps::currentContext());
+  auto ctx = kernel::ContextAny::erase(
+      ::orteaf::internal::execution_context::mps::currentContext());
   KernelArgsType args(std::move(ctx));
   EXPECT_TRUE(args.valid());
 }
@@ -226,14 +224,15 @@ TEST_F(KernelArgsMpsContextTest, HostFromCurrentContext) {
 using TypeErasedArgs = kernel::KernelArgs;
 
 TEST_F(KernelArgsMpsContextTest, ContextFromMpsContext) {
-  auto ctx =
-      kernel::ContextAny::erase(::orteaf::internal::execution_context::mps::Context{});
+  auto ctx = kernel::ContextAny::erase(
+      ::orteaf::internal::execution_context::mps::Context{});
   TypeErasedArgs args(std::move(ctx));
 
   EXPECT_TRUE(args.valid());
   EXPECT_EQ(args.execution(), orteaf::internal::execution::Execution::Mps);
-  auto *mps_ctx = args.context().tryAs<
-      ::orteaf::internal::execution_context::mps::Context>();
+  auto *mps_ctx =
+      args.context()
+          .tryAs<::orteaf::internal::execution_context::mps::Context>();
   EXPECT_NE(mps_ctx, nullptr);
 }
 
