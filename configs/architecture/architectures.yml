@@ -61,17 +61,6 @@ architectures:
         vendor: "apple"
         metal_family: "m4"
 
-  - id: "AppleM4Pro"
-    display_name: "Apple M4 Pro GPU"
-    execution: "Mps"
-    metadata:
-      parent: "M4"
-      description: "Apple Silicon M4 Pro GPU 向け最適化"
-      detect:
-        vendor: "apple"
-        metal_family: "m4" # Overlaps with M4, but specific to Pro if we add machine_ids or so.
-        machine_ids: ["Mac16,6", "Mac16,7", "Mac16,8"]
-
   - id: "Zen4"
     display_name: "Zen 4 AVX512"
     execution: "Cpu"
