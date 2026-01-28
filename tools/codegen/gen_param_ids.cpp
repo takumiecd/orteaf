@@ -13,6 +13,8 @@
 #include <utility>
 #include <vector>
 
+#include "include_resolver.h"
+
 namespace fs = std::filesystem;
 
 namespace {
@@ -156,12 +158,14 @@ ParsedConfig ParseConfig(const fs::path &yaml_path) {
       Fail(oss.str());
     }
 
-    // Value is now optional - auto-assign based on index if not specified
-    param.value = ReadInt(node, "value", false, context);
-    if (param.value < 0) {
-      // Auto-assign: use current index as value
-      param.value = static_cast<int>(idx);
+    // Value is auto-assigned by order (explicit values are not allowed)
+    if (node["value"]) {
+      std::ostringstream oss;
+      oss << "Key 'value' is not allowed for params (" << context
+          << "). Values are auto-assigned by order.";
+      Fail(oss.str());
     }
+    param.value = static_cast<int>(idx);
 
     // Check for duplicate values
     if (!seen_values.insert(param.value).second) {
@@ -226,6 +230,14 @@ GeneratedData GenerateOutputs(const ResolvedConfig &resolved) {
     Fail("No params defined");
   }
 
+  std::vector<std::string> cpp_types;
+  cpp_types.reserve(resolved.params.size());
+  for (const auto &param : resolved.params) {
+    cpp_types.push_back(param.cpp_type);
+  }
+  const auto include_headers =
+      ::orteaf::codegen::CollectRequiredIncludes(cpp_types);
+
   // Generate .def file
   std::ostringstream def_stream;
   def_stream << "// Auto-generated. Do not edit.\n";
@@ -237,12 +249,14 @@ GeneratedData GenerateOutputs(const ResolvedConfig &resolved) {
   std::ostringstream header_stream;
   header_stream << "// Auto-generated. Do not edit.\n";
   header_stream << "#pragma once\n\n";
-  header_stream << "#include <array>\n";
   header_stream << "#include <cstddef>\n";
   header_stream << "#include <cstdint>\n";
   header_stream << "#include <string_view>\n";
   header_stream << "#include <variant>\n";
-  header_stream << "#include <orteaf/internal/kernel/core/array_view.h>\n\n";
+  for (const auto &header : include_headers) {
+    header_stream << "#include <" << header << ">\n";
+  }
+  header_stream << "\n";
   header_stream << "namespace orteaf::internal::kernel {\n";
   header_stream << "enum class ParamId : std::uint64_t;\n";
   header_stream << "}  // namespace orteaf::internal::kernel\n\n";
@@ -251,38 +265,24 @@ GeneratedData GenerateOutputs(const ResolvedConfig &resolved) {
   header_stream << "inline constexpr std::size_t kParamIdCount = "
                 << param_count << ";\n\n";
 
-  // Description table
-  header_stream << "inline constexpr std::array<std::string_view, "
-                   "kParamIdCount> kParamIdDescriptions = {\n";
-  for (const auto &param : resolved.params) {
-    header_stream << "    \"" << EscapeStringLiteral(param.description)
-                  << "\",\n";
-  }
-  header_stream << "};\n\n";
-
-  // C++ type table
-  header_stream << "inline constexpr std::array<std::string_view, "
-                   "kParamIdCount> kParamIdCppTypes = {\n";
-  for (const auto &param : resolved.params) {
-    header_stream << "    \"" << EscapeStringLiteral(param.cpp_type) << "\",\n";
-  }
-  header_stream << "};\n\n";
-
-  // Type info (template specializations for each ParamId)
-  // Uses string-based type names to avoid requiring all types to be defined
-  header_stream << "// Type info for each ParamId\n";
+  // Unified ParamInfo template
+  header_stream << "// Parameter information for each ParamId\n";
   header_stream << "template <ParamId ID>\n";
-  header_stream << "struct ParamTypeInfo;\n\n";
+  header_stream << "struct ParamInfo;\n\n";
 
   for (const auto &param : resolved.params) {
     header_stream << "template <>\n";
-    header_stream << "struct ParamTypeInfo<ParamId::" << param.id << "> {\n";
+    header_stream << "struct ParamInfo<ParamId::" << param.id << "> {\n";
+    header_stream << "    using Type = " << param.cpp_type << ";\n";
     header_stream << "    static constexpr std::string_view kTypeName = \""
                   << EscapeStringLiteral(param.cpp_type) << "\";\n";
     header_stream << "    static constexpr std::string_view kDescription = \""
                   << EscapeStringLiteral(param.description) << "\";\n";
     header_stream << "};\n\n";
   }
+
+  header_stream << "template <ParamId ID>\n";
+  header_stream << "using ParamValueTypeT = typename ParamInfo<ID>::Type;\n\n";
 
   // Collect unique C++ types (excluding "Tensor")
   std::unordered_set<std::string> unique_types;
@@ -309,17 +309,20 @@ GeneratedData GenerateOutputs(const ResolvedConfig &resolved) {
     variant_types.push_back("  std::size_t");
   if (unique_types.count("std::uint32_t"))
     variant_types.push_back("  std::uint32_t");
+  if (unique_types.count("std::int64_t"))
+    variant_types.push_back("  std::int64_t");
   if (unique_types.count("void*"))
     variant_types.push_back("  void*");
 
   // Add ArrayView types for common numeric types
-  variant_types.push_back("  ::orteaf::internal::kernel::ArrayView<const int>");
+  variant_types.push_back("  ::orteaf::internal::base::ArrayView<const int>");
   variant_types.push_back(
-      "  ::orteaf::internal::kernel::ArrayView<const std::size_t>");
+      "  ::orteaf::internal::base::ArrayView<const std::size_t>");
   variant_types.push_back(
-      "  ::orteaf::internal::kernel::ArrayView<const float>");
+      "  ::orteaf::internal::base::ArrayView<const std::int64_t>");
+  variant_types.push_back("  ::orteaf::internal::base::ArrayView<const float>");
   variant_types.push_back(
-      "  ::orteaf::internal::kernel::ArrayView<const double>");
+      "  ::orteaf::internal::base::ArrayView<const double>");
 
   // Output variant types
   for (std::size_t i = 0; i < variant_types.size(); ++i) {

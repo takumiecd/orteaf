@@ -128,7 +128,7 @@ std::string_view AccessToString(Access access) {
   return "None";
 }
 
-struct StorageDefinition {
+struct OperandDefinition {
   std::string id;
   int value;
   Access access;
@@ -137,7 +137,7 @@ struct StorageDefinition {
 
 struct ParsedConfig {
   std::string schema_version;
-  std::vector<StorageDefinition> storages;
+  std::vector<OperandDefinition> operands;
 };
 
 ParsedConfig ParseConfig(const fs::path &yaml_path) {
@@ -163,48 +163,50 @@ ParsedConfig ParseConfig(const fs::path &yaml_path) {
   }
   config.schema_version = schema_version_node.as<std::string>();
 
-  const auto storages_node = root["storages"];
-  if (!storages_node || !storages_node.IsSequence()) {
-    Fail("Missing required sequence key 'storages'");
+  const auto operands_node = root["operands"];
+  if (!operands_node || !operands_node.IsSequence()) {
+    Fail("Missing required sequence key 'operands'");
   }
 
   std::unordered_set<std::string> seen_ids;
   std::unordered_set<int> seen_values;
 
-  config.storages.reserve(storages_node.size());
-  for (std::size_t idx = 0; idx < storages_node.size(); ++idx) {
-    const auto &node = storages_node[idx];
+  config.operands.reserve(operands_node.size());
+  for (std::size_t idx = 0; idx < operands_node.size(); ++idx) {
+    const auto &node = operands_node[idx];
     if (!node.IsMap()) {
       std::ostringstream oss;
-      oss << "Each storage entry must be a mapping (index " << idx << ")";
+      oss << "Each operand entry must be a mapping (index " << idx << ")";
       Fail(oss.str());
     }
-    const std::string context = "storages[" + std::to_string(idx) + "]";
+    const std::string context = "operands[" + std::to_string(idx) + "]";
 
-    StorageDefinition storage;
-    storage.id = ReadString(node, "id", true, context);
-    if (storage.id.empty()) {
+    OperandDefinition operand;
+    operand.id = ReadString(node, "id", true, context);
+    if (operand.id.empty()) {
       std::ostringstream oss;
       oss << "Key 'id' must not be empty (" << context << ")";
       Fail(oss.str());
     }
-    if (!seen_ids.insert(storage.id).second) {
+    if (!seen_ids.insert(operand.id).second) {
       std::ostringstream oss;
-      oss << "Duplicate storage id '" << storage.id << "'";
+      oss << "Duplicate operand id '" << operand.id << "'";
       Fail(oss.str());
     }
 
-    // Value is optional - auto-assign based on index if not specified
-    storage.value = ReadInt(node, "value", false, context);
-    if (storage.value < 0) {
-      // Auto-assign: use current index as value
-      storage.value = static_cast<int>(idx);
+    // Value is auto-assigned by order (explicit values are not allowed)
+    if (node["value"]) {
+      std::ostringstream oss;
+      oss << "Key 'value' is not allowed for operands (" << context
+          << "). Values are auto-assigned by order.";
+      Fail(oss.str());
     }
+    operand.value = static_cast<int>(idx);
 
     // Check for duplicate values
-    if (!seen_values.insert(storage.value).second) {
+    if (!seen_values.insert(operand.value).second) {
       std::ostringstream oss;
-      oss << "Duplicate storage value " << storage.value;
+      oss << "Duplicate operand value " << operand.value;
       Fail(oss.str());
     }
 
@@ -215,21 +217,21 @@ ParsedConfig ParseConfig(const fs::path &yaml_path) {
       oss << "Key 'access' must not be empty (" << context << ")";
       Fail(oss.str());
     }
-    storage.access = ParseAccess(access_str, context);
+    operand.access = ParseAccess(access_str, context);
 
-    storage.description = ReadString(node, "description", false, context);
-    if (storage.description.empty()) {
-      storage.description = storage.id;
+    operand.description = ReadString(node, "description", false, context);
+    if (operand.description.empty()) {
+      operand.description = operand.id;
     }
 
-    config.storages.emplace_back(std::move(storage));
+    config.operands.emplace_back(std::move(operand));
   }
 
   return config;
 }
 
 struct ResolvedConfig {
-  std::vector<StorageDefinition> storages;
+  std::vector<OperandDefinition> operands;
   std::unordered_map<std::string, std::size_t> id_to_index;
   std::unordered_map<int, std::size_t> value_to_index;
 };
@@ -243,34 +245,34 @@ ResolvedConfig ResolveConfig(ParsedConfig config) {
   }
 
   ResolvedConfig resolved;
-  resolved.id_to_index.reserve(config.storages.size());
-  resolved.value_to_index.reserve(config.storages.size());
+  resolved.id_to_index.reserve(config.operands.size());
+  resolved.value_to_index.reserve(config.operands.size());
 
-  for (std::size_t i = 0; i < config.storages.size(); ++i) {
-    resolved.id_to_index.emplace(config.storages[i].id, i);
-    resolved.value_to_index.emplace(config.storages[i].value, i);
+  for (std::size_t i = 0; i < config.operands.size(); ++i) {
+    resolved.id_to_index.emplace(config.operands[i].id, i);
+    resolved.value_to_index.emplace(config.operands[i].value, i);
   }
 
-  resolved.storages = std::move(config.storages);
+  resolved.operands = std::move(config.operands);
   return resolved;
 }
 
 struct GeneratedData {
-  std::string storage_id_def;
-  std::string storage_id_tables_header;
+  std::string operand_id_def;
+  std::string operand_id_tables_header;
 };
 
 GeneratedData GenerateOutputs(const ResolvedConfig &resolved) {
-  const auto storage_count = resolved.storages.size();
-  if (storage_count == 0) {
-    Fail("No storages defined");
+  const auto operand_count = resolved.operands.size();
+  if (operand_count == 0) {
+    Fail("No operands defined");
   }
 
   // Generate .def file
   std::ostringstream def_stream;
   def_stream << "// Auto-generated. Do not edit.\n";
-  for (const auto &storage : resolved.storages) {
-    def_stream << "STORAGE_ID(" << storage.id << ", " << storage.value << ")\n";
+  for (const auto &operand : resolved.operands) {
+    def_stream << "OPERAND_ID(" << operand.id << ", " << operand.value << ")\n";
   }
 
   // Generate tables header
@@ -283,52 +285,52 @@ GeneratedData GenerateOutputs(const ResolvedConfig &resolved) {
   header_stream << "#include <string_view>\n\n";
   header_stream << "#include <orteaf/internal/kernel/core/access.h>\n\n";
   header_stream << "namespace orteaf::internal::kernel {\n";
-  header_stream << "enum class StorageId : std::uint64_t;\n";
+  header_stream << "enum class OperandId : std::uint64_t;\n";
   header_stream << "}  // namespace orteaf::internal::kernel\n\n";
-  header_stream << "namespace orteaf::generated::storage_id_tables {\n";
+  header_stream << "namespace orteaf::generated::operand_id_tables {\n";
   header_stream << "using ::orteaf::internal::kernel::Access;\n";
-  header_stream << "using ::orteaf::internal::kernel::StorageId;\n\n";
-  header_stream << "inline constexpr std::size_t kStorageIdCount = "
-                << storage_count << ";\n\n";
+  header_stream << "using ::orteaf::internal::kernel::OperandId;\n\n";
+  header_stream << "inline constexpr std::size_t kOperandIdCount = "
+                << operand_count << ";\n\n";
 
   // Description table
   header_stream << "inline constexpr std::array<std::string_view, "
-                   "kStorageIdCount> kStorageIdDescriptions = {\n";
-  for (const auto &storage : resolved.storages) {
-    header_stream << "    \"" << EscapeStringLiteral(storage.description)
+                   "kOperandIdCount> kOperandIdDescriptions = {\n";
+  for (const auto &operand : resolved.operands) {
+    header_stream << "    \"" << EscapeStringLiteral(operand.description)
                   << "\",\n";
   }
   header_stream << "};\n\n";
 
   // Access table
   header_stream << "inline constexpr std::array<Access, "
-                   "kStorageIdCount> kStorageIdAccesses = {\n";
-  for (const auto &storage : resolved.storages) {
-    header_stream << "    Access::" << AccessToString(storage.access) << ",\n";
+                   "kOperandIdCount> kOperandIdAccesses = {\n";
+  for (const auto &operand : resolved.operands) {
+    header_stream << "    Access::" << AccessToString(operand.access) << ",\n";
   }
   header_stream << "};\n\n";
 
-  // Type info (template specializations for each StorageId)
-  header_stream << "// Type info for each StorageId\n";
-  header_stream << "template <StorageId ID>\n";
-  header_stream << "struct StorageTypeInfo;\n\n";
+  // Type info (template specializations for each OperandId)
+  header_stream << "// Type info for each OperandId\n";
+  header_stream << "template <OperandId ID>\n";
+  header_stream << "struct OperandTypeInfo;\n\n";
 
-  for (const auto &storage : resolved.storages) {
+  for (const auto &operand : resolved.operands) {
     header_stream << "template <>\n";
-    header_stream << "struct StorageTypeInfo<StorageId::" << storage.id
+    header_stream << "struct OperandTypeInfo<OperandId::" << operand.id
                   << "> {\n";
     header_stream << "    static constexpr Access kAccess = Access::"
-                  << AccessToString(storage.access) << ";\n";
+                  << AccessToString(operand.access) << ";\n";
     header_stream << "    static constexpr std::string_view kDescription = \""
-                  << EscapeStringLiteral(storage.description) << "\";\n";
+                  << EscapeStringLiteral(operand.description) << "\";\n";
     header_stream << "};\n\n";
   }
 
-  header_stream << "}  // namespace orteaf::generated::storage_id_tables\n";
+  header_stream << "}  // namespace orteaf::generated::operand_id_tables\n";
 
   GeneratedData generated;
-  generated.storage_id_def = def_stream.str();
-  generated.storage_id_tables_header = header_stream.str();
+  generated.operand_id_def = def_stream.str();
+  generated.operand_id_tables_header = header_stream.str();
   return generated;
 }
 
@@ -351,7 +353,7 @@ void WriteFile(const fs::path &path, const std::string &content) {
 
 int main(int argc, char **argv) try {
   if (argc != 3) {
-    std::cerr << "Usage: gen_storage_ids <storage_ids.yml> <output_dir>\n";
+    std::cerr << "Usage: gen_operand_ids <operand_ids.yml> <output_dir>\n";
     return 1;
   }
 
@@ -374,12 +376,12 @@ int main(int argc, char **argv) try {
     return 1;
   }
 
-  WriteFile(output_dir / "storage_id.def", generated.storage_id_def);
-  WriteFile(output_dir / "storage_id_tables.h",
-            generated.storage_id_tables_header);
+  WriteFile(output_dir / "operand_id.def", generated.operand_id_def);
+  WriteFile(output_dir / "operand_id_tables.h",
+            generated.operand_id_tables_header);
 
   return 0;
 } catch (const std::exception &e) {
-  std::cerr << "gen_storage_ids error: " << e.what() << "\n";
+  std::cerr << "gen_operand_ids error: " << e.what() << "\n";
   return 1;
 }

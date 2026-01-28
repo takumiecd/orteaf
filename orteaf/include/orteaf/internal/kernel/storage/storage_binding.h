@@ -1,41 +1,38 @@
 #pragma once
 
-#include <orteaf/internal/kernel/storage/storage_id.h>
+#include <orteaf/internal/kernel/storage/operand_key.h>
+#include <orteaf/internal/storage/storage_lease.h>
 
 namespace orteaf::internal::kernel {
 
 /**
- * @brief Generic storage binding structure for kernel arguments.
+ * @brief Storage binding structure for kernel arguments.
  *
- * Represents a bound storage resource with its identifier and lease.
- * This template is specialized for different execution backends (CPU, MPS, CUDA).
- * Access pattern information is available through the StorageId metadata.
- *
- * @tparam StorageLease The backend-specific storage lease type
- *                      (e.g., CpuStorageLease, MpsStorageLease, CudaStorageLease)
+ * Represents a bound storage resource with its operand key and lease.
+ * Uses the type-erased StorageLease to avoid backend-specific bindings.
+ * Access pattern information is available through the OperandId metadata.
  *
  * Example:
  * @code
- * using CpuStorageBinding = StorageBinding<CpuStorageLease>;
- * using MpsStorageBinding = StorageBinding<MpsStorageLease>;
+ * StorageBinding binding{makeOperandKey(OperandId::Input0), lease};
  * @endcode
  */
-template <typename StorageLease>
 struct StorageBinding {
   /**
-   * @brief Storage identifier.
+   * @brief Operand key.
    *
-   * Identifies the semantic role of this storage (e.g., Input0, Output).
-   * Access pattern can be queried via StorageTypeInfo<id>::kAccess.
+   * Identifies the semantic role of this storage (e.g., Input0, Output) and
+   * the tensor-internal role (e.g., Data, Index).
+   * Access pattern can be queried via OperandTypeInfo<id>::kAccess.
    */
-  StorageId id;
+  OperandKey key;
 
   /**
    * @brief Backend-specific storage lease.
    *
    * Holds the actual storage resource for the target execution backend.
    */
-  StorageLease lease;
+  ::orteaf::internal::storage::StorageLease lease;
 };
 
 } // namespace orteaf::internal::kernel

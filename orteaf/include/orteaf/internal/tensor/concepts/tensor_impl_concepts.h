@@ -13,6 +13,9 @@
 #include <span>
 #include <type_traits>
 
+#include <orteaf/internal/kernel/core/kernel_args.h>
+#include <orteaf/internal/kernel/storage/operand_id.h>
+
 namespace orteaf::internal::tensor {
 
 // =============================================================================
@@ -31,6 +34,15 @@ concept TensorImplConcept = requires {
   } -> std::convertible_to<const typename Impl::StorageLease &>;
   { impl.valid() } -> std::convertible_to<bool>;
 };
+
+/// @brief Concept for TensorImpl that can bind all kernel args
+template <typename Impl>
+concept HasBindAllArgs =
+    TensorImplConcept<Impl> &&
+    requires(const Impl &impl, ::orteaf::internal::kernel::KernelArgs &args,
+             ::orteaf::internal::kernel::OperandId operand_id) {
+      { impl.bindAllArgs(args, operand_id) } -> std::same_as<void>;
+    };
 
 /// @brief Concept for TensorImpl that supports transpose
 template <typename Impl>

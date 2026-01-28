@@ -1,10 +1,11 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <type_traits>
 
-namespace orteaf::internal::kernel {
+namespace orteaf::internal::base {
 
 /**
  * @brief Lightweight view over a contiguous array of POD elements.
@@ -73,6 +74,8 @@ template <typename T> struct ArrayView {
 // Verify that ArrayView is trivially copyable for all common types
 static_assert(std::is_trivially_copyable_v<ArrayView<const int>>,
               "ArrayView<const int> must be trivially copyable");
+static_assert(std::is_trivially_copyable_v<ArrayView<const std::int64_t>>,
+              "ArrayView<const std::int64_t> must be trivially copyable");
 static_assert(std::is_trivially_copyable_v<ArrayView<const float>>,
               "ArrayView<const float> must be trivially copyable");
 static_assert(std::is_trivially_copyable_v<ArrayView<const double>>,
@@ -80,14 +83,14 @@ static_assert(std::is_trivially_copyable_v<ArrayView<const double>>,
 static_assert(std::is_trivially_copyable_v<ArrayView<const std::size_t>>,
               "ArrayView<const std::size_t> must be trivially copyable");
 
-} // namespace orteaf::internal::kernel
+} // namespace orteaf::internal::base
 
 // Hash support for std::unordered_map and std::unordered_set
 namespace std {
 
-template <typename T> struct hash<::orteaf::internal::kernel::ArrayView<T>> {
+template <typename T> struct hash<::orteaf::internal::base::ArrayView<T>> {
   std::size_t operator()(
-      const ::orteaf::internal::kernel::ArrayView<T> &view) const noexcept {
+      const ::orteaf::internal::base::ArrayView<T> &view) const noexcept {
     // Combine hash of pointer and count (boost::hash_combine style).
     std::size_t h1 = std::hash<const T *>{}(view.data);
     std::size_t h2 = std::hash<std::size_t>{}(view.count);

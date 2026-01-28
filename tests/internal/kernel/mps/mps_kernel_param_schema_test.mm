@@ -5,12 +5,11 @@
 #include "orteaf/internal/execution/mps/api/mps_execution_api.h"
 #include "orteaf/internal/execution/mps/platform/mps_slow_ops.h"
 #include "orteaf/internal/execution_context/mps/current_context.h"
-#include "orteaf/internal/kernel/mps/mps_kernel_args.h"
+#include "orteaf/internal/kernel/core/kernel_args.h"
 #include "orteaf/internal/kernel/param/param.h"
 #include "orteaf/internal/kernel/param/param_id.h"
 
 namespace kernel = orteaf::internal::kernel;
-namespace mps_kernel = orteaf::internal::kernel::mps;
 
 // ============================================================
 // Test Fixture
@@ -103,7 +102,7 @@ TEST_F(MpsKernelParamSchemaTest, FieldExplicitGet) {
 }
 
 TEST_F(MpsKernelParamSchemaTest, FieldExtractSuccess) {
-  mps_kernel::MpsKernelArgs args;
+  kernel::KernelArgs args;
   args.addParam(kernel::Param(kernel::ParamId::Alpha, 5.0f));
 
   kernel::Field<kernel::ParamId::Alpha, float> field;
@@ -113,14 +112,14 @@ TEST_F(MpsKernelParamSchemaTest, FieldExtractSuccess) {
 }
 
 TEST_F(MpsKernelParamSchemaTest, FieldExtractMissingThrows) {
-  mps_kernel::MpsKernelArgs args;
+  kernel::KernelArgs args;
 
   kernel::Field<kernel::ParamId::Alpha, float> field;
   EXPECT_THROW(field.extract(args), std::runtime_error);
 }
 
 TEST_F(MpsKernelParamSchemaTest, FieldExtractTypeMismatchThrows) {
-  mps_kernel::MpsKernelArgs args;
+  kernel::KernelArgs args;
   args.addParam(kernel::Param(kernel::ParamId::Alpha, 42)); // int, not float
 
   kernel::Field<kernel::ParamId::Alpha, float> field;
@@ -144,7 +143,7 @@ TEST_F(MpsKernelParamSchemaTest, OptionalFieldWithDefaultValue) {
 }
 
 TEST_F(MpsKernelParamSchemaTest, OptionalFieldExtractSuccess) {
-  mps_kernel::MpsKernelArgs args;
+  kernel::KernelArgs args;
   args.addParam(kernel::Param(kernel::ParamId::Epsilon, 0.001f));
 
   kernel::OptionalField<kernel::ParamId::Epsilon, float> field;
@@ -156,7 +155,7 @@ TEST_F(MpsKernelParamSchemaTest, OptionalFieldExtractSuccess) {
 }
 
 TEST_F(MpsKernelParamSchemaTest, OptionalFieldExtractMissingDoesNotThrow) {
-  mps_kernel::MpsKernelArgs args;
+  kernel::KernelArgs args;
 
   kernel::OptionalField<kernel::ParamId::Epsilon, float> field(1e-5f);
   field.extract(args);
@@ -192,7 +191,7 @@ struct SimpleSchema : kernel::ParamSchema<SimpleSchema> {
 };
 
 TEST_F(MpsKernelParamSchemaTest, SimpleSchemaExtract) {
-  mps_kernel::MpsKernelArgs args;
+  kernel::KernelArgs args;
   args.addParam(kernel::Param(kernel::ParamId::Alpha, 1.5f));
   args.addParam(kernel::Param(kernel::ParamId::Beta, 2.5f));
   args.addParam(kernel::Param(kernel::ParamId::Dim, std::size_t{128}));
@@ -205,7 +204,7 @@ TEST_F(MpsKernelParamSchemaTest, SimpleSchemaExtract) {
 }
 
 TEST_F(MpsKernelParamSchemaTest, SimpleSchemaImplicitConversion) {
-  mps_kernel::MpsKernelArgs args;
+  kernel::KernelArgs args;
   args.addParam(kernel::Param(kernel::ParamId::Alpha, 3.14f));
   args.addParam(kernel::Param(kernel::ParamId::Beta, 2.71f));
   args.addParam(kernel::Param(kernel::ParamId::Dim, std::size_t{256}));
@@ -223,7 +222,7 @@ TEST_F(MpsKernelParamSchemaTest, SimpleSchemaImplicitConversion) {
 }
 
 TEST_F(MpsKernelParamSchemaTest, SchemaMissingParamThrows) {
-  mps_kernel::MpsKernelArgs args;
+  kernel::KernelArgs args;
   args.addParam(kernel::Param(kernel::ParamId::Alpha, 1.0f));
   // Missing Beta and Dim
 
@@ -240,7 +239,7 @@ struct MixedSchema : kernel::ParamSchema<MixedSchema> {
 };
 
 TEST_F(MpsKernelParamSchemaTest, MixedSchemaAllPresent) {
-  mps_kernel::MpsKernelArgs args;
+  kernel::KernelArgs args;
   args.addParam(kernel::Param(kernel::ParamId::Epsilon, 1e-5f));
   args.addParam(kernel::Param(kernel::ParamId::Axis, -1));
   args.addParam(kernel::Param(kernel::ParamId::Scale, 2.0));
@@ -254,7 +253,7 @@ TEST_F(MpsKernelParamSchemaTest, MixedSchemaAllPresent) {
 }
 
 TEST_F(MpsKernelParamSchemaTest, MixedSchemaOptionalMissing) {
-  mps_kernel::MpsKernelArgs args;
+  kernel::KernelArgs args;
   args.addParam(kernel::Param(kernel::ParamId::Epsilon, 1e-5f));
   args.addParam(kernel::Param(kernel::ParamId::Axis, 0));
 
@@ -277,7 +276,7 @@ struct MultiTypeSchema : kernel::ParamSchema<MultiTypeSchema> {
 };
 
 TEST_F(MpsKernelParamSchemaTest, MultiTypeSchemaExtract) {
-  mps_kernel::MpsKernelArgs args;
+  kernel::KernelArgs args;
   args.addParam(kernel::Param(kernel::ParamId::Alpha, 0.5f));
   args.addParam(kernel::Param(kernel::ParamId::Scale, 3.14159));
   args.addParam(kernel::Param(kernel::ParamId::Count, std::size_t{1024}));
@@ -307,7 +306,7 @@ struct NormalizationKernelParams : kernel::ParamSchema<NormalizationKernelParams
 };
 
 TEST_F(MpsKernelParamSchemaTest, PracticalNormalizationKernel) {
-  mps_kernel::MpsKernelArgs args;
+  kernel::KernelArgs args;
   args.addParam(kernel::Param(kernel::ParamId::Epsilon, 1e-5f));
   args.addParam(kernel::Param(kernel::ParamId::Axis, -1));
   args.addParam(kernel::Param(kernel::ParamId::Dim, std::size_t{512}));
@@ -334,7 +333,7 @@ TEST_F(MpsKernelParamSchemaTest, PracticalNormalizationKernel) {
 }
 
 TEST_F(MpsKernelParamSchemaTest, PracticalConditionalBehavior) {
-  mps_kernel::MpsKernelArgs args;
+  kernel::KernelArgs args;
   args.addParam(kernel::Param(kernel::ParamId::Epsilon, 1e-5f));
   args.addParam(kernel::Param(kernel::ParamId::Axis, 0));
   args.addParam(kernel::Param(kernel::ParamId::Dim, std::size_t{256}));

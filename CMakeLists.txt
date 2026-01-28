@@ -57,7 +57,8 @@ set(EXECUTION_KERNEL_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/orteaf/execut
 set(ARCHITECTURE_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/orteaf/architecture CACHE INTERNAL "")
 set(DEVICE_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/orteaf/device CACHE INTERNAL "")
 set(PARAM_ID_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/orteaf/kernel CACHE INTERNAL "")
-set(STORAGE_ID_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/orteaf/kernel CACHE INTERNAL "")
+set(OPERAND_ID_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/orteaf/kernel CACHE INTERNAL "")
+set(ROLE_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/orteaf/kernel CACHE INTERNAL "")
 
 
 orteaf_add_cuda_kernel_binaries()
@@ -192,22 +193,42 @@ add_custom_target(generate_param_ids
 
 add_custom_command(
     OUTPUT
-        ${STORAGE_ID_GEN_DIR}/storage_id.def
-        ${STORAGE_ID_GEN_DIR}/storage_id_tables.h
-    COMMAND $<TARGET_FILE:gen_storage_ids>
-            ${CMAKE_CURRENT_SOURCE_DIR}/configs/kernel/storage_ids.yml
-            ${STORAGE_ID_GEN_DIR}
+        ${OPERAND_ID_GEN_DIR}/operand_id.def
+        ${OPERAND_ID_GEN_DIR}/operand_id_tables.h
+    COMMAND $<TARGET_FILE:gen_operand_ids>
+            ${CMAKE_CURRENT_SOURCE_DIR}/configs/kernel/operand_ids.yml
+            ${OPERAND_ID_GEN_DIR}
     DEPENDS
-        ${CMAKE_CURRENT_SOURCE_DIR}/configs/kernel/storage_ids.yml
-        gen_storage_ids
-    COMMENT "Generating storage_id metadata"
+        ${CMAKE_CURRENT_SOURCE_DIR}/configs/kernel/operand_ids.yml
+        gen_operand_ids
+    COMMENT "Generating operand_id metadata"
     VERBATIM
 )
 
-add_custom_target(generate_storage_ids
+add_custom_target(generate_operand_ids
     DEPENDS
-        ${STORAGE_ID_GEN_DIR}/storage_id.def
-        ${STORAGE_ID_GEN_DIR}/storage_id_tables.h
+        ${OPERAND_ID_GEN_DIR}/operand_id.def
+        ${OPERAND_ID_GEN_DIR}/operand_id_tables.h
+)
+
+add_custom_command(
+    OUTPUT
+        ${ROLE_GEN_DIR}/role.def
+        ${ROLE_GEN_DIR}/role_tables.h
+    COMMAND $<TARGET_FILE:gen_roles>
+            ${CMAKE_CURRENT_SOURCE_DIR}/configs/kernel/roles.yml
+            ${ROLE_GEN_DIR}
+    DEPENDS
+        ${CMAKE_CURRENT_SOURCE_DIR}/configs/kernel/roles.yml
+        gen_roles
+    COMMENT "Generating role metadata"
+    VERBATIM
+)
+
+add_custom_target(generate_roles
+    DEPENDS
+        ${ROLE_GEN_DIR}/role.def
+        ${ROLE_GEN_DIR}/role_tables.h
 )
 
 
@@ -355,7 +376,7 @@ endforeach()
 message(STATUS "==========================================")
 
 add_subdirectory(orteaf)
-add_dependencies(orteaf generate_executions generate_ops generate_dtypes generate_architectures generate_devices generate_param_ids generate_storage_ids)
+add_dependencies(orteaf generate_executions generate_ops generate_dtypes generate_architectures generate_devices generate_param_ids generate_operand_ids generate_roles)
 
 
 if(TARGET orteaf)
@@ -385,7 +406,6 @@ endif()
 if(ENABLE_TEST)
     add_subdirectory(tests)
     if(TARGET orteaf_tests)
-        add_dependencies(orteaf_tests generate_executions generate_ops generate_dtypes generate_architectures generate_devices generate_param_ids generate_storage_ids)
+        add_dependencies(orteaf_tests generate_executions generate_ops generate_dtypes generate_architectures generate_devices generate_param_ids generate_operand_ids generate_roles)
     endif()
 endif()
-

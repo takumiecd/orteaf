@@ -62,11 +62,20 @@ target_link_libraries(gen_param_ids
 
 target_compile_features(gen_param_ids PRIVATE cxx_std_20)
 
-add_executable(gen_storage_ids gen_storage_ids.cpp)
+add_executable(gen_operand_ids gen_operand_ids.cpp)
 
-target_link_libraries(gen_storage_ids
+target_link_libraries(gen_operand_ids
     PRIVATE
         "${YAML_CPP_TARGET}"
 )
 
-target_compile_features(gen_storage_ids PRIVATE cxx_std_20)
+target_compile_features(gen_operand_ids PRIVATE cxx_std_20)
+
+add_executable(gen_roles gen_roles.cpp)
+
+target_link_libraries(gen_roles
+    PRIVATE
+        "${YAML_CPP_TARGET}"
+)
+
+target_compile_features(gen_roles PRIVATE cxx_std_20)

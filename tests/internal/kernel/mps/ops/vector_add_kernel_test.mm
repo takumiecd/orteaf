@@ -10,15 +10,15 @@
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_compute_command_encoder.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_device.h>
 #include <orteaf/internal/execution_context/mps/context.h>
-#include <orteaf/internal/kernel/mps/mps_kernel_args.h>
+#include <orteaf/internal/kernel/core/kernel_args.h>
 #include <orteaf/internal/kernel/mps/mps_kernel_base.h>
 #include <orteaf/internal/kernel/mps/mps_kernel_entry.h>
 #include <orteaf/internal/kernel/param/param.h>
 #include <orteaf/internal/kernel/param/param_id.h>
-#include <orteaf/internal/kernel/storage/storage_id.h>
+#include <orteaf/internal/kernel/storage/operand_id.h>
 
 // Include the kernel under test
-#include "orteaf/src/extension/kernel/mps/ops/vector_add_kernel.h"
+#include "tests/internal/kernel/mps/ops/fixtures/vector_add_kernel.h"
 
 namespace kernel = orteaf::internal::kernel;
 namespace mps_kernel = orteaf::internal::kernel::mps;
@@ -36,9 +36,9 @@ TEST(VectorAddKernelTest, StorageSchemaHasThreeFields) {
   vector_add::VectorAddStorages storages;
 
   // Check storage IDs
-  EXPECT_EQ(storages.a.kId, kernel::StorageId::Input0);
-  EXPECT_EQ(storages.b.kId, kernel::StorageId::Input1);
-  EXPECT_EQ(storages.c.kId, kernel::StorageId::Output);
+  EXPECT_EQ(storages.a.kId, kernel::OperandId::Input0);
+  EXPECT_EQ(storages.b.kId, kernel::OperandId::Input1);
+  EXPECT_EQ(storages.c.kId, kernel::OperandId::Output);
 }
 
 TEST(VectorAddKernelTest, ParamSchemaHasNumElements) {
@@ -109,7 +109,7 @@ TEST_F(VectorAddKernelIntegrationTest, KernelEntryCanBeCreated) {
 TEST_F(VectorAddKernelIntegrationTest, ExecuteFunctionSignatureIsCorrect) {
   // Verify the execute function signature matches what MpsKernelEntry expects
   using ExpectedFunc =
-      void (*)(mps_kernel::MpsKernelBase &, mps_kernel::MpsKernelArgs &);
+      void (*)(mps_kernel::MpsKernelBase &, kernel::KernelArgs &);
 
   auto entry = vector_add::createVectorAddKernel();
 
@@ -124,23 +124,14 @@ TEST_F(VectorAddKernelIntegrationTest, ExecuteFunctionSignatureIsCorrect) {
 // Execute Function Logic Tests (without actual GPU dispatch)
 // =============================================================================
 
-TEST(VectorAddKernelTest, ExecuteFunctionThrowsWithoutConfiguredRuntime) {
-  // Default constructor requires MPS runtime to be configured
-  EXPECT_THROW({ mps_kernel::MpsKernelArgs args; }, std::runtime_error);
-}
-
-TEST(VectorAddKernelTest, NoInitAllowsConstructionWithoutRuntime) {
-  // NoInit allows construction without MPS runtime (for testing)
-  mps_kernel::MpsKernelArgs args{mps_kernel::MpsKernelArgs::NoInit{}};
-
-  // Context has null leases, but construction succeeds
-  EXPECT_FALSE(args.context().device);
-  EXPECT_FALSE(args.context().command_queue);
+TEST(VectorAddKernelTest, KernelArgsDefaultContextIsInvalid) {
+  kernel::KernelArgs args;
+  EXPECT_FALSE(args.valid());
 }
 
 TEST(VectorAddKernelTest, ExecuteFunctionThrowsWhenStoragesNotBound) {
   auto entry = vector_add::createVectorAddKernel();
-  mps_kernel::MpsKernelArgs args{mps_kernel::MpsKernelArgs::NoInit{}};
+  kernel::KernelArgs args;
 
   // Execute throws because required storage bindings are not set
   EXPECT_THROW({ entry.execute(entry.base, args); }, std::runtime_error);

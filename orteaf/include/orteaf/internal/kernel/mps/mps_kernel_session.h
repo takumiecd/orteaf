@@ -10,9 +10,8 @@
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_compute_command_encoder.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_size.h"
 #include "orteaf/internal/execution_context/mps/context.h"
-#include "orteaf/internal/kernel/mps/mps_kernel_args.h"
+#include "orteaf/internal/kernel/core/kernel_args.h"
 #include "orteaf/internal/kernel/mps/mps_kernel_base.h"
-#include "orteaf/internal/kernel/mps/mps_storage_binding.h"
 
 namespace orteaf::internal::kernel::mps {
 
@@ -58,9 +57,14 @@ public:
    * @return Optional session, empty if creation failed
    */
   static std::optional<MpsKernelSession> begin(MpsKernelBase &base,
-                                               MpsKernelArgs &args,
+                                               ::orteaf::internal::kernel::KernelArgs &args,
                                                std::size_t kernel_index = 0) {
-    auto command_buffer = base.createCommandBuffer(args.context());
+    auto *context =
+        args.context().tryAs<::orteaf::internal::execution_context::mps::Context>();
+    if (context == nullptr) {
+      return std::nullopt;
+    }
+    auto command_buffer = base.createCommandBuffer(*context);
     if (!command_buffer) {
       return std::nullopt;
     }
@@ -70,8 +74,8 @@ public:
       return std::nullopt;
     }
 
-    auto *pipeline =
-        base.getPipeline(args.context().device.payloadHandle(), kernel_index);
+    auto *pipeline = base.getPipeline(context->device.payloadHandle(),
+                                      kernel_index);
     if (!pipeline) {
       base.endEncoding(encoder);
       return std::nullopt;
@@ -115,8 +119,7 @@ public:
    * @brief Wait for storage dependencies (RAW hazards).
    */
   template <typename... Fields> void waitDependencies(Fields &...fields) {
-    base_->template waitAllStorageDependencies<MpsStorageBinding>(encoder_,
-                                                                  fields...);
+    base_->waitAllStorageDependencies(encoder_, fields...);
   }
 
   /**
@@ -165,8 +168,13 @@ public:
    */
   template <typename... Fields>
   [[nodiscard]] bool updateTokens(Fields &...fields) {
-    return base_->template updateAllStorageTokens<MpsStorageBinding>(
-        args_->context(), command_buffer_, encoder_, fields...);
+    auto *context =
+        args_->context().tryAs<::orteaf::internal::execution_context::mps::Context>();
+    if (context == nullptr) {
+      return false;
+    }
+    return base_->updateAllStorageTokens(*context, command_buffer_, encoder_,
+                                         fields...);
   }
 
   /**
@@ -180,7 +188,8 @@ public:
   MpsCommandBuffer_t commandBuffer() const noexcept { return command_buffer_; }
 
 private:
-  MpsKernelSession(MpsKernelBase &base, MpsKernelArgs &args,
+  MpsKernelSession(MpsKernelBase &base,
+                   ::orteaf::internal::kernel::KernelArgs &args,
                    MpsCommandBuffer_t command_buffer,
                    MpsComputeCommandEncoder_t encoder)
       : base_(&base), args_(&args), command_buffer_(command_buffer),
@@ -195,7 +204,7 @@ private:
   }
 
   MpsKernelBase *base_;
-  MpsKernelArgs *args_;
+  ::orteaf::internal::kernel::KernelArgs *args_;
   MpsCommandBuffer_t command_buffer_;
   MpsComputeCommandEncoder_t encoder_;
   bool committed_ = false;

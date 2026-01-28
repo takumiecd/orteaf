@@ -1,9 +1,9 @@
 #pragma once
 
 #include <orteaf/internal/diagnostics/error/error.h>
-#include <orteaf/internal/kernel/storage/storage_id.h>
+#include <orteaf/internal/kernel/storage/operand_key.h>
 #include <orteaf/internal/kernel/storage/storage_list.h>
-#include <orteaf/kernel/storage_id_tables.h>
+#include <orteaf/kernel/operand_id_tables.h>
 
 #include <utility>
 
@@ -12,20 +12,24 @@ namespace orteaf::internal::kernel {
 /**
  * @brief Storage field type for kernel storage schema.
  *
- * Associates a StorageId with its binding and provides automatic extraction
+ * Associates an OperandId with its binding and provides automatic extraction
  * from KernelArgs. Provides access to the storage lease.
  *
- * @tparam ID Storage identifier
+ * @tparam ID Operand identifier
+ * @tparam Role Role (defaults to Data)
  *
  * Example:
  * @code
- * StorageField<StorageId::Input0> input;
+ * StorageField<OperandId::Input0> input;
  * input.extract(args);
  * auto& lease = input.lease();
  * @endcode
  */
-template <StorageId ID> struct StorageField {
-  static constexpr StorageId kId = ID;
+template <OperandId ID, Role RoleValue = Role::Data>
+struct StorageField {
+  static constexpr OperandId kId = ID;
+  static constexpr Role kRole = RoleValue;
+  static constexpr OperandKey kKey{ID, RoleValue};
 
   /**
    * @brief Check if storage binding was found.
@@ -49,8 +53,7 @@ template <StorageId ID> struct StorageField {
   /**
    * @brief Get the storage lease.
    *
-   * @tparam StorageBinding The storage binding type (MpsStorageBinding,
-   * CpuStorageBinding)
+   * @tparam StorageBinding The storage binding type
    * @throws std::runtime_error if binding not found
    */
   template <typename StorageBinding> auto &lease() const {
@@ -78,7 +81,7 @@ template <StorageId ID> struct StorageField {
    * @brief Get the access pattern for this storage.
    */
   static constexpr ::orteaf::internal::kernel::Access access() {
-    return ::orteaf::generated::storage_id_tables::StorageTypeInfo<
+    return ::orteaf::generated::operand_id_tables::OperandTypeInfo<
         kId>::kAccess;
   }
 
@@ -91,7 +94,7 @@ template <StorageId ID> struct StorageField {
    */
   template <typename StorageBinding>
   void extract(const StorageList<StorageBinding> &storages) {
-    binding_ = storages.find(kId);
+    binding_ = storages.find(kKey);
     if (!binding_) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
@@ -102,8 +105,7 @@ template <StorageId ID> struct StorageField {
   /**
    * @brief Extract storage binding from kernel arguments.
    *
-   * @tparam KernelArgs The kernel arguments type (CpuKernelArgs, MpsKernelArgs,
-   * etc.)
+   * @tparam KernelArgs The kernel arguments type (KernelArgs)
    * @param args Kernel arguments containing storage bindings
    * @throws std::runtime_error if storage not found
    */
@@ -122,10 +124,14 @@ private:
  *
  * Similar to StorageField but allows missing storage bindings.
  *
- * @tparam ID Storage identifier
+ * @tparam ID Operand identifier
+ * @tparam Role Role (defaults to Data)
  */
-template <StorageId ID> struct OptionalStorageField {
-  static constexpr StorageId kId = ID;
+template <OperandId ID, Role RoleValue = Role::Data>
+struct OptionalStorageField {
+  static constexpr OperandId kId = ID;
+  static constexpr Role kRole = RoleValue;
+  static constexpr OperandKey kKey{ID, RoleValue};
 
   /**
    * @brief Check if storage binding was found.
@@ -171,7 +177,7 @@ template <StorageId ID> struct OptionalStorageField {
    * @brief Get the access pattern for this storage.
    */
   static constexpr ::orteaf::internal::kernel::Access access() {
-    return ::orteaf::generated::storage_id_tables::StorageTypeInfo<
+    return ::orteaf::generated::operand_id_tables::OperandTypeInfo<
         kId>::kAccess;
   }
 
@@ -185,7 +191,7 @@ template <StorageId ID> struct OptionalStorageField {
    */
   template <typename StorageBinding>
   void extract(const StorageList<StorageBinding> &storages) {
-    binding_ = storages.find(kId);
+    binding_ = storages.find(kKey);
   }
 
   /**
@@ -217,8 +223,8 @@ private:
  * Example:
  * @code
  * struct MyStorages : StorageSchema<MyStorages> {
- *   StorageField<StorageId::Input0> input;
- *   StorageField<StorageId::Output0> output;
+ *   StorageField<OperandId::Input0> input;
+ *   StorageField<OperandId::Output0> output;
  *
  *   ORTEAF_EXTRACT_STORAGES(input, output)
  * };
@@ -267,9 +273,9 @@ void extractStorages(const KernelArgs &args, Fields &...fields) {
  * Usage:
  * @code
  * struct MyStorages : StorageSchema<MyStorages> {
- *   StorageField<StorageId::Input0> input;
- *   StorageField<StorageId::Output> output;
- *   OptionalStorageField<StorageId::Workspace> workspace;
+ *   StorageField<OperandId::Input0> input;
+ *   StorageField<OperandId::Output> output;
+ *   OptionalStorageField<OperandId::Workspace> workspace;
  *
  *   ORTEAF_EXTRACT_STORAGES(input, output, workspace)
  * };

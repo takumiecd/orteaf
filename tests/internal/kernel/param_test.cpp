@@ -7,7 +7,7 @@
 #include <vector>
 
 namespace kernel = orteaf::internal::kernel;
-using kernel::ArrayView;
+using orteaf::internal::base::ArrayView;
 using kernel::Param;
 using kernel::ParamId;
 

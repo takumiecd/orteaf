@@ -1,126 +1,149 @@
 #pragma once
 
 #include <utility>
-#include <variant>
 
 #include <orteaf/internal/execution/execution.h>
-#include <orteaf/internal/kernel/cpu/cpu_kernel_args.h>
-
-#if ORTEAF_ENABLE_MPS
-#include <orteaf/internal/kernel/mps/mps_kernel_args.h>
-#endif
-
-#if ORTEAF_ENABLE_CUDA
-#include <orteaf/internal/kernel/cuda/cuda_kernel_args.h>
-#endif
+#include <orteaf/internal/kernel/core/context_any.h>
+#include <orteaf/internal/kernel/param/param_list.h>
+#include <orteaf/internal/kernel/storage/storage_binding.h>
+#include <orteaf/internal/kernel/storage/operand_key.h>
+#include <orteaf/internal/kernel/storage/storage_list.h>
+#include <orteaf/internal/storage/storage_lease.h>
 
 namespace orteaf::internal::kernel {
 
 /**
  * @brief Type-erased kernel arguments container.
  *
- * Wraps backend-specific KernelArgs (Cpu/Mps/Cuda) in a std::variant,
- * providing a unified interface similar to the Storage class pattern.
- *
+ * Holds execution context, storage bindings, and parameters without
+ * backend-specific subclasses.
  */
 class KernelArgs {
 public:
   using Execution = ::orteaf::internal::execution::Execution;
-  using CpuKernelArgsType = cpu::CpuKernelArgs;
-#if ORTEAF_ENABLE_MPS
-  using MpsKernelArgsType = mps::MpsKernelArgs;
-#endif
-#if ORTEAF_ENABLE_CUDA
-  using CudaKernelArgsType = cuda::CudaKernelArgs;
-#endif
+  using Context = ContextAny;
+  using StorageLease = ::orteaf::internal::storage::StorageLease;
+  using StorageBindingType = StorageBinding;
+  using StorageListType = StorageList<StorageBindingType>;
 
-  // Variant type holding all backend implementations
-  using Variant = std::variant<std::monostate, CpuKernelArgsType
-#if ORTEAF_ENABLE_MPS
-                               ,
-                               MpsKernelArgsType
-#endif
-                               >;
-
-  /**
-   * @brief Default constructor. Creates an invalid (uninitialized) KernelArgs.
-   */
   KernelArgs() = default;
 
-  /**
-   * @brief Type-erase a backend-specific KernelArgs object.
-   *
-   * @tparam T A backend-specific KernelArgs type.
-   * @param args The backend-specific KernelArgs to wrap.
-   * @return A new KernelArgs instance containing the wrapped args.
-   */
-  template <typename T> static KernelArgs erase(T args) {
-    return KernelArgs(Variant{std::move(args)});
-  }
+  explicit KernelArgs(Context context) : context_(std::move(context)) {}
 
   /**
-   * @brief Attempt to retrieve as a specific type.
-   *
-   * @tparam T The target KernelArgs type.
-   * @return Pointer if it holds type T, nullptr otherwise.
+   * @brief Get the execution context.
    */
-  template <typename T> T *tryAs() { return std::get_if<T>(&variant_); }
-
-  template <typename T> const T *tryAs() const {
-    return std::get_if<T>(&variant_);
-  }
+  const Context &context() const { return context_; }
+  Context &context() { return context_; }
 
   /**
-   * @brief Apply a visitor to the underlying KernelArgs.
+   * @brief Check if the KernelArgs has a valid context.
    */
-  template <typename Visitor> decltype(auto) visit(Visitor &&v) {
-    return std::visit(std::forward<Visitor>(v), variant_);
-  }
-
-  template <typename Visitor> decltype(auto) visit(Visitor &&v) const {
-    return std::visit(std::forward<Visitor>(v), variant_);
-  }
-
-  /**
-   * @brief Check if the KernelArgs is initialized.
-   */
-  bool valid() const {
-    return !std::holds_alternative<std::monostate>(variant_);
-  }
+  bool valid() const { return context_.valid(); }
 
   /**
    * @brief Return the execution backend for this KernelArgs.
    */
-  Execution execution() const {
-    return std::visit(
-        [](const auto &args) -> Execution {
-          using T = std::decay_t<decltype(args)>;
-          if constexpr (std::is_same_v<T, std::monostate>) {
-            return Execution::Cpu; // Default for invalid
-          } else if constexpr (std::is_same_v<T, CpuKernelArgsType>) {
-            return Execution::Cpu;
-          }
-#if ORTEAF_ENABLE_MPS
-          else if constexpr (std::is_same_v<T, MpsKernelArgsType>) {
-            return Execution::Mps;
-          }
-#endif
-#if ORTEAF_ENABLE_CUDA
-          else if constexpr (std::is_same_v<T, CudaKernelArgsType>) {
-            return Execution::Cuda;
-          }
-#endif
-          else {
-            return Execution::Cpu;
-          }
-        },
-        variant_);
+  Execution execution() const { return context_.execution(); }
+
+  /**
+   * @brief Add a storage binding with the specified operand key.
+   */
+  void addStorage(OperandKey key, StorageLease lease) {
+    storages_.add(StorageBindingType{key, std::move(lease)});
   }
 
-private:
-  explicit KernelArgs(Variant v) : variant_(std::move(v)) {}
+  /**
+   * @brief Add a storage binding with the specified ID (Data role).
+   */
+  void addStorage(OperandId id, StorageLease lease) {
+    addStorage(makeOperandKey(id), std::move(lease));
+  }
 
-  Variant variant_{};
+  /**
+   * @brief Find a storage binding by operand key.
+   */
+  const StorageBindingType *findStorage(OperandKey key) const {
+    return storages_.find(key);
+  }
+
+  /**
+   * @brief Find a storage binding by operand (mutable).
+   */
+  StorageBindingType *findStorage(OperandKey key) { return storages_.find(key); }
+
+  /**
+   * @brief Find a storage binding by ID (Data role).
+   */
+  const StorageBindingType *findStorage(OperandId id) const {
+    return storages_.find(id);
+  }
+
+  /**
+   * @brief Find a storage binding by ID (mutable, Data role).
+   */
+  StorageBindingType *findStorage(OperandId id) { return storages_.find(id); }
+
+  /**
+   * @brief Get the list of all storage bindings.
+   */
+  const auto &storageList() const { return storages_; }
+  auto &storageList() { return storages_; }
+
+  /**
+   * @brief Get the number of storage bindings.
+   */
+  std::size_t storageCount() const { return storages_.size(); }
+
+  /**
+   * @brief Get the current storage capacity.
+   */
+  std::size_t storageCapacity() const { return storages_.capacity(); }
+
+  /**
+   * @brief Clear all storage bindings.
+   */
+  void clearStorages() { storages_.clear(); }
+
+  /**
+   * @brief Add a parameter.
+   */
+  void addParam(Param param) { params_.add(std::move(param)); }
+
+  /**
+   * @brief Find a parameter by ID (global).
+   */
+  const Param *findParam(ParamId id) const { return params_.find(id); }
+
+  /**
+   * @brief Find a parameter by key.
+   */
+  const Param *findParam(ParamKey key) const { return params_.find(key); }
+
+  /**
+   * @brief Find a parameter by ID (mutable, global).
+   */
+  Param *findParam(ParamId id) { return params_.find(id); }
+
+  /**
+   * @brief Find a parameter by key (mutable).
+   */
+  Param *findParam(ParamKey key) { return params_.find(key); }
+
+  /**
+   * @brief Get the list of all parameters.
+   */
+  const auto &paramList() const { return params_; }
+
+  /**
+   * @brief Clear all parameters.
+   */
+  void clearParams() { params_.clear(); }
+
+private:
+  Context context_{};
+  StorageListType storages_{};
+  ParamList params_{};
 };
 
 } // namespace orteaf::internal::kernel

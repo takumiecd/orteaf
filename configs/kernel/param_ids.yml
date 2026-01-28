@@ -1,7 +1,8 @@
 schema_version: "1.0"
 
 # Kernel parameter definitions
-# Each parameter has an ID, value, C++ type, and description
+# Each parameter has an ID, C++ type, and description
+# value is not allowed; IDs are auto-assigned by order.
 params:
   # Scalar parameters
   - id: Alpha
@@ -45,3 +46,16 @@ params:
   - id: DataPtr
     cpp_type: "void*"
     description: "Data pointer"
+
+  # Dense tensor layout parameters
+  - id: Shape
+    cpp_type: "::orteaf::internal::base::ArrayView<const std::int64_t>"
+    description: "Tensor shape (int64 array view)"
+
+  - id: Strides
+    cpp_type: "::orteaf::internal::base::ArrayView<const std::int64_t>"
+    description: "Tensor strides (int64 array view)"
+
+  - id: Offset
+    cpp_type: "std::int64_t"
+    description: "Tensor element offset (int64)"

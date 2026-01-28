@@ -18,8 +18,10 @@
 #include "orteaf/internal/execution_context/mps/context.h"
 #include "orteaf/internal/kernel/schema/kernel_param_schema.h"
 #include "orteaf/internal/kernel/schema/kernel_storage_schema.h"
-#include "orteaf/internal/kernel/mps/mps_storage_binding.h"
+#include "orteaf/internal/kernel/storage/storage_binding.h"
 #include "orteaf/internal/kernel/param/param.h"
+#include "orteaf/internal/storage/storage_lease.h"
+#include "orteaf/internal/storage/registry/storage_types.h"
 #include "orteaf/internal/storage/mps/mps_storage.h"
 
 namespace orteaf::internal::kernel::mps {
@@ -328,25 +330,34 @@ struct MpsKernelBase {
    * Retrieves the storage from a StorageField and binds it to the encoder.
    * This is a convenience method for use with kernel storage schemas.
    *
-   * @tparam ID Storage identifier
+   * @tparam ID Operand identifier
    * @param encoder Compute command encoder to bind the buffer to
    * @param field Storage field from a storage schema
    * @param index Binding index for the buffer
    */
-  template <::orteaf::internal::kernel::StorageId ID>
+  template <::orteaf::internal::kernel::OperandId ID,
+            ::orteaf::internal::kernel::Role Role =
+                ::orteaf::internal::kernel::Role::Data>
   void setBuffer(::orteaf::internal::execution::mps::platform::wrapper::
                      MpsComputeCommandEncoder_t encoder,
-                 const ::orteaf::internal::kernel::StorageField<ID> &field,
+                 const ::orteaf::internal::kernel::StorageField<ID, Role> &field,
                  std::size_t index) const {
     if (encoder == nullptr) {
       return;
     }
-    const auto &binding = field.template binding<MpsStorageBinding>();
+    using AnyBinding = ::orteaf::internal::kernel::StorageBinding;
+    using MpsLease = ::orteaf::internal::storage::MpsStorageLease;
+    const auto &binding = field.template binding<AnyBinding>();
     const auto &storage_lease = binding.lease;
-    auto *storage_ptr = storage_lease.operator->();
-    if (storage_ptr) {
-      setBuffer(encoder, *storage_ptr, index);
+    auto *mps_lease = storage_lease.template tryAs<MpsLease>();
+    if (!mps_lease) {
+      return;
     }
+    auto *storage_ptr = mps_lease->operator->();
+    if (!storage_ptr) {
+      return;
+    }
+    setBuffer(encoder, *storage_ptr, index);
   }
 
   /**
@@ -692,17 +703,16 @@ struct MpsKernelBase {
    * This ensures that previous operations writing to these storages have
    * completed.
    *
-   * @tparam StorageBinding The storage binding type (MpsStorageBinding)
    * @tparam Fields Storage field types
    * @param encoder Compute command encoder to wait on
    * @param fields Storage fields to check for dependencies
    */
-  template <typename StorageBinding, typename... Fields>
+  template <typename... Fields>
   void
   waitAllStorageDependencies(::orteaf::internal::execution::mps::platform::
                                  wrapper::MpsComputeCommandEncoder_t encoder,
                              Fields &...fields) const {
-    (waitStorageDependency<StorageBinding>(encoder, fields), ...);
+    (waitStorageDependency(encoder, fields), ...);
   }
 
   /**
@@ -714,7 +724,6 @@ struct MpsKernelBase {
    * This ensures that subsequent operations will wait for this kernel to
    * complete.
    *
-   * @tparam StorageBinding The storage binding type (MpsStorageBinding)
    * @tparam Fields Storage field types
    * @param context Execution context containing the command queue
    * @param command_buffer Command buffer being executed
@@ -723,7 +732,7 @@ struct MpsKernelBase {
    * @return true if fence was acquired and updated successfully, false
    * otherwise
    */
-  template <typename StorageBinding, typename... Fields>
+  template <typename... Fields>
   [[nodiscard]] bool updateAllStorageTokens(
       ::orteaf::internal::execution_context::mps::Context &context,
       ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandBuffer_t
@@ -743,7 +752,7 @@ struct MpsKernelBase {
     updateFence(encoder, payload->fence());
 
     // Update all storage tokens
-    (updateStorageToken<StorageBinding>(fence_lease, fields), ...);
+    (updateStorageToken(fence_lease, fields), ...);
     return true;
   }
 
@@ -785,7 +794,7 @@ private:
    * @param encoder Compute command encoder to wait on
    * @param field Storage field to check for dependencies
    */
-  template <typename StorageBinding, typename Field>
+  template <typename Field>
   void waitStorageDependency(::orteaf::internal::execution::mps::platform::
                                  wrapper::MpsComputeCommandEncoder_t encoder,
                              const Field &field) const {
@@ -796,8 +805,14 @@ private:
       return; // Optional field not present
     }
 
-    auto &storage_lease = field.template lease<StorageBinding>();
-    auto *storage_ptr = storage_lease.operator->();
+    using AnyBinding = ::orteaf::internal::kernel::StorageBinding;
+    using MpsLease = ::orteaf::internal::storage::MpsStorageLease;
+    auto &storage_lease_any = field.template lease<AnyBinding>();
+    auto *mps_lease = storage_lease_any.template tryAs<MpsLease>();
+    if (!mps_lease) {
+      return; // Wrong execution backend
+    }
+    auto *storage_ptr = mps_lease->operator->();
     if (!storage_ptr) {
       return; // Invalid storage lease
     }
@@ -847,7 +862,7 @@ private:
    * @param fence_lease Fence lease acquired for this kernel
    * @param field Storage field to update tokens on
    */
-  template <typename StorageBinding, typename FenceLease, typename Field>
+  template <typename FenceLease, typename Field>
   void updateStorageToken(FenceLease &fence_lease, Field &field) const {
     using Access = ::orteaf::internal::kernel::Access;
     constexpr auto access = Field::access();
@@ -856,8 +871,14 @@ private:
       return; // Optional field not present
     }
 
-    auto &storage_lease = field.template lease<StorageBinding>();
-    auto *storage_ptr = storage_lease.operator->();
+    using AnyBinding = ::orteaf::internal::kernel::StorageBinding;
+    using MpsLease = ::orteaf::internal::storage::MpsStorageLease;
+    auto &storage_lease_any = field.template lease<AnyBinding>();
+    auto *mps_lease = storage_lease_any.template tryAs<MpsLease>();
+    if (!mps_lease) {
+      return; // Wrong execution backend
+    }
+    auto *storage_ptr = mps_lease->operator->();
     if (!storage_ptr) {
       return; // Invalid storage lease
     }

@@ -6,10 +6,11 @@
 #include <orteaf/internal/execution/mps/manager/mps_compute_pipeline_state_manager.h>
 #include <orteaf/internal/execution/mps/mps_handles.h>
 #include <orteaf/internal/execution_context/mps/context.h>
-#include <orteaf/internal/kernel/mps/mps_kernel_args.h>
+#include <orteaf/internal/kernel/core/kernel_args.h>
 #include <orteaf/internal/kernel/mps/mps_kernel_base.h>
 #include <orteaf/internal/kernel/mps/mps_kernel_entry.h>
 
+namespace kernel = orteaf::internal::kernel;
 namespace mps_kernel = orteaf::internal::kernel::mps;
 namespace mps_manager = orteaf::internal::execution::mps::manager;
 namespace mps_exec = orteaf::internal::execution::mps;
@@ -33,10 +34,10 @@ struct MockRuntimeApi {
 // Test helper: track execution calls
 static bool g_execute_called = false;
 static mps_kernel::MpsKernelBase *g_execute_base = nullptr;
-static mps_kernel::MpsKernelArgs *g_execute_args = nullptr;
+static kernel::KernelArgs *g_execute_args = nullptr;
 
 void mockExecuteFunc(mps_kernel::MpsKernelBase &base,
-                     mps_kernel::MpsKernelArgs &args) {
+                     kernel::KernelArgs &args) {
   g_execute_called = true;
   g_execute_base = &base;
   g_execute_args = &args;

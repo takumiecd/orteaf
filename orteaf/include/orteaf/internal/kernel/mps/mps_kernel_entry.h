@@ -2,7 +2,8 @@
 
 #if ORTEAF_ENABLE_MPS
 
-#include "orteaf/internal/kernel/mps/mps_kernel_args.h"
+#include "orteaf/internal/diagnostics/error/error.h"
+#include "orteaf/internal/kernel/core/kernel_args.h"
 #include "orteaf/internal/kernel/mps/mps_kernel_base.h"
 
 namespace orteaf::internal::kernel::mps {
@@ -17,7 +18,8 @@ namespace orteaf::internal::kernel::mps {
  * PipelineLease level within MpsComputePipelineStateManager.
  */
 struct MpsKernelEntry {
-  using ExecuteFunc = void (*)(MpsKernelBase &base, MpsKernelArgs &args);
+  using ExecuteFunc =
+      void (*)(MpsKernelBase &base, ::orteaf::internal::kernel::KernelArgs &args);
 
   /**
    * @brief Kernel base instance.
@@ -43,10 +45,17 @@ struct MpsKernelEntry {
    *
    * @param args Kernel arguments containing context, storages, and parameters
    */
-  void run(MpsKernelArgs &args) {
-    auto device = args.context().device.payloadHandle();
+  void run(::orteaf::internal::kernel::KernelArgs &args) {
+    auto *context =
+        args.context().tryAs<::orteaf::internal::execution_context::mps::Context>();
+    if (!context) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+          "MPS kernel requires MPS execution context");
+    }
+    auto device = context->device.payloadHandle();
     if (!base.configured(device)) {
-      base.configure(args.context());
+      base.configure(*context);
     }
     execute(base, args);
   }

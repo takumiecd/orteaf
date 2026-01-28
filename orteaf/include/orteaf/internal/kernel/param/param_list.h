@@ -15,7 +15,7 @@ inline constexpr std::size_t kDefaultParamListCapacity = 16;
  * @brief Parameter list container.
  *
  * Manages a collection of parameters with efficient inline storage.
- * Provides convenient methods for adding and finding parameters by ID.
+ * Provides convenient methods for adding and finding parameters by key/ID.
  * Used across all kernel argument implementations.
  */
 class ParamList {
@@ -41,14 +41,14 @@ public:
   void pushBack(Param param) { storage_.pushBack(std::move(param)); }
 
   /**
-   * @brief Find a parameter by ID.
+   * @brief Find a parameter by key.
    *
-   * @param id Parameter identifier to search for
+   * @param key Parameter key to search for
    * @return Pointer to Param if found, nullptr otherwise
    */
-  const Param *find(ParamId id) const {
+  const Param *find(ParamKey key) const {
     for (const auto &p : storage_) {
-      if (p.id() == id) {
+      if (p.key() == key) {
         return &p;
       }
     }
@@ -56,15 +56,32 @@ public:
   }
 
   /**
-   * @brief Find a parameter by ID (mutable version).
+   * @brief Find a parameter by key (mutable version).
    */
-  Param *find(ParamId id) {
+  Param *find(ParamKey key) {
     for (auto &p : storage_) {
-      if (p.id() == id) {
+      if (p.key() == key) {
         return &p;
       }
     }
     return nullptr;
+  }
+
+  /**
+   * @brief Find a parameter by ID (global scope only).
+   *
+   * @param id Parameter identifier to search for
+   * @return Pointer to Param if found, nullptr otherwise
+   */
+  const Param *find(ParamId id) const {
+    return find(ParamKey::global(id));
+  }
+
+  /**
+   * @brief Find a parameter by ID (mutable, global scope only).
+   */
+  Param *find(ParamId id) {
+    return find(ParamKey::global(id));
   }
 
   /**

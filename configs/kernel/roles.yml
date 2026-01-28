@@ -1,0 +1,17 @@
+schema_version: "1.0"
+
+# Role definitions
+# Roles distinguish multiple storages within a single logical tensor
+# value is not allowed; roles are auto-assigned by order.
+roles:
+  - id: Data
+    description: "Primary tensor data storage"
+
+  - id: Index
+    description: "Index/indices storage"
+
+  - id: Indptr
+    description: "Index pointer/offset storage"
+
+  - id: Meta
+    description: "Auxiliary metadata storage"
