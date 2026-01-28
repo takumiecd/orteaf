@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <type_traits>
 
@@ -73,6 +74,8 @@ template <typename T> struct ArrayView {
 // Verify that ArrayView is trivially copyable for all common types
 static_assert(std::is_trivially_copyable_v<ArrayView<const int>>,
               "ArrayView<const int> must be trivially copyable");
+static_assert(std::is_trivially_copyable_v<ArrayView<const std::int64_t>>,
+              "ArrayView<const std::int64_t> must be trivially copyable");
 static_assert(std::is_trivially_copyable_v<ArrayView<const float>>,
               "ArrayView<const float> must be trivially copyable");
 static_assert(std::is_trivially_copyable_v<ArrayView<const double>>,

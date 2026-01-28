@@ -311,6 +311,8 @@ GeneratedData GenerateOutputs(const ResolvedConfig &resolved) {
     variant_types.push_back("  std::size_t");
   if (unique_types.count("std::uint32_t"))
     variant_types.push_back("  std::uint32_t");
+  if (unique_types.count("std::int64_t"))
+    variant_types.push_back("  std::int64_t");
   if (unique_types.count("void*"))
     variant_types.push_back("  void*");
 
@@ -318,6 +320,8 @@ GeneratedData GenerateOutputs(const ResolvedConfig &resolved) {
   variant_types.push_back("  ::orteaf::internal::kernel::ArrayView<const int>");
   variant_types.push_back(
       "  ::orteaf::internal::kernel::ArrayView<const std::size_t>");
+  variant_types.push_back(
+      "  ::orteaf::internal::kernel::ArrayView<const std::int64_t>");
   variant_types.push_back(
       "  ::orteaf::internal::kernel::ArrayView<const float>");
   variant_types.push_back(

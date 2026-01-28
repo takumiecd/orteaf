@@ -15,6 +15,8 @@
 
 #include <orteaf/internal/base/small_vector.h>
 #include <orteaf/internal/diagnostics/error/error.h>
+#include <orteaf/internal/kernel/core/kernel_arg_slots.h>
+#include <orteaf/internal/kernel/storage/storage_id.h>
 
 namespace orteaf::extension::tensor {
 
@@ -23,14 +25,58 @@ public:
   using Dim = std::int64_t;
   using Dims = ::orteaf::internal::base::SmallVector<Dim, 4>;
   using size_type = std::size_t;
+  using KernelArrayView = ::orteaf::internal::kernel::ArrayView<const Dim>;
+  using ShapeParamSlot =
+      ::orteaf::internal::kernel::ParamSlot<
+          KernelArrayView, ::orteaf::internal::kernel::ParamId::Shape>;
+  using StridesParamSlot =
+      ::orteaf::internal::kernel::ParamSlot<
+          KernelArrayView, ::orteaf::internal::kernel::ParamId::Strides>;
+  using OffsetParamSlot =
+      ::orteaf::internal::kernel::ParamSlot<
+          Dim, ::orteaf::internal::kernel::ParamId::Offset>;
 
-  DenseTensorLayout() = default;
+  DenseTensorLayout() { syncParams(); }
 
   DenseTensorLayout(Dims shape, Dims strides, Dim offset = 0)
       : shape_(std::move(shape)), strides_(std::move(strides)),
         offset_(offset) {
     validateShape(shape_);
     validateRankMatch(shape_, strides_);
+    syncParams();
+  }
+
+  DenseTensorLayout(const DenseTensorLayout &other)
+      : shape_(other.shape_), strides_(other.strides_), offset_(other.offset_) {
+    syncParams();
+  }
+
+  DenseTensorLayout &operator=(const DenseTensorLayout &other) {
+    if (this == &other) {
+      return *this;
+    }
+    shape_ = other.shape_;
+    strides_ = other.strides_;
+    offset_ = other.offset_;
+    syncParams();
+    return *this;
+  }
+
+  DenseTensorLayout(DenseTensorLayout &&other) noexcept
+      : shape_(std::move(other.shape_)), strides_(std::move(other.strides_)),
+        offset_(other.offset_) {
+    syncParams();
+  }
+
+  DenseTensorLayout &operator=(DenseTensorLayout &&other) noexcept {
+    if (this == &other) {
+      return *this;
+    }
+    shape_ = std::move(other.shape_);
+    strides_ = std::move(other.strides_);
+    offset_ = other.offset_;
+    syncParams();
+    return *this;
   }
 
   static DenseTensorLayout contiguous(std::span<const Dim> shape) {
@@ -52,6 +98,25 @@ public:
   Dim offset() const noexcept { return offset_; }
 
   Dim numel() const noexcept { return numelOf(shape_); }
+
+  KernelArrayView shapeView() const noexcept {
+    return KernelArrayView(shape_.data(), shape_.size());
+  }
+
+  KernelArrayView stridesView() const noexcept {
+    return KernelArrayView(strides_.data(), strides_.size());
+  }
+
+  const ShapeParamSlot &shapeSlot() const noexcept { return shape_param_; }
+  const StridesParamSlot &stridesSlot() const noexcept { return strides_param_; }
+  const OffsetParamSlot &offsetSlot() const noexcept { return offset_param_; }
+
+  void bindParams(::orteaf::internal::kernel::KernelArgs &args,
+                  ::orteaf::internal::kernel::StorageId storage_id) const {
+    shape_param_.bindScoped(args, storage_id);
+    strides_param_.bindScoped(args, storage_id);
+    offset_param_.bindScoped(args, storage_id);
+  }
 
   bool isContiguous() const noexcept {
     if (shape_.empty()) {
@@ -378,6 +443,12 @@ public:
   }
 
 private:
+  void syncParams() {
+    shape_param_.value_ = shapeView();
+    strides_param_.value_ = stridesView();
+    offset_param_.value_ = offset_;
+  }
+
   static void validateRankMatch(const Dims &shape, const Dims &strides) {
     if (shape.size() != strides.size()) {
       ::orteaf::internal::diagnostics::error::throwError(
@@ -431,6 +502,9 @@ private:
   Dims shape_{};
   Dims strides_{};
   Dim offset_{0};
+  ShapeParamSlot shape_param_{};
+  StridesParamSlot strides_param_{};
+  OffsetParamSlot offset_param_{};
 };
 
 } // namespace orteaf::extension::tensor

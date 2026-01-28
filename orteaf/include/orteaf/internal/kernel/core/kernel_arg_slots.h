@@ -74,6 +74,10 @@ struct StorageSlot {
   }
   ::orteaf::internal::storage::StorageLease &lease() { return storage_; }
 
+  void bind(KernelArgs &args, StorageId storage_id) const {
+    args.addStorage(makeStorageKey(storage_id, Role), storage_);
+  }
+
   void bind(KernelArgs &args, StorageId storage_id) {
     args.addStorage(makeStorageKey(storage_id, Role), std::move(storage_));
   }

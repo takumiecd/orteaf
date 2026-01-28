@@ -46,3 +46,16 @@ params:
   - id: DataPtr
     cpp_type: "void*"
     description: "Data pointer"
+
+  # Dense tensor layout parameters
+  - id: Shape
+    cpp_type: "ArrayView<const std::int64_t>"
+    description: "Tensor shape (int64 array view)"
+
+  - id: Strides
+    cpp_type: "ArrayView<const std::int64_t>"
+    description: "Tensor strides (int64 array view)"
+
+  - id: Offset
+    cpp_type: "std::int64_t"
+    description: "Tensor element offset (int64)"

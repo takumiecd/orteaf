@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <utility>
 #include <variant>
@@ -45,6 +46,12 @@ public:
       : key_(ParamKey::global(id)), value_(value) {}
 
   /**
+   * @brief Construct a parameter with an int64_t value (global).
+   */
+  Param(ParamId id, std::int64_t value) noexcept
+      : key_(ParamKey::global(id)), value_(value) {}
+
+  /**
    * @brief Construct a parameter with a size_t value (global).
    */
   Param(ParamId id, std::size_t value) noexcept
@@ -83,6 +90,11 @@ public:
    * @brief Construct a parameter with an int value (scoped).
    */
   Param(ParamKey key, int value) noexcept : key_(key), value_(value) {}
+
+  /**
+   * @brief Construct a parameter with an int64_t value (scoped).
+   */
+  Param(ParamKey key, std::int64_t value) noexcept : key_(key), value_(value) {}
 
   /**
    * @brief Construct a parameter with a size_t value (scoped).
