@@ -130,7 +130,7 @@ TEST(ArchitectureParent, ForEachFallbackVisitsChain) {
   arch::forEachFallback(arch::Architecture::CudaSm80,
                         [&](arch::Architecture a) { visited.push_back(a); });
 
-  // Without explicit parent chain, should be: Sm80 -> CudaGeneric
+  // Verifies parent chain: Sm80 -> CudaGeneric
   ASSERT_EQ(visited.size(), 2u);
   EXPECT_EQ(visited[0], arch::Architecture::CudaSm80);
   EXPECT_EQ(visited[1], arch::Architecture::CudaGeneric);
