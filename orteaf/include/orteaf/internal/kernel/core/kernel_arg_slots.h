@@ -5,6 +5,7 @@
 
 #include <orteaf/internal/kernel/core/kernel_args.h>
 #include <orteaf/internal/kernel/param/param.h>
+#include <orteaf/internal/kernel/param/param_transform.h>
 #include <orteaf/internal/kernel/storage/storage_key.h>
 #include <orteaf/internal/kernel/storage/storage_role.h>
 #include <orteaf/internal/kernel/storage/storage_id.h>
@@ -21,8 +22,10 @@ namespace orteaf::internal::kernel {
  */
 template <typename T, ParamId Id, StorageRole Role = StorageRole::Data>
 struct ParamSlot {
-  static_assert(std::is_constructible_v<Param, ParamKey, T>,
-                "ParamSlot value type must be supported by Param");
+  using Target =
+      ::orteaf::generated::param_id_tables::ParamValueTypeT<Id>;
+  static_assert(std::is_constructible_v<Param, ParamKey, Target>,
+                "ParamSlot target type must be supported by Param");
   static constexpr ParamId kId = Id;
   static constexpr StorageRole kRole = Role;
 
@@ -40,17 +43,20 @@ struct ParamSlot {
   }
 
   void bindGlobal(KernelArgs &args) const {
-    args.addParam(Param(globalKey(), value_));
+    args.addParam(Param(globalKey(), Transform<T, Target>(value_)));
   }
 
   void bindScoped(KernelArgs &args, StorageId storage_id) const {
-    args.addParam(Param(scopedKey(storage_id), value_));
+    args.addParam(
+        Param(scopedKey(storage_id), Transform<T, Target>(value_)));
   }
 
-  Param toGlobalParam() const { return Param(globalKey(), value_); }
+  Param toGlobalParam() const {
+    return Param(globalKey(), Transform<T, Target>(value_));
+  }
 
   Param toScopedParam(StorageId storage_id) const {
-    return Param(scopedKey(storage_id), value_);
+    return Param(scopedKey(storage_id), Transform<T, Target>(value_));
   }
 };
 

@@ -276,6 +276,10 @@ GeneratedData GenerateOutputs(const ResolvedConfig &resolved) {
   header_stream << "template <ParamId ID>\n";
   header_stream << "struct ParamTypeInfo;\n\n";
 
+  header_stream << "// Value type for each ParamId\n";
+  header_stream << "template <ParamId ID>\n";
+  header_stream << "struct ParamValueType;\n\n";
+
   for (const auto &param : resolved.params) {
     header_stream << "template <>\n";
     header_stream << "struct ParamTypeInfo<ParamId::" << param.id << "> {\n";
@@ -284,7 +288,15 @@ GeneratedData GenerateOutputs(const ResolvedConfig &resolved) {
     header_stream << "    static constexpr std::string_view kDescription = \""
                   << EscapeStringLiteral(param.description) << "\";\n";
     header_stream << "};\n\n";
+
+    header_stream << "template <>\n";
+    header_stream << "struct ParamValueType<ParamId::" << param.id << "> {\n";
+    header_stream << "    using Type = " << param.cpp_type << ";\n";
+    header_stream << "};\n\n";
   }
+
+  header_stream << "template <ParamId ID>\n";
+  header_stream << "using ParamValueTypeT = typename ParamValueType<ID>::Type;\n\n";
 
   // Collect unique C++ types (excluding "Tensor")
   std::unordered_set<std::string> unique_types;

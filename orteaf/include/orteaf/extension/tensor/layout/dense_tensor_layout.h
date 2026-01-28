@@ -16,6 +16,7 @@
 #include <orteaf/internal/base/small_vector.h>
 #include <orteaf/internal/diagnostics/error/error.h>
 #include <orteaf/internal/kernel/core/kernel_arg_slots.h>
+#include <orteaf/internal/kernel/param/transform/small_vector_array_view.h>
 #include <orteaf/internal/kernel/storage/storage_id.h>
 
 namespace orteaf::extension::tensor {
@@ -28,56 +29,26 @@ public:
   using KernelArrayView = ::orteaf::internal::kernel::ArrayView<const Dim>;
   using ShapeParamSlot =
       ::orteaf::internal::kernel::ParamSlot<
-          KernelArrayView, ::orteaf::internal::kernel::ParamId::Shape>;
+          Dims, ::orteaf::internal::kernel::ParamId::Shape>;
   using StridesParamSlot =
       ::orteaf::internal::kernel::ParamSlot<
-          KernelArrayView, ::orteaf::internal::kernel::ParamId::Strides>;
+          Dims, ::orteaf::internal::kernel::ParamId::Strides>;
   using OffsetParamSlot =
       ::orteaf::internal::kernel::ParamSlot<
           Dim, ::orteaf::internal::kernel::ParamId::Offset>;
 
-  DenseTensorLayout() { syncParams(); }
+  DenseTensorLayout() = default;
 
   DenseTensorLayout(Dims shape, Dims strides, Dim offset = 0)
       : shape_(std::move(shape)), strides_(std::move(strides)),
         offset_(offset) {
-    validateShape(shape_);
-    validateRankMatch(shape_, strides_);
-    syncParams();
+    validateShape(shape_.value_);
+    validateRankMatch(shape_.value_, strides_.value_);
   }
-
-  DenseTensorLayout(const DenseTensorLayout &other)
-      : shape_(other.shape_), strides_(other.strides_), offset_(other.offset_) {
-    syncParams();
-  }
-
-  DenseTensorLayout &operator=(const DenseTensorLayout &other) {
-    if (this == &other) {
-      return *this;
-    }
-    shape_ = other.shape_;
-    strides_ = other.strides_;
-    offset_ = other.offset_;
-    syncParams();
-    return *this;
-  }
-
-  DenseTensorLayout(DenseTensorLayout &&other) noexcept
-      : shape_(std::move(other.shape_)), strides_(std::move(other.strides_)),
-        offset_(other.offset_) {
-    syncParams();
-  }
-
-  DenseTensorLayout &operator=(DenseTensorLayout &&other) noexcept {
-    if (this == &other) {
-      return *this;
-    }
-    shape_ = std::move(other.shape_);
-    strides_ = std::move(other.strides_);
-    offset_ = other.offset_;
-    syncParams();
-    return *this;
-  }
+  DenseTensorLayout(const DenseTensorLayout &) = default;
+  DenseTensorLayout &operator=(const DenseTensorLayout &) = default;
+  DenseTensorLayout(DenseTensorLayout &&) noexcept = default;
+  DenseTensorLayout &operator=(DenseTensorLayout &&) noexcept = default;
 
   static DenseTensorLayout contiguous(std::span<const Dim> shape) {
     validateShape(shape);
@@ -92,43 +63,43 @@ public:
     return contiguous(std::span<const Dim>(shape.data(), shape.size()));
   }
 
-  size_type rank() const noexcept { return shape_.size(); }
-  const Dims &shape() const noexcept { return shape_; }
-  const Dims &strides() const noexcept { return strides_; }
-  Dim offset() const noexcept { return offset_; }
+  size_type rank() const noexcept { return shape_.value_.size(); }
+  const Dims &shape() const noexcept { return shape_.value_; }
+  const Dims &strides() const noexcept { return strides_.value_; }
+  Dim offset() const noexcept { return offset_.value_; }
 
-  Dim numel() const noexcept { return numelOf(shape_); }
+  Dim numel() const noexcept { return numelOf(shape_.value_); }
 
   KernelArrayView shapeView() const noexcept {
-    return KernelArrayView(shape_.data(), shape_.size());
+    return KernelArrayView(shape_.value_.data(), shape_.value_.size());
   }
 
   KernelArrayView stridesView() const noexcept {
-    return KernelArrayView(strides_.data(), strides_.size());
+    return KernelArrayView(strides_.value_.data(), strides_.value_.size());
   }
 
-  const ShapeParamSlot &shapeSlot() const noexcept { return shape_param_; }
-  const StridesParamSlot &stridesSlot() const noexcept { return strides_param_; }
-  const OffsetParamSlot &offsetSlot() const noexcept { return offset_param_; }
+  const ShapeParamSlot &shapeSlot() const noexcept { return shape_; }
+  const StridesParamSlot &stridesSlot() const noexcept { return strides_; }
+  const OffsetParamSlot &offsetSlot() const noexcept { return offset_; }
 
   void bindParams(::orteaf::internal::kernel::KernelArgs &args,
                   ::orteaf::internal::kernel::StorageId storage_id) const {
-    shape_param_.bindScoped(args, storage_id);
-    strides_param_.bindScoped(args, storage_id);
-    offset_param_.bindScoped(args, storage_id);
+    shape_.bindScoped(args, storage_id);
+    strides_.bindScoped(args, storage_id);
+    offset_.bindScoped(args, storage_id);
   }
 
   bool isContiguous() const noexcept {
-    if (shape_.empty()) {
+    if (shape_.value_.empty()) {
       return true;
     }
     Dim expected = 1;
-    for (size_type idx = shape_.size(); idx > 0; --idx) {
+    for (size_type idx = shape_.value_.size(); idx > 0; --idx) {
       const size_type dim = idx - 1;
-      if (strides_[dim] != expected) {
+      if (strides_.value_[dim] != expected) {
         return false;
       }
-      expected *= shape_[dim];
+      expected *= shape_.value_[dim];
     }
     return true;
   }
@@ -159,12 +130,12 @@ public:
               "DenseTensorLayout transpose perm contains duplicates");
         }
       }
-      new_shape[i] = shape_[dim];
-      new_strides[i] = strides_[dim];
+      new_shape[i] = shape_.value_[dim];
+      new_strides[i] = strides_.value_[dim];
     }
 
     return DenseTensorLayout(std::move(new_shape), std::move(new_strides),
-                             offset_);
+                             offset_.value_);
   }
 
   DenseTensorLayout slice(std::span<const Dim> starts,
@@ -183,12 +154,12 @@ public:
           "DenseTensorLayout slice requires starts/sizes/steps to match rank");
     }
 
-    Dims new_shape = shape_;
-    Dims new_strides = strides_;
-    Dim new_offset = offset_;
+    Dims new_shape = shape_.value_;
+    Dims new_strides = strides_.value_;
+    Dim new_offset = offset_.value_;
 
     for (size_type i = 0; i < dims; ++i) {
-      const Dim dim = shape_[i];
+      const Dim dim = shape_.value_[i];
       const Dim start = starts[i];
       const Dim size = sizes[i];
       const Dim step = steps.empty() ? Dim{1} : steps[i];
@@ -211,8 +182,8 @@ public:
 
       if (size == 0) {
         new_shape[i] = 0;
-        new_strides[i] = strides_[i] * step;
-        new_offset += start * strides_[i];
+        new_strides[i] = strides_.value_[i] * step;
+        new_offset += start * strides_.value_[i];
         continue;
       }
 
@@ -238,8 +209,8 @@ public:
       }
 
       new_shape[i] = size;
-      new_strides[i] = strides_[i] * step;
-      new_offset += start * strides_[i];
+      new_strides[i] = strides_.value_[i] * step;
+      new_offset += start * strides_.value_[i];
     }
 
     return DenseTensorLayout(std::move(new_shape), std::move(new_strides),
@@ -316,7 +287,7 @@ public:
 
     Dims strides = makeContiguousStrides(resolved_shape);
     return DenseTensorLayout(std::move(resolved_shape), std::move(strides),
-                             offset_);
+                             offset_.value_);
   }
 
   DenseTensorLayout broadcastTo(std::span<const Dim> new_shape) const {
@@ -337,9 +308,9 @@ public:
       const size_type new_dim_index = idx - 1;
       const Dim new_dim = new_shape_dims[new_dim_index];
       const Dim old_dim =
-          (old_index > 0) ? shape_[old_index - 1] : Dim{1};
+          (old_index > 0) ? shape_.value_[old_index - 1] : Dim{1};
       const Dim old_stride =
-          (old_index > 0) ? strides_[old_index - 1] : Dim{0};
+          (old_index > 0) ? strides_.value_[old_index - 1] : Dim{0};
       if (old_index > 0) {
         --old_index;
       }
@@ -356,21 +327,21 @@ public:
     }
 
     return DenseTensorLayout(std::move(new_shape_dims), std::move(new_strides),
-                             offset_);
+                             offset_.value_);
   }
 
   DenseTensorLayout squeeze() const {
     Dims new_shape;
     Dims new_strides;
     for (size_type i = 0; i < rank(); ++i) {
-      if (shape_[i] == 1) {
+      if (shape_.value_[i] == 1) {
         continue;
       }
-      new_shape.pushBack(shape_[i]);
-      new_strides.pushBack(strides_[i]);
+      new_shape.pushBack(shape_.value_[i]);
+      new_strides.pushBack(strides_.value_[i]);
     }
     return DenseTensorLayout(std::move(new_shape), std::move(new_strides),
-                             offset_);
+                             offset_.value_);
   }
 
   DenseTensorLayout squeeze(std::span<const size_type> dims) const {
@@ -390,7 +361,7 @@ public:
             ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
             "DenseTensorLayout squeeze dims contain duplicates");
       }
-      if (shape_[dim] != 1) {
+      if (shape_.value_[dim] != 1) {
         ::orteaf::internal::diagnostics::error::throwError(
             ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
             "DenseTensorLayout squeeze dim must be size 1");
@@ -402,12 +373,12 @@ public:
       if (remove[i] != 0) {
         continue;
       }
-      new_shape.pushBack(shape_[i]);
-      new_strides.pushBack(strides_[i]);
+      new_shape.pushBack(shape_.value_[i]);
+      new_strides.pushBack(strides_.value_[i]);
     }
 
     return DenseTensorLayout(std::move(new_shape), std::move(new_strides),
-                             offset_);
+                             offset_.value_);
   }
 
   DenseTensorLayout unsqueeze(size_type dim) const {
@@ -427,28 +398,22 @@ public:
       if (i == dim) {
         new_shape[i] = 1;
         if (old_index < rank()) {
-          new_strides[i] = strides_[old_index] * shape_[old_index];
+          new_strides[i] = strides_.value_[old_index] * shape_.value_[old_index];
         } else {
           new_strides[i] = 1;
         }
         continue;
       }
-      new_shape[i] = shape_[old_index];
-      new_strides[i] = strides_[old_index];
+      new_shape[i] = shape_.value_[old_index];
+      new_strides[i] = strides_.value_[old_index];
       ++old_index;
     }
 
     return DenseTensorLayout(std::move(new_shape), std::move(new_strides),
-                             offset_);
+                             offset_.value_);
   }
 
 private:
-  void syncParams() {
-    shape_param_.value_ = shapeView();
-    strides_param_.value_ = stridesView();
-    offset_param_.value_ = offset_;
-  }
-
   static void validateRankMatch(const Dims &shape, const Dims &strides) {
     if (shape.size() != strides.size()) {
       ::orteaf::internal::diagnostics::error::throwError(
@@ -499,12 +464,9 @@ private:
         std::span<const Dim>(shape.data(), shape.size()));
   }
 
-  Dims shape_{};
-  Dims strides_{};
-  Dim offset_{0};
-  ShapeParamSlot shape_param_{};
-  StridesParamSlot strides_param_{};
-  OffsetParamSlot offset_param_{};
+  ShapeParamSlot shape_{};
+  StridesParamSlot strides_{};
+  OffsetParamSlot offset_{};
 };
 
 } // namespace orteaf::extension::tensor
