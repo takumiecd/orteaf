@@ -11,7 +11,7 @@
 #include <orteaf/internal/kernel/core/access.h>
 #include <orteaf/internal/kernel/cpu/cpu_storage_binding.h>
 #include <orteaf/internal/kernel/core/kernel_key.h>
-#include <orteaf/internal/kernel/storage/storage_id.h>
+#include <orteaf/internal/kernel/storage/storage_key.h>
 #include <orteaf/internal/storage/registry/storage_types.h>
 
 namespace orteaf::internal::kernel::cpu {
@@ -81,8 +81,12 @@ public:
    * @param id Storage identifier (contains access pattern metadata)
    * @param lease Storage lease to bind
    */
+  void addStorage(StorageKey key, StorageLease lease) {
+    storages_.add(CpuStorageBinding{key, std::move(lease)});
+  }
+
   void addStorage(StorageId id, StorageLease lease) {
-    storages_.add(CpuStorageBinding{id, std::move(lease)});
+    addStorage(makeStorageKey(id), std::move(lease));
   }
 
   /**
@@ -91,6 +95,10 @@ public:
    * @param id Storage identifier to search for
    * @return Pointer to CpuStorageBinding if found, nullptr otherwise
    */
+  const CpuStorageBinding *findStorage(StorageKey key) const {
+    return storages_.find(key);
+  }
+
   const CpuStorageBinding *findStorage(StorageId id) const {
     return storages_.find(id);
   }
@@ -98,6 +106,8 @@ public:
   /**
    * @brief Find a storage binding by ID (mutable version).
    */
+  CpuStorageBinding *findStorage(StorageKey key) { return storages_.find(key); }
+
   CpuStorageBinding *findStorage(StorageId id) { return storages_.find(id); }
 
   /**

@@ -14,7 +14,7 @@
 #include <orteaf/internal/kernel/core/access.h>
 #include <orteaf/internal/kernel/core/kernel_key.h>
 #include <orteaf/internal/kernel/mps/mps_storage_binding.h>
-#include <orteaf/internal/kernel/storage/storage_id.h>
+#include <orteaf/internal/kernel/storage/storage_key.h>
 #include <orteaf/internal/storage/registry/storage_types.h>
 
 namespace orteaf::internal::kernel::mps {
@@ -85,8 +85,12 @@ public:
    * @param id Storage identifier (contains access pattern metadata)
    * @param lease Storage lease to bind
    */
+  void addStorage(StorageKey key, StorageLease lease) {
+    storages_.add(MpsStorageBinding{key, std::move(lease)});
+  }
+
   void addStorage(StorageId id, StorageLease lease) {
-    storages_.add(MpsStorageBinding{id, std::move(lease)});
+    addStorage(makeStorageKey(id), std::move(lease));
   }
 
   /**
@@ -95,6 +99,10 @@ public:
    * @param id Storage identifier to search for
    * @return Pointer to MpsStorageBinding if found, nullptr otherwise
    */
+  const MpsStorageBinding *findStorage(StorageKey key) const {
+    return storages_.find(key);
+  }
+
   const MpsStorageBinding *findStorage(StorageId id) const {
     return storages_.find(id);
   }
@@ -102,6 +110,8 @@ public:
   /**
    * @brief Find a storage binding by ID (mutable version).
    */
+  MpsStorageBinding *findStorage(StorageKey key) { return storages_.find(key); }
+
   MpsStorageBinding *findStorage(StorageId id) { return storages_.find(id); }
 
   /**

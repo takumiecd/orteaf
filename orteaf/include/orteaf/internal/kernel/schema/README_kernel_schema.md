@@ -393,15 +393,17 @@ void executeKernel(auto& args) {
 
 ## Storage API リファレンス
 
-### `StorageField<StorageId ID>`
+### `StorageField<StorageId ID, StorageRole Role = Data>`
 - 必須ストレージバインディングを表すフィールド型
+- `Role` は同一テンソル内のストレージ役割（Data/Index など）。省略時は `Data`
 - `extract(args)`: 抽出（存在しない場合は例外）
 - `binding<StorageBinding>()`: バインディング取得
 - `lease<StorageBinding>()`: リース取得（const/非const版）
 - `operator bool()`: 存在チェック
 
-### `OptionalStorageField<StorageId ID>`
+### `OptionalStorageField<StorageId ID, StorageRole Role = Data>`
 - オプショナルストレージバインディングを表すフィールド型
+- `Role` は同一テンソル内のストレージ役割（Data/Index など）。省略時は `Data`
 - `extract(args)`: 抽出（存在しなくてもOK）
 - `present()`: ストレージが存在するか
 - `bindingOr<StorageBinding>(default)`: バインディングまたはデフォルト値

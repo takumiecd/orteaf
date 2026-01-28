@@ -1,13 +1,13 @@
 #pragma once
 
-#include <orteaf/internal/kernel/storage/storage_id.h>
+#include <orteaf/internal/kernel/storage/storage_key.h>
 
 namespace orteaf::internal::kernel {
 
 /**
  * @brief Generic storage binding structure for kernel arguments.
  *
- * Represents a bound storage resource with its identifier and lease.
+ * Represents a bound storage resource with its key and lease.
  * This template is specialized for different execution backends (CPU, MPS, CUDA).
  * Access pattern information is available through the StorageId metadata.
  *
@@ -25,10 +25,11 @@ struct StorageBinding {
   /**
    * @brief Storage identifier.
    *
-   * Identifies the semantic role of this storage (e.g., Input0, Output).
-   * Access pattern can be queried via StorageTypeInfo<id>::kAccess.
-   */
-  StorageId id;
+ * Identifies the semantic role of this storage (e.g., Input0, Output) and
+ * the tensor-internal role (e.g., Data, Index).
+ * Access pattern can be queried via StorageTypeInfo<id>::kAccess.
+ */
+  StorageKey key;
 
   /**
    * @brief Backend-specific storage lease.

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <orteaf/internal/diagnostics/error/error.h>
-#include <orteaf/internal/kernel/storage/storage_id.h>
+#include <orteaf/internal/kernel/storage/storage_key.h>
 #include <orteaf/internal/kernel/storage/storage_list.h>
 #include <orteaf/kernel/storage_id_tables.h>
 
@@ -16,6 +16,7 @@ namespace orteaf::internal::kernel {
  * from KernelArgs. Provides access to the storage lease.
  *
  * @tparam ID Storage identifier
+ * @tparam Role Storage role (defaults to Data)
  *
  * Example:
  * @code
@@ -24,8 +25,11 @@ namespace orteaf::internal::kernel {
  * auto& lease = input.lease();
  * @endcode
  */
-template <StorageId ID> struct StorageField {
+template <StorageId ID, StorageRole Role = StorageRole::Data>
+struct StorageField {
   static constexpr StorageId kId = ID;
+  static constexpr StorageRole kRole = Role;
+  static constexpr StorageKey kKey{ID, Role};
 
   /**
    * @brief Check if storage binding was found.
@@ -91,7 +95,7 @@ template <StorageId ID> struct StorageField {
    */
   template <typename StorageBinding>
   void extract(const StorageList<StorageBinding> &storages) {
-    binding_ = storages.find(kId);
+    binding_ = storages.find(kKey);
     if (!binding_) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
@@ -123,9 +127,13 @@ private:
  * Similar to StorageField but allows missing storage bindings.
  *
  * @tparam ID Storage identifier
+ * @tparam Role Storage role (defaults to Data)
  */
-template <StorageId ID> struct OptionalStorageField {
+template <StorageId ID, StorageRole Role = StorageRole::Data>
+struct OptionalStorageField {
   static constexpr StorageId kId = ID;
+  static constexpr StorageRole kRole = Role;
+  static constexpr StorageKey kKey{ID, Role};
 
   /**
    * @brief Check if storage binding was found.
@@ -185,7 +193,7 @@ template <StorageId ID> struct OptionalStorageField {
    */
   template <typename StorageBinding>
   void extract(const StorageList<StorageBinding> &storages) {
-    binding_ = storages.find(kId);
+    binding_ = storages.find(kKey);
   }
 
   /**
