@@ -9,8 +9,8 @@
 #include <orteaf/internal/kernel/param/param.h>
 #include <orteaf/internal/kernel/param/param_id.h>
 #include <orteaf/internal/kernel/param/param_key.h>
-#include <orteaf/internal/kernel/storage/storage_key.h>
-#include <orteaf/internal/kernel/storage/storage_id.h>
+#include <orteaf/internal/kernel/storage/operand_key.h>
+#include <orteaf/internal/kernel/storage/operand_id.h>
 
 #include "tests/internal/kernel/mps/ops/fixtures/scoped_param_kernel.h"
 
@@ -24,8 +24,8 @@ TEST(ScopedParamKernelTest, ParamSchemaIsScopedToInput0) {
   scoped_kernel::ScopedParamParams params;
 
   EXPECT_EQ(params.num_elements.kId, kernel::ParamId::NumElements);
-  EXPECT_EQ(params.num_elements.kStorageKey.id, kernel::StorageId::Input0);
-  EXPECT_EQ(params.num_elements.kStorageKey.role, kernel::StorageRole::Data);
+  EXPECT_EQ(params.num_elements.kOperandKey.id, kernel::OperandId::Input0);
+  EXPECT_EQ(params.num_elements.kOperandKey.role, kernel::Role::Data);
 }
 
 TEST(ScopedParamKernelTest, ExecuteExtractsScopedParam) {
@@ -34,7 +34,7 @@ TEST(ScopedParamKernelTest, ExecuteExtractsScopedParam) {
 
   const auto key = kernel::ParamKey::scoped(
       kernel::ParamId::NumElements,
-      kernel::makeStorageKey(kernel::StorageId::Input0));
+      kernel::makeOperandKey(kernel::OperandId::Input0));
   args.addParam(kernel::Param(key, static_cast<std::uint32_t>(7)));
 
   auto entry = scoped_kernel::createScopedParamKernel();

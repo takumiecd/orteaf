@@ -1,31 +1,31 @@
 #pragma once
 
-#include <orteaf/internal/kernel/storage/storage_key.h>
+#include <orteaf/internal/kernel/storage/operand_key.h>
 #include <orteaf/internal/storage/storage_lease.h>
 
 namespace orteaf::internal::kernel {
 
 /**
- * @brief Storage binding structure for kernel arguments.
+ * @brief Operand binding structure for kernel arguments.
  *
- * Represents a bound storage resource with its key and lease.
+ * Represents a bound storage resource with its operand key and lease.
  * Uses the type-erased StorageLease to avoid backend-specific bindings.
- * Access pattern information is available through the StorageId metadata.
+ * Access pattern information is available through the OperandId metadata.
  *
  * Example:
  * @code
- * StorageBinding binding{makeStorageKey(StorageId::Input0), lease};
+ * Operand binding{makeOperandKey(OperandId::Input0), lease};
  * @endcode
  */
-struct StorageBinding {
+struct Operand {
   /**
-   * @brief Storage identifier.
+   * @brief Operand key.
    *
    * Identifies the semantic role of this storage (e.g., Input0, Output) and
    * the tensor-internal role (e.g., Data, Index).
-   * Access pattern can be queried via StorageTypeInfo<id>::kAccess.
+   * Access pattern can be queried via OperandTypeInfo<id>::kAccess.
    */
-  StorageKey key;
+  OperandKey key;
 
   /**
    * @brief Backend-specific storage lease.

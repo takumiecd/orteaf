@@ -183,19 +183,19 @@ template <ParamId ID, typename T> struct OptionalField {
 /**
  * @brief Scoped field type for kernel parameter schema.
  *
- * Associates a ParamId with a storage scope and type.
+ * Associates a ParamId with an operand-key scope and type.
  *
  * @tparam ID Parameter identifier
  * @tparam T Parameter value type
- * @tparam SID Storage identifier to scope to
- * @tparam Role Storage role (defaults to Data)
+ * @tparam SID Operand identifier to scope to
+ * @tparam Role Role (defaults to Data)
  */
-template <ParamId ID, typename T, StorageId SID,
-          StorageRole Role = StorageRole::Data>
+template <ParamId ID, typename T, OperandId SID,
+          Role Role = Role::Data>
 struct ScopedField {
   static constexpr ParamId kId = ID;
-  static constexpr StorageKey kStorageKey{SID, Role};
-  static constexpr ParamKey kKey = ParamKey::scoped(ID, kStorageKey);
+  static constexpr OperandKey kOperandKey{SID, Role};
+  static constexpr ParamKey kKey = ParamKey::scoped(ID, kOperandKey);
   using Type = T;
   T value{};
 
@@ -254,12 +254,12 @@ struct ScopedField {
 /**
  * @brief Optional scoped field type for kernel parameter schema.
  */
-template <ParamId ID, typename T, StorageId SID,
-          StorageRole Role = StorageRole::Data>
+template <ParamId ID, typename T, OperandId SID,
+          Role Role = Role::Data>
 struct OptionalScopedField {
   static constexpr ParamId kId = ID;
-  static constexpr StorageKey kStorageKey{SID, Role};
-  static constexpr ParamKey kKey = ParamKey::scoped(ID, kStorageKey);
+  static constexpr OperandKey kOperandKey{SID, Role};
+  static constexpr ParamKey kKey = ParamKey::scoped(ID, kOperandKey);
   using Type = T;
   T value{};
   bool present = false;

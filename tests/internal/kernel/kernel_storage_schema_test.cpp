@@ -1,11 +1,11 @@
 #include <orteaf/internal/kernel/schema/kernel_storage_schema.h>
-#include <orteaf/internal/kernel/storage/storage_binding.h>
+#include <orteaf/internal/kernel/storage/operand.h>
 #include <orteaf/internal/storage/storage_lease.h>
 
 #include <gtest/gtest.h>
 
 #include <orteaf/internal/kernel/core/kernel_args.h>
-#include <orteaf/internal/kernel/storage/storage_id.h>
+#include <orteaf/internal/kernel/storage/operand_id.h>
 
 #include <orteaf/internal/execution/cpu/api/cpu_execution_api.h>
 #include <orteaf/internal/execution_context/cpu/current_context.h>
@@ -34,8 +34,8 @@ protected:
 
 // Define storage schema outside test function
 struct SimpleStorageSchema : StorageSchema<SimpleStorageSchema> {
-  OptionalStorageField<StorageId::Input0> input;
-  OptionalStorageField<StorageId::Output> output;
+  OptionalStorageField<OperandId::Input0> input;
+  OptionalStorageField<OperandId::Output> output;
 
   ORTEAF_EXTRACT_STORAGES(input, output)
 };
@@ -53,9 +53,9 @@ TEST_F(KernelStorageSchemaTest, BasicExtraction) {
 }
 
 struct OptionalStorageSchema : StorageSchema<OptionalStorageSchema> {
-  OptionalStorageField<StorageId::Input0> input;
-  OptionalStorageField<StorageId::Output> output;
-  OptionalStorageField<StorageId::Workspace> workspace;
+  OptionalStorageField<OperandId::Input0> input;
+  OptionalStorageField<OperandId::Output> output;
+  OptionalStorageField<OperandId::Workspace> workspace;
 
   ORTEAF_EXTRACT_STORAGES(input, output, workspace)
 };
@@ -73,14 +73,14 @@ TEST_F(KernelStorageSchemaTest, OptionalStorageField) {
   EXPECT_FALSE(schema.workspace.present());
 
   // Optional field returns nullptr when not present
-  using AnyBinding = StorageBinding;
+  using AnyBinding = Operand;
   auto *workspace_binding = schema.workspace.bindingOr<AnyBinding>();
   EXPECT_EQ(workspace_binding, nullptr);
 }
 
 struct RequiredStorageSchema : StorageSchema<RequiredStorageSchema> {
-  StorageField<StorageId::Input0> input;
-  StorageField<StorageId::Output> output;
+  StorageField<OperandId::Input0> input;
+  StorageField<OperandId::Output> output;
 
   ORTEAF_EXTRACT_STORAGES(input, output)
 };
@@ -95,7 +95,7 @@ TEST_F(KernelStorageSchemaTest, OptionalFieldNotPresent) {
   KernelArgs args;
 
   // Single field extraction
-  OptionalStorageField<StorageId::Workspace> workspace_field;
+  OptionalStorageField<OperandId::Workspace> workspace_field;
   workspace_field.extract(args);
 
   EXPECT_FALSE(workspace_field);

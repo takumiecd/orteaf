@@ -156,7 +156,7 @@ ParsedConfig ParseConfig(const fs::path &yaml_path) {
 
     if (node["value"]) {
       std::ostringstream oss;
-      oss << "Key 'value' is not allowed for storage roles (" << context
+      oss << "Key 'value' is not allowed for roles (" << context
           << "). Values are auto-assigned by order.";
       Fail(oss.str());
     }
@@ -187,7 +187,7 @@ GeneratedFiles GenerateFiles(const ParsedConfig &config) {
   std::ostringstream def_stream;
   def_stream << "// Auto-generated. Do not edit.\n";
   for (const auto &role : config.roles) {
-    def_stream << "STORAGE_ROLE(" << role.id << ", " << role.value << ")\n";
+    def_stream << "ROLE(" << role.id << ", " << role.value << ")\n";
   }
 
   std::ostringstream header_stream;
@@ -198,35 +198,35 @@ GeneratedFiles GenerateFiles(const ParsedConfig &config) {
   header_stream << "#include <cstdint>\n";
   header_stream << "#include <string_view>\n\n";
   header_stream << "namespace orteaf::internal::kernel {\n";
-  header_stream << "enum class StorageRole : std::uint8_t;\n";
+  header_stream << "enum class Role : std::uint8_t;\n";
   header_stream << "}  // namespace orteaf::internal::kernel\n\n";
-  header_stream << "namespace orteaf::generated::storage_role_tables {\n";
-  header_stream << "using ::orteaf::internal::kernel::StorageRole;\n\n";
-  header_stream << "inline constexpr std::size_t kStorageRoleCount = "
+  header_stream << "namespace orteaf::generated::role_tables {\n";
+  header_stream << "using ::orteaf::internal::kernel::Role;\n\n";
+  header_stream << "inline constexpr std::size_t kRoleCount = "
                 << role_count << ";\n\n";
 
   header_stream << "inline constexpr std::array<std::string_view, "
-                   "kStorageRoleCount> kStorageRoleDescriptions = {\n";
+                   "kRoleCount> kRoleDescriptions = {\n";
   for (const auto &role : config.roles) {
     header_stream << "    \"" << EscapeStringLiteral(role.description)
                   << "\",\n";
   }
   header_stream << "};\n\n";
 
-  header_stream << "// Type info for each StorageRole\n";
-  header_stream << "template <StorageRole Role>\n";
-  header_stream << "struct StorageRoleInfo;\n\n";
+  header_stream << "// Type info for each Role\n";
+  header_stream << "template <Role Role>\n";
+  header_stream << "struct RoleInfo;\n\n";
 
   for (const auto &role : config.roles) {
     header_stream << "template <>\n";
-    header_stream << "struct StorageRoleInfo<StorageRole::" << role.id
+    header_stream << "struct RoleInfo<Role::" << role.id
                   << "> {\n";
     header_stream << "    static constexpr std::string_view kDescription = \""
                   << EscapeStringLiteral(role.description) << "\";\n";
     header_stream << "};\n\n";
   }
 
-  header_stream << "}  // namespace orteaf::generated::storage_role_tables\n";
+  header_stream << "}  // namespace orteaf::generated::role_tables\n";
 
   generated.role_def = def_stream.str();
   generated.role_tables_header = header_stream.str();
@@ -253,7 +253,7 @@ void WriteFile(const fs::path &path, const std::string &content) {
 
 int main(int argc, char **argv) {
   if (argc != 3) {
-    std::cerr << "Usage: gen_storage_roles <storage_roles.yml> <output_dir>\n";
+    std::cerr << "Usage: gen_roles <roles.yml> <output_dir>\n";
     return 1;
   }
 
@@ -264,11 +264,11 @@ int main(int argc, char **argv) {
     auto config = ParseConfig(yaml_path);
     auto generated = GenerateFiles(config);
 
-    WriteFile(output_dir / "storage_role.def", generated.role_def);
-    WriteFile(output_dir / "storage_role_tables.h",
+    WriteFile(output_dir / "role.def", generated.role_def);
+    WriteFile(output_dir / "role_tables.h",
               generated.role_tables_header);
   } catch (const std::exception &e) {
-    std::cerr << "gen_storage_roles error: " << e.what() << "\n";
+    std::cerr << "gen_roles error: " << e.what() << "\n";
     return 1;
   }
 

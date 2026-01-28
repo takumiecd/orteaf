@@ -4,8 +4,8 @@
 #include "orteaf/internal/kernel/param/param.h"
 #include "orteaf/internal/kernel/param/param_id.h"
 #include "orteaf/internal/kernel/param/param_key.h"
-#include "orteaf/internal/kernel/storage/storage_id.h"
-#include "orteaf/internal/kernel/storage/storage_key.h"
+#include "orteaf/internal/kernel/storage/operand_id.h"
+#include "orteaf/internal/kernel/storage/operand_key.h"
 
 #include "orteaf/internal/execution/mps/api/mps_execution_api.h"
 #include "orteaf/internal/execution/mps/platform/mps_slow_ops.h"
@@ -119,7 +119,7 @@ TEST_F(KernelArgsMpsContextTest, AddAndFindScopedParam) {
 
   const auto key = kernel::ParamKey::scoped(
       kernel::ParamId::Alpha,
-      kernel::makeStorageKey(kernel::StorageId::Input0));
+      kernel::makeOperandKey(kernel::OperandId::Input0));
   args.addParam(kernel::Param(key, 3.5f));
 
   // Global lookup should not match scoped params.
@@ -164,7 +164,7 @@ TEST_F(KernelArgsMpsContextTest, AddStorageBeyondInlineCapacity) {
   const std::size_t count = 24;
   for (std::size_t i = 0; i < count; ++i) {
     KernelArgsType::StorageLease lease;
-    args.addStorage(kernel::StorageId::Input0, std::move(lease));
+    args.addStorage(kernel::OperandId::Input0, std::move(lease));
   }
   EXPECT_EQ(args.storageCount(), count);
   EXPECT_GE(args.storageCapacity(), count);
@@ -173,17 +173,17 @@ TEST_F(KernelArgsMpsContextTest, AddStorageBeyondInlineCapacity) {
 TEST_F(KernelArgsMpsContextTest, AddStorageLease) {
   KernelArgsType args;
 
-  // Add a storage lease with StorageId
+  // Add a storage lease with OperandId
   KernelArgsType::StorageLease lease;
-  args.addStorage(kernel::StorageId::Input0, std::move(lease));
+  args.addStorage(kernel::OperandId::Input0, std::move(lease));
 
   EXPECT_EQ(args.storageCount(), 1);
 
   // Verify we can find the storage by ID
-  const auto *binding = args.findStorage(kernel::StorageId::Input0);
+  const auto *binding = args.findStorage(kernel::OperandId::Input0);
   ASSERT_NE(binding, nullptr);
-  EXPECT_EQ(binding->key.id, kernel::StorageId::Input0);
-  EXPECT_EQ(binding->key.role, kernel::StorageRole::Data);
+  EXPECT_EQ(binding->key.id, kernel::OperandId::Input0);
+  EXPECT_EQ(binding->key.role, kernel::Role::Data);
 }
 
 TEST_F(KernelArgsMpsContextTest, ParamListIteration) {

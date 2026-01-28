@@ -10,7 +10,7 @@
 #include <orteaf/internal/kernel/mps/mps_kernel_base.h>
 #include <orteaf/internal/kernel/mps/mps_kernel_entry.h>
 #include <orteaf/internal/kernel/param/param_id.h>
-#include <orteaf/internal/kernel/storage/storage_id.h>
+#include <orteaf/internal/kernel/storage/operand_id.h>
 
 namespace orteaf::extension::kernel::mps::ops {
 
@@ -24,7 +24,7 @@ namespace mps_kernel = ::orteaf::internal::kernel::mps;
  */
 struct ScopedParamParams : kernel::ParamSchema<ScopedParamParams> {
   kernel::ScopedField<kernel::ParamId::NumElements, std::uint32_t,
-                      kernel::StorageId::Input0>
+                      kernel::OperandId::Input0>
       num_elements;
 
   ORTEAF_EXTRACT_FIELDS(num_elements)

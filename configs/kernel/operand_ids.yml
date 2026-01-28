@@ -1,0 +1,53 @@
+schema_version: "1.0"
+
+# Kernel operand binding definitions
+# Each operand has an ID, default access pattern, and description
+# value is not allowed; IDs are auto-assigned by order.
+operands:
+  # Input operands (Read-only)
+  - id: Input0
+    access: Read
+    description: "First input tensor operand"
+  
+  - id: Input1
+    access: Read
+    description: "Second input tensor operand"
+  
+  - id: Input2
+    access: Read
+    description: "Third input tensor operand"
+  
+  - id: Input3
+    access: Read
+    description: "Fourth input tensor operand"
+  
+  # Output operands (Write-only)
+  - id: Output
+    access: Write
+    description: "Primary output tensor operand"
+  
+  - id: Output1
+    access: Write
+    description: "Secondary output tensor operand"
+  
+  # Input/Output operands (Read-Write)
+  - id: InOut
+    access: ReadWrite
+    description: "In-place input/output tensor operand"
+  
+  - id: InOut1
+    access: ReadWrite
+    description: "Secondary in-place input/output tensor operand"
+  
+  # Temporary/workspace operands (Read-Write)
+  - id: Temp
+    access: ReadWrite
+    description: "Temporary workspace operand"
+  
+  - id: Temp1
+    access: ReadWrite
+    description: "Secondary temporary workspace operand"
+  
+  - id: Workspace
+    access: ReadWrite
+    description: "General workspace operand"

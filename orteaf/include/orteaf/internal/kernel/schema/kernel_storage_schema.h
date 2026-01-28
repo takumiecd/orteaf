@@ -1,9 +1,9 @@
 #pragma once
 
 #include <orteaf/internal/diagnostics/error/error.h>
-#include <orteaf/internal/kernel/storage/storage_key.h>
+#include <orteaf/internal/kernel/storage/operand_key.h>
 #include <orteaf/internal/kernel/storage/storage_list.h>
-#include <orteaf/kernel/storage_id_tables.h>
+#include <orteaf/kernel/operand_id_tables.h>
 
 #include <utility>
 
@@ -12,24 +12,24 @@ namespace orteaf::internal::kernel {
 /**
  * @brief Storage field type for kernel storage schema.
  *
- * Associates a StorageId with its binding and provides automatic extraction
+ * Associates an OperandId with its binding and provides automatic extraction
  * from KernelArgs. Provides access to the storage lease.
  *
- * @tparam ID Storage identifier
- * @tparam Role Storage role (defaults to Data)
+ * @tparam ID Operand identifier
+ * @tparam Role Role (defaults to Data)
  *
  * Example:
  * @code
- * StorageField<StorageId::Input0> input;
+ * StorageField<OperandId::Input0> input;
  * input.extract(args);
  * auto& lease = input.lease();
  * @endcode
  */
-template <StorageId ID, StorageRole Role = StorageRole::Data>
+template <OperandId ID, Role RoleValue = Role::Data>
 struct StorageField {
-  static constexpr StorageId kId = ID;
-  static constexpr StorageRole kRole = Role;
-  static constexpr StorageKey kKey{ID, Role};
+  static constexpr OperandId kId = ID;
+  static constexpr Role kRole = RoleValue;
+  static constexpr OperandKey kKey{ID, RoleValue};
 
   /**
    * @brief Check if storage binding was found.
@@ -81,7 +81,7 @@ struct StorageField {
    * @brief Get the access pattern for this storage.
    */
   static constexpr ::orteaf::internal::kernel::Access access() {
-    return ::orteaf::generated::storage_id_tables::StorageTypeInfo<
+    return ::orteaf::generated::operand_id_tables::OperandTypeInfo<
         kId>::kAccess;
   }
 
@@ -124,14 +124,14 @@ private:
  *
  * Similar to StorageField but allows missing storage bindings.
  *
- * @tparam ID Storage identifier
- * @tparam Role Storage role (defaults to Data)
+ * @tparam ID Operand identifier
+ * @tparam Role Role (defaults to Data)
  */
-template <StorageId ID, StorageRole Role = StorageRole::Data>
+template <OperandId ID, Role RoleValue = Role::Data>
 struct OptionalStorageField {
-  static constexpr StorageId kId = ID;
-  static constexpr StorageRole kRole = Role;
-  static constexpr StorageKey kKey{ID, Role};
+  static constexpr OperandId kId = ID;
+  static constexpr Role kRole = RoleValue;
+  static constexpr OperandKey kKey{ID, RoleValue};
 
   /**
    * @brief Check if storage binding was found.
@@ -177,7 +177,7 @@ struct OptionalStorageField {
    * @brief Get the access pattern for this storage.
    */
   static constexpr ::orteaf::internal::kernel::Access access() {
-    return ::orteaf::generated::storage_id_tables::StorageTypeInfo<
+    return ::orteaf::generated::operand_id_tables::OperandTypeInfo<
         kId>::kAccess;
   }
 
@@ -223,8 +223,8 @@ private:
  * Example:
  * @code
  * struct MyStorages : StorageSchema<MyStorages> {
- *   StorageField<StorageId::Input0> input;
- *   StorageField<StorageId::Output0> output;
+ *   StorageField<OperandId::Input0> input;
+ *   StorageField<OperandId::Output0> output;
  *
  *   ORTEAF_EXTRACT_STORAGES(input, output)
  * };
@@ -273,9 +273,9 @@ void extractStorages(const KernelArgs &args, Fields &...fields) {
  * Usage:
  * @code
  * struct MyStorages : StorageSchema<MyStorages> {
- *   StorageField<StorageId::Input0> input;
- *   StorageField<StorageId::Output> output;
- *   OptionalStorageField<StorageId::Workspace> workspace;
+ *   StorageField<OperandId::Input0> input;
+ *   StorageField<OperandId::Output> output;
+ *   OptionalStorageField<OperandId::Workspace> workspace;
  *
  *   ORTEAF_EXTRACT_STORAGES(input, output, workspace)
  * };

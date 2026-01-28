@@ -3,8 +3,8 @@
 #include "orteaf/internal/kernel/param/param.h"
 #include "orteaf/internal/kernel/param/param_id.h"
 #include "orteaf/internal/kernel/param/param_key.h"
-#include "orteaf/internal/kernel/storage/storage_id.h"
-#include "orteaf/internal/kernel/storage/storage_key.h"
+#include "orteaf/internal/kernel/storage/operand_id.h"
+#include "orteaf/internal/kernel/storage/operand_key.h"
 
 #include "orteaf/internal/execution/cpu/api/cpu_execution_api.h"
 #include "orteaf/internal/execution_context/cpu/current_context.h"
@@ -88,7 +88,7 @@ TEST_F(KernelArgsCpuContextTest, AddAndFindScopedParam) {
 
   const auto key = kernel::ParamKey::scoped(
       kernel::ParamId::Alpha,
-      kernel::makeStorageKey(kernel::StorageId::Input0));
+      kernel::makeOperandKey(kernel::OperandId::Input0));
   args.addParam(kernel::Param(key, 3.5f));
 
   // Global lookup should not match scoped params.
@@ -133,7 +133,7 @@ TEST_F(KernelArgsCpuContextTest, AddStorageBeyondInlineCapacity) {
   const std::size_t count = 24;
   for (std::size_t i = 0; i < count; ++i) {
     KernelArgsType::StorageLease lease;
-    args.addStorage(kernel::StorageId::InOut, std::move(lease));
+    args.addStorage(kernel::OperandId::InOut, std::move(lease));
   }
   EXPECT_EQ(args.storageCount(), count);
   EXPECT_GE(args.storageCapacity(), count);
@@ -142,17 +142,17 @@ TEST_F(KernelArgsCpuContextTest, AddStorageBeyondInlineCapacity) {
 TEST_F(KernelArgsCpuContextTest, AddStorageLease) {
   KernelArgsType args;
 
-  // Add a storage lease with StorageId
+  // Add a storage lease with OperandId
   KernelArgsType::StorageLease lease;
-  args.addStorage(kernel::StorageId::InOut, std::move(lease));
+  args.addStorage(kernel::OperandId::InOut, std::move(lease));
 
   EXPECT_EQ(args.storageCount(), 1);
 
   // Verify we can find the storage by ID
-  const auto *binding = args.findStorage(kernel::StorageId::InOut);
+  const auto *binding = args.findStorage(kernel::OperandId::InOut);
   ASSERT_NE(binding, nullptr);
-  EXPECT_EQ(binding->key.id, kernel::StorageId::InOut);
-  EXPECT_EQ(binding->key.role, kernel::StorageRole::Data);
+  EXPECT_EQ(binding->key.id, kernel::OperandId::InOut);
+  EXPECT_EQ(binding->key.role, kernel::Role::Data);
 }
 
 TEST_F(KernelArgsCpuContextTest, ParamListIteration) {

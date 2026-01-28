@@ -1,7 +1,7 @@
 #pragma once
 
 #include <orteaf/internal/base/small_vector.h>
-#include <orteaf/internal/kernel/storage/storage_key.h>
+#include <orteaf/internal/kernel/storage/operand_key.h>
 
 #include <cstddef>
 
@@ -14,7 +14,7 @@ inline constexpr std::size_t kDefaultStorageListCapacity = 16;
  * @brief Generic storage list container.
  *
  * Manages a collection of storage bindings with efficient inline storage.
- * Provides convenient methods for adding and finding storages by key.
+ * Provides convenient methods for adding and finding storages by operand key.
  * Template parameter allows use with different storage binding types
  * (e.g., StorageBinding).
  *
@@ -23,10 +23,10 @@ inline constexpr std::size_t kDefaultStorageListCapacity = 16;
  *
  * Example:
  * @code
- * using AnyBinding = StorageBinding;
+ * using AnyBinding = Operand;
  * StorageList<AnyBinding> storages;
- * storages.add(AnyBinding{makeStorageKey(StorageId::Input0), lease});
- * auto* binding = storages.find(makeStorageKey(StorageId::Input0));
+ * storages.add(AnyBinding{makeOperandKey(OperandId::Input0), lease});
+ * auto* binding = storages.find(makeOperandKey(OperandId::Input0));
  * @endcode
  */
 template <typename StorageBinding,
@@ -53,12 +53,12 @@ public:
   void pushBack(StorageBinding binding) { storage_.pushBack(std::move(binding)); }
 
   /**
-   * @brief Find a storage binding by key.
+   * @brief Find a storage binding by operand key.
    *
-   * @param key Storage key to search for
+   * @param key Operand key to search for
    * @return Pointer to StorageBinding if found, nullptr otherwise
    */
-  const StorageBinding *find(StorageKey key) const {
+  const StorageBinding *find(OperandKey key) const {
     for (const auto &binding : storage_) {
       if (binding.key == key) {
         return &binding;
@@ -68,9 +68,9 @@ public:
   }
 
   /**
-   * @brief Find a storage binding by key (mutable version).
+   * @brief Find a storage binding by operand key (mutable version).
    */
-  StorageBinding *find(StorageKey key) {
+  StorageBinding *find(OperandKey key) {
     for (auto &binding : storage_) {
       if (binding.key == key) {
         return &binding;
@@ -82,14 +82,14 @@ public:
   /**
    * @brief Find a storage binding by ID (defaults to Data role).
    */
-  const StorageBinding *find(StorageId id) const {
-    return find(makeStorageKey(id));
+  const StorageBinding *find(OperandId id) const {
+    return find(makeOperandKey(id));
   }
 
   /**
    * @brief Find a storage binding by ID (mutable, defaults to Data role).
    */
-  StorageBinding *find(StorageId id) { return find(makeStorageKey(id)); }
+  StorageBinding *find(OperandId id) { return find(makeOperandKey(id)); }
 
   /**
    * @brief Get the number of storage bindings.

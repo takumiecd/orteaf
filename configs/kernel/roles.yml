@@ -1,6 +1,6 @@
 schema_version: "1.0"
 
-# Storage role definitions
+# Role definitions
 # Roles distinguish multiple storages within a single logical tensor
 # value is not allowed; roles are auto-assigned by order.
 roles:

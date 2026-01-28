@@ -5,10 +5,10 @@
 #include <orteaf/internal/kernel/core/kernel_args.h>
 #include <orteaf/internal/kernel/param/param_id.h>
 #include <orteaf/internal/kernel/param/transform/small_vector_array_view.h>
-#include <orteaf/internal/kernel/storage/storage_binding.h>
-#include <orteaf/internal/kernel/storage/storage_id.h>
-#include <orteaf/internal/kernel/storage/storage_key.h>
-#include <orteaf/internal/kernel/storage/storage_role.h>
+#include <orteaf/internal/kernel/storage/operand.h>
+#include <orteaf/internal/kernel/storage/operand_id.h>
+#include <orteaf/internal/kernel/storage/operand_key.h>
+#include <orteaf/internal/kernel/storage/role.h>
 #include <orteaf/internal/storage/storage_lease.h>
 
 #include <gtest/gtest.h>
@@ -23,29 +23,29 @@ TEST(ParamSlot, BindGlobal) {
 
   const auto *param = args.findParam(kernel::ParamId::Alpha);
   ASSERT_NE(param, nullptr);
-  EXPECT_FALSE(param->key().storage.has_value());
+  EXPECT_FALSE(param->key().operand_key.has_value());
   EXPECT_FLOAT_EQ(*param->tryGet<float>(), 1.5f);
 }
 
 TEST(ParamSlot, BindScoped) {
   kernel::KernelArgs args;
-  kernel::ParamSlot<float, kernel::ParamId::Alpha, kernel::StorageRole::Index>
+  kernel::ParamSlot<float, kernel::ParamId::Alpha, kernel::Role::Index>
       slot(2.5f);
 
-  slot.bindScoped(args, kernel::StorageId::Input0);
+  slot.bindScoped(args, kernel::OperandId::Input0);
 
   EXPECT_EQ(args.findParam(kernel::ParamId::Alpha), nullptr);
 
   const auto key = kernel::ParamKey::scoped(
       kernel::ParamId::Alpha,
-      kernel::makeStorageKey(kernel::StorageId::Input0,
-                             kernel::StorageRole::Index));
+      kernel::makeOperandKey(kernel::OperandId::Input0,
+                             kernel::Role::Index));
   const auto *param = args.findParam(key);
   ASSERT_NE(param, nullptr);
-  ASSERT_TRUE(param->key().storage.has_value());
-  EXPECT_EQ(*param->key().storage,
-            kernel::makeStorageKey(kernel::StorageId::Input0,
-                                   kernel::StorageRole::Index));
+  ASSERT_TRUE(param->key().operand_key.has_value());
+  EXPECT_EQ(*param->key().operand_key,
+            kernel::makeOperandKey(kernel::OperandId::Input0,
+                                   kernel::Role::Index));
   EXPECT_FLOAT_EQ(*param->tryGet<float>(), 2.5f);
 }
 
@@ -55,14 +55,14 @@ TEST(ParamSlot, ToParam) {
                                 3.0f);
   EXPECT_EQ(global_slot.toGlobalParam(), expected_global);
 
-  kernel::ParamSlot<float, kernel::ParamId::Beta, kernel::StorageRole::Data>
+  kernel::ParamSlot<float, kernel::ParamId::Beta, kernel::Role::Data>
       scoped_slot(4.0f);
   const auto key = kernel::ParamKey::scoped(
       kernel::ParamId::Beta,
-      kernel::makeStorageKey(kernel::StorageId::Output,
-                             kernel::StorageRole::Data));
+      kernel::makeOperandKey(kernel::OperandId::Output,
+                             kernel::Role::Data));
   kernel::Param expected_scoped(key, 4.0f);
-  EXPECT_EQ(scoped_slot.toScopedParam(kernel::StorageId::Output),
+  EXPECT_EQ(scoped_slot.toScopedParam(kernel::OperandId::Output),
             expected_scoped);
 }
 
@@ -90,15 +90,15 @@ TEST(ParamSlot, BindGlobalSmallVectorToArrayView) {
 TEST(StorageSlot, Bind) {
   kernel::KernelArgs args;
   ::orteaf::internal::storage::StorageLease lease;
-  kernel::StorageSlot<kernel::StorageRole::Index> slot(std::move(lease));
+  kernel::StorageSlot<kernel::Role::Index> slot(std::move(lease));
 
-  slot.bind(args, kernel::StorageId::Input0);
+  slot.bind(args, kernel::OperandId::Input0);
 
   EXPECT_EQ(args.storageCount(), 1u);
   const auto *binding =
-      args.findStorage(kernel::makeStorageKey(kernel::StorageId::Input0,
-                                              kernel::StorageRole::Index));
+      args.findStorage(kernel::makeOperandKey(kernel::OperandId::Input0,
+                                              kernel::Role::Index));
   ASSERT_NE(binding, nullptr);
-  EXPECT_EQ(binding->key.id, kernel::StorageId::Input0);
-  EXPECT_EQ(binding->key.role, kernel::StorageRole::Index);
+  EXPECT_EQ(binding->key.id, kernel::OperandId::Input0);
+  EXPECT_EQ(binding->key.role, kernel::Role::Index);
 }

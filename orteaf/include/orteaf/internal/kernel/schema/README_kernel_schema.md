@@ -219,13 +219,13 @@ void executeKernel(auto& args) {
 - `valueOr(T defaultVal)`: 値またはデフォルト値を取得
 - `operator bool()`: 存在チェック
 
-### `ScopedField<ParamId ID, typename T, StorageId SID, StorageRole Role = Data>`
+### `ScopedField<ParamId ID, typename T, OperandId SID, Role Role = Data>`
 - 特定ストレージにスコープされた必須パラメータを表すフィールド型
 - `extract(args)`: 抽出（存在しない場合や型不一致で例外）
 - `operator T()`: 暗黙的型変換
 - `get()`: 明示的値取得
 
-### `OptionalScopedField<ParamId ID, typename T, StorageId SID, StorageRole Role = Data>`
+### `OptionalScopedField<ParamId ID, typename T, OperandId SID, Role Role = Data>`
 - 特定ストレージにスコープされたオプショナルパラメータを表すフィールド型
 - `extract(args)`: 抽出（存在しなくてもOK）
 - `present`: パラメータが存在するか
@@ -270,9 +270,9 @@ namespace orteaf::internal::kernel::mps {
 
 // カーネルに必要なストレージを構造体として定義
 struct MyKernelStorages : StorageSchema<MyKernelStorages> {
-  StorageField<StorageId::Input0> input;
-  StorageField<StorageId::Output> output;
-  OptionalStorageField<StorageId::Workspace> workspace;
+  StorageField<OperandId::Input0> input;
+  StorageField<OperandId::Output> output;
+  OptionalStorageField<OperandId::Workspace> workspace;
   
   // マクロで自動抽出ロジックを生成
   ORTEAF_EXTRACT_STORAGES(input, output, workspace)
@@ -292,12 +292,12 @@ void executeMyMpsKernel(MpsKernelBase& base, KernelArgs& args) {
   auto storages = MyKernelStorages::extract(args);
   
   // ストレージリースへのアクセス
-  auto& input_lease = storages.input.lease<StorageBinding>();
-  auto& output_lease = storages.output.lease<StorageBinding>();
+  auto& input_lease = storages.input.lease<Operand>();
+  auto& output_lease = storages.output.lease<Operand>();
   
   // オプショナルストレージのチェック
   if (storages.workspace) {
-    auto& workspace_lease = storages.workspace.lease<StorageBinding>();
+    auto& workspace_lease = storages.workspace.lease<Operand>();
     // Workspaceを使用...
   }
   
@@ -312,8 +312,8 @@ void executeMyMpsKernel(MpsKernelBase& base, KernelArgs& args) {
 void executeMyCpuKernel(KernelArgs& args) {
   auto storages = MyKernelStorages::extract(args);
   
-  auto& input_lease = storages.input.lease<StorageBinding>();
-  auto& output_lease = storages.output.lease<StorageBinding>();
+  auto& input_lease = storages.input.lease<Operand>();
+  auto& output_lease = storages.output.lease<Operand>();
   
   // カーネル実行処理...
 }
@@ -323,10 +323,10 @@ void executeMyCpuKernel(KernelArgs& args) {
 
 ```cpp
 struct ConvolutionStorages : StorageSchema<ConvolutionStorages> {
-  StorageField<StorageId::Input0> input;      // 必須
-  StorageField<StorageId::Output> output;     // 必須
-  OptionalStorageField<StorageId::Workspace> workspace;  // オプショナル
-  OptionalStorageField<StorageId::Temp> temp;            // オプショナル
+  StorageField<OperandId::Input0> input;      // 必須
+  StorageField<OperandId::Output> output;     // 必須
+  OptionalStorageField<OperandId::Workspace> workspace;  // オプショナル
+  OptionalStorageField<OperandId::Temp> temp;            // オプショナル
   
   ORTEAF_EXTRACT_STORAGES(input, output, workspace, temp)
 };
@@ -354,17 +354,17 @@ namespace orteaf::internal::kernel {
 
 // 汎用的な入出力ストレージ
 struct BasicIOStorages : StorageSchema<BasicIOStorages> {
-  StorageField<StorageId::Input0> input;
-  StorageField<StorageId::Output> output;
+  StorageField<OperandId::Input0> input;
+  StorageField<OperandId::Output> output;
   
   ORTEAF_EXTRACT_STORAGES(input, output)
 };
 
 // 複数入力ストレージ
 struct MultiInputStorages : StorageSchema<MultiInputStorages> {
-  StorageField<StorageId::Input0> input0;
-  StorageField<StorageId::Input1> input1;
-  StorageField<StorageId::Output> output;
+  StorageField<OperandId::Input0> input0;
+  StorageField<OperandId::Input1> input1;
+  StorageField<OperandId::Output> output;
   
   ORTEAF_EXTRACT_STORAGES(input0, input1, output)
 };
@@ -377,11 +377,11 @@ struct MultiInputStorages : StorageSchema<MultiInputStorages> {
 ### 従来の方法（手動取得）
 ```cpp
 void executeKernel(auto& args) {
-  const auto* input_binding = args.findStorage(StorageId::Input0);
+  const auto* input_binding = args.findStorage(OperandId::Input0);
   if (!input_binding) throw std::runtime_error("Missing input storage");
   auto& input_lease = input_binding->lease;
   
-  const auto* output_binding = args.findStorage(StorageId::Output);
+  const auto* output_binding = args.findStorage(OperandId::Output);
   if (!output_binding) throw std::runtime_error("Missing output storage");
   auto& output_lease = output_binding->lease;
   
@@ -392,8 +392,8 @@ void executeKernel(auto& args) {
 ### 新しい方法（スキーマベース）
 ```cpp
 struct MyStorages : StorageSchema<MyStorages> {
-  StorageField<StorageId::Input0> input;
-  StorageField<StorageId::Output> output;
+  StorageField<OperandId::Input0> input;
+  StorageField<OperandId::Output> output;
   ORTEAF_EXTRACT_STORAGES(input, output)
 };
 
@@ -406,21 +406,21 @@ void executeKernel(auto& args) {
 
 ## Storage API リファレンス
 
-### `StorageField<StorageId ID, StorageRole Role = Data>`
+### `StorageField<OperandId ID, Role Role = Data>`
 - 必須ストレージバインディングを表すフィールド型
 - `Role` は同一テンソル内のストレージ役割（Data/Index など）。省略時は `Data`
 - `extract(args)`: 抽出（存在しない場合は例外）
-- `binding<StorageBinding>()`: バインディング取得
-- `lease<StorageBinding>()`: リース取得（const/非const版）
+- `binding<Operand>()`: バインディング取得
+- `lease<Operand>()`: リース取得（const/非const版）
 - `operator bool()`: 存在チェック
 
-### `OptionalStorageField<StorageId ID, StorageRole Role = Data>`
+### `OptionalStorageField<OperandId ID, Role Role = Data>`
 - オプショナルストレージバインディングを表すフィールド型
 - `Role` は同一テンソル内のストレージ役割（Data/Index など）。省略時は `Data`
 - `extract(args)`: 抽出（存在しなくてもOK）
 - `present()`: ストレージが存在するか
-- `bindingOr<StorageBinding>(default)`: バインディングまたはデフォルト値
-- `leaseOr<StorageBinding>(nullptr)`: リースまたはnullptr
+- `bindingOr<Operand>(default)`: バインディングまたはデフォルト値
+- `leaseOr<Operand>(nullptr)`: リースまたはnullptr
 - `operator bool()`: 存在チェック
 
 ### `StorageSchema<Derived>`
@@ -435,16 +435,16 @@ void executeKernel(auto& args) {
 ### テンプレートによる汎用性
 - `StorageField`, `OptionalStorageField`, `StorageSchema`は全てテンプレート実装
 - バックエンド非依存で、CPU/MPS/CUDA全てに対応
-- `KernelArgs`型から自動的に`StorageBinding`型を推論
+- `KernelArgs`型から自動的に`Operand`型を推論
 
 ### 型推論の仕組み
 ```cpp
 template <typename KernelArgs>
 void extract(const KernelArgs &args) {
   // KernelArgs::StorageListType::Storage::value_type から
-  // StorageBinding を自動推論
-  using StorageBinding = typename KernelArgs::StorageListType::Storage::value_type;
-  extract<StorageBinding>(args.storageList());
+  // Operand を自動推論
+  using Operand = typename KernelArgs::StorageListType::Storage::value_type;
+  extract<Operand>(args.storageList());
 }
 ```
 
@@ -473,9 +473,9 @@ struct NormalizationParams : ParamSchema<NormalizationParams> {
 
 // ストレージスキーマ
 struct NormalizationStorages : StorageSchema<NormalizationStorages> {
-  StorageField<StorageId::Input0> input;
-  StorageField<StorageId::Output> output;
-  OptionalStorageField<StorageId::Workspace> workspace;
+  StorageField<OperandId::Input0> input;
+  StorageField<OperandId::Output> output;
+  OptionalStorageField<OperandId::Workspace> workspace;
   
   ORTEAF_EXTRACT_STORAGES(input, output, workspace)
 };
@@ -492,12 +492,12 @@ void executeNormalization(MpsKernelBase& base, KernelArgs& args) {
   double scale = params.scale.valueOr(1.0);
   
   // ストレージへのアクセス
-  auto& input_lease = storages.input.lease<StorageBinding>();
-  auto& output_lease = storages.output.lease<StorageBinding>();
+  auto& input_lease = storages.input.lease<Operand>();
+  auto& output_lease = storages.output.lease<Operand>();
   
   // Workspaceの条件付き使用
   if (storages.workspace) {
-    auto& workspace_lease = storages.workspace.lease<StorageBinding>();
+    auto& workspace_lease = storages.workspace.lease<Operand>();
     // Workspaceを使った高速パス...
   } else {
     // Workspaceなしの通常パス...
@@ -525,8 +525,8 @@ struct NormalizationParams : ParamSchema<NormalizationParams> {
 
 // 全バックエンド共通のストレージ
 struct NormalizationStorages : StorageSchema<NormalizationStorages> {
-  StorageField<StorageId::Input0> input;
-  StorageField<StorageId::Output> output;
+  StorageField<OperandId::Input0> input;
+  StorageField<OperandId::Output> output;
   ORTEAF_EXTRACT_STORAGES(input, output)
 };
 
@@ -538,8 +538,8 @@ void cpuNormalization(KernelArgs& args) {
   auto params = NormalizationParams::extract(args);
   auto storages = NormalizationStorages::extract(args);
   
-  auto& input = storages.input.lease<StorageBinding>();
-  auto& output = storages.output.lease<StorageBinding>();
+  auto& input = storages.input.lease<Operand>();
+  auto& output = storages.output.lease<Operand>();
   // CPU実装...
 }
 }
@@ -550,8 +550,8 @@ void mpsNormalization(MpsKernelBase& base, KernelArgs& args) {
   auto params = NormalizationParams::extract(args);
   auto storages = NormalizationStorages::extract(args);
   
-  auto& input = storages.input.lease<StorageBinding>();
-  auto& output = storages.output.lease<StorageBinding>();
+  auto& input = storages.input.lease<Operand>();
+  auto& output = storages.output.lease<Operand>();
   // MPS実装...
 }
 }

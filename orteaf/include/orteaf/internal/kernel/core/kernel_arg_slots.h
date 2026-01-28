@@ -6,28 +6,28 @@
 #include <orteaf/internal/kernel/core/kernel_args.h>
 #include <orteaf/internal/kernel/param/param.h>
 #include <orteaf/internal/kernel/param/param_transform.h>
-#include <orteaf/internal/kernel/storage/storage_key.h>
-#include <orteaf/internal/kernel/storage/storage_role.h>
-#include <orteaf/internal/kernel/storage/storage_id.h>
+#include <orteaf/internal/kernel/storage/operand_key.h>
+#include <orteaf/internal/kernel/storage/role.h>
+#include <orteaf/internal/kernel/storage/operand_id.h>
 #include <orteaf/internal/storage/storage_lease.h>
 
 namespace orteaf::internal::kernel {
 
 /**
- * @brief Typed parameter slot with an optional storage role.
+ * @brief Typed parameter slot with an optional role.
  *
- * The storage ID is provided later when binding into KernelArgs.
+ * The operand ID is provided later when binding into KernelArgs.
  * This keeps TensorImpl/Layout-side definitions stable even as the
- * storage layout evolves.
+ * operand layout evolves.
  */
-template <typename T, ParamId Id, StorageRole Role = StorageRole::Data>
+template <typename T, ParamId Id, Role RoleValue = Role::Data>
 struct ParamSlot {
   using Target =
       ::orteaf::generated::param_id_tables::ParamValueTypeT<Id>;
   static_assert(std::is_constructible_v<Param, ParamKey, Target>,
                 "ParamSlot target type must be supported by Param");
   static constexpr ParamId kId = Id;
-  static constexpr StorageRole kRole = Role;
+  static constexpr Role kRole = RoleValue;
 
   T value_{};
 
@@ -38,36 +38,36 @@ struct ParamSlot {
     return ParamKey::global(Id);
   }
 
-  static constexpr ParamKey scopedKey(StorageId storage_id) noexcept {
-    return ParamKey::scoped(Id, makeStorageKey(storage_id, Role));
+  static constexpr ParamKey scopedKey(OperandId operand_id) noexcept {
+    return ParamKey::scoped(Id, makeOperandKey(operand_id, RoleValue));
   }
 
   void bindGlobal(KernelArgs &args) const {
     args.addParam(Param(globalKey(), Transform<T, Target>(value_)));
   }
 
-  void bindScoped(KernelArgs &args, StorageId storage_id) const {
+  void bindScoped(KernelArgs &args, OperandId operand_id) const {
     args.addParam(
-        Param(scopedKey(storage_id), Transform<T, Target>(value_)));
+        Param(scopedKey(operand_id), Transform<T, Target>(value_)));
   }
 
   Param toGlobalParam() const {
     return Param(globalKey(), Transform<T, Target>(value_));
   }
 
-  Param toScopedParam(StorageId storage_id) const {
-    return Param(scopedKey(storage_id), Transform<T, Target>(value_));
+  Param toScopedParam(OperandId operand_id) const {
+    return Param(scopedKey(operand_id), Transform<T, Target>(value_));
   }
 };
 
 /**
  * @brief Storage slot with a fixed role.
  *
- * The storage ID is provided later when binding into KernelArgs.
+ * The operand ID is provided later when binding into KernelArgs.
  */
-template <StorageRole Role = StorageRole::Data>
+template <Role RoleValue = Role::Data>
 struct StorageSlot {
-  static constexpr StorageRole kRole = Role;
+  static constexpr Role kRole = RoleValue;
 
   ::orteaf::internal::storage::StorageLease storage_{};
 
@@ -80,12 +80,12 @@ struct StorageSlot {
   }
   ::orteaf::internal::storage::StorageLease &lease() { return storage_; }
 
-  void bind(KernelArgs &args, StorageId storage_id) const {
-    args.addStorage(makeStorageKey(storage_id, Role), storage_);
+  void bind(KernelArgs &args, OperandId operand_id) const {
+    args.addStorage(makeOperandKey(operand_id, RoleValue), storage_);
   }
 
-  void bind(KernelArgs &args, StorageId storage_id) {
-    args.addStorage(makeStorageKey(storage_id, Role), std::move(storage_));
+  void bind(KernelArgs &args, OperandId operand_id) {
+    args.addStorage(makeOperandKey(operand_id, RoleValue), std::move(storage_));
   }
 };
 

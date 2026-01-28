@@ -17,7 +17,7 @@
 #include <orteaf/internal/diagnostics/error/error.h>
 #include <orteaf/internal/kernel/core/kernel_arg_slots.h>
 #include <orteaf/internal/kernel/param/transform/small_vector_array_view.h>
-#include <orteaf/internal/kernel/storage/storage_id.h>
+#include <orteaf/internal/kernel/storage/operand_id.h>
 
 namespace orteaf::extension::tensor {
 
@@ -80,10 +80,10 @@ public:
   const OffsetParamSlot &offsetSlot() const noexcept { return offset_; }
 
   void bindParams(::orteaf::internal::kernel::KernelArgs &args,
-                  ::orteaf::internal::kernel::StorageId storage_id) const {
-    shape_.bindScoped(args, storage_id);
-    strides_.bindScoped(args, storage_id);
-    offset_.bindScoped(args, storage_id);
+                  ::orteaf::internal::kernel::OperandId operand_id) const {
+    shape_.bindScoped(args, operand_id);
+    strides_.bindScoped(args, operand_id);
+    offset_.bindScoped(args, operand_id);
   }
 
   bool isContiguous() const noexcept {

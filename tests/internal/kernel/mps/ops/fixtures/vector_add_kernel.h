@@ -12,7 +12,7 @@
 #include <orteaf/internal/kernel/mps/mps_kernel_entry.h>
 #include <orteaf/internal/kernel/mps/mps_kernel_session.h>
 #include <orteaf/internal/kernel/param/param_id.h>
-#include <orteaf/internal/kernel/storage/storage_id.h>
+#include <orteaf/internal/kernel/storage/operand_id.h>
 
 namespace orteaf::extension::kernel::mps::ops {
 
@@ -28,9 +28,9 @@ namespace mps_kernel = ::orteaf::internal::kernel::mps;
  * - Output: Output vector (C = A + B)
  */
 struct VectorAddStorages : kernel::StorageSchema<VectorAddStorages> {
-  kernel::StorageField<kernel::StorageId::Input0> a;
-  kernel::StorageField<kernel::StorageId::Input1> b;
-  kernel::StorageField<kernel::StorageId::Output> c;
+  kernel::StorageField<kernel::OperandId::Input0> a;
+  kernel::StorageField<kernel::OperandId::Input1> b;
+  kernel::StorageField<kernel::OperandId::Output> c;
 
   ORTEAF_EXTRACT_STORAGES(a, b, c)
 };

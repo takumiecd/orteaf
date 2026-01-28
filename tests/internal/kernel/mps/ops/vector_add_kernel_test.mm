@@ -15,7 +15,7 @@
 #include <orteaf/internal/kernel/mps/mps_kernel_entry.h>
 #include <orteaf/internal/kernel/param/param.h>
 #include <orteaf/internal/kernel/param/param_id.h>
-#include <orteaf/internal/kernel/storage/storage_id.h>
+#include <orteaf/internal/kernel/storage/operand_id.h>
 
 // Include the kernel under test
 #include "tests/internal/kernel/mps/ops/fixtures/vector_add_kernel.h"
@@ -36,9 +36,9 @@ TEST(VectorAddKernelTest, StorageSchemaHasThreeFields) {
   vector_add::VectorAddStorages storages;
 
   // Check storage IDs
-  EXPECT_EQ(storages.a.kId, kernel::StorageId::Input0);
-  EXPECT_EQ(storages.b.kId, kernel::StorageId::Input1);
-  EXPECT_EQ(storages.c.kId, kernel::StorageId::Output);
+  EXPECT_EQ(storages.a.kId, kernel::OperandId::Input0);
+  EXPECT_EQ(storages.b.kId, kernel::OperandId::Input1);
+  EXPECT_EQ(storages.c.kId, kernel::OperandId::Output);
 }
 
 TEST(VectorAddKernelTest, ParamSchemaHasNumElements) {

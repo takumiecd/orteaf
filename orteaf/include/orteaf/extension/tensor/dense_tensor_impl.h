@@ -16,7 +16,7 @@
 #include <orteaf/internal/dtype/dtype.h>
 #include <orteaf/internal/execution/execution.h>
 #include <orteaf/internal/kernel/core/kernel_arg_slots.h>
-#include <orteaf/internal/kernel/storage/storage_id.h>
+#include <orteaf/internal/kernel/storage/operand_id.h>
 #include <orteaf/internal/storage/storage_lease.h>
 
 namespace orteaf::extension::tensor {
@@ -40,7 +40,7 @@ public:
   using Dim = Layout::Dim;
   using StorageLease = ::orteaf::internal::storage::StorageLease;
   using StorageSlot = ::orteaf::internal::kernel::StorageSlot<
-      ::orteaf::internal::kernel::StorageRole::Data>;
+      ::orteaf::internal::kernel::Role::Data>;
   using DType = ::orteaf::internal::DType;
   using Execution = ::orteaf::internal::execution::Execution;
 
@@ -114,9 +114,9 @@ public:
   bool isContiguous() const noexcept { return layout_.isContiguous(); }
 
   void bindKernelArgs(::orteaf::internal::kernel::KernelArgs &args,
-                      ::orteaf::internal::kernel::StorageId storage_id) const {
-    storage_.bind(args, storage_id);
-    layout_.bindParams(args, storage_id);
+                      ::orteaf::internal::kernel::OperandId operand_id) const {
+    storage_.bind(args, operand_id);
+    layout_.bindParams(args, operand_id);
   }
 
 private:

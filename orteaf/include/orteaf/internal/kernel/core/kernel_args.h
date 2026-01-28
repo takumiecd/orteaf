@@ -5,8 +5,8 @@
 #include <orteaf/internal/execution/execution.h>
 #include <orteaf/internal/kernel/core/context_any.h>
 #include <orteaf/internal/kernel/param/param_list.h>
-#include <orteaf/internal/kernel/storage/storage_binding.h>
-#include <orteaf/internal/kernel/storage/storage_key.h>
+#include <orteaf/internal/kernel/storage/operand.h>
+#include <orteaf/internal/kernel/storage/operand_key.h>
 #include <orteaf/internal/kernel/storage/storage_list.h>
 #include <orteaf/internal/storage/storage_lease.h>
 
@@ -23,7 +23,7 @@ public:
   using Execution = ::orteaf::internal::execution::Execution;
   using Context = ContextAny;
   using StorageLease = ::orteaf::internal::storage::StorageLease;
-  using StorageBindingType = StorageBinding;
+  using StorageBindingType = Operand;
   using StorageListType = StorageList<StorageBindingType>;
 
   KernelArgs() = default;
@@ -47,42 +47,42 @@ public:
   Execution execution() const { return context_.execution(); }
 
   /**
-   * @brief Add a storage binding with the specified key.
+   * @brief Add a storage binding with the specified operand key.
    */
-  void addStorage(StorageKey key, StorageLease lease) {
+  void addStorage(OperandKey key, StorageLease lease) {
     storages_.add(StorageBindingType{key, std::move(lease)});
   }
 
   /**
    * @brief Add a storage binding with the specified ID (Data role).
    */
-  void addStorage(StorageId id, StorageLease lease) {
-    addStorage(makeStorageKey(id), std::move(lease));
+  void addStorage(OperandId id, StorageLease lease) {
+    addStorage(makeOperandKey(id), std::move(lease));
   }
 
   /**
-   * @brief Find a storage binding by key.
+   * @brief Find a storage binding by operand key.
    */
-  const StorageBindingType *findStorage(StorageKey key) const {
+  const StorageBindingType *findStorage(OperandKey key) const {
     return storages_.find(key);
   }
 
   /**
-   * @brief Find a storage binding by key (mutable).
+   * @brief Find a storage binding by operand (mutable).
    */
-  StorageBindingType *findStorage(StorageKey key) { return storages_.find(key); }
+  StorageBindingType *findStorage(OperandKey key) { return storages_.find(key); }
 
   /**
    * @brief Find a storage binding by ID (Data role).
    */
-  const StorageBindingType *findStorage(StorageId id) const {
+  const StorageBindingType *findStorage(OperandId id) const {
     return storages_.find(id);
   }
 
   /**
    * @brief Find a storage binding by ID (mutable, Data role).
    */
-  StorageBindingType *findStorage(StorageId id) { return storages_.find(id); }
+  StorageBindingType *findStorage(OperandId id) { return storages_.find(id); }
 
   /**
    * @brief Get the list of all storage bindings.
