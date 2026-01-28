@@ -5,6 +5,7 @@
 
 #include <orteaf/internal/base/array_view.h>
 #include <orteaf/internal/base/inline_vector.h>
+#include <orteaf/internal/diagnostics/error/error.h>
 #include <orteaf/internal/kernel/param/param_transform.h>
 
 namespace orteaf::internal::kernel {
@@ -16,6 +17,11 @@ struct TransformImpl<::orteaf::internal::base::ArrayView<const T>,
   apply(const ::orteaf::internal::base::ArrayView<const T> &value) {
     ::orteaf::internal::base::InlineVector<T, N> result{};
     const std::size_t count = value.size();
+    if (count > static_cast<std::size_t>(N)) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+          "ArrayView size exceeds InlineVector capacity");
+    }
     const std::size_t limit =
         count < static_cast<std::size_t>(N) ? count
                                             : static_cast<std::size_t>(N);
