@@ -6,7 +6,7 @@
 #include <utility>
 #include <variant>
 
-#include <orteaf/internal/kernel/core/array_view.h>
+#include <orteaf/internal/base/array_view.h>
 #include <orteaf/internal/kernel/param/param_id.h>
 #include <orteaf/internal/kernel/param/param_key.h>
 #include <orteaf/kernel/param_id_tables.h>
@@ -73,7 +73,7 @@ public:
    * @brief Construct a parameter with an ArrayView value (global).
    */
   template <typename T>
-  Param(ParamId id, ArrayView<T> value) noexcept
+  Param(ParamId id, internal::base::ArrayView<T> value) noexcept
       : key_(ParamKey::global(id)), value_(value) {}
 
   /**
@@ -115,7 +115,7 @@ public:
    * @brief Construct a parameter with an ArrayView value (scoped).
    */
   template <typename T>
-  Param(ParamKey key, ArrayView<T> value) noexcept : key_(key), value_(value) {}
+  Param(ParamKey key, internal::base::ArrayView<T> value) noexcept : key_(key), value_(value) {}
 
   /**
    * @brief Get the parameter ID.

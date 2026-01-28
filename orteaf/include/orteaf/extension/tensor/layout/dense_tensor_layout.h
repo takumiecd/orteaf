@@ -26,16 +26,13 @@ public:
   using Dim = std::int64_t;
   using Dims = ::orteaf::internal::base::SmallVector<Dim, 4>;
   using size_type = std::size_t;
-  using KernelArrayView = ::orteaf::internal::kernel::ArrayView<const Dim>;
-  using ShapeParamSlot =
-      ::orteaf::internal::kernel::ParamSlot<
-          Dims, ::orteaf::internal::kernel::ParamId::Shape>;
-  using StridesParamSlot =
-      ::orteaf::internal::kernel::ParamSlot<
-          Dims, ::orteaf::internal::kernel::ParamId::Strides>;
-  using OffsetParamSlot =
-      ::orteaf::internal::kernel::ParamSlot<
-          Dim, ::orteaf::internal::kernel::ParamId::Offset>;
+  using KernelArrayView = ::orteaf::internal::base::ArrayView<const Dim>;
+  using ShapeParamSlot = ::orteaf::internal::kernel::ParamSlot<
+      Dims, ::orteaf::internal::kernel::ParamId::Shape>;
+  using StridesParamSlot = ::orteaf::internal::kernel::ParamSlot<
+      Dims, ::orteaf::internal::kernel::ParamId::Strides>;
+  using OffsetParamSlot = ::orteaf::internal::kernel::ParamSlot<
+      Dim, ::orteaf::internal::kernel::ParamId::Offset>;
 
   DenseTensorLayout() = default;
 
@@ -126,7 +123,8 @@ public:
       for (size_type j = 0; j < i; ++j) {
         if (perm[j] == dim) {
           ::orteaf::internal::diagnostics::error::throwError(
-              ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+              ::orteaf::internal::diagnostics::error::OrteafErrc::
+                  InvalidParameter,
               "DenseTensorLayout transpose perm contains duplicates");
         }
       }
@@ -171,12 +169,14 @@ public:
       }
       if (size < 0) {
         ::orteaf::internal::diagnostics::error::throwError(
-            ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+            ::orteaf::internal::diagnostics::error::OrteafErrc::
+                InvalidParameter,
             "DenseTensorLayout slice size must be non-negative");
       }
       if (step == 0) {
         ::orteaf::internal::diagnostics::error::throwError(
-            ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+            ::orteaf::internal::diagnostics::error::OrteafErrc::
+                InvalidParameter,
             "DenseTensorLayout slice step cannot be zero");
       }
 
@@ -234,7 +234,8 @@ public:
       if (dim == -1) {
         if (has_inferred) {
           ::orteaf::internal::diagnostics::error::throwError(
-              ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+              ::orteaf::internal::diagnostics::error::OrteafErrc::
+                  InvalidParameter,
               "DenseTensorLayout reshape only allows one inferred dimension");
         }
         has_inferred = true;
@@ -243,7 +244,8 @@ public:
       }
       if (dim < 0) {
         ::orteaf::internal::diagnostics::error::throwError(
-            ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+            ::orteaf::internal::diagnostics::error::OrteafErrc::
+                InvalidParameter,
             "DenseTensorLayout reshape dimensions must be non-negative");
       }
       if (dim == 0) {
@@ -258,23 +260,27 @@ public:
       const Dim expected = has_zero ? Dim{0} : known_product;
       if (current != expected) {
         ::orteaf::internal::diagnostics::error::throwError(
-            ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+            ::orteaf::internal::diagnostics::error::OrteafErrc::
+                InvalidParameter,
             "DenseTensorLayout reshape element count mismatch");
       }
     } else {
       if (has_zero) {
         ::orteaf::internal::diagnostics::error::throwError(
-            ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+            ::orteaf::internal::diagnostics::error::OrteafErrc::
+                InvalidParameter,
             "DenseTensorLayout reshape cannot infer with zero dimensions");
       }
       if (current == 0) {
         ::orteaf::internal::diagnostics::error::throwError(
-            ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+            ::orteaf::internal::diagnostics::error::OrteafErrc::
+                InvalidParameter,
             "DenseTensorLayout reshape cannot infer with zero elements");
       }
       if (known_product == 0 || current % known_product != 0) {
         ::orteaf::internal::diagnostics::error::throwError(
-            ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+            ::orteaf::internal::diagnostics::error::OrteafErrc::
+                InvalidParameter,
             "DenseTensorLayout reshape cannot infer dimension");
       }
     }
@@ -321,7 +327,8 @@ public:
         new_strides[new_dim_index] = 0;
       } else {
         ::orteaf::internal::diagnostics::error::throwError(
-            ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+            ::orteaf::internal::diagnostics::error::OrteafErrc::
+                InvalidParameter,
             "DenseTensorLayout broadcast dimension mismatch");
       }
     }
@@ -358,12 +365,14 @@ public:
       }
       if (remove[dim] != 0) {
         ::orteaf::internal::diagnostics::error::throwError(
-            ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+            ::orteaf::internal::diagnostics::error::OrteafErrc::
+                InvalidParameter,
             "DenseTensorLayout squeeze dims contain duplicates");
       }
       if (shape_.value_[dim] != 1) {
         ::orteaf::internal::diagnostics::error::throwError(
-            ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+            ::orteaf::internal::diagnostics::error::OrteafErrc::
+                InvalidParameter,
             "DenseTensorLayout squeeze dim must be size 1");
       }
       remove[dim] = 1;
@@ -398,7 +407,8 @@ public:
       if (i == dim) {
         new_shape[i] = 1;
         if (old_index < rank()) {
-          new_strides[i] = strides_.value_[old_index] * shape_.value_[old_index];
+          new_strides[i] =
+              strides_.value_[old_index] * shape_.value_[old_index];
         } else {
           new_strides[i] = 1;
         }
@@ -426,7 +436,8 @@ private:
     for (Dim dim : shape) {
       if (dim < 0) {
         ::orteaf::internal::diagnostics::error::throwError(
-            ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+            ::orteaf::internal::diagnostics::error::OrteafErrc::
+                InvalidParameter,
             "DenseTensorLayout shape must be non-negative");
       }
     }

@@ -244,7 +244,7 @@ GeneratedData GenerateOutputs(const ResolvedConfig &resolved) {
   header_stream << "#include <cstdint>\n";
   header_stream << "#include <string_view>\n";
   header_stream << "#include <variant>\n";
-  header_stream << "#include <orteaf/internal/kernel/core/array_view.h>\n\n";
+  header_stream << "#include <orteaf/internal/base/array_view.h>\n\n";
   header_stream << "namespace orteaf::internal::kernel {\n";
   header_stream << "enum class ParamId : std::uint64_t;\n";
   header_stream << "}  // namespace orteaf::internal::kernel\n\n";
@@ -296,7 +296,8 @@ GeneratedData GenerateOutputs(const ResolvedConfig &resolved) {
   }
 
   header_stream << "template <ParamId ID>\n";
-  header_stream << "using ParamValueTypeT = typename ParamValueType<ID>::Type;\n\n";
+  header_stream
+      << "using ParamValueTypeT = typename ParamValueType<ID>::Type;\n\n";
 
   // Collect unique C++ types (excluding "Tensor")
   std::unordered_set<std::string> unique_types;
@@ -329,15 +330,14 @@ GeneratedData GenerateOutputs(const ResolvedConfig &resolved) {
     variant_types.push_back("  void*");
 
   // Add ArrayView types for common numeric types
-  variant_types.push_back("  ::orteaf::internal::kernel::ArrayView<const int>");
+  variant_types.push_back("  ::orteaf::internal::base::ArrayView<const int>");
   variant_types.push_back(
-      "  ::orteaf::internal::kernel::ArrayView<const std::size_t>");
+      "  ::orteaf::internal::base::ArrayView<const std::size_t>");
   variant_types.push_back(
-      "  ::orteaf::internal::kernel::ArrayView<const std::int64_t>");
+      "  ::orteaf::internal::base::ArrayView<const std::int64_t>");
+  variant_types.push_back("  ::orteaf::internal::base::ArrayView<const float>");
   variant_types.push_back(
-      "  ::orteaf::internal::kernel::ArrayView<const float>");
-  variant_types.push_back(
-      "  ::orteaf::internal::kernel::ArrayView<const double>");
+      "  ::orteaf::internal::base::ArrayView<const double>");
 
   // Output variant types
   for (std::size_t i = 0; i < variant_types.size(); ++i) {
