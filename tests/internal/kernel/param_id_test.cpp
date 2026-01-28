@@ -154,94 +154,57 @@ TEST(ParamId, ConstexprSupport) {
 // ============================================================
 
 TEST(ParamIdTables, ParamIdCountCorrect) {
-  EXPECT_EQ(param_tables::kParamIdCount, 10);
-}
-
-TEST(ParamIdTables, DescriptionsTableSize) {
-  EXPECT_EQ(param_tables::kParamIdDescriptions.size(),
-            param_tables::kParamIdCount);
-}
-
-TEST(ParamIdTables, CppTypesTableSize) {
-  EXPECT_EQ(param_tables::kParamIdCppTypes.size(), param_tables::kParamIdCount);
-}
-
-TEST(ParamIdTables, DescriptionsAreNonEmpty) {
-  for (const auto &desc : param_tables::kParamIdDescriptions) {
-    EXPECT_FALSE(desc.empty());
-  }
-}
-
-TEST(ParamIdTables, CppTypesAreNonEmpty) {
-  for (const auto &type : param_tables::kParamIdCppTypes) {
-    EXPECT_FALSE(type.empty());
-  }
-}
-
-TEST(ParamIdTables, SampleDescriptions) {
-  // Index 0 = Input
-  EXPECT_EQ(param_tables::kParamIdDescriptions[0],
-            "Alpha scalar parameter (float)");
-  // Index 1 = Output
-  EXPECT_EQ(param_tables::kParamIdDescriptions[1],
-            "Beta scalar parameter (float)");
-}
-
-TEST(ParamIdTables, SampleCppTypes) {
-  // Index 0 = Alpha (float)
-  EXPECT_EQ(param_tables::kParamIdCppTypes[0], "float");
-  // Index 6 = Count (size_t)
-  EXPECT_EQ(param_tables::kParamIdCppTypes[6], "std::size_t");
+  EXPECT_EQ(param_tables::kParamIdCount, 13);
 }
 
 // ============================================================
-// ParamTypeInfo tests
+// ParamInfo tests
 // ============================================================
 
-TEST(ParamTypeInfo, InputHasCorrectTypeName) {
-  using InputInfo = param_tables::ParamTypeInfo<kernel::ParamId::Alpha>;
+TEST(ParamInfo, InputHasCorrectTypeName) {
+  using InputInfo = param_tables::ParamInfo<kernel::ParamId::Alpha>;
   EXPECT_EQ(InputInfo::kTypeName, "float");
   EXPECT_FALSE(InputInfo::kDescription.empty());
 }
 
-TEST(ParamTypeInfo, AlphaHasFloatTypeName) {
-  using AlphaInfo = param_tables::ParamTypeInfo<kernel::ParamId::Alpha>;
+TEST(ParamInfo, AlphaHasFloatTypeName) {
+  using AlphaInfo = param_tables::ParamInfo<kernel::ParamId::Alpha>;
   EXPECT_EQ(AlphaInfo::kTypeName, "float");
   EXPECT_FALSE(AlphaInfo::kDescription.empty());
 }
 
-TEST(ParamTypeInfo, ScaleHasDoubleTypeName) {
-  using ScaleInfo = param_tables::ParamTypeInfo<kernel::ParamId::Scale>;
+TEST(ParamInfo, ScaleHasDoubleTypeName) {
+  using ScaleInfo = param_tables::ParamInfo<kernel::ParamId::Scale>;
   EXPECT_EQ(ScaleInfo::kTypeName, "double");
 }
 
-TEST(ParamTypeInfo, AxisHasIntTypeName) {
-  using AxisInfo = param_tables::ParamTypeInfo<kernel::ParamId::Axis>;
+TEST(ParamInfo, AxisHasIntTypeName) {
+  using AxisInfo = param_tables::ParamInfo<kernel::ParamId::Axis>;
   EXPECT_EQ(AxisInfo::kTypeName, "int");
 }
 
-TEST(ParamTypeInfo, DimHasSizeTTypeName) {
-  using DimInfo = param_tables::ParamTypeInfo<kernel::ParamId::Dim>;
+TEST(ParamInfo, DimHasSizeTTypeName) {
+  using DimInfo = param_tables::ParamInfo<kernel::ParamId::Dim>;
   EXPECT_EQ(DimInfo::kTypeName, "std::size_t");
 }
 
-TEST(ParamTypeInfo, BufferPtrHasVoidPtrTypeName) {
-  using BufferPtrInfo = param_tables::ParamTypeInfo<kernel::ParamId::BufferPtr>;
+TEST(ParamInfo, BufferPtrHasVoidPtrTypeName) {
+  using BufferPtrInfo = param_tables::ParamInfo<kernel::ParamId::BufferPtr>;
   EXPECT_EQ(BufferPtrInfo::kTypeName, "void*");
 }
 
-TEST(ParamTypeInfo, AllTypeInfoHaveDescription) {
-  // Test all ParamTypeInfo have non-empty descriptions
-  EXPECT_FALSE(param_tables::ParamTypeInfo<kernel::ParamId::Alpha>::kDescription
+TEST(ParamInfo, AllTypeInfoHaveDescription) {
+  // Test all ParamInfo have non-empty descriptions
+  EXPECT_FALSE(param_tables::ParamInfo<kernel::ParamId::Alpha>::kDescription
                    .empty());
   EXPECT_FALSE(
-      param_tables::ParamTypeInfo<kernel::ParamId::Beta>::kDescription.empty());
-  EXPECT_FALSE(param_tables::ParamTypeInfo<kernel::ParamId::Alpha>::kDescription
+      param_tables::ParamInfo<kernel::ParamId::Beta>::kDescription.empty());
+  EXPECT_FALSE(param_tables::ParamInfo<kernel::ParamId::Alpha>::kDescription
                    .empty());
   EXPECT_FALSE(
-      param_tables::ParamTypeInfo<kernel::ParamId::Beta>::kDescription.empty());
+      param_tables::ParamInfo<kernel::ParamId::Beta>::kDescription.empty());
   EXPECT_FALSE(
-      param_tables::ParamTypeInfo<kernel::ParamId::Axis>::kDescription.empty());
+      param_tables::ParamInfo<kernel::ParamId::Axis>::kDescription.empty());
 }
 
 // ============================================================
@@ -262,9 +225,9 @@ TEST(ParamId, PracticalKernelParameterRegistry) {
 }
 
 TEST(ParamId, TypeNameLookup) {
-  // Demonstrate type name lookup using ParamTypeInfo
-  using AlphaInfo = param_tables::ParamTypeInfo<kernel::ParamId::Alpha>;
-  using BetaInfo = param_tables::ParamTypeInfo<kernel::ParamId::Beta>;
+  // Demonstrate type name lookup using ParamInfo
+  using AlphaInfo = param_tables::ParamInfo<kernel::ParamId::Alpha>;
+  using BetaInfo = param_tables::ParamInfo<kernel::ParamId::Beta>;
 
   // Both should be float
   EXPECT_EQ(AlphaInfo::kTypeName, "float");

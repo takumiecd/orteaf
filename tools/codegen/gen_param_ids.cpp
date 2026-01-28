@@ -239,7 +239,6 @@ GeneratedData GenerateOutputs(const ResolvedConfig &resolved) {
   std::ostringstream header_stream;
   header_stream << "// Auto-generated. Do not edit.\n";
   header_stream << "#pragma once\n\n";
-  header_stream << "#include <array>\n";
   header_stream << "#include <cstddef>\n";
   header_stream << "#include <cstdint>\n";
   header_stream << "#include <string_view>\n";
@@ -253,51 +252,24 @@ GeneratedData GenerateOutputs(const ResolvedConfig &resolved) {
   header_stream << "inline constexpr std::size_t kParamIdCount = "
                 << param_count << ";\n\n";
 
-  // Description table
-  header_stream << "inline constexpr std::array<std::string_view, "
-                   "kParamIdCount> kParamIdDescriptions = {\n";
-  for (const auto &param : resolved.params) {
-    header_stream << "    \"" << EscapeStringLiteral(param.description)
-                  << "\",\n";
-  }
-  header_stream << "};\n\n";
-
-  // C++ type table
-  header_stream << "inline constexpr std::array<std::string_view, "
-                   "kParamIdCount> kParamIdCppTypes = {\n";
-  for (const auto &param : resolved.params) {
-    header_stream << "    \"" << EscapeStringLiteral(param.cpp_type) << "\",\n";
-  }
-  header_stream << "};\n\n";
-
-  // Type info (template specializations for each ParamId)
-  // Uses string-based type names to avoid requiring all types to be defined
-  header_stream << "// Type info for each ParamId\n";
+  // Unified ParamInfo template
+  header_stream << "// Parameter information for each ParamId\n";
   header_stream << "template <ParamId ID>\n";
-  header_stream << "struct ParamTypeInfo;\n\n";
-
-  header_stream << "// Value type for each ParamId\n";
-  header_stream << "template <ParamId ID>\n";
-  header_stream << "struct ParamValueType;\n\n";
+  header_stream << "struct ParamInfo;\n\n";
 
   for (const auto &param : resolved.params) {
     header_stream << "template <>\n";
-    header_stream << "struct ParamTypeInfo<ParamId::" << param.id << "> {\n";
+    header_stream << "struct ParamInfo<ParamId::" << param.id << "> {\n";
+    header_stream << "    using Type = " << param.cpp_type << ";\n";
     header_stream << "    static constexpr std::string_view kTypeName = \""
                   << EscapeStringLiteral(param.cpp_type) << "\";\n";
     header_stream << "    static constexpr std::string_view kDescription = \""
                   << EscapeStringLiteral(param.description) << "\";\n";
     header_stream << "};\n\n";
-
-    header_stream << "template <>\n";
-    header_stream << "struct ParamValueType<ParamId::" << param.id << "> {\n";
-    header_stream << "    using Type = " << param.cpp_type << ";\n";
-    header_stream << "};\n\n";
   }
 
   header_stream << "template <ParamId ID>\n";
-  header_stream
-      << "using ParamValueTypeT = typename ParamValueType<ID>::Type;\n\n";
+  header_stream << "using ParamValueTypeT = typename ParamInfo<ID>::Type;\n\n";
 
   // Collect unique C++ types (excluding "Tensor")
   std::unordered_set<std::string> unique_types;
