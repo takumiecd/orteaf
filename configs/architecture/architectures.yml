@@ -5,6 +5,7 @@ architectures:
     display_name: "CUDA SM80"
     execution: "Cuda"
     metadata:
+      parent: "CudaGeneric"
       description: "Ampere 世代 GPU (A100 など) 向け最適化"
       detect:
         vendor: "nvidia"
@@ -14,6 +15,7 @@ architectures:
     display_name: "CUDA SM86"
     execution: "Cuda"
     metadata:
+      parent: "CudaGeneric"
       description: "Ampere 世代 GPU (RTX 30 シリーズ) 向け最適化"
       detect:
         vendor: "nvidia"
@@ -23,6 +25,7 @@ architectures:
     display_name: "CUDA SM90"
     execution: "Cuda"
     metadata:
+      parent: "CudaGeneric"
       description: "Hopper 世代 GPU (H100 など) 向け最適化"
       detect:
         vendor: "nvidia"
@@ -32,6 +35,7 @@ architectures:
     display_name: "Apple M2 GPU"
     execution: "Mps"
     metadata:
+      parent: "MpsGeneric"
       description: "Apple Silicon M2 世代 GPU 向け最適化"
       detect:
         vendor: "apple"
@@ -41,6 +45,7 @@ architectures:
     display_name: "Apple M3 GPU"
     execution: "Mps"
     metadata:
+      parent: "MpsGeneric"
       description: "Apple Silicon M3 世代 GPU 向け最適化"
       detect:
         vendor: "apple"
@@ -50,6 +55,7 @@ architectures:
     display_name: "Apple M4 GPU"
     execution: "Mps"
     metadata:
+      parent: "MpsGeneric"
       description: "Apple Silicon M4 世代 GPU 向け最適化"
       detect:
         vendor: "apple"
@@ -59,6 +65,7 @@ architectures:
     display_name: "Zen 4 AVX512"
     execution: "Cpu"
     metadata:
+      parent: "CpuGeneric"
       description: "Zen 4 / AVX-512 対応 CPU 向け最適化"
       detect:
         vendor: "amd"
@@ -69,6 +76,7 @@ architectures:
     display_name: "Skylake AVX512"
     execution: "Cpu"
     metadata:
+      parent: "CpuGeneric"
       description: "Intel Skylake-X / AVX-512 対応 CPU 向け最適化"
       detect:
         vendor: "intel"
@@ -80,6 +88,7 @@ architectures:
     display_name: "Apple M4 Pro"
     execution: "Cpu"
     metadata:
+      parent: "CpuGeneric"
       description: "Apple Silicon M4 Pro アーキテクチャ (Avalanche/Blizzard) 向け最適化"
       detect:
         vendor: "apple"
@@ -89,6 +98,7 @@ architectures:
     display_name: "Intel Comet Lake"
     execution: "Cpu"
     metadata:
+      parent: "CpuGeneric"
       description: "Comet Lake ファミリ (Core i9-10850K など) 向けの AVX2 最適化"
       detect:
         vendor: "intel"

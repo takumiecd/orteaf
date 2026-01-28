@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <initializer_list>
 #include <iostream>
 #include <optional>
@@ -245,6 +246,7 @@ struct ArchitectureInput {
   std::string execution_id;
   std::string display_name;
   std::string description;
+  std::optional<std::string> parent;
   std::optional<DetectSpec> detect;
 };
 
@@ -421,7 +423,13 @@ std::vector<ArchitectureInput> ParseArchitectureConfig(
         Fail(oss.str());
       }
       const std::string metadata_context = context + ".metadata";
-      ExpectKeys(metadata_node, metadata_context, {"description", "detect"});
+      ExpectKeys(metadata_node, metadata_context,
+                 {"description", "detect", "parent"});
+      if (const auto parent =
+              ReadOptionalString(metadata_node, "parent", metadata_context);
+          parent) {
+        input.parent = *parent;
+      }
       if (const auto desc = ReadOptionalString(metadata_node, "description",
                                                metadata_context);
           desc) {
@@ -446,6 +454,8 @@ struct ResolvedArchitecture {
   std::string description;
   std::size_t execution_index;
   std::uint16_t local_index;
+  std::optional<std::string>
+      parent_id; // Raw parent from YAML (to resolve later)
   std::optional<DetectSpec> detect;
 };
 
@@ -539,6 +549,8 @@ GenerateOutputs(const std::vector<ExecutionInfo> &executions,
         resolved_entry.execution_index = execution_index;
         resolved_entry.local_index = local_index++;
         resolved_entry.detect = entry.detect;
+        resolved_entry.parent_id =
+            entry.parent; // Will be resolved to index later
         resolved.push_back(std::move(resolved_entry));
       }
       execution_counts[execution_index] = entries.size() + 1; // +1 for generic
@@ -547,6 +559,102 @@ GenerateOutputs(const std::vector<ExecutionInfo> &executions,
     }
   }
   execution_offsets.push_back(resolved.size());
+
+  // Build architecture_id -> global index lookup, scoped by execution.
+  // Key: (execution_index, architecture_id) -> global index
+  std::unordered_map<std::string, std::size_t> arch_id_to_global_index;
+  for (std::size_t i = 0; i < resolved.size(); ++i) {
+    // Use "execution_id:arch_id" as key to scope by execution
+    const std::string key = executions[resolved[i].execution_index].id + ":" +
+                            resolved[i].architecture_id;
+    arch_id_to_global_index[key] = i;
+  }
+
+  // Resolve parent_id to parent_index.
+  // kInvalidParent (0xFFFF) means no parent (Generic architectures).
+  constexpr std::uint16_t kInvalidParent = 0xFFFF;
+  std::vector<std::uint16_t> parent_indices(resolved.size(), kInvalidParent);
+
+  for (std::size_t i = 0; i < resolved.size(); ++i) {
+    const auto &arch = resolved[i];
+
+    if (arch.local_index == 0) {
+      // Generic architectures have no parent
+      parent_indices[i] = kInvalidParent;
+      continue;
+    }
+
+    // User-defined architectures MUST have explicit parent
+    if (!arch.parent_id) {
+      std::ostringstream oss;
+      oss << "Architecture '" << arch.architecture_id
+          << "' is missing required 'parent' field in metadata. "
+          << "Use 'parent: \"" << executions[arch.execution_index].id
+          << "Generic\"' to derive from the base architecture.";
+      Fail(oss.str());
+    }
+
+    // Resolve explicit parent
+    const std::string parent_key =
+        executions[arch.execution_index].id + ":" + *arch.parent_id;
+    const auto parent_it = arch_id_to_global_index.find(parent_key);
+    if (parent_it == arch_id_to_global_index.end()) {
+      std::ostringstream oss;
+      oss << "Architecture '" << arch.architecture_id
+          << "' references unknown parent '" << *arch.parent_id
+          << "' in execution '" << executions[arch.execution_index].id << "'";
+      Fail(oss.str());
+    }
+    parent_indices[i] = static_cast<std::uint16_t>(parent_it->second);
+  }
+
+  // Cycle detection using DFS
+  {
+    enum class State { Unvisited, Visiting, Visited };
+    std::vector<State> states(resolved.size(), State::Unvisited);
+
+    std::function<void(std::size_t, std::vector<std::size_t> &)> detect_cycle =
+        [&](std::size_t idx, std::vector<std::size_t> &path) {
+          if (states[idx] == State::Visited) {
+            return;
+          }
+          if (states[idx] == State::Visiting) {
+            // Found cycle - build error message
+            std::ostringstream oss;
+            oss << "Cycle detected in architecture parent chain: ";
+            bool in_cycle = false;
+            for (std::size_t i = 0; i < path.size(); ++i) {
+              if (path[i] == idx) {
+                in_cycle = true;
+              }
+              if (in_cycle) {
+                oss << resolved[path[i]].architecture_id;
+                if (i + 1 < path.size()) {
+                  oss << " -> ";
+                }
+              }
+            }
+            oss << " -> " << resolved[idx].architecture_id;
+            Fail(oss.str());
+          }
+
+          states[idx] = State::Visiting;
+          path.push_back(idx);
+
+          const auto parent_idx = parent_indices[idx];
+          if (parent_idx != kInvalidParent) {
+            detect_cycle(parent_idx, path);
+          }
+
+          path.pop_back();
+          states[idx] = State::Visited;
+        };
+
+    for (std::size_t i = 0; i < resolved.size(); ++i) {
+      std::vector<std::size_t> path;
+      detect_cycle(i, path);
+    }
+  }
 
   GeneratedData generated;
 
@@ -618,6 +726,21 @@ GenerateOutputs(const std::vector<ExecutionInfo> &executions,
                  oss << '"' << EscapeStringLiteral(arch.description) << '"';
                  return oss.str();
                });
+
+    // Parent indices table
+    header_stream
+        << "inline constexpr std::uint16_t kInvalidParent = 0xFFFF;\n\n";
+    header_stream
+        << "inline constexpr std::array<std::uint16_t, kArchitectureCount> "
+           "kArchitectureParentIndices = {\n";
+    for (const auto parent_idx : parent_indices) {
+      if (parent_idx == kInvalidParent) {
+        header_stream << "    kInvalidParent,\n";
+      } else {
+        header_stream << "    " << parent_idx << ",\n";
+      }
+    }
+    header_stream << "};\n\n";
 
     header_stream << "inline constexpr std::array<std::size_t, "
                   << executions.size()
