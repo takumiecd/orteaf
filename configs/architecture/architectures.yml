@@ -15,7 +15,7 @@ architectures:
     display_name: "CUDA SM86"
     execution: "Cuda"
     metadata:
-      parent: "CudaGeneric"
+      parent: "Sm80"
       description: "Ampere 世代 GPU (RTX 30 シリーズ) 向け最適化"
       detect:
         vendor: "nvidia"
@@ -25,7 +25,7 @@ architectures:
     display_name: "CUDA SM90"
     execution: "Cuda"
     metadata:
-      parent: "CudaGeneric"
+      parent: "Sm80"
       description: "Hopper 世代 GPU (H100 など) 向け最適化"
       detect:
         vendor: "nvidia"
@@ -61,6 +61,17 @@ architectures:
         vendor: "apple"
         metal_family: "m4"
 
+  - id: "AppleM4Pro"
+    display_name: "Apple M4 Pro GPU"
+    execution: "Mps"
+    metadata:
+      parent: "M4"
+      description: "Apple Silicon M4 Pro GPU 向け最適化"
+      detect:
+        vendor: "apple"
+        metal_family: "m4" # Overlaps with M4, but specific to Pro if we add machine_ids or so.
+        machine_ids: ["Mac16,6", "Mac16,7", "Mac16,8"]
+
   - id: "Zen4"
     display_name: "Zen 4 AVX512"
     execution: "Cpu"
@@ -83,16 +94,6 @@ architectures:
         family: 6
         model: [85]
         features: ["avx512"]
-
-  - id: "AppleM4Pro"
-    display_name: "Apple M4 Pro"
-    execution: "Cpu"
-    metadata:
-      parent: "CpuGeneric"
-      description: "Apple Silicon M4 Pro アーキテクチャ (Avalanche/Blizzard) 向け最適化"
-      detect:
-        vendor: "apple"
-        machine_ids: ["Mac15,4", "Mac15,6", "Mac15,7", "Mac16,6", "Mac16,7", "Mac16,8"]
 
   - id: "IntelCometLake"
     display_name: "Intel Comet Lake"
