@@ -13,39 +13,15 @@ ResolveContext buildContext(const KeyRequest &request) {
   context.fixed.op = request.op;
   context.fixed.dtype = request.dtype;
 
-  // Get execution from architecture
-  auto execution = arch::executionOf(request.architecture);
-
-  // Get all architectures for this execution backend
-  auto architectures = arch::architecturesOf(execution);
-
-  // Add rules: requested architecture first, then fallback to less specific
-  // Order: requested arch → other specific archs → generic (index 0)
-
-  // Start with the requested architecture
-  context.rules.pushBack({
-      {request.architecture, static_cast<Layout>(0), static_cast<Variant>(0)},
-      nullptr,
-  });
-
-  // Add other specific architectures (indices > 0, excluding requested)
-  for (std::size_t i = architectures.size(); i > 1; --i) {
-    auto architecture = architectures[i - 1];
-    if (architecture != request.architecture) {
-      context.rules.pushBack({
-          {architecture, static_cast<Layout>(0), static_cast<Variant>(0)},
-          nullptr,
+  // Build fallback chain using parent hierarchy
+  // Order: requested arch → parent → parent's parent → ... → Generic
+  arch::forEachFallback(
+      request.architecture, [&](arch::Architecture architecture) {
+        context.rules.pushBack({
+            {architecture, static_cast<Layout>(0), static_cast<Variant>(0)},
+            nullptr,
+        });
       });
-    }
-  }
-
-  // Add generic architecture last (index 0) if not already the requested one
-  if (!architectures.empty() && architectures[0] != request.architecture) {
-    context.rules.pushBack({
-        {architectures[0], static_cast<Layout>(0), static_cast<Variant>(0)},
-        nullptr,
-    });
-  }
 
   return context;
 }

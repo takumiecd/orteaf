@@ -252,3 +252,37 @@ TEST(KeyResolver, ResolveFallsBackToGeneric) {
   ASSERT_TRUE(result.has_value());
   EXPECT_EQ(*result, generic_key);
 }
+
+TEST(KeyResolver, BuildContextGeneratesHierarchicalRules) {
+  // Test Sm86 -> Sm80 -> CudaGeneric
+  kernel::KeyRequest request{static_cast<Op>(1), DType::F32,
+                             Architecture::CudaSm86};
+
+  auto context = resolver::buildContext(request);
+
+  ASSERT_EQ(context.rules.size(), 3u);
+  EXPECT_EQ(context.rules[0].components.arch, Architecture::CudaSm86);
+  EXPECT_EQ(context.rules[1].components.arch, Architecture::CudaSm80);
+  EXPECT_EQ(context.rules[2].components.arch, Architecture::CudaGeneric);
+}
+
+TEST(KeyResolver, ResolveFollowsHierarchy) {
+  MockRegistry registry;
+  kernel::KeyRequest request{static_cast<Op>(1), DType::F32,
+                             Architecture::CudaSm86};
+
+  kernel::FixedKeyComponents fixed{request.op, request.dtype};
+
+  // Only Sm80 kernel is available
+  kernel::VariableKeyComponents sm80_comp{Architecture::CudaSm80,
+                                          static_cast<kernel::Layout>(0),
+                                          static_cast<kernel::Variant>(0)};
+  auto sm80_key = kernel::makeKey(fixed, sm80_comp);
+  registry.add(sm80_key);
+
+  kernel::KernelArgs args;
+  auto result = resolver::resolve(registry, request, args);
+
+  ASSERT_TRUE(result.has_value());
+  EXPECT_EQ(*result, sm80_key);
+}
