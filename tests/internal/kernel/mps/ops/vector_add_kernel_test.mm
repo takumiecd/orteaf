@@ -18,7 +18,7 @@
 #include <orteaf/internal/kernel/storage/storage_id.h>
 
 // Include the kernel under test
-#include "orteaf/src/extension/kernel/mps/ops/vector_add_kernel.h"
+#include "tests/internal/kernel/mps/ops/fixtures/vector_add_kernel.h"
 
 namespace kernel = orteaf::internal::kernel;
 namespace mps_kernel = orteaf::internal::kernel::mps;

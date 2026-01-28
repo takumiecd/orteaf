@@ -12,7 +12,7 @@
 #include <orteaf/internal/kernel/storage/storage_key.h>
 #include <orteaf/internal/kernel/storage/storage_id.h>
 
-#include "orteaf/src/extension/kernel/mps/ops/scoped_param_kernel.h"
+#include "tests/internal/kernel/mps/ops/fixtures/scoped_param_kernel.h"
 
 namespace kernel = orteaf::internal::kernel;
 namespace mps_kernel = orteaf::internal::kernel::mps;
