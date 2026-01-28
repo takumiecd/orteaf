@@ -5,7 +5,7 @@
 #include <orteaf/internal/execution/execution.h>
 #include <orteaf/internal/kernel/core/context_any.h>
 #include <orteaf/internal/kernel/param/param_list.h>
-#include <orteaf/internal/kernel/storage/operand.h>
+#include <orteaf/internal/kernel/storage/storage_binding.h>
 #include <orteaf/internal/kernel/storage/operand_key.h>
 #include <orteaf/internal/kernel/storage/storage_list.h>
 #include <orteaf/internal/storage/storage_lease.h>
@@ -23,7 +23,7 @@ public:
   using Execution = ::orteaf::internal::execution::Execution;
   using Context = ContextAny;
   using StorageLease = ::orteaf::internal::storage::StorageLease;
-  using StorageBindingType = Operand;
+  using StorageBindingType = StorageBinding;
   using StorageListType = StorageList<StorageBindingType>;
 
   KernelArgs() = default;

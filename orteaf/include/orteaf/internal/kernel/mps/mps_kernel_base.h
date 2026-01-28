@@ -18,7 +18,7 @@
 #include "orteaf/internal/execution_context/mps/context.h"
 #include "orteaf/internal/kernel/schema/kernel_param_schema.h"
 #include "orteaf/internal/kernel/schema/kernel_storage_schema.h"
-#include "orteaf/internal/kernel/storage/operand.h"
+#include "orteaf/internal/kernel/storage/storage_binding.h"
 #include "orteaf/internal/kernel/param/param.h"
 #include "orteaf/internal/storage/storage_lease.h"
 #include "orteaf/internal/storage/registry/storage_types.h"
@@ -345,7 +345,7 @@ struct MpsKernelBase {
     if (encoder == nullptr) {
       return;
     }
-    using AnyBinding = ::orteaf::internal::kernel::Operand;
+    using AnyBinding = ::orteaf::internal::kernel::StorageBinding;
     using MpsLease = ::orteaf::internal::storage::MpsStorageLease;
     const auto &binding = field.template binding<AnyBinding>();
     const auto &storage_lease = binding.lease;
@@ -805,7 +805,7 @@ private:
       return; // Optional field not present
     }
 
-    using AnyBinding = ::orteaf::internal::kernel::Operand;
+    using AnyBinding = ::orteaf::internal::kernel::StorageBinding;
     using MpsLease = ::orteaf::internal::storage::MpsStorageLease;
     auto &storage_lease_any = field.template lease<AnyBinding>();
     auto *mps_lease = storage_lease_any.template tryAs<MpsLease>();
@@ -871,7 +871,7 @@ private:
       return; // Optional field not present
     }
 
-    using AnyBinding = ::orteaf::internal::kernel::Operand;
+    using AnyBinding = ::orteaf::internal::kernel::StorageBinding;
     using MpsLease = ::orteaf::internal::storage::MpsStorageLease;
     auto &storage_lease_any = field.template lease<AnyBinding>();
     auto *mps_lease = storage_lease_any.template tryAs<MpsLease>();

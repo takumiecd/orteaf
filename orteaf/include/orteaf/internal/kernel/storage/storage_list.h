@@ -23,7 +23,7 @@ inline constexpr std::size_t kDefaultStorageListCapacity = 16;
  *
  * Example:
  * @code
- * using AnyBinding = Operand;
+ * using AnyBinding = StorageBinding;
  * StorageList<AnyBinding> storages;
  * storages.add(AnyBinding{makeOperandKey(OperandId::Input0), lease});
  * auto* binding = storages.find(makeOperandKey(OperandId::Input0));

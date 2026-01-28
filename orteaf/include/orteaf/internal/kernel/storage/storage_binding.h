@@ -6,7 +6,7 @@
 namespace orteaf::internal::kernel {
 
 /**
- * @brief Operand binding structure for kernel arguments.
+ * @brief Storage binding structure for kernel arguments.
  *
  * Represents a bound storage resource with its operand key and lease.
  * Uses the type-erased StorageLease to avoid backend-specific bindings.
@@ -14,10 +14,10 @@ namespace orteaf::internal::kernel {
  *
  * Example:
  * @code
- * Operand binding{makeOperandKey(OperandId::Input0), lease};
+ * StorageBinding binding{makeOperandKey(OperandId::Input0), lease};
  * @endcode
  */
-struct Operand {
+struct StorageBinding {
   /**
    * @brief Operand key.
    *

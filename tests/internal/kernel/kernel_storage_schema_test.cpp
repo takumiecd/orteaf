@@ -1,5 +1,5 @@
 #include <orteaf/internal/kernel/schema/kernel_storage_schema.h>
-#include <orteaf/internal/kernel/storage/operand.h>
+#include <orteaf/internal/kernel/storage/storage_binding.h>
 #include <orteaf/internal/storage/storage_lease.h>
 
 #include <gtest/gtest.h>
@@ -73,7 +73,7 @@ TEST_F(KernelStorageSchemaTest, OptionalStorageField) {
   EXPECT_FALSE(schema.workspace.present());
 
   // Optional field returns nullptr when not present
-  using AnyBinding = Operand;
+  using AnyBinding = StorageBinding;
   auto *workspace_binding = schema.workspace.bindingOr<AnyBinding>();
   EXPECT_EQ(workspace_binding, nullptr);
 }

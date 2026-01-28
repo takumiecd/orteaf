@@ -5,7 +5,7 @@
 #include <orteaf/internal/kernel/core/kernel_args.h>
 #include <orteaf/internal/kernel/param/param_id.h>
 #include <orteaf/internal/kernel/param/transform/small_vector_array_view.h>
-#include <orteaf/internal/kernel/storage/operand.h>
+#include <orteaf/internal/kernel/storage/storage_binding.h>
 #include <orteaf/internal/kernel/storage/operand_id.h>
 #include <orteaf/internal/kernel/storage/operand_key.h>
 #include <orteaf/internal/kernel/storage/role.h>
