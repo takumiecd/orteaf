@@ -5,6 +5,8 @@
 #include <orteaf/internal/kernel/param/param_id.h>
 #include <orteaf/internal/kernel/param/param_key.h>
 #include <orteaf/internal/kernel/param/param_list.h>
+#include <orteaf/internal/kernel/param/param_transform.h>
+#include <orteaf/kernel/param_id_tables.h>
 
 #include <utility>
 
@@ -76,13 +78,15 @@ template <ParamId ID, typename T> struct Field {
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
           "Required parameter not found");
     }
-    const auto *val = param->template tryGet<T>();
+    using ParamValueType =
+        typename ::orteaf::generated::param_id_tables::ParamInfo<ID>::Type;
+    const auto *val = param->template tryGet<ParamValueType>();
     if (!val) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
           "Parameter type mismatch");
     }
-    value = *val;
+    value = Transform<ParamValueType, T>(*val);
   }
 
   /**
@@ -152,12 +156,14 @@ template <ParamId ID, typename T> struct OptionalField {
       present = false;
       return;
     }
-    const auto *val = param->template tryGet<T>();
+    using ParamValueType =
+        typename ::orteaf::generated::param_id_tables::ParamInfo<ID>::Type;
+    const auto *val = param->template tryGet<ParamValueType>();
     if (!val) {
       present = false;
       return;
     }
-    value = *val;
+    value = Transform<ParamValueType, T>(*val);
     present = true;
   }
 
@@ -226,13 +232,15 @@ struct ScopedField {
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
           "Required parameter not found");
     }
-    const auto *val = param->template tryGet<T>();
+    using ParamValueType =
+        typename ::orteaf::generated::param_id_tables::ParamInfo<ID>::Type;
+    const auto *val = param->template tryGet<ParamValueType>();
     if (!val) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
           "Parameter type mismatch");
     }
-    value = *val;
+    value = Transform<ParamValueType, T>(*val);
   }
 
   /**
@@ -272,12 +280,14 @@ struct OptionalScopedField {
       present = false;
       return;
     }
-    const auto *val = param->template tryGet<T>();
+    using ParamValueType =
+        typename ::orteaf::generated::param_id_tables::ParamInfo<ID>::Type;
+    const auto *val = param->template tryGet<ParamValueType>();
     if (!val) {
       present = false;
       return;
     }
-    value = *val;
+    value = Transform<ParamValueType, T>(*val);
     present = true;
   }
 
