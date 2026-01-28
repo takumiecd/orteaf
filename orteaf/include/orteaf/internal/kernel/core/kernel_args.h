@@ -23,7 +23,7 @@ public:
   using Execution = ::orteaf::internal::execution::Execution;
   using Context = ContextAny;
   using StorageLease = ::orteaf::internal::storage::StorageLease;
-  using StorageBindingType = StorageBinding<StorageLease>;
+  using StorageBindingType = StorageBinding;
   using StorageListType = StorageList<StorageBindingType>;
 
   KernelArgs() = default;

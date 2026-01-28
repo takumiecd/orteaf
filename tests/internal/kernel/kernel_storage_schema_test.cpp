@@ -73,7 +73,7 @@ TEST_F(KernelStorageSchemaTest, OptionalStorageField) {
   EXPECT_FALSE(schema.workspace.present());
 
   // Optional field returns nullptr when not present
-  using AnyBinding = StorageBinding<::orteaf::internal::storage::StorageLease>;
+  using AnyBinding = StorageBinding;
   auto *workspace_binding = schema.workspace.bindingOr<AnyBinding>();
   EXPECT_EQ(workspace_binding, nullptr);
 }

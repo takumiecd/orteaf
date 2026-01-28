@@ -292,12 +292,12 @@ void executeMyMpsKernel(MpsKernelBase& base, KernelArgs& args) {
   auto storages = MyKernelStorages::extract(args);
   
   // ストレージリースへのアクセス
-  auto& input_lease = storages.input.lease<StorageBinding<StorageLease>>();
-  auto& output_lease = storages.output.lease<StorageBinding<StorageLease>>();
+  auto& input_lease = storages.input.lease<StorageBinding>();
+  auto& output_lease = storages.output.lease<StorageBinding>();
   
   // オプショナルストレージのチェック
   if (storages.workspace) {
-    auto& workspace_lease = storages.workspace.lease<StorageBinding<StorageLease>>();
+    auto& workspace_lease = storages.workspace.lease<StorageBinding>();
     // Workspaceを使用...
   }
   
@@ -312,8 +312,8 @@ void executeMyMpsKernel(MpsKernelBase& base, KernelArgs& args) {
 void executeMyCpuKernel(KernelArgs& args) {
   auto storages = MyKernelStorages::extract(args);
   
-  auto& input_lease = storages.input.lease<StorageBinding<StorageLease>>();
-  auto& output_lease = storages.output.lease<StorageBinding<StorageLease>>();
+  auto& input_lease = storages.input.lease<StorageBinding>();
+  auto& output_lease = storages.output.lease<StorageBinding>();
   
   // カーネル実行処理...
 }
@@ -442,7 +442,7 @@ void executeKernel(auto& args) {
 template <typename KernelArgs>
 void extract(const KernelArgs &args) {
   // KernelArgs::StorageListType::Storage::value_type から
-  // StorageBinding<StorageLease> を自動推論
+  // StorageBinding を自動推論
   using StorageBinding = typename KernelArgs::StorageListType::Storage::value_type;
   extract<StorageBinding>(args.storageList());
 }
@@ -492,12 +492,12 @@ void executeNormalization(MpsKernelBase& base, KernelArgs& args) {
   double scale = params.scale.valueOr(1.0);
   
   // ストレージへのアクセス
-  auto& input_lease = storages.input.lease<StorageBinding<StorageLease>>();
-  auto& output_lease = storages.output.lease<StorageBinding<StorageLease>>();
+  auto& input_lease = storages.input.lease<StorageBinding>();
+  auto& output_lease = storages.output.lease<StorageBinding>();
   
   // Workspaceの条件付き使用
   if (storages.workspace) {
-    auto& workspace_lease = storages.workspace.lease<StorageBinding<StorageLease>>();
+    auto& workspace_lease = storages.workspace.lease<StorageBinding>();
     // Workspaceを使った高速パス...
   } else {
     // Workspaceなしの通常パス...
@@ -538,8 +538,8 @@ void cpuNormalization(KernelArgs& args) {
   auto params = NormalizationParams::extract(args);
   auto storages = NormalizationStorages::extract(args);
   
-  auto& input = storages.input.lease<StorageBinding<StorageLease>>();
-  auto& output = storages.output.lease<StorageBinding<StorageLease>>();
+  auto& input = storages.input.lease<StorageBinding>();
+  auto& output = storages.output.lease<StorageBinding>();
   // CPU実装...
 }
 }
@@ -550,8 +550,8 @@ void mpsNormalization(MpsKernelBase& base, KernelArgs& args) {
   auto params = NormalizationParams::extract(args);
   auto storages = NormalizationStorages::extract(args);
   
-  auto& input = storages.input.lease<StorageBinding<StorageLease>>();
-  auto& output = storages.output.lease<StorageBinding<StorageLease>>();
+  auto& input = storages.input.lease<StorageBinding>();
+  auto& output = storages.output.lease<StorageBinding>();
   // MPS実装...
 }
 }
