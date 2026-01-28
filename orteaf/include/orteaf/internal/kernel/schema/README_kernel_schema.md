@@ -219,6 +219,19 @@ void executeKernel(auto& args) {
 - `valueOr(T defaultVal)`: 値またはデフォルト値を取得
 - `operator bool()`: 存在チェック
 
+### `ScopedField<ParamId ID, typename T, StorageId SID, StorageRole Role = Data>`
+- 特定ストレージにスコープされた必須パラメータを表すフィールド型
+- `extract(args)`: 抽出（存在しない場合や型不一致で例外）
+- `operator T()`: 暗黙的型変換
+- `get()`: 明示的値取得
+
+### `OptionalScopedField<ParamId ID, typename T, StorageId SID, StorageRole Role = Data>`
+- 特定ストレージにスコープされたオプショナルパラメータを表すフィールド型
+- `extract(args)`: 抽出（存在しなくてもOK）
+- `present`: パラメータが存在するか
+- `valueOr(T defaultVal)`: 値またはデフォルト値を取得
+- `operator bool()`: 存在チェック
+
 ### `ParamSchema<Derived>`
 - スキーマベースクラス（CRTP）
 - `static Derived extract(const KernelArgs&)`: 一括抽出（テンプレート）

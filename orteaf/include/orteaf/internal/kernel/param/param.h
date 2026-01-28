@@ -7,14 +7,15 @@
 
 #include <orteaf/internal/kernel/core/array_view.h>
 #include <orteaf/internal/kernel/param/param_id.h>
+#include <orteaf/internal/kernel/param/param_key.h>
 #include <orteaf/kernel/param_id_tables.h>
 
 namespace orteaf::internal::kernel {
 
 /**
- * @brief Type-erased parameter combining ParamId with its typed value.
+ * @brief Type-erased parameter combining ParamKey with its typed value.
  *
- * Param associates a ParamId with a value from the auto-generated ParamValue
+ * Param associates a ParamKey with a value from the auto-generated ParamValue
  * variant. This allows heterogeneous collections of parameters (e.g.,
  * std::vector<Param>) while maintaining type safety through std::variant.
  *
@@ -26,45 +27,93 @@ public:
   using Value = ::orteaf::generated::param_id_tables::ParamValue;
 
   /**
-   * @brief Construct a parameter with a float value.
+   * @brief Construct a parameter with a float value (global).
    */
-  Param(ParamId id, float value) noexcept : id_(id), value_(value) {}
+  Param(ParamId id, float value) noexcept
+      : key_(ParamKey::global(id)), value_(value) {}
 
   /**
-   * @brief Construct a parameter with a double value.
+   * @brief Construct a parameter with a double value (global).
    */
-  Param(ParamId id, double value) noexcept : id_(id), value_(value) {}
+  Param(ParamId id, double value) noexcept
+      : key_(ParamKey::global(id)), value_(value) {}
 
   /**
-   * @brief Construct a parameter with an int value.
+   * @brief Construct a parameter with an int value (global).
    */
-  Param(ParamId id, int value) noexcept : id_(id), value_(value) {}
+  Param(ParamId id, int value) noexcept
+      : key_(ParamKey::global(id)), value_(value) {}
 
   /**
-   * @brief Construct a parameter with a size_t value.
+   * @brief Construct a parameter with a size_t value (global).
    */
-  Param(ParamId id, std::size_t value) noexcept : id_(id), value_(value) {}
+  Param(ParamId id, std::size_t value) noexcept
+      : key_(ParamKey::global(id)), value_(value) {}
 
   /**
-   * @brief Construct a parameter with a uint32_t value.
+   * @brief Construct a parameter with a uint32_t value (global).
    */
-  Param(ParamId id, std::uint32_t value) noexcept : id_(id), value_(value) {}
+  Param(ParamId id, std::uint32_t value) noexcept
+      : key_(ParamKey::global(id)), value_(value) {}
 
   /**
-   * @brief Construct a parameter with a void* value.
+   * @brief Construct a parameter with a void* value (global).
    */
-  Param(ParamId id, void *value) noexcept : id_(id), value_(value) {}
+  Param(ParamId id, void *value) noexcept
+      : key_(ParamKey::global(id)), value_(value) {}
 
   /**
-   * @brief Construct a parameter with an ArrayView value.
+   * @brief Construct a parameter with an ArrayView value (global).
    */
   template <typename T>
-  Param(ParamId id, ArrayView<T> value) noexcept : id_(id), value_(value) {}
+  Param(ParamId id, ArrayView<T> value) noexcept
+      : key_(ParamKey::global(id)), value_(value) {}
+
+  /**
+   * @brief Construct a parameter with a float value (scoped).
+   */
+  Param(ParamKey key, float value) noexcept : key_(key), value_(value) {}
+
+  /**
+   * @brief Construct a parameter with a double value (scoped).
+   */
+  Param(ParamKey key, double value) noexcept : key_(key), value_(value) {}
+
+  /**
+   * @brief Construct a parameter with an int value (scoped).
+   */
+  Param(ParamKey key, int value) noexcept : key_(key), value_(value) {}
+
+  /**
+   * @brief Construct a parameter with a size_t value (scoped).
+   */
+  Param(ParamKey key, std::size_t value) noexcept : key_(key), value_(value) {}
+
+  /**
+   * @brief Construct a parameter with a uint32_t value (scoped).
+   */
+  Param(ParamKey key, std::uint32_t value) noexcept : key_(key), value_(value) {}
+
+  /**
+   * @brief Construct a parameter with a void* value (scoped).
+   */
+  Param(ParamKey key, void *value) noexcept : key_(key), value_(value) {}
+
+  /**
+   * @brief Construct a parameter with an ArrayView value (scoped).
+   */
+  template <typename T>
+  Param(ParamKey key, ArrayView<T> value) noexcept : key_(key), value_(value) {}
 
   /**
    * @brief Get the parameter ID.
    */
-  constexpr ParamId id() const noexcept { return id_; }
+  constexpr ParamId id() const noexcept { return key_.id; }
+
+  /**
+   * @brief Get the parameter key.
+   */
+  constexpr const ParamKey &key() const noexcept { return key_; }
 
   /**
    * @brief Get the parameter value (const reference).
@@ -118,7 +167,7 @@ public:
    * @brief Equality comparison.
    */
   friend bool operator==(const Param &lhs, const Param &rhs) noexcept {
-    return lhs.id_ == rhs.id_ && lhs.value_ == rhs.value_;
+    return lhs.key_ == rhs.key_ && lhs.value_ == rhs.value_;
   }
 
   /**
@@ -129,7 +178,7 @@ public:
   }
 
 private:
-  ParamId id_;
+  ParamKey key_;
   Value value_;
 };
 
@@ -141,9 +190,9 @@ namespace std {
 template <> struct hash<::orteaf::internal::kernel::Param> {
   std::size_t
   operator()(const ::orteaf::internal::kernel::Param &param) const noexcept {
-    // Combine hash of id and value
+    // Combine hash of key and value
     std::size_t h1 =
-        std::hash<::orteaf::internal::kernel::ParamId>{}(param.id());
+        std::hash<::orteaf::internal::kernel::ParamKey>{}(param.key());
     std::size_t h2 = std::visit(
         [](const auto &v) { return std::hash<std::decay_t<decltype(v)>>{}(v); },
         param.value());

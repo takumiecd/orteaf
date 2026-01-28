@@ -3,6 +3,7 @@
 #include <orteaf/internal/base/small_vector.h>
 #include <orteaf/internal/diagnostics/error/error.h>
 #include <orteaf/internal/kernel/param/param_id.h>
+#include <orteaf/internal/kernel/param/param_key.h>
 #include <orteaf/internal/kernel/param/param_list.h>
 
 #include <utility>
@@ -14,6 +15,10 @@ namespace orteaf::internal::kernel {
  */
 inline const Param *findParamInList(const ParamList &params, ParamId id) {
   return params.find(id);
+}
+
+inline const Param *findParamInList(const ParamList &params, ParamKey key) {
+  return params.find(key);
 }
 
 /**
@@ -34,6 +39,7 @@ inline const Param *findParamInList(const ParamList &params, ParamId id) {
  */
 template <ParamId ID, typename T> struct Field {
   static constexpr ParamId kId = ID;
+  static constexpr ParamKey kKey = ParamKey::global(ID);
   using Type = T;
   T value{};
 
@@ -64,7 +70,7 @@ template <ParamId ID, typename T> struct Field {
    * @throws std::runtime_error if parameter not found or type mismatch
    */
   void extract(const ParamList &params) {
-    const auto *param = findParamInList(params, kId);
+    const auto *param = findParamInList(params, kKey);
     if (!param) {
       ::orteaf::internal::diagnostics::error::throwError(
           ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
@@ -102,6 +108,7 @@ template <ParamId ID, typename T> struct Field {
  */
 template <ParamId ID, typename T> struct OptionalField {
   static constexpr ParamId kId = ID;
+  static constexpr ParamKey kKey = ParamKey::global(ID);
   using Type = T;
   T value{};
   bool present = false;
@@ -141,7 +148,7 @@ template <ParamId ID, typename T> struct OptionalField {
    * @param params Parameter list to extract from
    */
   void extract(const ParamList &params) {
-    const auto *param = findParamInList(params, kId);
+    const auto *param = findParamInList(params, kKey);
     if (!param) {
       present = false;
       return;
@@ -164,6 +171,118 @@ template <ParamId ID, typename T> struct OptionalField {
    * etc.)
    * @param args Kernel arguments containing parameters
    */
+  template <typename KernelArgs> void extract(const KernelArgs &args) {
+    extract(args.paramList());
+  }
+};
+
+/**
+ * @brief Scoped field type for kernel parameter schema.
+ *
+ * Associates a ParamId with a storage scope and type.
+ *
+ * @tparam ID Parameter identifier
+ * @tparam T Parameter value type
+ * @tparam SID Storage identifier to scope to
+ * @tparam Role Storage role (defaults to Data)
+ */
+template <ParamId ID, typename T, StorageId SID,
+          StorageRole Role = StorageRole::Data>
+struct ScopedField {
+  static constexpr ParamId kId = ID;
+  static constexpr StorageKey kStorageKey{SID, Role};
+  static constexpr ParamKey kKey = ParamKey::scoped(ID, kStorageKey);
+  using Type = T;
+  T value{};
+
+  /**
+   * @brief Implicit conversion to value type.
+   */
+  constexpr operator T() const { return value; }
+
+  /**
+   * @brief Implicit conversion to value reference.
+   */
+  constexpr operator T &() { return value; }
+
+  /**
+   * @brief Explicit value accessor.
+   */
+  constexpr T &get() { return value; }
+
+  /**
+   * @brief Explicit value accessor (const).
+   */
+  constexpr const T &get() const { return value; }
+
+  /**
+   * @brief Extract value from parameter list.
+   *
+   * @param params Parameter list to extract from
+   * @throws std::runtime_error if parameter not found or type mismatch
+   */
+  void extract(const ParamList &params) {
+    const auto *param = findParamInList(params, kKey);
+    if (!param) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+          "Required parameter not found");
+    }
+    const auto *val = param->template tryGet<T>();
+    if (!val) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+          "Parameter type mismatch");
+    }
+    value = *val;
+  }
+
+  /**
+   * @brief Extract value from kernel arguments.
+   */
+  template <typename KernelArgs> void extract(const KernelArgs &args) {
+    extract(args.paramList());
+  }
+};
+
+/**
+ * @brief Optional scoped field type for kernel parameter schema.
+ */
+template <ParamId ID, typename T, StorageId SID,
+          StorageRole Role = StorageRole::Data>
+struct OptionalScopedField {
+  static constexpr ParamId kId = ID;
+  static constexpr StorageKey kStorageKey{SID, Role};
+  static constexpr ParamKey kKey = ParamKey::scoped(ID, kStorageKey);
+  using Type = T;
+  T value{};
+  bool present = false;
+
+  constexpr OptionalScopedField() = default;
+  constexpr explicit OptionalScopedField(T defaultValue) : value(defaultValue) {}
+
+  constexpr operator T() const { return value; }
+  explicit operator bool() const { return present; }
+
+  constexpr T valueOr(T defaultValue) const {
+    return present ? value : defaultValue;
+  }
+
+  void extract(const ParamList &params) {
+    const auto *param = findParamInList(params, kKey);
+    if (!param) {
+      present = false;
+      return;
+    }
+    const auto *val = param->template tryGet<T>();
+    if (!val) {
+      present = false;
+      return;
+    }
+    value = *val;
+    present = true;
+  }
+
   template <typename KernelArgs> void extract(const KernelArgs &args) {
     extract(args.paramList());
   }

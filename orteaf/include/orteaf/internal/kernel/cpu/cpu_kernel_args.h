@@ -146,9 +146,19 @@ public:
   const Param *findParam(ParamId id) const { return params_.find(id); }
 
   /**
+   * @brief Find a parameter by key.
+   */
+  const Param *findParam(ParamKey key) const { return params_.find(key); }
+
+  /**
    * @brief Find a parameter by ID (mutable version).
    */
   Param *findParam(ParamId id) { return params_.find(id); }
+
+  /**
+   * @brief Find a parameter by key (mutable version).
+   */
+  Param *findParam(ParamKey key) { return params_.find(key); }
 
   /**
    * @brief Get the list of all parameters.

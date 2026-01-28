@@ -4,6 +4,8 @@
 #include "orteaf/internal/kernel/mps/mps_kernel_args.h"
 #include "orteaf/internal/kernel/param/param.h"
 #include "orteaf/internal/kernel/param/param_id.h"
+#include "orteaf/internal/kernel/param/param_key.h"
+#include "orteaf/internal/kernel/storage/storage_key.h"
 #include "orteaf/internal/kernel/storage/storage_id.h"
 
 #include "orteaf/internal/execution/mps/api/mps_execution_api.h"
@@ -112,6 +114,22 @@ TEST_F(MpsKernelArgsTest, AddAndFindParams) {
   const auto *count_param = args.findParam(kernel::ParamId::Count);
   ASSERT_NE(count_param, nullptr);
   EXPECT_EQ(*count_param->tryGet<int>(), 100);
+}
+
+TEST_F(MpsKernelArgsTest, AddAndFindScopedParam) {
+  MpsArgs args;
+
+  const auto key = kernel::ParamKey::scoped(
+      kernel::ParamId::Alpha,
+      kernel::makeStorageKey(kernel::StorageId::Input0));
+  args.addParam(kernel::Param(key, 3.5f));
+
+  // Global lookup should not match scoped params.
+  EXPECT_EQ(args.findParam(kernel::ParamId::Alpha), nullptr);
+
+  const auto *param = args.findParam(key);
+  ASSERT_NE(param, nullptr);
+  EXPECT_FLOAT_EQ(*param->tryGet<float>(), 3.5f);
 }
 
 TEST_F(MpsKernelArgsTest, FindNonExistentParam) {

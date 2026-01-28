@@ -25,7 +25,7 @@ ParamKey scoped = ParamKey::scoped(ParamId::Shape, key);
 ## Current Integration
 - Storage bindings and storage lists are keyed by `StorageKey`.
 - `StorageField` / `OptionalStorageField` accept `(StorageId, StorageRole)`.
-- `ParamKey` is added but not yet wired into `ParamList`.
+- `ParamKey` is supported by `Param` and `ParamList` with global/scoped lookup.
 
 ## Migration Notes
 - Existing code using `StorageId` works via default role `Data`.
