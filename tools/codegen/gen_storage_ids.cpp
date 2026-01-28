@@ -194,12 +194,14 @@ ParsedConfig ParseConfig(const fs::path &yaml_path) {
       Fail(oss.str());
     }
 
-    // Value is optional - auto-assign based on index if not specified
-    storage.value = ReadInt(node, "value", false, context);
-    if (storage.value < 0) {
-      // Auto-assign: use current index as value
-      storage.value = static_cast<int>(idx);
+    // Value is auto-assigned by order (explicit values are not allowed)
+    if (node["value"]) {
+      std::ostringstream oss;
+      oss << "Key 'value' is not allowed for storages (" << context
+          << "). Values are auto-assigned by order.";
+      Fail(oss.str());
     }
+    storage.value = static_cast<int>(idx);
 
     // Check for duplicate values
     if (!seen_values.insert(storage.value).second) {

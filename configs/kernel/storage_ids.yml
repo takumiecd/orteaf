@@ -2,6 +2,7 @@ schema_version: "1.0"
 
 # Kernel storage binding definitions
 # Each storage has an ID, default access pattern, and description
+# value is not allowed; IDs are auto-assigned by order.
 storages:
   # Input storages (Read-only)
   - id: Input0

@@ -1,7 +1,8 @@
 schema_version: "1.0"
 
 # Kernel parameter definitions
-# Each parameter has an ID, value, C++ type, and description
+# Each parameter has an ID, C++ type, and description
+# value is not allowed; IDs are auto-assigned by order.
 params:
   # Scalar parameters
   - id: Alpha
