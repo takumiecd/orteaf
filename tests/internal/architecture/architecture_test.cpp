@@ -96,7 +96,7 @@ TEST(ArchitectureParent, GenericHasNoParent) {
 }
 
 TEST(ArchitectureParent, NonGenericHasParent) {
-  // All non-generic architectures have a parent (defaults to Generic)
+  // All non-generic architectures must have an explicit parent in the YAML
   EXPECT_TRUE(arch::hasParent(arch::Architecture::CudaSm80));
   EXPECT_TRUE(arch::hasParent(arch::Architecture::MpsM3));
   EXPECT_TRUE(arch::hasParent(arch::Architecture::CpuZen4));
