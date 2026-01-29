@@ -9,10 +9,9 @@
 #include "orteaf/internal/base/lease/control_block/strong.h"
 #include "orteaf/internal/base/manager/pool_manager.h"
 #include "orteaf/internal/base/pool/slot_pool.h"
-#include "orteaf/internal/execution/mps/manager/mps_compute_pipeline_state_manager.h"
 #include "orteaf/internal/execution/mps/manager/mps_device_manager.h"
-#include "orteaf/internal/execution/mps/manager/mps_library_manager.h"
 #include "orteaf/internal/execution/mps/mps_handles.h"
+#include "orteaf/internal/execution/mps/resource/mps_kernel_base.h"
 #include "orteaf/internal/execution/mps/platform/mps_slow_ops.h"
 
 namespace orteaf::internal::execution::mps::manager {
@@ -21,66 +20,15 @@ namespace orteaf::internal::execution::mps::manager {
 class MpsKernelBaseManager;
 
 // =============================================================================
-// Payload: holds pipeline state leases for kernel execution
+// Payload (Kernel Base Resource)
 // =============================================================================
-
-/**
- * @brief Payload for MPS kernel base resource.
- *
- * Contains pipeline state leases for one or more kernel functions.
- * Each kernel can have multiple library/function pairs.
- */
-struct MpsKernelBasePayload {
-  using PipelineLease = ::orteaf::internal::execution::mps::manager::
-      MpsComputePipelineStateManager::PipelineLease;
-
-  MpsKernelBasePayload() = default;
-  MpsKernelBasePayload(const MpsKernelBasePayload &) = delete;
-  MpsKernelBasePayload &operator=(const MpsKernelBasePayload &) = delete;
-  MpsKernelBasePayload(MpsKernelBasePayload &&) = default;
-  MpsKernelBasePayload &operator=(MpsKernelBasePayload &&) = default;
-  ~MpsKernelBasePayload() = default;
-
-  void reset() noexcept { pipelines_.clear(); }
-
-  void reserve(std::size_t count) { pipelines_.reserve(count); }
-  void addPipeline(PipelineLease &&lease) {
-    pipelines_.pushBack(std::move(lease));
-  }
-
-  /// Get the number of kernel functions
-  [[nodiscard]] std::size_t kernelCount() const noexcept {
-    return pipelines_.size();
-  }
-
-  /// Get a pipeline lease by index
-  [[nodiscard]] PipelineLease *getPipeline(std::size_t index) noexcept {
-    if (index >= pipelines_.size()) {
-      return nullptr;
-    }
-    return &pipelines_[index];
-  }
-
-  /// Get a const pipeline lease by index
-  [[nodiscard]] const PipelineLease *
-  getPipeline(std::size_t index) const noexcept {
-    if (index >= pipelines_.size()) {
-      return nullptr;
-    }
-    return &pipelines_[index];
-  }
-
-private:
-  /// Pipeline state leases for each kernel function
-  ::orteaf::internal::base::HeapVector<PipelineLease> pipelines_{};
-};
 
 // =============================================================================
 // Payload Pool Traits
 // =============================================================================
 
 struct KernelBasePayloadPoolTraits {
-  using Payload = MpsKernelBasePayload;
+  using Payload = ::orteaf::internal::execution::mps::resource::MpsKernelBase;
   using Handle = ::orteaf::internal::execution::mps::MpsKernelBaseHandle;
   using DeviceLease = ::orteaf::internal::execution::mps::manager::
       MpsDeviceManager::DeviceLease;
@@ -114,7 +62,8 @@ struct KernelBaseControlBlockTag {};
 
 using KernelBaseControlBlock = ::orteaf::internal::base::StrongControlBlock<
     ::orteaf::internal::execution::mps::MpsKernelBaseHandle,
-    MpsKernelBasePayload, KernelBasePayloadPool>;
+    ::orteaf::internal::execution::mps::resource::MpsKernelBase,
+    KernelBasePayloadPool>;
 
 // =============================================================================
 // Manager Traits for PoolManager

@@ -14,50 +14,18 @@ using DeviceLease = ::orteaf::internal::execution::mps::manager::
 // =============================================================================
 
 bool KernelBasePayloadPoolTraits::create(Payload &payload,
-                                          const Request &request,
-                                          const Context &context) {
+                                        const Request &request,
+                                        const Context &context) {
   if (context.device_lease == nullptr || !(*context.device_lease)) {
     return false;
   }
 
-  // Acquire pipeline leases for each library/function key pair
-  payload.reserve(request.keys.size());
-  for (const auto &key : request.keys) {
-    // Get library lease via DeviceLease->libraryManager()
-    auto library_lease =
-        (*context.device_lease)->libraryManager().acquire(key.first);
-    if (!library_lease) {
-      // Failed to acquire library, cleanup and return false
-      payload.reset();
-      return false;
-    }
-
-    // Get library resource from the lease using operator->()
-    auto *library_resource = library_lease.operator->();
-    if (library_resource == nullptr) {
-      payload.reset();
-      return false;
-    }
-
-    // Acquire pipeline lease from pipeline manager
-    auto pipeline_lease =
-        library_resource->pipelineManager().acquire(key.second);
-    if (!pipeline_lease) {
-      payload.reset();
-      return false;
-    }
-
-    // Store the pipeline lease (library lease will be held by pipeline)
-    payload.addPipeline(std::move(pipeline_lease));
-  }
-
-  return true;
+  return payload.initialize(request.keys, *context.device_lease);
 }
 
 void KernelBasePayloadPoolTraits::destroy(Payload &payload,
                                            const Request &,
                                            const Context &) {
-  // Pipeline leases are automatically released on destruction
   payload.reset();
 }
 

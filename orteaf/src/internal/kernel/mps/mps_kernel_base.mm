@@ -5,9 +5,10 @@
 namespace orteaf::internal::execution::mps::resource {
 
 void MpsKernelBase::configure(
-    ::orteaf::internal::execution_context::mps::Context &context) {
-  auto device = context.device.payloadHandle();
-  auto *device_resource = context.device.operator->();
+    ::orteaf::internal::execution::mps::manager::MpsDeviceManager::DeviceLease
+        &device_lease) {
+  auto device = device_lease.payloadHandle();
+  auto *device_resource = device_lease.operator->();
   if (!device_resource) {
     return; // Invalid device lease
   }
@@ -32,6 +33,46 @@ void MpsKernelBase::configure(
     }
   }
   entry.configured = true;
+}
+
+bool MpsKernelBase::initialize(
+    const ::orteaf::internal::base::HeapVector<Key> &keys,
+    ::orteaf::internal::execution::mps::manager::MpsDeviceManager::DeviceLease
+        &device_lease) {
+  reset();
+  reserveKeys(keys.size());
+  for (const auto &key : keys) {
+    addKey(key.first.identifier.c_str(), key.second.identifier.c_str());
+  }
+  if (!device_lease) {
+    reset();
+    return false;
+  }
+  ::orteaf::internal::execution_context::mps::Context context{};
+  configure(device_lease);
+
+  if (keys.empty()) {
+    return true;
+  }
+
+  const auto device = device_lease.payloadHandle();
+  const auto idx = findDeviceIndex(device);
+  if (idx == kInvalidIndex) {
+    reset();
+    return false;
+  }
+  const auto &entry = device_pipelines_[idx];
+  if (!entry.configured || entry.pipelines.size() != keys.size()) {
+    reset();
+    return false;
+  }
+  for (const auto &pipeline : entry.pipelines) {
+    if (!pipeline) {
+      reset();
+      return false;
+    }
+  }
+  return true;
 }
 
 } // namespace orteaf::internal::execution::mps::resource

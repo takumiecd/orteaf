@@ -57,7 +57,7 @@ struct MpsKernelEntry {
     }
     auto device = context->device.payloadHandle();
     if (!base.configured(device)) {
-      base.configure(*context);
+      base.configure(context->device);
     }
     execute(base, args);
   }
