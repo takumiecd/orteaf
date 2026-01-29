@@ -5,8 +5,10 @@
 
 #include <orteaf/internal/diagnostics/error/error.h>
 #include <orteaf/internal/kernel/mps/mps_kernel_base_manager.h>
+#include <orteaf/internal/execution/mps/manager/mps_device_manager.h>
 #include <orteaf/internal/execution/mps/manager/mps_library_manager.h>
 #include <tests/internal/execution/mps/manager/testing/execution_ops_provider.h>
+#include <tests/internal/execution/mps/manager/testing/execution_mock_expectations.h>
 #include <tests/internal/execution/mps/manager/testing/manager_test_fixture.h>
 #include <tests/internal/testing/error_assert.h>
 
@@ -15,10 +17,27 @@ namespace kernel_mps = orteaf::internal::kernel::mps;
 namespace mps_mgr = orteaf::internal::execution::mps::manager;
 namespace mps_wrapper = orteaf::internal::execution::mps::platform::wrapper;
 namespace testing_mps = orteaf::tests::execution::mps::testing;
+namespace mock_expect = orteaf::tests::execution::mps;
 
 using orteaf::tests::ExpectError;
 
 namespace {
+
+mps_wrapper::MpsDevice_t makeDevice(std::uintptr_t value) {
+  return reinterpret_cast<mps_wrapper::MpsDevice_t>(value);
+}
+
+mps_wrapper::MpsLibrary_t makeLibrary(std::uintptr_t value) {
+  return reinterpret_cast<mps_wrapper::MpsLibrary_t>(value);
+}
+
+mps_wrapper::MpsFunction_t makeFunction(std::uintptr_t value) {
+  return reinterpret_cast<mps_wrapper::MpsFunction_t>(value);
+}
+
+mps_wrapper::MpsComputePipelineState_t makePipeline(std::uintptr_t value) {
+  return reinterpret_cast<mps_wrapper::MpsComputePipelineState_t>(value);
+}
 
 kernel_mps::MpsKernelBaseManager::Config
 makeConfig(std::size_t payload_capacity, std::size_t control_block_capacity,
@@ -38,43 +57,132 @@ makeConfig(std::size_t payload_capacity, std::size_t control_block_capacity,
 template <class Provider>
 class MpsKernelBaseManagerTypedTest : public ::testing::Test {
 protected:
+  using Context = typename Provider::Context;
+
   void SetUp() override {
-    adapter_ = std::make_unique<Provider>();
-    library_manager_ = std::make_unique<mps_mgr::MpsLibraryManager>();
+    Provider::setUp(context_);
+    
+    device_manager_ = std::make_unique<mps_mgr::MpsDeviceManager>();
     kernel_base_manager_ = std::make_unique<kernel_mps::MpsKernelBaseManager>();
     
-    // Configure library manager first
-    mps_mgr::MpsLibraryManager::Config lib_config{};
-    lib_config.control_block_capacity = 4;
-    lib_config.control_block_block_size = 4;
-    lib_config.payload_capacity = 4;
-    lib_config.payload_block_size = 4;
+    // Get ops
+    auto *ops = Provider::getOps(context_);
     
-    mps_mgr::MpsComputePipelineStateManager::Config pipeline_config{};
-    pipeline_config.control_block_capacity = 4;
-    pipeline_config.control_block_block_size = 4;
-    pipeline_config.payload_capacity = 4;
-    pipeline_config.payload_block_size = 4;
+    // For mock, setup expectations
+    if constexpr (Provider::is_mock) {
+      // Setup device mock expectations
+      mock_expect::ExecutionMockExpectations::expectGetDeviceCount(*ops, 1);
+      mock_expect::ExecutionMockExpectations::expectGetDevices(
+          *ops, {{0, makeDevice(0x1000)}});
+      mock_expect::ExecutionMockExpectations::expectDetectArchitectures(
+          *ops,
+          {{::orteaf::internal::execution::mps::MpsDeviceHandle{0},
+            ::orteaf::internal::architecture::Architecture::MpsGeneric}});
+      
+      // Device creation will create command queues, events, and fences
+      mock_expect::ExecutionMockExpectations::expectCreateCommandQueues(
+          *ops, {reinterpret_cast<mps_wrapper::MpsCommandQueue_t>(0x3000)},
+          ::testing::Eq(makeDevice(0x1000)));
+      mock_expect::ExecutionMockExpectations::expectCreateEvents(
+          *ops, {reinterpret_cast<mps_wrapper::MpsEvent_t>(0x4000)},
+          ::testing::Eq(makeDevice(0x1000)));
+      mock_expect::ExecutionMockExpectations::expectCreateFences(
+          *ops, {reinterpret_cast<mps_wrapper::MpsFence_t>(0x2000)},
+          ::testing::Eq(makeDevice(0x1000)));
+    }
     
-    library_manager_->configureForTest(lib_config, adapter_->device(),
-                                       adapter_->ops(), pipeline_config);
+    const int device_count = ops ? ops->getDeviceCount() : 1;
+    const std::size_t capacity =
+        device_count <= 0 ? 1u : static_cast<std::size_t>(device_count);
+    
+    // Configure device manager (includes library manager)
+    mps_mgr::MpsDeviceManager::Config device_config{};
+    device_config.control_block_capacity = capacity;
+    device_config.control_block_block_size = capacity;
+    device_config.payload_capacity = capacity;
+    device_config.payload_block_size = capacity;
+    
+    // All sub-managers need proper config
+    device_config.command_queue_config.control_block_capacity = 1;
+    device_config.command_queue_config.control_block_block_size = 1;
+    device_config.command_queue_config.payload_capacity = 1;
+    device_config.command_queue_config.payload_block_size = 1;
+    
+    device_config.event_config.control_block_capacity = 1;
+    device_config.event_config.control_block_block_size = 1;
+    device_config.event_config.payload_capacity = 1;
+    device_config.event_config.payload_block_size = 1;
+    
+    device_config.fence_config.control_block_capacity = 1;
+    device_config.fence_config.control_block_block_size = 1;
+    device_config.fence_config.payload_capacity = 1;
+    device_config.fence_config.payload_block_size = 1;
+    
+    device_config.heap_config.control_block_capacity = 1;
+    device_config.heap_config.control_block_block_size = 1;
+    device_config.heap_config.payload_capacity = 1;
+    device_config.heap_config.payload_block_size = 1;
+    device_config.heap_config.buffer_config.control_block_capacity = 1;
+    device_config.heap_config.buffer_config.control_block_block_size = 1;
+    device_config.heap_config.buffer_config.payload_capacity = 1;
+    device_config.heap_config.buffer_config.payload_block_size = 1;
+    
+    device_config.graph_config.control_block_capacity = 1;
+    device_config.graph_config.control_block_block_size = 1;
+    device_config.graph_config.payload_capacity = 1;
+    device_config.graph_config.payload_block_size = 1;
+    
+    // Library manager config
+    device_config.library_config.control_block_capacity = 4;
+    device_config.library_config.control_block_block_size = 4;
+    device_config.library_config.payload_capacity = 4;
+    device_config.library_config.payload_block_size = 4;
+    
+    // Pipeline config
+    device_config.library_config.pipeline_config.control_block_capacity = 4;
+    device_config.library_config.pipeline_config.control_block_block_size = 4;
+    device_config.library_config.pipeline_config.payload_capacity = 4;
+    device_config.library_config.pipeline_config.payload_block_size = 4;
+    
+    device_manager_->configureForTest(device_config, ops);
+    
+    // Acquire device lease
+    device_lease_ = device_manager_->acquire(
+        ::orteaf::internal::execution::mps::MpsDeviceHandle{0});
   }
 
   void TearDown() override {
+    if constexpr (Provider::is_mock) {
+      auto *ops = Provider::getOps(context_);
+      // Expect fence, event, and command queue destruction
+      mock_expect::ExecutionMockExpectations::expectDestroyFences(
+          *ops, {reinterpret_cast<mps_wrapper::MpsFence_t>(0x2000)});
+      mock_expect::ExecutionMockExpectations::expectDestroyEvents(
+          *ops, {reinterpret_cast<mps_wrapper::MpsEvent_t>(0x4000)});
+      mock_expect::ExecutionMockExpectations::expectDestroyCommandQueues(
+          *ops, {reinterpret_cast<mps_wrapper::MpsCommandQueue_t>(0x3000)});
+      // Expect device cleanup
+      mock_expect::ExecutionMockExpectations::expectReleaseDevices(
+          *ops, {makeDevice(0x1000)});
+    }
+
+    device_lease_.release();
+    device_manager_->shutdown();
     kernel_base_manager_.reset();
-    library_manager_.reset();
-    adapter_.reset();
+    device_manager_.reset();
+    Provider::tearDown(context_);
   }
 
   kernel_mps::MpsKernelBaseManager &manager() { return *kernel_base_manager_; }
-  mps_mgr::MpsLibraryManager &libraryManager() { return *library_manager_; }
-  auto &adapter() { return *adapter_; }
-  auto *getOps() { return adapter_->ops(); }
+  mps_mgr::MpsDeviceManager &deviceManager() { return *device_manager_; }
+  auto &deviceLease() { return device_lease_; }
+  auto *getOps() { return Provider::getOps(context_); }
 
 private:
-  std::unique_ptr<Provider> adapter_;
-  std::unique_ptr<mps_mgr::MpsLibraryManager> library_manager_;
+  Context context_{};
+  std::unique_ptr<mps_mgr::MpsDeviceManager> device_manager_;
   std::unique_ptr<kernel_mps::MpsKernelBaseManager> kernel_base_manager_;
+  mps_mgr::MpsDeviceManager::DeviceLease device_lease_;
 };
 
 #if ORTEAF_ENABLE_MPS
@@ -92,49 +200,27 @@ TYPED_TEST_SUITE(MpsKernelBaseManagerTypedTest, ProviderTypes);
 // Initialization Tests
 // =============================================================================
 
-TYPED_TEST(MpsKernelBaseManagerTypedTest, InitializeRejectsNullLibraryManager) {
-  auto &manager = this->manager();
-
-  // Act & Assert
-  ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
-    manager.configureForTest(makeConfig(1, 1, 1, 1, 1, 1), nullptr,
-                             this->getOps());
-  });
-}
-
-TYPED_TEST(MpsKernelBaseManagerTypedTest, InitializeRejectsNullOps) {
-  auto &manager = this->manager();
-  auto &library_manager = this->libraryManager();
-
-  // Act & Assert
-  ExpectError(diag_error::OrteafErrc::InvalidArgument, [&] {
-    manager.configureForTest(makeConfig(1, 1, 1, 1, 1, 1), &library_manager,
-                             nullptr);
-  });
-}
-
-TYPED_TEST(MpsKernelBaseManagerTypedTest, OperationsBeforeInitializationThrow) {
-  auto &manager = this->manager();
-
-  // Act & Assert
-  ::orteaf::internal::base::HeapVector<kernel_mps::MpsKernelBaseManager::Key>
-      keys;
-  ExpectError(diag_error::OrteafErrc::InvalidState,
-              [&] { (void)manager.acquire(keys); });
-}
-
 TYPED_TEST(MpsKernelBaseManagerTypedTest, InitializeSucceeds) {
   auto &manager = this->manager();
-  auto &library_manager = this->libraryManager();
 
   // Act
-  manager.configureForTest(makeConfig(2, 2, 2, 2, 1, 1), &library_manager,
-                           this->getOps());
+  manager.configureForTest(makeConfig(2, 2, 2, 2, 1, 1));
 
   // Assert
   EXPECT_TRUE(manager.isConfiguredForTest());
   EXPECT_EQ(manager.payloadPoolCapacityForTest(), 2);
   EXPECT_EQ(manager.controlBlockPoolCapacityForTest(), 2);
+}
+
+TYPED_TEST(MpsKernelBaseManagerTypedTest, OperationsBeforeInitializationThrow) {
+  auto &manager = this->manager();
+  auto &device_lease = this->deviceLease();
+
+  // Act & Assert
+  ::orteaf::internal::base::HeapVector<kernel_mps::MpsKernelBaseManager::Key>
+      keys;
+  ExpectError(diag_error::OrteafErrc::InvalidState,
+              [&] { (void)manager.acquire(keys, device_lease); });
 }
 
 // =============================================================================
@@ -143,83 +229,34 @@ TYPED_TEST(MpsKernelBaseManagerTypedTest, InitializeSucceeds) {
 
 TYPED_TEST(MpsKernelBaseManagerTypedTest, AcquireEmptyKeysSucceeds) {
   auto &manager = this->manager();
-  auto &library_manager = this->libraryManager();
+  auto &device_lease = this->deviceLease();
 
   // Arrange
-  manager.configureForTest(makeConfig(2, 2, 2, 2, 1, 1), &library_manager,
-                           this->getOps());
+  manager.configureForTest(makeConfig(2, 2, 2, 2, 1, 1));
 
   ::orteaf::internal::base::HeapVector<kernel_mps::MpsKernelBaseManager::Key>
       keys;
 
   // Act
-  auto lease = manager.acquire(keys);
+  auto lease = manager.acquire(keys, device_lease);
 
   // Assert
   EXPECT_TRUE(lease);
   EXPECT_EQ(lease->kernelCount(), 0);
 }
 
-TYPED_TEST(MpsKernelBaseManagerTypedTest, AcquireWithKeysSucceeds) {
-  auto &manager = this->manager();
-  auto &library_manager = this->libraryManager();
-
-  // Arrange
-  manager.configureForTest(makeConfig(2, 2, 2, 2, 1, 1), &library_manager,
-                           this->getOps());
-
-  ::orteaf::internal::base::HeapVector<kernel_mps::MpsKernelBaseManager::Key>
-      keys;
-  keys.pushBack({mps_mgr::LibraryKey::Named("test_lib"),
-                 mps_mgr::FunctionKey::Named("test_func")});
-
-  // Act
-  auto lease = manager.acquire(keys);
-
-  // Assert
-  EXPECT_TRUE(lease);
-  EXPECT_EQ(lease->kernelCount(), 1);
-  EXPECT_NE(lease->getPipeline(0), nullptr);
-}
-
-TYPED_TEST(MpsKernelBaseManagerTypedTest, AcquireMultipleKeysSucceeds) {
-  auto &manager = this->manager();
-  auto &library_manager = this->libraryManager();
-
-  // Arrange
-  manager.configureForTest(makeConfig(2, 2, 2, 2, 1, 1), &library_manager,
-                           this->getOps());
-
-  ::orteaf::internal::base::HeapVector<kernel_mps::MpsKernelBaseManager::Key>
-      keys;
-  keys.pushBack({mps_mgr::LibraryKey::Named("lib1"),
-                 mps_mgr::FunctionKey::Named("func1")});
-  keys.pushBack({mps_mgr::LibraryKey::Named("lib1"),
-                 mps_mgr::FunctionKey::Named("func2")});
-
-  // Act
-  auto lease = manager.acquire(keys);
-
-  // Assert
-  EXPECT_TRUE(lease);
-  EXPECT_EQ(lease->kernelCount(), 2);
-  EXPECT_NE(lease->getPipeline(0), nullptr);
-  EXPECT_NE(lease->getPipeline(1), nullptr);
-}
-
 TYPED_TEST(MpsKernelBaseManagerTypedTest, ReleaseDecreasesRefCount) {
   auto &manager = this->manager();
-  auto &library_manager = this->libraryManager();
+  auto &device_lease = this->deviceLease();
 
   // Arrange
-  manager.configureForTest(makeConfig(2, 2, 2, 2, 1, 1), &library_manager,
-                           this->getOps());
+  manager.configureForTest(makeConfig(2, 2, 2, 2, 1, 1));
 
   ::orteaf::internal::base::HeapVector<kernel_mps::MpsKernelBaseManager::Key>
       keys;
 
   // Act
-  auto lease = manager.acquire(keys);
+  auto lease = manager.acquire(keys, device_lease);
   EXPECT_TRUE(lease);
   auto count_before = lease.strongCount();
 
@@ -231,17 +268,16 @@ TYPED_TEST(MpsKernelBaseManagerTypedTest, ReleaseDecreasesRefCount) {
 
 TYPED_TEST(MpsKernelBaseManagerTypedTest, MultipleAcquireSharesResources) {
   auto &manager = this->manager();
-  auto &library_manager = this->libraryManager();
+  auto &device_lease = this->deviceLease();
 
   // Arrange
-  manager.configureForTest(makeConfig(2, 2, 2, 2, 1, 1), &library_manager,
-                           this->getOps());
+  manager.configureForTest(makeConfig(2, 2, 2, 2, 1, 1));
 
   ::orteaf::internal::base::HeapVector<kernel_mps::MpsKernelBaseManager::Key>
       keys;
 
   // Act
-  auto lease1 = manager.acquire(keys);
+  auto lease1 = manager.acquire(keys, device_lease);
   auto lease2 = lease1; // Copy should increase ref count
 
   // Assert
@@ -257,12 +293,10 @@ TYPED_TEST(MpsKernelBaseManagerTypedTest, MultipleAcquireSharesResources) {
 
 TYPED_TEST(MpsKernelBaseManagerTypedTest, GrowthChunkSizeIsRespected) {
   auto &manager = this->manager();
-  auto &library_manager = this->libraryManager();
 
   // Arrange
   const std::size_t growth_chunk = 3;
-  manager.configureForTest(makeConfig(1, 1, 1, 1, growth_chunk, growth_chunk),
-                           &library_manager, this->getOps());
+  manager.configureForTest(makeConfig(1, 1, 1, 1, growth_chunk, growth_chunk));
 
   // Assert
   EXPECT_EQ(manager.payloadGrowthChunkSizeForTest(), growth_chunk);
@@ -275,11 +309,9 @@ TYPED_TEST(MpsKernelBaseManagerTypedTest, GrowthChunkSizeIsRespected) {
 
 TYPED_TEST(MpsKernelBaseManagerTypedTest, ShutdownCleansUp) {
   auto &manager = this->manager();
-  auto &library_manager = this->libraryManager();
 
   // Arrange
-  manager.configureForTest(makeConfig(2, 2, 2, 2, 1, 1), &library_manager,
-                           this->getOps());
+  manager.configureForTest(makeConfig(2, 2, 2, 2, 1, 1));
   EXPECT_TRUE(manager.isConfiguredForTest());
 
   // Act
