@@ -15,7 +15,8 @@
 namespace orteaf::extension::kernel::mps::ops {
 
 namespace kernel = ::orteaf::internal::kernel;
-namespace mps_kernel = ::orteaf::internal::execution::mps::resource;
+namespace mps_kernel = ::orteaf::internal::kernel::mps;
+namespace mps_resource = ::orteaf::internal::execution::mps::resource;
 
 /**
  * @brief Parameter schema demonstrating storage-scoped params.
@@ -35,7 +36,7 @@ struct ScopedParamParams : kernel::ParamSchema<ScopedParamParams> {
  *
  * Extracts a scoped parameter and writes a global Count param as a side effect.
  */
-inline void scopedParamExecute(mps_kernel::MpsKernelBase & /*base*/,
+inline void scopedParamExecute(mps_resource::MpsKernelBase & /*base*/,
                                ::orteaf::internal::kernel::KernelArgs &args) {
   auto params = ScopedParamParams::extract(args);
   args.addParam(kernel::Param(kernel::ParamId::Count,

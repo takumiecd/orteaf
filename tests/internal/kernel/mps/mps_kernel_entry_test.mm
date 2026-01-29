@@ -11,7 +11,8 @@
 #include <orteaf/internal/kernel/mps/mps_kernel_entry.h>
 
 namespace kernel = orteaf::internal::kernel;
-namespace mps_kernel = ::orteaf::internal::execution::mps::resource;
+namespace mps_kernel = ::orteaf::internal::kernel::mps;
+namespace mps_resource = ::orteaf::internal::execution::mps::resource;
 namespace mps_manager = orteaf::internal::execution::mps::manager;
 namespace mps_exec = orteaf::internal::execution::mps;
 namespace mps_context = orteaf::internal::execution_context::mps;
@@ -20,9 +21,9 @@ namespace {
 
 // Mock RuntimeApi for testing configure()
 struct MockRuntimeApi {
-  using PipelineLease = mps_kernel::MpsKernelBase::PipelineLease;
-  using LibraryKey = mps_kernel::MpsKernelBase::LibraryKey;
-  using FunctionKey = mps_kernel::MpsKernelBase::FunctionKey;
+  using PipelineLease = mps_resource::MpsKernelBase::PipelineLease;
+  using LibraryKey = mps_resource::MpsKernelBase::LibraryKey;
+  using FunctionKey = mps_resource::MpsKernelBase::FunctionKey;
 
   static PipelineLease acquirePipeline(mps_exec::MpsDeviceHandle device,
                                        const LibraryKey &lib,
@@ -33,10 +34,10 @@ struct MockRuntimeApi {
 
 // Test helper: track execution calls
 static bool g_execute_called = false;
-static mps_kernel::MpsKernelBase *g_execute_base = nullptr;
+static mps_resource::MpsKernelBase *g_execute_base = nullptr;
 static kernel::KernelArgs *g_execute_args = nullptr;
 
-void mockExecuteFunc(mps_kernel::MpsKernelBase &base,
+void mockExecuteFunc(mps_resource::MpsKernelBase &base,
                      kernel::KernelArgs &args) {
   g_execute_called = true;
   g_execute_base = &base;

@@ -15,7 +15,7 @@
 #include "tests/internal/kernel/mps/ops/fixtures/scoped_param_kernel.h"
 
 namespace kernel = orteaf::internal::kernel;
-namespace mps_kernel = ::orteaf::internal::execution::mps::resource;
+namespace mps_resource = ::orteaf::internal::execution::mps::resource;
 namespace scoped_kernel = orteaf::extension::kernel::mps::ops;
 
 namespace {
@@ -29,7 +29,7 @@ TEST(ScopedParamKernelTest, ParamSchemaIsScopedToInput0) {
 }
 
 TEST(ScopedParamKernelTest, ExecuteExtractsScopedParam) {
-  mps_kernel::MpsKernelBase base;
+  mps_resource::MpsKernelBase base;
   kernel::KernelArgs args;
 
   const auto key = kernel::ParamKey::scoped(

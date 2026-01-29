@@ -21,7 +21,7 @@
 #include "tests/internal/kernel/mps/ops/fixtures/vector_add_kernel.h"
 
 namespace kernel = orteaf::internal::kernel;
-namespace mps_kernel = ::orteaf::internal::execution::mps::resource;
+namespace mps_resource = ::orteaf::internal::execution::mps::resource;
 namespace mps_wrapper = orteaf::internal::execution::mps::platform::wrapper;
 namespace vector_add = orteaf::extension::kernel::mps::ops;
 
@@ -109,7 +109,7 @@ TEST_F(VectorAddKernelIntegrationTest, KernelEntryCanBeCreated) {
 TEST_F(VectorAddKernelIntegrationTest, ExecuteFunctionSignatureIsCorrect) {
   // Verify the execute function signature matches what MpsKernelEntry expects
   using ExpectedFunc =
-      void (*)(mps_kernel::MpsKernelBase &, kernel::KernelArgs &);
+      void (*)(mps_resource::MpsKernelBase &, kernel::KernelArgs &);
 
   auto entry = vector_add::createVectorAddKernel();
 
