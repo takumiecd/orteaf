@@ -13,6 +13,7 @@ struct MpsBufferTag {};
 struct MpsGraphTag {};
 struct MpsEventTag {};
 struct MpsFenceTag {};
+struct MpsKernelBaseTag {};
 
 using MpsDeviceHandle = ::orteaf::internal::base::Handle<MpsDeviceTag, uint32_t, void>;
 using MpsCommandQueueHandle =
@@ -25,6 +26,7 @@ using MpsBufferViewHandle = ::orteaf::internal::base::Handle<MpsBufferTag, uint3
 using MpsGraphHandle = ::orteaf::internal::base::Handle<MpsGraphTag, uint32_t, uint8_t>;
 using MpsEventHandle = ::orteaf::internal::base::Handle<MpsEventTag, uint32_t, uint8_t>;
 using MpsFenceHandle = ::orteaf::internal::base::Handle<MpsFenceTag, uint32_t, uint8_t>;
+using MpsKernelBaseHandle = ::orteaf::internal::base::Handle<MpsKernelBaseTag, uint32_t, void>;
 
 static_assert(std::is_trivially_copyable_v<MpsDeviceHandle>);
 static_assert(std::is_trivially_copyable_v<MpsBufferHandle>);
