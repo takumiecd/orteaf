@@ -98,10 +98,14 @@ inline void vectorAddExecute(kernel::core::KernelEntry::KernelBaseLease &lease,
  *
  * This factory function creates a KernelEntry configured for vector add.
  *
+ * @param lease Kernel base lease with registered library/function keys
  * @return KernelEntry for vector add operations
  */
-inline kernel::core::KernelEntry createVectorAddKernel() {
+inline kernel::core::KernelEntry createVectorAddKernel(
+    kernel::core::KernelEntry::MpsKernelBaseLease lease) {
   kernel::core::KernelEntry entry;
+  entry.setBase(
+      kernel::core::KernelEntry::KernelBaseLease{std::move(lease)});
   entry.setExecute(vectorAddExecute);
 
   return entry;
