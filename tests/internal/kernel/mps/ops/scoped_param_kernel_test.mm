@@ -5,7 +5,7 @@
 #include <cstdint>
 
 #include <orteaf/internal/kernel/core/kernel_args.h>
-#include <orteaf/internal/execution/mps/resource/mps_kernel_base.h>
+#include <orteaf/internal/kernel/kernel_entry.h>
 #include <orteaf/internal/kernel/param/param.h>
 #include <orteaf/internal/kernel/param/param_id.h>
 #include <orteaf/internal/kernel/param/param_key.h>
@@ -15,7 +15,6 @@
 #include "tests/internal/kernel/mps/ops/fixtures/scoped_param_kernel.h"
 
 namespace kernel = orteaf::internal::kernel;
-namespace mps_resource = ::orteaf::internal::execution::mps::resource;
 namespace scoped_kernel = orteaf::extension::kernel::mps::ops;
 
 namespace {
@@ -29,7 +28,6 @@ TEST(ScopedParamKernelTest, ParamSchemaIsScopedToInput0) {
 }
 
 TEST(ScopedParamKernelTest, ExecuteExtractsScopedParam) {
-  mps_resource::MpsKernelBase base;
   kernel::KernelArgs args;
 
   const auto key = kernel::ParamKey::scoped(
@@ -38,7 +36,9 @@ TEST(ScopedParamKernelTest, ExecuteExtractsScopedParam) {
   args.addParam(kernel::Param(key, static_cast<std::uint32_t>(7)));
 
   auto entry = scoped_kernel::createScopedParamKernel();
-  entry.execute(base, args);
+  auto func = entry.execute();
+  ASSERT_NE(func, nullptr);
+  func(entry.base(), args);
 
   // Global lookup should not match scoped params.
   EXPECT_EQ(args.findParam(kernel::ParamId::NumElements), nullptr);

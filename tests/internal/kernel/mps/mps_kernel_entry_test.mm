@@ -2,83 +2,57 @@
 #include <gtest/gtest.h>
 
 #include <cstddef>
+#include <variant>
 
 #include <orteaf/internal/execution/mps/manager/mps_compute_pipeline_state_manager.h>
 #include <orteaf/internal/execution/mps/mps_handles.h>
 #include <orteaf/internal/execution_context/mps/context.h>
 #include <orteaf/internal/kernel/core/kernel_args.h>
-#include <orteaf/internal/execution/mps/resource/mps_kernel_base.h>
-#include <orteaf/internal/kernel/mps/mps_kernel_entry.h>
+#include <orteaf/internal/kernel/kernel_entry.h>
 
 namespace kernel = orteaf::internal::kernel;
-namespace mps_kernel = ::orteaf::internal::kernel::mps;
-namespace mps_resource = ::orteaf::internal::execution::mps::resource;
-namespace mps_manager = orteaf::internal::execution::mps::manager;
-namespace mps_exec = orteaf::internal::execution::mps;
-namespace mps_context = orteaf::internal::execution_context::mps;
+namespace kernel_entry = ::orteaf::internal::kernel;
 
 namespace {
 
-// Mock RuntimeApi for testing configure()
-struct MockRuntimeApi {
-  using PipelineLease = mps_resource::MpsKernelBase::PipelineLease;
-  using LibraryKey = mps_resource::MpsKernelBase::LibraryKey;
-  using FunctionKey = mps_resource::MpsKernelBase::FunctionKey;
-
-  static PipelineLease acquirePipeline(mps_exec::MpsDeviceHandle device,
-                                       const LibraryKey &lib,
-                                       const FunctionKey &func) {
-    return PipelineLease{};
-  }
-};
-
 // Test helper: track execution calls
 static bool g_execute_called = false;
-static mps_resource::MpsKernelBase *g_execute_base = nullptr;
+static kernel_entry::KernelEntry::KernelBaseLease *g_execute_lease = nullptr;
 static kernel::KernelArgs *g_execute_args = nullptr;
 
-void mockExecuteFunc(mps_resource::MpsKernelBase &base,
+void mockExecuteFunc(kernel_entry::KernelEntry::KernelBaseLease &lease,
                      kernel::KernelArgs &args) {
   g_execute_called = true;
-  g_execute_base = &base;
+  g_execute_lease = &lease;
   g_execute_args = &args;
 }
 
 void resetExecuteTracking() {
   g_execute_called = false;
-  g_execute_base = nullptr;
+  g_execute_lease = nullptr;
   g_execute_args = nullptr;
 }
 
 TEST(MpsKernelEntryTest, DefaultConstruction) {
-  mps_kernel::MpsKernelEntry entry;
-  EXPECT_EQ(entry.base.kernelCount(), 0u);
-  EXPECT_EQ(entry.execute, nullptr);
+  kernel_entry::KernelEntry entry;
+  EXPECT_TRUE(std::holds_alternative<std::monostate>(entry.base()));
+  EXPECT_EQ(entry.execute(), nullptr);
 }
 
 TEST(MpsKernelEntryTest, SetExecuteFunction) {
-  mps_kernel::MpsKernelEntry entry;
-  entry.execute = mockExecuteFunc;
-  EXPECT_NE(entry.execute, nullptr);
+  kernel_entry::KernelEntry entry;
+  entry.setExecute(mockExecuteFunc);
+  EXPECT_NE(entry.execute(), nullptr);
 }
 
-TEST(MpsKernelEntryTest, BaseCanBeConfigured) {
-  mps_kernel::MpsKernelEntry entry;
-  entry.base.addKey("lib1", "func1");
-
-  EXPECT_EQ(entry.base.kernelCount(), 1u);
-}
-
-TEST(MpsKernelEntryTest, RunWithMultipleKernels) {
+TEST(MpsKernelEntryTest, RunThrowsOnEmptyBase) {
   resetExecuteTracking();
 
-  mps_kernel::MpsKernelEntry entry;
-  entry.base.addKey("lib1", "func1");
-  entry.base.addKey("lib2", "func2");
-  entry.base.addKey("lib3", "func3");
-  entry.execute = mockExecuteFunc;
+  kernel_entry::KernelEntry entry;
+  entry.setExecute(mockExecuteFunc);
 
-  EXPECT_EQ(entry.base.kernelCount(), 3u);
+  kernel::KernelArgs args;
+  EXPECT_THROW({ entry.run(args); }, std::runtime_error);
 }
 
 } // namespace

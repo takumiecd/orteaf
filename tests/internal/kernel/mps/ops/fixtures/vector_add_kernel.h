@@ -8,8 +8,7 @@
 #include <orteaf/internal/kernel/schema/kernel_param_schema.h>
 #include <orteaf/internal/kernel/schema/kernel_storage_schema.h>
 #include <orteaf/internal/kernel/core/kernel_args.h>
-#include <orteaf/internal/execution/mps/resource/mps_kernel_base.h>
-#include <orteaf/internal/kernel/mps/mps_kernel_entry.h>
+#include <orteaf/internal/kernel/kernel_entry.h>
 #include <orteaf/internal/kernel/mps/mps_kernel_session.h>
 #include <orteaf/internal/kernel/param/param_id.h>
 #include <orteaf/internal/kernel/storage/operand_id.h>
@@ -52,19 +51,35 @@ struct VectorAddParams : kernel::ParamSchema<VectorAddParams> {
  * @brief Execute function for vector add kernel.
  *
  * Encodes and dispatches the vector add compute shader.
- * This function is called by MpsKernelEntry::run().
+ * This function is called by KernelEntry::run().
  *
  * @param base Configured MpsKernelBase with cached pipeline state
  * @param args Kernel arguments containing storages and parameters
  */
-inline void vectorAddExecute(mps_resource::MpsKernelBase &base,
+inline mps_resource::MpsKernelBase *
+getMpsBase(kernel::KernelEntry::KernelBaseLease &lease) {
+  using LeaseT = kernel::KernelEntry::MpsKernelBaseLease;
+  auto *mps_lease = std::get_if<LeaseT>(&lease);
+  if (!mps_lease || !(*mps_lease)) {
+    return nullptr;
+  }
+  return mps_lease->operator->();
+}
+
+inline void vectorAddExecute(kernel::KernelEntry::KernelBaseLease &lease,
                              ::orteaf::internal::kernel::KernelArgs &args) {
+  auto *base_ptr = getMpsBase(lease);
+  if (!base_ptr) {
+    ::orteaf::internal::diagnostics::error::throwError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+        "MPS kernel base lease is invalid");
+  }
   // Extract storages and params
   auto storages = VectorAddStorages::extract(args);
   auto params = VectorAddParams::extract(args);
 
   // Begin session (auto cleanup on scope exit)
-  auto session = mps_kernel::MpsKernelSession::begin(base, args, 0);
+  auto session = mps_kernel::MpsKernelSession::begin(*base_ptr, args, 0);
   if (!session)
     return;
 
@@ -81,18 +96,13 @@ inline void vectorAddExecute(mps_resource::MpsKernelBase &base,
 /**
  * @brief Create and initialize a vector add kernel entry.
  *
- * This factory function creates an MpsKernelEntry configured for vector add.
+ * This factory function creates a KernelEntry configured for vector add.
  *
- * @return MpsKernelEntry for vector add operations
+ * @return KernelEntry for vector add operations
  */
-inline mps_kernel::MpsKernelEntry createVectorAddKernel() {
-  mps_kernel::MpsKernelEntry entry;
-
-  // Register the Metal library and function
-  entry.base.addKey("vector_add", "orteaf_vector_add");
-
-  // Set the execute function
-  entry.execute = vectorAddExecute;
+inline kernel::KernelEntry createVectorAddKernel() {
+  kernel::KernelEntry entry;
+  entry.setExecute(vectorAddExecute);
 
   return entry;
 }

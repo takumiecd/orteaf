@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <variant>
 #include <vector>
 
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_buffer.h>
@@ -11,8 +12,7 @@
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_device.h>
 #include <orteaf/internal/execution_context/mps/context.h>
 #include <orteaf/internal/kernel/core/kernel_args.h>
-#include <orteaf/internal/execution/mps/resource/mps_kernel_base.h>
-#include <orteaf/internal/kernel/mps/mps_kernel_entry.h>
+#include <orteaf/internal/kernel/kernel_entry.h>
 #include <orteaf/internal/kernel/param/param.h>
 #include <orteaf/internal/kernel/param/param_id.h>
 #include <orteaf/internal/kernel/storage/operand_id.h>
@@ -21,7 +21,7 @@
 #include "tests/internal/kernel/mps/ops/fixtures/vector_add_kernel.h"
 
 namespace kernel = orteaf::internal::kernel;
-namespace mps_resource = ::orteaf::internal::execution::mps::resource;
+namespace kernel_entry = ::orteaf::internal::kernel;
 namespace mps_wrapper = orteaf::internal::execution::mps::platform::wrapper;
 namespace vector_add = orteaf::extension::kernel::mps::ops;
 
@@ -51,10 +51,8 @@ TEST(VectorAddKernelTest, CreateKernelEntryHasCorrectStructure) {
   auto entry = vector_add::createVectorAddKernel();
 
   // Check kernel count (should have 1 kernel registered)
-  EXPECT_EQ(entry.base.kernelCount(), 1u);
-
-  // Check execute function is set
-  EXPECT_NE(entry.execute, nullptr);
+  EXPECT_TRUE(std::holds_alternative<std::monostate>(entry.base()));
+  EXPECT_NE(entry.execute(), nullptr);
 }
 
 // =============================================================================
@@ -93,8 +91,8 @@ protected:
 TEST_F(VectorAddKernelIntegrationTest, KernelEntryCanBeCreated) {
   auto entry = vector_add::createVectorAddKernel();
 
-  EXPECT_EQ(entry.base.kernelCount(), 1u);
-  EXPECT_NE(entry.execute, nullptr);
+  EXPECT_TRUE(std::holds_alternative<std::monostate>(entry.base()));
+  EXPECT_NE(entry.execute(), nullptr);
 }
 
 // NOTE: Full integration tests would require:
@@ -107,14 +105,14 @@ TEST_F(VectorAddKernelIntegrationTest, KernelEntryCanBeCreated) {
 // Full integration would require the complete runtime setup.
 
 TEST_F(VectorAddKernelIntegrationTest, ExecuteFunctionSignatureIsCorrect) {
-  // Verify the execute function signature matches what MpsKernelEntry expects
+  // Verify the execute function signature matches what KernelEntry expects
   using ExpectedFunc =
-      void (*)(mps_resource::MpsKernelBase &, kernel::KernelArgs &);
+      void (*)(kernel_entry::KernelEntry::KernelBaseLease &, kernel::KernelArgs &);
 
   auto entry = vector_add::createVectorAddKernel();
 
   // This static_cast will fail at compile time if signature is wrong
-  ExpectedFunc func = entry.execute;
+  ExpectedFunc func = entry.execute();
   EXPECT_NE(func, nullptr);
 }
 
@@ -134,7 +132,9 @@ TEST(VectorAddKernelTest, ExecuteFunctionThrowsWhenStoragesNotBound) {
   kernel::KernelArgs args;
 
   // Execute throws because required storage bindings are not set
-  EXPECT_THROW({ entry.execute(entry.base, args); }, std::runtime_error);
+  auto func = entry.execute();
+  ASSERT_NE(func, nullptr);
+  EXPECT_THROW({ func(entry.base(), args); }, std::runtime_error);
 }
 
 } // namespace
