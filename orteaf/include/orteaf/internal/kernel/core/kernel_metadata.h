@@ -5,6 +5,7 @@
 #include <variant>
 
 #if ORTEAF_ENABLE_MPS
+#include "orteaf/internal/execution/mps/api/mps_execution_api.h"
 #include "orteaf/internal/execution/mps/manager/mps_kernel_metadata_manager.h"
 #endif
 #include "orteaf/internal/kernel/core/kernel_entry.h"
@@ -56,6 +57,9 @@ public:
             if (!payload) {
               return;
             }
+            entry.setBase(::orteaf::internal::execution::mps::api::
+                              MpsExecutionApi::acquireKernelBase(
+                                  payload->keys()));
             entry.setExecute(payload->execute());
 #endif
           }
