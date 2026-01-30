@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <system_error>
 #include <variant>
 #include <vector>
 
@@ -48,10 +49,11 @@ TEST(VectorAddKernelTest, ParamSchemaHasNumElements) {
 }
 
 TEST(VectorAddKernelTest, CreateKernelEntryHasCorrectStructure) {
-  auto entry = vector_add::createVectorAddKernel();
+  using MpsLease = kernel_entry::KernelEntry::MpsKernelBaseLease;
+  auto entry = vector_add::createVectorAddKernel(MpsLease{});
 
-  // Check kernel count (should have 1 kernel registered)
-  EXPECT_TRUE(std::holds_alternative<std::monostate>(entry.base()));
+  // Check lease variant (MPS lease is expected, may be invalid)
+  EXPECT_TRUE(std::holds_alternative<MpsLease>(entry.base()));
   EXPECT_NE(entry.execute(), nullptr);
 }
 
@@ -89,9 +91,10 @@ protected:
 };
 
 TEST_F(VectorAddKernelIntegrationTest, KernelEntryCanBeCreated) {
-  auto entry = vector_add::createVectorAddKernel();
+  using MpsLease = kernel_entry::KernelEntry::MpsKernelBaseLease;
+  auto entry = vector_add::createVectorAddKernel(MpsLease{});
 
-  EXPECT_TRUE(std::holds_alternative<std::monostate>(entry.base()));
+  EXPECT_TRUE(std::holds_alternative<MpsLease>(entry.base()));
   EXPECT_NE(entry.execute(), nullptr);
 }
 
@@ -109,7 +112,8 @@ TEST_F(VectorAddKernelIntegrationTest, ExecuteFunctionSignatureIsCorrect) {
   using ExpectedFunc =
       void (*)(kernel_entry::KernelEntry::KernelBaseLease &, kernel::KernelArgs &);
 
-  auto entry = vector_add::createVectorAddKernel();
+  using MpsLease = kernel_entry::KernelEntry::MpsKernelBaseLease;
+  auto entry = vector_add::createVectorAddKernel(MpsLease{});
 
   // This static_cast will fail at compile time if signature is wrong
   ExpectedFunc func = entry.execute();
@@ -128,13 +132,14 @@ TEST(VectorAddKernelTest, KernelArgsDefaultContextIsInvalid) {
 }
 
 TEST(VectorAddKernelTest, ExecuteFunctionThrowsWhenStoragesNotBound) {
-  auto entry = vector_add::createVectorAddKernel();
+  using MpsLease = kernel_entry::KernelEntry::MpsKernelBaseLease;
+  auto entry = vector_add::createVectorAddKernel(MpsLease{});
   kernel::KernelArgs args;
 
   // Execute throws because required storage bindings are not set
   auto func = entry.execute();
   ASSERT_NE(func, nullptr);
-  EXPECT_THROW({ func(entry.base(), args); }, std::runtime_error);
+  EXPECT_THROW({ func(entry.base(), args); }, std::system_error);
 }
 
 } // namespace
