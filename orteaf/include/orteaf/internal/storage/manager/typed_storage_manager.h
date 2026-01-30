@@ -128,6 +128,11 @@ template <typename Storage> struct TypedStoragePoolTraits {
           builder.withHeapKey(request.heap_key);
         }
       }
+      if constexpr (requires { builder.withDeviceHandle(request.device); }) {
+        if (request.device.isValid()) {
+          builder.withDeviceHandle(request.device);
+        }
+      }
       if constexpr (requires { builder.withDType(request.dtype); }) {
         builder.withDType(request.dtype);
       }
