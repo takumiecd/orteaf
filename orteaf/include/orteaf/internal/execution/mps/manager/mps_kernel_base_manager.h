@@ -112,9 +112,6 @@ public:
   /// Strong lease type for kernel base resources
   using KernelBaseLease = Core::StrongLeaseType;
 
-private:
-  friend KernelBaseLease;
-
 public:
   struct Config {
     // PoolManager settings

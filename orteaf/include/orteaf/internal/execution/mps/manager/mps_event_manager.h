@@ -146,9 +146,6 @@ public:
 
   using EventLease = Core::StrongLeaseType;
 
-private:
-  friend EventLease;
-
 public:
   struct Config {
     // PoolManager settings
