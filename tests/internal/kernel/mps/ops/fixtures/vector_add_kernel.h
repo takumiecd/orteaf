@@ -53,7 +53,7 @@ struct VectorAddParams : kernel::ParamSchema<VectorAddParams> {
  * Encodes and dispatches the vector add compute shader.
  * This function is called by KernelEntry::run().
  *
- * @param base Configured MpsKernelBase with cached pipeline state
+ * @param lease KernelBaseLease reference (may hold an MpsKernelBase lease)
  * @param args Kernel arguments containing storages and parameters
  */
 inline mps_resource::MpsKernelBase *

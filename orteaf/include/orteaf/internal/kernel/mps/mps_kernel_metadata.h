@@ -7,6 +7,7 @@
 #include <variant>
 
 #include "orteaf/internal/base/heap_vector.h"
+#include "orteaf/internal/execution/mps/api/mps_execution_api.h"
 #include "orteaf/internal/execution/mps/manager/mps_compute_pipeline_state_manager.h"
 #include "orteaf/internal/kernel/core/kernel_entry.h"
 #include "orteaf/internal/kernel/registry/kernel_entry_traits.h"
@@ -42,6 +43,8 @@ struct MpsKernelMetadata {
    */
   [[nodiscard]] ::orteaf::internal::kernel::core::KernelEntry rebuild() const {
     ::orteaf::internal::kernel::core::KernelEntry entry;
+    entry.setBase(::orteaf::internal::execution::mps::api::MpsExecutionApi::
+                      acquireKernelBase(keys));
     entry.setExecute(execute);
     return entry;
   }
