@@ -401,10 +401,10 @@ TYPED_TEST(MpsHeapManagerTypedTest, ShutdownDestroysRemainingHeaps) {
 }
 
 // =============================================================================
-// BufferManager Access Tests
+// Heap Lease Access Tests
 // =============================================================================
 
-TYPED_TEST(MpsHeapManagerTypedTest, BufferManagerAccessFromLease) {
+TYPED_TEST(MpsHeapManagerTypedTest, AcquireFromHandleReturnsLease) {
   if constexpr (!TypeParam::is_mock) {
     GTEST_SKIP() << "Mock-only test";
     return;
@@ -422,20 +422,21 @@ TYPED_TEST(MpsHeapManagerTypedTest, BufferManagerAccessFromLease) {
   this->adapter().expectCreateHeapsInOrder({{descriptor, makeHeap(0xD00)}});
   this->adapter().expectDestroyHeaps({makeHeap(0xD00)});
 
-  // Act: Acquire heap, then get buffer manager
+  // Act: Acquire heap, then reacquire by handle
   auto lease = manager.acquire(key);
-  auto *buffer_manager = manager.bufferManager(lease);
+  auto handle = lease.payloadHandle();
+  auto lease2 = manager.acquire(handle);
 
-  // Assert: BufferManager is valid and initialized
-  EXPECT_NE(buffer_manager, nullptr);
-  EXPECT_TRUE(buffer_manager->isConfiguredForTest());
+  // Assert: Lease is valid
+  EXPECT_TRUE(lease2);
 
-  // Cleanup: Release lease before shutdown
+  // Cleanup
   lease.release();
+  lease2.release();
   manager.shutdown();
 }
 
-TYPED_TEST(MpsHeapManagerTypedTest, BufferManagerAccessFromKey) {
+TYPED_TEST(MpsHeapManagerTypedTest, AcquireBufferFromLeaseZeroSize) {
   if constexpr (!TypeParam::is_mock) {
     GTEST_SKIP() << "Mock-only test";
     return;
@@ -453,34 +454,25 @@ TYPED_TEST(MpsHeapManagerTypedTest, BufferManagerAccessFromKey) {
   this->adapter().expectCreateHeapsInOrder({{descriptor, makeHeap(0xE00)}});
   this->adapter().expectDestroyHeaps({makeHeap(0xE00)});
 
-  // Act: Get buffer manager directly by key (creates heap if needed)
-  auto *buffer_manager = manager.bufferManager(key);
+  auto lease = manager.acquire(key);
+  auto buffer_lease = lease->acquireBuffer(0, 0);
 
-  // Assert: BufferManager is valid
-  EXPECT_NE(buffer_manager, nullptr);
-  EXPECT_TRUE(buffer_manager->isConfiguredForTest());
+  EXPECT_FALSE(buffer_lease);
 
-  // Act: Same key returns same buffer manager (cached)
-  auto *buffer_manager2 = manager.bufferManager(key);
-
-  // Assert: Same pointer
-  EXPECT_EQ(buffer_manager, buffer_manager2);
-
-  // Cleanup
+  lease.release();
   manager.shutdown();
 }
 
-TYPED_TEST(MpsHeapManagerTypedTest,
-           BufferManagerAccessBeforeInitializationThrows) {
+TYPED_TEST(MpsHeapManagerTypedTest, AcquireBeforeInitializationThrows) {
   auto &manager = this->manager();
   const auto key = this->defaultKey(0x4000);
 
   // Act & Assert: Accessing before initialization throws InvalidState
   ExpectError(diag_error::OrteafErrc::InvalidState,
-              [&] { (void)manager.bufferManager(key); });
+              [&] { (void)manager.acquire(key); });
 }
 
-TYPED_TEST(MpsHeapManagerTypedTest, BufferManagerAccessWithInvalidKeyThrows) {
+TYPED_TEST(MpsHeapManagerTypedTest, AcquireWithInvalidKeyThrows) {
   auto &manager = this->manager();
 
   // Arrange
@@ -494,7 +486,7 @@ TYPED_TEST(MpsHeapManagerTypedTest, BufferManagerAccessWithInvalidKeyThrows) {
 
   // Act & Assert: Invalid key is rejected
   ExpectError(diag_error::OrteafErrc::InvalidArgument,
-              [&] { (void)manager.bufferManager(key); });
+              [&] { (void)manager.acquire(key); });
 
   manager.shutdown();
 }

@@ -191,41 +191,26 @@ MpsHeapManager::acquire(const HeapDescriptorKey &key) {
   return lease;
 }
 
-MpsHeapManager::BufferManager *
-MpsHeapManager::bufferManager(const HeapLease &lease) {
-  if (!lease) {
-    return nullptr;
-  }
-  auto *payload = const_cast<MpsHeapPayload *>(lease.operator->());
-  return payload ? &payload->bufferManager() : nullptr;
-}
-
-MpsHeapManager::BufferManager *
-MpsHeapManager::bufferManager(const HeapDescriptorKey &key) {
+MpsHeapManager::HeapLease
+MpsHeapManager::acquire(HeapHandle handle) {
   core_.ensureConfigured();
-  validateKey(key);
-
-  // Check if already cached
-  if (auto it = key_to_index_.find(key); it != key_to_index_.end()) {
-    const auto index = it->second;
-    const HeapHandle handle{
-        static_cast<typename HeapHandle::index_type>(index)};
-    auto lease = lifetime_.get(handle);
-    if (!lease) {
-      lease = core_.acquireStrongLease(handle);
-      lifetime_.set(lease);
-    }
-    auto *payload = lease.operator->();
-    return payload ? &payload->bufferManager() : nullptr;
+  if (!handle.isValid()) {
+    ::orteaf::internal::diagnostics::error::throwError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+        "Heap handle is invalid");
   }
-
-  // Create new entry - use acquire and then extract buffer_manager
-  auto lease = acquire(key);
-  if (!lease) {
-    return nullptr;
+  if (!core_.isAlive(handle)) {
+    ::orteaf::internal::diagnostics::error::throwError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+        "Heap handle does not reference a live payload");
   }
-  auto *payload = lease.operator->();
-  return payload ? &payload->bufferManager() : nullptr;
+  auto cached = lifetime_.get(handle);
+  if (cached) {
+    return cached;
+  }
+  auto lease = core_.acquireStrongLease(handle);
+  lifetime_.set(lease);
+  return lease;
 }
 
 void MpsHeapManager::validateKey(const HeapDescriptorKey &key) const {

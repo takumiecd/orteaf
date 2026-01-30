@@ -108,9 +108,9 @@ struct MpsHeapPayload {
   }
 
   HeapType heap() const noexcept { return heap_; }
-  BufferManager &bufferManager() noexcept { return buffer_manager_; }
-  const BufferManager &bufferManager() const noexcept {
-    return buffer_manager_;
+  using BufferLease = BufferManager::StrongBufferLease;
+  BufferLease acquireBuffer(std::size_t size, std::size_t alignment) {
+    return buffer_manager_.acquire(size, alignment);
   }
 
 private:
@@ -231,10 +231,7 @@ public:
   void shutdown();
 
   HeapLease acquire(const HeapDescriptorKey &key);
-
-  // Direct access to BufferManager for a given heap
-  BufferManager *bufferManager(const HeapLease &lease);
-  BufferManager *bufferManager(const HeapDescriptorKey &key);
+  HeapLease acquire(HeapHandle handle);
 
 #if ORTEAF_ENABLE_TEST
   void configureForTest(const Config &config, DeviceType device,
