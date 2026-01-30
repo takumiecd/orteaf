@@ -24,8 +24,8 @@ struct Handle {
   using underlying_type = Index;
   static constexpr bool has_generation = true;
 
-  index_type index{};
-  generation_type generation{};
+  index_type index{invalid_index()};
+  generation_type generation{invalid_generation()};
 
   constexpr Handle() = default;
     constexpr Handle(index_type idx, generation_type gen = generation_type{}) noexcept
@@ -54,7 +54,7 @@ struct Handle<Tag, Index, void> {
   using underlying_type = Index;
   static constexpr bool has_generation = false;
 
-  index_type index{};
+  index_type index{invalid_index()};
 
   constexpr Handle() = default;
   constexpr explicit Handle(index_type idx) noexcept : index(idx) {}
