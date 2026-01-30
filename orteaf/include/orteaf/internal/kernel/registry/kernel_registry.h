@@ -5,7 +5,8 @@
 
 #include "orteaf/internal/base/lru_list.h"
 #include "orteaf/internal/kernel/core/kernel_key.h"
-#include "orteaf/internal/kernel/registry/kernel_entry_traits.h"
+#include "orteaf/internal/kernel/kernel_entry.h"
+#include "orteaf/internal/kernel/kernel_metadata.h"
 #include "orteaf/internal/kernel/registry/kernel_registry_config.h"
 
 namespace orteaf::internal::kernel::registry {
@@ -21,12 +22,11 @@ namespace orteaf::internal::kernel::registry {
  * Uses LRU (Least Recently Used) algorithm for eviction at each tier.
  * KernelKey serves as the virtual address for kernel lookup.
  *
- * @tparam Traits Must satisfy KernelEntryTraitsConcept
  */
-template <KernelEntryTraitsConcept Traits> class KernelRegistry {
+class KernelRegistry {
 public:
-  using Entry = typename Traits::Entry;
-  using Metadata = typename Traits::Metadata;
+  using Entry = ::orteaf::internal::kernel::KernelEntry;
+  using Metadata = ::orteaf::internal::kernel::KernelMetadataLease;
   using Key = ::orteaf::internal::kernel::KernelKey;
 
   /**
@@ -299,7 +299,7 @@ private:
     // Demote to Secondary Storage
     auto it = main_memory_.find(key);
     if (it != main_memory_.end()) {
-      secondary_storage_[key] = Traits::toMetadata(*it->second);
+      secondary_storage_[key] = Metadata{};
       main_memory_.erase(it);
     }
     main_memory_nodes_.erase(key);
@@ -363,11 +363,3 @@ private:
 };
 
 } // namespace orteaf::internal::kernel::registry
-
-// Convenience type aliases for specific backends
-#if ORTEAF_ENABLE_MPS
-#include "orteaf/internal/kernel/mps/mps_kernel_metadata.h"
-namespace orteaf::internal::kernel::registry {
-using MpsKernelRegistry = KernelRegistry<MpsKernelEntryTraits>;
-} // namespace orteaf::internal::kernel::registry
-#endif

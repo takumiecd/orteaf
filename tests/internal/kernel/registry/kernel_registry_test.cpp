@@ -1,13 +1,11 @@
 #include "orteaf/internal/kernel/registry/kernel_registry.h"
 
-#if ORTEAF_ENABLE_MPS
-
 #include <gtest/gtest.h>
 
 #include <type_traits>
 
 #include "orteaf/internal/kernel/core/kernel_key.h"
-#include "orteaf/internal/kernel/mps/mps_kernel_metadata.h"
+#include "orteaf/internal/kernel/kernel_metadata.h"
 #include "orteaf/internal/kernel/registry/kernel_registry_config.h"
 
 namespace registry = orteaf::internal::kernel::registry;
@@ -21,25 +19,21 @@ kernel::KernelKey makeKey(int id) {
 }
 
 // Helper to create test metadata
-registry::MpsKernelMetadata makeMetadata(const char *lib, const char *func) {
-  registry::MpsKernelMetadata metadata;
-  metadata.keys.pushBack({
-      registry::MpsKernelMetadata::LibraryKey::Named(lib),
-      registry::MpsKernelMetadata::FunctionKey::Named(func),
-  });
-  metadata.execute = nullptr;
-  return metadata;
+kernel::KernelMetadataLease makeMetadata(const char *lib, const char *func) {
+  (void)lib;
+  (void)func;
+  return kernel::KernelMetadataLease{};
 }
 
-static_assert(!std::is_move_constructible_v<registry::MpsKernelRegistry>);
-static_assert(!std::is_move_assignable_v<registry::MpsKernelRegistry>);
+static_assert(!std::is_move_constructible_v<registry::KernelRegistry>);
+static_assert(!std::is_move_assignable_v<registry::KernelRegistry>);
 
 // ============================================================
 // Basic construction tests
 // ============================================================
 
 TEST(KernelRegistryTest, DefaultConstruction) {
-  registry::MpsKernelRegistry reg;
+  registry::KernelRegistry reg;
 
   EXPECT_EQ(reg.cacheSize(), 0u);
   EXPECT_EQ(reg.mainMemorySize(), 0u);
@@ -53,7 +47,7 @@ TEST(KernelRegistryTest, CustomConfiguration) {
   config.cache_capacity = 4;
   config.main_memory_capacity = 16;
 
-  registry::MpsKernelRegistry reg(config);
+  registry::KernelRegistry reg(config);
 
   EXPECT_EQ(reg.config().cache_capacity, 4u);
   EXPECT_EQ(reg.config().main_memory_capacity, 16u);
@@ -65,7 +59,7 @@ TEST(KernelRegistryTest, CacheNodePointerStableAcrossRehash) {
   config.cache_capacity = 128;
   config.main_memory_capacity = 128;
 
-  registry::MpsKernelRegistry reg(config);
+  registry::KernelRegistry reg(config);
   auto key = makeKey(1);
   reg.registerKernel(key, makeMetadata("lib1", "func1"));
   ASSERT_NE(reg.lookup(key), nullptr);
@@ -92,7 +86,7 @@ TEST(KernelRegistryTest, MainMemoryNodePointerStableAcrossRehash) {
   config.cache_capacity = 128;
   config.main_memory_capacity = 128;
 
-  registry::MpsKernelRegistry reg(config);
+  registry::KernelRegistry reg(config);
   auto key = makeKey(1);
   reg.registerKernel(key, makeMetadata("lib1", "func1"));
   ASSERT_NE(reg.lookup(key), nullptr);
@@ -120,7 +114,7 @@ TEST(KernelRegistryTest, MainMemoryNodePointerStableAcrossRehash) {
 // ============================================================
 
 TEST(KernelRegistryTest, RegisterAddsToSecondaryStorage) {
-  registry::MpsKernelRegistry reg;
+  registry::KernelRegistry reg;
   auto key = makeKey(1);
   auto metadata = makeMetadata("lib1", "func1");
 
@@ -134,7 +128,7 @@ TEST(KernelRegistryTest, RegisterAddsToSecondaryStorage) {
 }
 
 TEST(KernelRegistryTest, LookupPromotesFromSecondary) {
-  registry::MpsKernelRegistry reg;
+  registry::KernelRegistry reg;
   auto key = makeKey(1);
   reg.registerKernel(key, makeMetadata("lib1", "func1"));
 
@@ -154,7 +148,7 @@ TEST(KernelRegistryTest, LookupPromotesFromSecondary) {
 }
 
 TEST(KernelRegistryTest, LookupMiss) {
-  registry::MpsKernelRegistry reg;
+  registry::KernelRegistry reg;
   auto key = makeKey(999);
 
   auto *result = reg.lookup(key);
@@ -164,7 +158,7 @@ TEST(KernelRegistryTest, LookupMiss) {
 }
 
 TEST(KernelRegistryTest, CacheHitAfterPromotion) {
-  registry::MpsKernelRegistry reg;
+  registry::KernelRegistry reg;
   auto key = makeKey(1);
   reg.registerKernel(key, makeMetadata("lib1", "func1"));
 
@@ -185,7 +179,7 @@ TEST(KernelRegistryTest, CacheEviction) {
   registry::KernelRegistryConfig config;
   config.cache_capacity = 2;
   config.main_memory_capacity = 10;
-  registry::MpsKernelRegistry reg(config);
+  registry::KernelRegistry reg(config);
 
   // Register 3 kernels
   reg.registerKernel(makeKey(1), makeMetadata("lib1", "func1"));
@@ -214,7 +208,7 @@ TEST(KernelRegistryTest, MainMemoryEviction) {
   registry::KernelRegistryConfig config;
   config.cache_capacity = 2;
   config.main_memory_capacity = 2;
-  registry::MpsKernelRegistry reg(config);
+  registry::KernelRegistry reg(config);
 
   // Register 3 kernels
   reg.registerKernel(makeKey(1), makeMetadata("lib1", "func1"));
@@ -238,7 +232,7 @@ TEST(KernelRegistryTest, LruOrderingOnAccess) {
   registry::KernelRegistryConfig config;
   config.cache_capacity = 2;
   config.main_memory_capacity = 3;
-  registry::MpsKernelRegistry reg(config);
+  registry::KernelRegistry reg(config);
 
   // Register and lookup 3 kernels
   reg.registerKernel(makeKey(1), makeMetadata("lib1", "func1"));
@@ -267,7 +261,7 @@ TEST(KernelRegistryTest, LruOrderingOnAccess) {
 // ============================================================
 
 TEST(KernelRegistryTest, Clear) {
-  registry::MpsKernelRegistry reg;
+  registry::KernelRegistry reg;
   reg.registerKernel(makeKey(1), makeMetadata("lib1", "func1"));
   reg.registerKernel(makeKey(2), makeMetadata("lib2", "func2"));
 
@@ -280,7 +274,7 @@ TEST(KernelRegistryTest, Clear) {
 }
 
 TEST(KernelRegistryTest, Flush) {
-  registry::MpsKernelRegistry reg;
+  registry::KernelRegistry reg;
   reg.registerKernel(makeKey(1), makeMetadata("lib1", "func1"));
   reg.lookup(makeKey(1)); // Promote to cache
 
@@ -298,7 +292,7 @@ TEST(KernelRegistryTest, Flush) {
 // ============================================================
 
 TEST(KernelRegistryTest, Prefetch) {
-  registry::MpsKernelRegistry reg;
+  registry::KernelRegistry reg;
   reg.registerKernel(makeKey(1), makeMetadata("lib1", "func1"));
 
   // Before prefetch: only in secondary
@@ -313,7 +307,7 @@ TEST(KernelRegistryTest, Prefetch) {
 }
 
 TEST(KernelRegistryTest, PrefetchNotFound) {
-  registry::MpsKernelRegistry reg;
+  registry::KernelRegistry reg;
 
   bool result = reg.prefetch(makeKey(999));
 
@@ -325,7 +319,7 @@ TEST(KernelRegistryTest, PrefetchNotFound) {
 // ============================================================
 
 TEST(KernelRegistryTest, ContainsInSecondary) {
-  registry::MpsKernelRegistry reg;
+  registry::KernelRegistry reg;
   reg.registerKernel(makeKey(1), makeMetadata("lib1", "func1"));
 
   EXPECT_TRUE(reg.contains(makeKey(1)));
@@ -333,7 +327,7 @@ TEST(KernelRegistryTest, ContainsInSecondary) {
 }
 
 TEST(KernelRegistryTest, ContainsInMainMemory) {
-  registry::MpsKernelRegistry reg;
+  registry::KernelRegistry reg;
   reg.registerKernel(makeKey(1), makeMetadata("lib1", "func1"));
   reg.lookup(makeKey(1));
 
@@ -345,7 +339,7 @@ TEST(KernelRegistryTest, ContainsInMainMemory) {
 // ============================================================
 
 TEST(KernelRegistryTest, StatsTracking) {
-  registry::MpsKernelRegistry reg;
+  registry::KernelRegistry reg;
   auto key = makeKey(1);
   reg.registerKernel(key, makeMetadata("lib1", "func1"));
 
@@ -362,17 +356,4 @@ TEST(KernelRegistryTest, StatsTracking) {
   EXPECT_EQ(reg.stats().misses, 1u);
 }
 
-// ============================================================
-// Concept verification
-// ============================================================
-
-TEST(KernelRegistryTest, TraitsSatisfiesConcept) {
-  static_assert(
-      registry::KernelEntryTraitsConcept<registry::MpsKernelEntryTraits>,
-      "MpsKernelEntryTraits must satisfy KernelEntryTraitsConcept");
-  SUCCEED();
-}
-
 } // namespace
-
-#endif // ORTEAF_ENABLE_MPS
