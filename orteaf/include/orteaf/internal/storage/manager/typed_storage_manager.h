@@ -10,6 +10,7 @@
  */
 
 #include <cstddef>
+#include <type_traits>
 #include <utility>
 
 #include <orteaf/internal/base/handle.h>
@@ -60,12 +61,15 @@ template <>
 struct TypedStorageRequest<::orteaf::internal::storage::mps::MpsStorage> {
   using DeviceHandle =
       ::orteaf::internal::storage::mps::MpsStorage::DeviceHandle;
+  using HeapHandle =
+      ::orteaf::internal::storage::mps::MpsStorage::HeapHandle;
   using HeapDescriptorKey =
       ::orteaf::internal::storage::mps::MpsStorage::HeapDescriptorKey;
   using Layout = ::orteaf::internal::storage::mps::MpsStorage::Layout;
   using DType = ::orteaf::internal::storage::mps::MpsStorage::DType;
 
   DeviceHandle device{DeviceHandle::invalid()};
+  HeapHandle heap_handle{HeapHandle::invalid()};
   HeapDescriptorKey heap_key{};
   DType dtype{DType::F32};
   std::size_t numel{0};
@@ -88,6 +92,17 @@ template <typename Storage> struct TypedStoragePoolTraits {
   static constexpr const char *ManagerName = "TypedStorage manager";
 
   static void validateRequestOrThrow(const Request &request) {
+  #if ORTEAF_ENABLE_MPS
+    if constexpr (std::is_same_v<
+                      Storage, ::orteaf::internal::storage::mps::MpsStorage>) {
+      if (!request.heap_handle.isValid() &&
+          request.heap_key.size_bytes == 0) {
+        ORTEAF_THROW(
+            InvalidArgument,
+            "MpsStorage request requires a valid heap handle or heap key");
+      }
+    } else
+  #endif
     if constexpr (requires { request.device.isValid(); }) {
       if (!request.device.isValid()) {
         ORTEAF_THROW(InvalidArgument,
@@ -103,15 +118,15 @@ template <typename Storage> struct TypedStoragePoolTraits {
                      const Context & /*context*/) {
     if constexpr (requires { Payload::builder(); }) {
       auto builder = Payload::builder();
-      if constexpr (requires {
-                      builder.withDeviceHandle(request.device,
-                                               request.heap_key);
-                    }) {
-        builder.withDeviceHandle(request.device, request.heap_key);
-      } else if constexpr (requires {
-                             builder.withDeviceHandle(request.device);
-                           }) {
-        builder.withDeviceHandle(request.device);
+      if constexpr (requires { builder.withHeapHandle(request.heap_handle); }) {
+        if (request.heap_handle.isValid()) {
+          builder.withHeapHandle(request.heap_handle);
+        }
+      }
+      if constexpr (requires { builder.withHeapKey(request.heap_key); }) {
+        if (request.heap_key.size_bytes != 0) {
+          builder.withHeapKey(request.heap_key);
+        }
       }
       if constexpr (requires { builder.withDType(request.dtype); }) {
         builder.withDType(request.dtype);

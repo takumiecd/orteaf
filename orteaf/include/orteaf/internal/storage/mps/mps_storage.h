@@ -6,7 +6,6 @@
 #include <orteaf/internal/dtype/dtype.h>
 #include <orteaf/internal/execution/allocator/resource/mps/mps_resource.h>
 #include <orteaf/internal/execution/execution.h>
-#include <orteaf/internal/execution/mps/api/mps_execution_api.h>
 #include <orteaf/internal/execution/mps/manager/mps_buffer_manager.h>
 #include <orteaf/internal/execution/mps/manager/mps_heap_manager.h>
 
@@ -27,6 +26,7 @@ public:
   using HeapManager =
       ::orteaf::internal::execution::mps::manager::MpsHeapManager;
   using HeapLease = HeapManager::HeapLease;
+  using HeapHandle = HeapManager::HeapHandle;
   using HeapDescriptorKey =
       ::orteaf::internal::execution::mps::manager::HeapDescriptorKey;
   using DeviceHandle = ::orteaf::internal::execution::mps::MpsDeviceHandle;
@@ -68,11 +68,14 @@ public:
       return *this;
     }
 
-    Builder &withDeviceHandle(DeviceHandle handle,
-                              const HeapDescriptorKey &key) {
-      heap_lease_ =
-          ::orteaf::internal::execution::mps::api::MpsExecutionApi::acquireHeap(
-              handle, key);
+    Builder &withHeapHandle(HeapHandle handle) {
+      heap_handle_ = handle;
+      return *this;
+    }
+
+    Builder &withHeapKey(const HeapDescriptorKey &key) {
+      heap_key_ = key;
+      has_heap_key_ = true;
       return *this;
     }
 
@@ -110,22 +113,13 @@ public:
      * @return Constructed MpsStorage instance.
      * @throws If buffer_manager is null or acquisition fails.
      */
-    MpsStorage build() {
-      if (!heap_lease_) {
-        ::orteaf::internal::diagnostics::error::throwError(
-            ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-            "MpsStorage requires a valid heap lease");
-      }
-      const std::size_t size_in_bytes =
-          numel_ * ::orteaf::internal::sizeOf(dtype_);
-      BufferLease lease =
-          heap_lease_->bufferManager().acquire(size_in_bytes, alignment_);
-      return MpsStorage(std::move(lease), std::move(fence_token_),
-                        std::move(layout_), dtype_, numel_);
-    }
+    MpsStorage build();
 
   private:
     HeapLease heap_lease_{};
+    HeapHandle heap_handle_{};
+    HeapDescriptorKey heap_key_{};
+    bool has_heap_key_{false};
     DType dtype_{DType::F32};
     std::size_t numel_{0};
     std::size_t alignment_{0};

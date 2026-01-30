@@ -15,12 +15,8 @@ using DeviceLease = ::orteaf::internal::execution::mps::manager::
 
 bool KernelBasePayloadPoolTraits::create(Payload &payload,
                                         const Request &request,
-                                        const Context &context) {
-  if (context.device_lease == nullptr || !(*context.device_lease)) {
-    return false;
-  }
-
-  return payload.initialize(request.keys, *context.device_lease);
+                                        const Context &) {
+  return payload.setKeys(request.keys);
 }
 
 void KernelBasePayloadPoolTraits::destroy(Payload &payload,
@@ -49,7 +45,7 @@ void MpsKernelBaseManager::configure(const InternalConfig &config) {
       .withPayloadBlockSize(cfg.payload_block_size)
       .withPayloadGrowthChunkSize(cfg.payload_growth_chunk_size)
       .withRequest(payload_request)
-      .withContext({nullptr}) // Context set per-acquire
+      .withContext({}) // Context set per-acquire
       .configure(core_);
 }
 
@@ -59,19 +55,18 @@ void MpsKernelBaseManager::shutdown() {
   }
   
   const KernelBasePayloadPoolTraits::Request payload_request{};
-  const KernelBasePayloadPoolTraits::Context payload_context{nullptr};
+  const KernelBasePayloadPoolTraits::Context payload_context{};
   core_.shutdown(payload_request, payload_context);
 }
 
 MpsKernelBaseManager::KernelBaseLease
 MpsKernelBaseManager::acquire(
-    const ::orteaf::internal::base::HeapVector<Key> &keys,
-    DeviceLease &device_lease) {
+    const ::orteaf::internal::base::HeapVector<Key> &keys) {
   core_.ensureConfigured();
   
   KernelBasePayloadPoolTraits::Request request{};
   request.keys = keys;
-  const auto context = makePayloadContext(device_lease);
+  const KernelBasePayloadPoolTraits::Context context{};
   
   auto handle = core_.acquirePayloadOrGrowAndCreate(request, context);
   if (!handle.isValid()) {
@@ -81,14 +76,6 @@ MpsKernelBaseManager::acquire(
   }
   
   return core_.acquireStrongLease(handle);
-}
-
-KernelBasePayloadPoolTraits::Context
-MpsKernelBaseManager::makePayloadContext(
-    DeviceLease &device_lease) const noexcept {
-  KernelBasePayloadPoolTraits::Context context{};
-  context.device_lease = &device_lease;
-  return context;
 }
 
 } // namespace orteaf::internal::execution::mps::manager

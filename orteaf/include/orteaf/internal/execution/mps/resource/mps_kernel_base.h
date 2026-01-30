@@ -61,25 +61,31 @@ struct MpsKernelBase {
   }
 
   /**
-   * @brief Configure all pipeline leases for the given context's device.
+   * @brief Configure pipeline leases for the given device lease.
    *
    * Acquires pipeline leases from the device resource's library and pipeline
    * managers. If already configured for this device, clears and re-configures.
    *
-   * @param context Execution context containing device lease
+   * @param device_lease Device lease providing library/pipeline managers
    */
-  void configure(::orteaf::internal::execution::mps::manager::
-                     MpsDeviceManager::DeviceLease &device_lease);
+  void configurePipelines(
+      ::orteaf::internal::execution::mps::manager::MpsDeviceManager::DeviceLease
+          &device_lease);
 
   /**
-   * @brief Initialize kernel base with keys and configure for a device lease.
+   * @brief Set kernel keys only (no pipeline acquisition).
+   */
+  bool setKeys(const ::orteaf::internal::base::HeapVector<Key> &keys);
+
+  /**
+   * @brief Ensure pipeline leases are configured for the given device lease.
    *
    * Returns false if the device lease is invalid or any pipeline acquisition
    * fails.
    */
-  bool initialize(const ::orteaf::internal::base::HeapVector<Key> &keys,
-                  ::orteaf::internal::execution::mps::manager::
-                      MpsDeviceManager::DeviceLease &device_lease);
+  bool ensurePipelines(
+      ::orteaf::internal::execution::mps::manager::MpsDeviceManager::DeviceLease
+          &device_lease);
 
   /**
    * @brief Clear keys and cached pipelines.

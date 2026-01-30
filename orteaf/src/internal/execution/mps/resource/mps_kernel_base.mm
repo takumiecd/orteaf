@@ -4,7 +4,7 @@
 
 namespace orteaf::internal::execution::mps::resource {
 
-void MpsKernelBase::configure(
+void MpsKernelBase::configurePipelines(
     ::orteaf::internal::execution::mps::manager::MpsDeviceManager::DeviceLease
         &device_lease) {
   auto device = device_lease.payloadHandle();
@@ -33,41 +33,47 @@ void MpsKernelBase::configure(
     }
   }
   entry.configured = true;
+  for (const auto &pipeline : entry.pipelines) {
+    if (!pipeline) {
+      entry.configured = false;
+      break;
+    }
+  }
 }
 
-bool MpsKernelBase::initialize(
-    const ::orteaf::internal::base::HeapVector<Key> &keys,
+bool MpsKernelBase::setKeys(
+    const ::orteaf::internal::base::HeapVector<Key> &keys) {
+  reset();
+  keys_.reserve(keys.size());
+  for (const auto &key : keys) {
+    keys_.pushBack(key);
+  }
+  return true;
+}
+
+bool MpsKernelBase::ensurePipelines(
     ::orteaf::internal::execution::mps::manager::MpsDeviceManager::DeviceLease
         &device_lease) {
-  reset();
-  reserveKeys(keys.size());
-  for (const auto &key : keys) {
-    addKey(key.first.identifier.c_str(), key.second.identifier.c_str());
-  }
   if (!device_lease) {
-    reset();
     return false;
   }
-  configure(device_lease);
-
-  if (keys.empty()) {
+  if (keys_.empty()) {
     return true;
   }
-
   const auto device = device_lease.payloadHandle();
+  if (!configured(device)) {
+    configurePipelines(device_lease);
+  }
   const auto idx = findDeviceIndex(device);
   if (idx == kInvalidIndex) {
-    reset();
     return false;
   }
   const auto &entry = device_pipelines_[idx];
-  if (!entry.configured || entry.pipelines.size() != keys.size()) {
-    reset();
+  if (!entry.configured || entry.pipelines.size() != keys_.size()) {
     return false;
   }
   for (const auto &pipeline : entry.pipelines) {
     if (!pipeline) {
-      reset();
       return false;
     }
   }

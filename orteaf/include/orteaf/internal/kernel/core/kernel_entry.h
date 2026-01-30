@@ -83,9 +83,11 @@ public:
                       InvalidParameter,
                   "MPS kernel requires MPS execution context");
             }
-            auto device = context->device.payloadHandle();
-            if (!base_ptr->configured(device)) {
-              base_ptr->configure(context->device);
+            if (!base_ptr->ensurePipelines(context->device)) {
+              ::orteaf::internal::diagnostics::error::throwError(
+                  ::orteaf::internal::diagnostics::error::OrteafErrc::
+                      InvalidState,
+                  "MPS kernel base could not be initialized");
             }
             if (!execute_) {
               ::orteaf::internal::diagnostics::error::throwError(

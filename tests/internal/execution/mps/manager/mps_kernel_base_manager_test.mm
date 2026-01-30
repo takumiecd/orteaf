@@ -220,7 +220,7 @@ TYPED_TEST(MpsKernelBaseManagerTypedTest, OperationsBeforeInitializationThrow) {
   ::orteaf::internal::base::HeapVector<kernel_mps::MpsKernelBaseManager::Key>
       keys;
   ExpectError(diag_error::OrteafErrc::InvalidState,
-              [&] { (void)manager.acquire(keys, device_lease); });
+              [&] { (void)manager.acquire(keys); });
 }
 
 // =============================================================================
@@ -238,7 +238,7 @@ TYPED_TEST(MpsKernelBaseManagerTypedTest, AcquireEmptyKeysSucceeds) {
       keys;
 
   // Act
-  auto lease = manager.acquire(keys, device_lease);
+  auto lease = manager.acquire(keys);
 
   // Assert
   EXPECT_TRUE(lease);
@@ -256,7 +256,7 @@ TYPED_TEST(MpsKernelBaseManagerTypedTest, ReleaseDecreasesRefCount) {
       keys;
 
   // Act
-  auto lease = manager.acquire(keys, device_lease);
+  auto lease = manager.acquire(keys);
   EXPECT_TRUE(lease);
   auto count_before = lease.strongCount();
 
@@ -277,7 +277,7 @@ TYPED_TEST(MpsKernelBaseManagerTypedTest, MultipleAcquireSharesResources) {
       keys;
 
   // Act
-  auto lease1 = manager.acquire(keys, device_lease);
+  auto lease1 = manager.acquire(keys);
   auto lease2 = lease1; // Copy should increase ref count
 
   // Assert

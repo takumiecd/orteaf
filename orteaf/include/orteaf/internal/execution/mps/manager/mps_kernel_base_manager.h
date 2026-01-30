@@ -41,9 +41,7 @@ struct KernelBasePayloadPoolTraits {
     ::orteaf::internal::base::HeapVector<Key> keys;
   };
 
-  struct Context {
-    DeviceLease *device_lease{nullptr};
-  };
+  struct Context {};
 
   static bool create(Payload &payload, const Request &request,
                      const Context &context);
@@ -147,14 +145,12 @@ public:
    * @brief Acquire a kernel base lease.
    *
    * Creates a new kernel base with the specified library/function keys.
-   * The returned lease holds strong references to pipeline states.
+   * The returned lease holds the key list but does not configure pipelines.
    *
    * @param keys Library/function key pairs for kernel functions
-   * @param device_lease Device lease to access library manager
    * @return Strong lease to kernel base resource
    */
-  KernelBaseLease acquire(const ::orteaf::internal::base::HeapVector<Key> &keys,
-                          DeviceLease &device_lease);
+  KernelBaseLease acquire(const ::orteaf::internal::base::HeapVector<Key> &keys);
 
 #if ORTEAF_ENABLE_TEST
   void configureForTest(const Config &config) {
@@ -189,9 +185,6 @@ public:
 #endif
 
 private:
-  KernelBasePayloadPoolTraits::Context
-  makePayloadContext(DeviceLease &device_lease) const noexcept;
-
   Core core_{};
 };
 

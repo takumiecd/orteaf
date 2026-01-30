@@ -25,6 +25,7 @@ public:
       ::orteaf::internal::execution::mps::manager::HeapDescriptorKey;
   using HeapLease =
       ::orteaf::internal::execution::mps::manager::MpsHeapManager::HeapLease;
+  using HeapHandle = ::orteaf::internal::execution::mps::MpsHeapHandle;
   using LibraryKey = ::orteaf::internal::execution::mps::manager::LibraryKey;
   using FunctionKey = ::orteaf::internal::execution::mps::manager::FunctionKey;
   using KernelKey =
@@ -70,6 +71,15 @@ public:
     return device_lease->heapManager().acquire(key);
   }
 
+  static HeapLease acquireHeap(const HeapDescriptorKey &key) {
+    return acquireHeap(DeviceHandle{0}, key);
+  }
+
+  static HeapLease acquireHeap(HeapHandle handle) {
+    auto device_lease = acquireDevice(DeviceHandle{0});
+    return device_lease->heapManager().acquire(handle);
+  }
+
   // Acquire a single pipeline for the given device/library/function key trio.
   static PipelineLease acquirePipeline(DeviceHandle device,
                                        const LibraryKey &library_key,
@@ -92,10 +102,8 @@ public:
     return resource->fencePool().acquire();
   }
 
-  static KernelBaseLease acquireKernelBase(DeviceHandle device,
-                                           const KernelKeys &keys) {
-    auto device_lease = acquireDevice(device);
-    return manager().kernelBaseManager().acquire(keys, device_lease);
+  static KernelBaseLease acquireKernelBase(const KernelKeys &keys) {
+    return manager().kernelBaseManager().acquire(keys);
   }
 
   static KernelMetadataLease acquireKernelMetadata(const KernelKeys &keys,

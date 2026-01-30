@@ -8,6 +8,7 @@
  * after tensor_impl_manager.h.
  */
 
+#include <orteaf/internal/dtype/dtype.h>
 #include <orteaf/internal/storage/registry/storage_types.h>
 #include <orteaf/internal/tensor/manager/tensor_impl_manager.h>
 
@@ -88,6 +89,11 @@ bool TensorImplPoolTraits<Impl>::create(Payload &payload,
             typename MpsStorageManager::Request storage_request{};
             storage_request.device =
                 ::orteaf::internal::execution::mps::MpsDeviceHandle{0};
+            const auto numel_size =
+                static_cast<std::size_t>(numel) *
+                ::orteaf::internal::sizeOf(req.dtype);
+            storage_request.heap_key =
+                MpsStorage::HeapDescriptorKey::Sized(numel_size);
             storage_request.dtype = req.dtype;
             storage_request.numel = static_cast<std::size_t>(numel);
             storage_request.alignment = req.alignment;
