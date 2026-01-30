@@ -6,6 +6,7 @@
 #include <memory>
 #include <utility>
 
+#include "orteaf/internal/base/heap_vector.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include "orteaf/internal/execution/mps/manager/mps_execution_manager.h"
 #include "orteaf/internal/execution/mps/platform/mps_slow_ops.h"
@@ -26,6 +27,15 @@ public:
       ::orteaf::internal::execution::mps::manager::MpsHeapManager::HeapLease;
   using LibraryKey = ::orteaf::internal::execution::mps::manager::LibraryKey;
   using FunctionKey = ::orteaf::internal::execution::mps::manager::FunctionKey;
+  using KernelKey =
+      ::orteaf::internal::execution::mps::manager::MpsKernelBaseManager::Key;
+  using KernelKeys = ::orteaf::internal::base::HeapVector<KernelKey>;
+  using KernelBaseLease = ::orteaf::internal::execution::mps::manager::
+      MpsKernelBaseManager::KernelBaseLease;
+  using KernelMetadataLease = ::orteaf::internal::execution::mps::manager::
+      MpsKernelMetadataManager::KernelMetadataLease;
+  using KernelExecuteFunc = ::orteaf::internal::execution::mps::manager::
+      MpsKernelMetadataManager::ExecuteFunc;
   using PipelineLease = ::orteaf::internal::execution::mps::manager::
       MpsComputePipelineStateManager::PipelineLease;
   using StrongFenceLease = ::orteaf::internal::execution::mps::manager::
@@ -80,6 +90,17 @@ public:
     auto device_lease = acquireDevice(device);
     auto *resource = device_lease.operator->();
     return resource->fencePool().acquire();
+  }
+
+  static KernelBaseLease acquireKernelBase(DeviceHandle device,
+                                           const KernelKeys &keys) {
+    auto device_lease = acquireDevice(device);
+    return manager().kernelBaseManager().acquire(keys, device_lease);
+  }
+
+  static KernelMetadataLease acquireKernelMetadata(const KernelKeys &keys,
+                                                   KernelExecuteFunc execute) {
+    return manager().kernelMetadataManager().acquire(keys, execute);
   }
 
 private:

@@ -16,6 +16,7 @@ namespace orteaf::internal::execution::mps::manager {
 
 // Forward declaration
 class MpsKernelMetadataManager;
+class MpsExecutionManager;
 
 // =============================================================================
 // Payload Pool Traits
@@ -122,6 +123,8 @@ private:
   };
 
   void configure(const InternalConfig &config);
+
+  friend class MpsExecutionManager;
 
 public:
   void shutdown();

@@ -18,6 +18,7 @@ namespace orteaf::internal::execution::mps::manager {
 
 // Forward declaration
 class MpsKernelBaseManager;
+class MpsExecutionManager;
 
 // =============================================================================
 // Payload (Kernel Base Resource)
@@ -136,6 +137,8 @@ private:
   };
 
   void configure(const InternalConfig &config);
+
+  friend class MpsExecutionManager;
 
 public:
   void shutdown();
