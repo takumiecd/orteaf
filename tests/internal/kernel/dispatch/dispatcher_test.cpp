@@ -32,10 +32,19 @@ void mockExecuteFunc(kernel::core::KernelEntry::KernelBaseLease &lease,
   ++g_test_execution_count;
 }
 
-// Helper to create a test kernel entry
-kernel::core::KernelEntry makeTestEntry() {
-  kernel::core::KernelEntry::KernelBaseLease base{};
-  return kernel::core::KernelEntry(std::move(base), mockExecuteFunc);
+// Helper to create a test metadata with execute function and CPU base
+kernel::core::KernelMetadataLease makeTestMetadataWithCpuBase() {
+  auto metadata = kernel::core::KernelMetadataLease{};
+  metadata.setExecute(mockExecuteFunc);
+  // Note: CPU base doesn't need initialization, just create empty one
+  return metadata;
+}
+
+// Helper to create a test kernel entry with CPU base
+kernel::core::KernelEntry makeTestCpuEntry() {
+  kernel::core::KernelEntry::CpuKernelBase cpu_base{};
+  kernel::core::KernelEntry::KernelBaseLease base_lease{std::move(cpu_base)};
+  return kernel::core::KernelEntry(std::move(base_lease), mockExecuteFunc);
 }
 
 // Helper to create a test metadata
@@ -43,11 +52,26 @@ kernel::core::KernelMetadataLease makeTestMetadata() {
   return kernel::core::KernelMetadataLease{};
 }
 
-// Helper to register a test kernel
+// Helper to create a test metadata with execute function
+kernel::core::KernelMetadataLease makeTestMetadataWithExecute() {
+  auto metadata = kernel::core::KernelMetadataLease{};
+  metadata.setExecute(mockExecuteFunc);
+  return metadata;
+}
+
+// Helper to register a test kernel (without execute)
 void registerTestKernel(Op op, Architecture arch, kernel::Layout layout,
                        DType dtype, kernel::Variant variant) {
   auto key = kernel::kernel_key::make(op, arch, layout, dtype, variant);
   auto metadata = makeTestMetadata();
+  api::KernelRegistryApi::registerKernel(key, std::move(metadata));
+}
+
+// Helper to register a test kernel with execute function
+void registerTestKernelWithExecute(Op op, Architecture arch, kernel::Layout layout,
+                                   DType dtype, kernel::Variant variant) {
+  auto key = kernel::kernel_key::make(op, arch, layout, dtype, variant);
+  auto metadata = makeTestMetadataWithExecute();
   api::KernelRegistryApi::registerKernel(key, std::move(metadata));
 }
 
@@ -187,9 +211,154 @@ TEST_F(DispatcherTest, DispatchKernelNotFound) {
   EXPECT_EQ(g_test_execution_count, 0);
 }
 
-// Note: Testing successful dispatch requires a valid KernelEntry with
-// proper execution setup, which is complex in this minimal test.
-// The NotFound case validates the key resolution path.
+TEST_F(DispatcherTest, DispatchKernelSuccess) {
+  // Manually create and register a kernel with CPU base
+  auto key = kernel::kernel_key::make(
+    static_cast<Op>(1),
+    Architecture::CpuGeneric,
+    static_cast<kernel::Layout>(0),
+    DType::F32,
+    static_cast<kernel::Variant>(0)
+  );
+  
+  // Create a KernelEntry with CPU base and execute function
+  auto entry = makeTestCpuEntry();
+  
+  // Manually insert into registry (bypass metadata rebuild for this test)
+  auto &registry = api::KernelRegistryApi::instance();
+  // Note: We can't directly insert KernelEntry, so we'll test via metadata
+  
+  // Actually, let's use a different approach - register with execute function
+  // then manually fix up the entry after lookup
+  registerTestKernelWithExecute(
+    static_cast<Op>(1),
+    Architecture::CpuGeneric,
+    static_cast<kernel::Layout>(0),
+    DType::F32,
+    static_cast<kernel::Variant>(0)
+  );
+  
+  // Look up and replace the base
+  auto *lookup_entry = registry.lookup(key);
+  ASSERT_NE(lookup_entry, nullptr);
+  
+  // Replace the monostate base with CPU base
+  kernel::core::KernelEntry::CpuKernelBase cpu_base{};
+  kernel::core::KernelEntry::KernelBaseLease base_lease{std::move(cpu_base)};
+  lookup_entry->setBase(std::move(base_lease));
+  
+  // Now dispatch should succeed
+  dispatch::Dispatcher dispatcher;
+  
+  kernel::KeyRequest request{
+    static_cast<Op>(1),
+    DType::F32,
+    Architecture::CpuGeneric
+  };
+  
+  auto args = makeArgs();
+  
+  // Verify execution count starts at 0
+  EXPECT_EQ(g_test_execution_count, 0);
+  
+  // Dispatch the kernel
+  auto result = dispatcher.dispatch(request, args);
+  
+  // Verify successful dispatch
+  EXPECT_TRUE(result.success());
+  EXPECT_FALSE(result.notFound());
+  EXPECT_FALSE(result.failed());
+  
+  // Verify the kernel was executed
+  EXPECT_EQ(g_test_execution_count, 1);
+}
+
+TEST_F(DispatcherTest, DispatchKernelMultipleTimes) {
+  // Register and set up kernel with CPU base
+  auto key = kernel::kernel_key::make(
+    static_cast<Op>(1),
+    Architecture::CpuGeneric,
+    static_cast<kernel::Layout>(0),
+    DType::F32,
+    static_cast<kernel::Variant>(0)
+  );
+  
+  registerTestKernelWithExecute(
+    static_cast<Op>(1),
+    Architecture::CpuGeneric,
+    static_cast<kernel::Layout>(0),
+    DType::F32,
+    static_cast<kernel::Variant>(0)
+  );
+  
+  // Replace base with CPU base
+  auto &registry = api::KernelRegistryApi::instance();
+  auto *lookup_entry = registry.lookup(key);
+  ASSERT_NE(lookup_entry, nullptr);
+  
+  kernel::core::KernelEntry::CpuKernelBase cpu_base{};
+  kernel::core::KernelEntry::KernelBaseLease base_lease{std::move(cpu_base)};
+  lookup_entry->setBase(std::move(base_lease));
+  
+  // Dispatch multiple times
+  dispatch::Dispatcher dispatcher;
+  
+  kernel::KeyRequest request{
+    static_cast<Op>(1),
+    DType::F32,
+    Architecture::CpuGeneric
+  };
+  
+  auto args = makeArgs();
+  
+  EXPECT_EQ(g_test_execution_count, 0);
+  
+  auto result1 = dispatcher.dispatch(request, args);
+  EXPECT_TRUE(result1.success());
+  EXPECT_EQ(g_test_execution_count, 1);
+  
+  auto result2 = dispatcher.dispatch(request, args);
+  EXPECT_TRUE(result2.success());
+  EXPECT_EQ(g_test_execution_count, 2);
+  
+  auto result3 = dispatcher.dispatch(request, args);
+  EXPECT_TRUE(result3.success());
+  EXPECT_EQ(g_test_execution_count, 3);
+}
+
+TEST_F(DispatcherTest, DispatchKernelWithoutValidBase) {
+  // Register a kernel WITH execute function but WITHOUT valid base
+  // This simulates error case when base is not properly initialized
+  registerTestKernelWithExecute(
+    static_cast<Op>(1),
+    Architecture::CpuGeneric,
+    static_cast<kernel::Layout>(0),
+    DType::F32,
+    static_cast<kernel::Variant>(0)
+  );
+  
+  dispatch::Dispatcher dispatcher;
+  
+  kernel::KeyRequest request{
+    static_cast<Op>(1),
+    DType::F32,
+    Architecture::CpuGeneric
+  };
+  
+  auto args = makeArgs();
+  
+  // Dispatch the kernel
+  auto result = dispatcher.dispatch(request, args);
+  
+  // Since the kernel has std::monostate base, KernelEntry::run() will throw
+  // The dispatcher catches this and returns ExecutionError
+  EXPECT_TRUE(result.failed());
+  EXPECT_FALSE(result.success());
+  EXPECT_FALSE(result.notFound());
+  
+  // The execute function is not called because the base validation fails first
+  EXPECT_EQ(g_test_execution_count, 0);
+}
 
 // ============================================================
 // Integration with KernelRegistry API
