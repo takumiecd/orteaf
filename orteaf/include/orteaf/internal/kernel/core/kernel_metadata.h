@@ -5,6 +5,7 @@
 #include <utility>
 #include <variant>
 
+#include "orteaf/internal/execution/cpu/resource/cpu_kernel_metadata.h"
 #if ORTEAF_ENABLE_MPS
 #include "orteaf/internal/execution/mps/manager/mps_kernel_metadata_manager.h"
 #include "orteaf/internal/execution/mps/resource/mps_kernel_metadata.h"
@@ -46,6 +47,9 @@ concept KernelMetadataFromEntryBuildable =
  */
 class KernelMetadataLease {
 public:
+  using CpuKernelMetadata =
+      ::orteaf::internal::execution::cpu::resource::CpuKernelMetadata;
+
 #if ORTEAF_ENABLE_MPS
   using MpsKernelMetadataLease =
       ::orteaf::internal::execution::mps::manager::MpsKernelMetadataManager::
@@ -53,7 +57,8 @@ public:
 #endif
 
   using Variant = std::variant<
-      std::monostate
+      std::monostate,
+      CpuKernelMetadata
 #if ORTEAF_ENABLE_MPS
       ,
       MpsKernelMetadataLease
