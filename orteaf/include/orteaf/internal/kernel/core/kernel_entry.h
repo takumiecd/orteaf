@@ -6,6 +6,7 @@
 
 #include "orteaf/internal/diagnostics/error/error.h"
 #include "orteaf/internal/kernel/core/kernel_args.h"
+#include "orteaf/internal/execution/cpu/resource/cpu_kernel_base.h"
 
 #if ORTEAF_ENABLE_MPS
 #include "orteaf/internal/execution/mps/manager/mps_kernel_base_manager.h"
@@ -23,6 +24,9 @@ class KernelEntry {
 public:
   using Args = ::orteaf::internal::kernel::KernelArgs;
 
+  using CpuKernelBase =
+      ::orteaf::internal::execution::cpu::resource::CpuKernelBase;
+
 #if ORTEAF_ENABLE_MPS
   using MpsKernelBaseLease =
       ::orteaf::internal::execution::mps::manager::MpsKernelBaseManager::
@@ -30,7 +34,8 @@ public:
 #endif
 
   using KernelBaseLease = std::variant<
-      std::monostate
+      std::monostate,
+      CpuKernelBase
 #if ORTEAF_ENABLE_MPS
       ,
       MpsKernelBaseLease
@@ -64,6 +69,15 @@ public:
                 ::orteaf::internal::diagnostics::error::OrteafErrc::
                     InvalidState,
                 "Kernel base is not initialized");
+          } else if constexpr (std::is_same_v<LeaseT, CpuKernelBase>) {
+            // CPU kernels don't need any special setup
+            if (!execute_) {
+              ::orteaf::internal::diagnostics::error::throwError(
+                  ::orteaf::internal::diagnostics::error::OrteafErrc::
+                      InvalidState,
+                  "Kernel execute function is invalid");
+            }
+            execute_(base_, args);
 #if ORTEAF_ENABLE_MPS
           } else if constexpr (std::is_same_v<LeaseT, MpsKernelBaseLease>) {
             auto *base_ptr = lease_value.operator->();
