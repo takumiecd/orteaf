@@ -17,6 +17,93 @@ namespace orteaf::internal::tensor {
 namespace detail {
 
 // =============================================================================
+// Storage Lease Factory - Strategy Pattern
+// =============================================================================
+
+/// @brief Creates StorageLease for a specific execution backend.
+/// Each backend specializes this template to provide custom logic.
+template <::orteaf::internal::execution::Execution E>
+struct StorageLeaseFactory;
+
+/// @brief CPU storage factory specialization
+template <>
+struct StorageLeaseFactory<::orteaf::internal::execution::Execution::Cpu> {
+  template <typename Impl>
+  static ::orteaf::internal::storage::StorageLease create(
+      const TensorImplCreateRequest<Impl> &req,
+      ::orteaf::internal::storage::RegisteredStorages *storage_registry,
+      std::int64_t numel) {
+    using CpuStorage = ::orteaf::internal::storage::cpu::CpuStorage;
+    using CpuStorageManager = ::orteaf::internal::storage::CpuStorageManager;
+
+    typename CpuStorageManager::Request storage_request{};
+    storage_request.device =
+        ::orteaf::internal::execution::cpu::CpuDeviceHandle{0};
+    storage_request.dtype = req.dtype;
+    storage_request.numel = static_cast<std::size_t>(numel);
+    storage_request.alignment = req.alignment;
+    storage_request.layout = typename CpuStorage::Layout{};
+
+    auto lease = storage_registry->template get<CpuStorage>().acquire(
+        storage_request);
+    return ::orteaf::internal::storage::StorageLease::erase(std::move(lease));
+  }
+};
+
+#if ORTEAF_ENABLE_MPS
+/// @brief MPS storage factory specialization
+template <>
+struct StorageLeaseFactory<::orteaf::internal::execution::Execution::Mps> {
+  template <typename Impl>
+  static ::orteaf::internal::storage::StorageLease create(
+      const TensorImplCreateRequest<Impl> &req,
+      ::orteaf::internal::storage::RegisteredStorages *storage_registry,
+      std::int64_t numel) {
+    using MpsStorage = ::orteaf::internal::storage::mps::MpsStorage;
+    using MpsStorageManager = ::orteaf::internal::storage::MpsStorageManager;
+
+    typename MpsStorageManager::Request storage_request{};
+    storage_request.device =
+        ::orteaf::internal::execution::mps::MpsDeviceHandle{0};
+    const auto numel_size = static_cast<std::size_t>(numel) *
+                            ::orteaf::internal::sizeOf(req.dtype);
+    storage_request.heap_key =
+        MpsStorage::HeapDescriptorKey::Sized(numel_size);
+    storage_request.dtype = req.dtype;
+    storage_request.numel = static_cast<std::size_t>(numel);
+    storage_request.alignment = req.alignment;
+    storage_request.layout = typename MpsStorage::Layout{};
+
+    auto lease = storage_registry->template get<MpsStorage>().acquire(
+        storage_request);
+    return ::orteaf::internal::storage::StorageLease::erase(std::move(lease));
+  }
+};
+#endif
+
+/// @brief Runtime dispatcher for storage lease creation
+template <typename Impl>
+::orteaf::internal::storage::StorageLease createStorageLeaseForExecution(
+    const TensorImplCreateRequest<Impl> &req,
+    ::orteaf::internal::storage::RegisteredStorages *storage_registry,
+    std::int64_t numel) {
+  using Execution = ::orteaf::internal::execution::Execution;
+
+  switch (req.execution) {
+  case Execution::Cpu:
+    return StorageLeaseFactory<Execution::Cpu>::create(req, storage_registry,
+                                                        numel);
+#if ORTEAF_ENABLE_MPS
+  case Execution::Mps:
+    return StorageLeaseFactory<Execution::Mps>::create(req, storage_registry,
+                                                        numel);
+#endif
+  default:
+    return {};
+  }
+}
+
+// =============================================================================
 // Pool Traits Implementation
 // =============================================================================
 
@@ -60,51 +147,10 @@ bool TensorImplPoolTraits<Impl>::create(Payload &payload,
             numel *= dim;
           }
 
-          // Create storage request based on execution backend
-          using ::orteaf::internal::storage::StorageLease;
-          using Execution = ::orteaf::internal::execution::Execution;
-
-          StorageLease storage_lease{};
-          if (req.execution == Execution::Cpu) {
-            using CpuStorage = ::orteaf::internal::storage::cpu::CpuStorage;
-            using CpuStorageManager =
-                ::orteaf::internal::storage::CpuStorageManager;
-            typename CpuStorageManager::Request storage_request{};
-            storage_request.device =
-                ::orteaf::internal::execution::cpu::CpuDeviceHandle{0};
-            storage_request.dtype = req.dtype;
-            storage_request.numel = static_cast<std::size_t>(numel);
-            storage_request.alignment = req.alignment;
-            storage_request.layout = typename CpuStorage::Layout{};
-            auto lease =
-                context.storage_registry->template get<CpuStorage>().acquire(
-                    storage_request);
-            storage_lease = StorageLease::erase(std::move(lease));
-          }
-#if ORTEAF_ENABLE_MPS
-          else if (req.execution == Execution::Mps) {
-            using MpsStorage = ::orteaf::internal::storage::mps::MpsStorage;
-            using MpsStorageManager =
-                ::orteaf::internal::storage::MpsStorageManager;
-            typename MpsStorageManager::Request storage_request{};
-            storage_request.device =
-                ::orteaf::internal::execution::mps::MpsDeviceHandle{0};
-            const auto numel_size =
-                static_cast<std::size_t>(numel) *
-                ::orteaf::internal::sizeOf(req.dtype);
-            storage_request.heap_key =
-                MpsStorage::HeapDescriptorKey::Sized(numel_size);
-            storage_request.dtype = req.dtype;
-            storage_request.numel = static_cast<std::size_t>(numel);
-            storage_request.alignment = req.alignment;
-            storage_request.layout = typename MpsStorage::Layout{};
-            auto lease =
-                context.storage_registry->template get<MpsStorage>().acquire(
-                    storage_request);
-            storage_lease = StorageLease::erase(std::move(lease));
-          }
-#endif
-          else {
+          // Create storage lease using factory pattern
+          auto storage_lease =
+              createStorageLeaseForExecution(req, context.storage_registry, numel);
+          if (!storage_lease.valid()) {
             return false;
           }
 
