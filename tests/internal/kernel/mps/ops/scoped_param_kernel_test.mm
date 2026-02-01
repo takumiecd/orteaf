@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 
+#include <orteaf/internal/execution/cpu/api/cpu_execution_api.h>
 #include <orteaf/internal/kernel/core/kernel_args.h>
 #include <orteaf/internal/kernel/core/kernel_entry.h>
 #include <orteaf/internal/kernel/param/param.h>
@@ -28,6 +29,10 @@ TEST(ScopedParamKernelTest, ParamSchemaIsScopedToInput0) {
 }
 
 TEST(ScopedParamKernelTest, ExecuteExtractsScopedParam) {
+  namespace cpu_api = ::orteaf::internal::execution::cpu::api;
+  cpu_api::CpuExecutionApi::ExecutionManager::Config config{};
+  cpu_api::CpuExecutionApi::configure(config);
+
   kernel::KernelArgs args;
 
   const auto key = kernel::ParamKey::scoped(
@@ -35,10 +40,10 @@ TEST(ScopedParamKernelTest, ExecuteExtractsScopedParam) {
       kernel::makeOperandKey(kernel::OperandId::Input0));
   args.addParam(kernel::Param(key, static_cast<std::uint32_t>(7)));
 
-  auto entry = scoped_kernel::createScopedParamKernel();
-  auto func = entry.execute();
-  ASSERT_NE(func, nullptr);
-  func(entry.base(), args);
+  {
+    auto entry = scoped_kernel::createScopedParamKernel();
+    entry.run(args);
+  }
 
   // Global lookup should not match scoped params.
   EXPECT_EQ(args.findParam(kernel::ParamId::NumElements), nullptr);
@@ -46,6 +51,8 @@ TEST(ScopedParamKernelTest, ExecuteExtractsScopedParam) {
   const auto *count_param = args.findParam(kernel::ParamId::Count);
   ASSERT_NE(count_param, nullptr);
   EXPECT_EQ(*count_param->tryGet<std::size_t>(), 7u);
+
+  cpu_api::CpuExecutionApi::shutdown();
 }
 
 } // namespace

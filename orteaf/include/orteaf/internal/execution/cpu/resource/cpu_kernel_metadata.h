@@ -1,21 +1,40 @@
 #pragma once
 
-#include "orteaf/internal/kernel/core/kernel_entry.h"
 #include "orteaf/internal/execution/cpu/resource/cpu_kernel_base.h"
+
+namespace orteaf::internal::kernel::core {
+class KernelEntry;
+class KernelMetadataLease;
+} // namespace orteaf::internal::kernel::core
 
 namespace orteaf::internal::execution::cpu::resource {
 
 /**
  * @brief Kernel metadata resource for CPU.
  *
- * CPU kernels don't need to store any metadata for reconstruction
- * since the kernel function is directly callable and doesn't require
- * any cached resources like GPU backends do.
- *
- * This structure is intentionally empty, matching CpuKernelBase.
+ * Stores ExecuteFunc for kernel reconstruction.
  */
 struct CpuKernelMetadata {
+  using ExecuteFunc =
+      ::orteaf::internal::execution::cpu::resource::CpuKernelBase::ExecuteFunc;
+
   CpuKernelMetadata() = default;
+
+  ExecuteFunc execute() const noexcept { return execute_; }
+  void setExecute(ExecuteFunc execute) noexcept { execute_ = execute; }
+
+  // rebuild KernelEntry from Metadata
+  void rebuild(::orteaf::internal::kernel::core::KernelEntry &entry) const;
+
+  // Build Metadata from KernelBase
+  static CpuKernelMetadata buildFromBase(const CpuKernelBase &base);
+
+  // Build a metadata lease from KernelBase
+  static ::orteaf::internal::kernel::core::KernelMetadataLease
+  buildMetadataLeaseFromBase(const CpuKernelBase &base);
+
+private:
+  ExecuteFunc execute_{nullptr};
 };
 
 } // namespace orteaf::internal::execution::cpu::resource

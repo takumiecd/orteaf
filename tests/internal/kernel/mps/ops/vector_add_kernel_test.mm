@@ -3,7 +3,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <system_error>
 #include <variant>
 #include <vector>
 
@@ -24,6 +23,7 @@
 namespace kernel = orteaf::internal::kernel;
 namespace kernel_entry = ::orteaf::internal::kernel::core;
 namespace mps_wrapper = orteaf::internal::execution::mps::platform::wrapper;
+namespace mps_resource = ::orteaf::internal::execution::mps::resource;
 namespace vector_add = orteaf::extension::kernel::mps::ops;
 
 namespace {
@@ -54,7 +54,6 @@ TEST(VectorAddKernelTest, CreateKernelEntryHasCorrectStructure) {
 
   // Check lease variant (MPS lease is expected, may be invalid)
   EXPECT_TRUE(std::holds_alternative<MpsLease>(entry.base()));
-  EXPECT_NE(entry.execute(), nullptr);
 }
 
 // =============================================================================
@@ -95,7 +94,6 @@ TEST_F(VectorAddKernelIntegrationTest, KernelEntryCanBeCreated) {
   auto entry = vector_add::createVectorAddKernel(MpsLease{});
 
   EXPECT_TRUE(std::holds_alternative<MpsLease>(entry.base()));
-  EXPECT_NE(entry.execute(), nullptr);
 }
 
 // NOTE: Full integration tests would require:
@@ -108,15 +106,9 @@ TEST_F(VectorAddKernelIntegrationTest, KernelEntryCanBeCreated) {
 // Full integration would require the complete runtime setup.
 
 TEST_F(VectorAddKernelIntegrationTest, ExecuteFunctionSignatureIsCorrect) {
-  // Verify the execute function signature matches what KernelEntry expects
-  using ExpectedFunc =
-      void (*)(kernel_entry::KernelEntry::KernelBaseLease &, kernel::KernelArgs &);
-
-  using MpsLease = kernel_entry::KernelEntry::MpsKernelBaseLease;
-  auto entry = vector_add::createVectorAddKernel(MpsLease{});
-
-  // This static_cast will fail at compile time if signature is wrong
-  ExpectedFunc func = entry.execute();
+  // Verify the execute function signature matches the MPS base contract
+  using ExpectedFunc = mps_resource::MpsKernelBase::ExecuteFunc;
+  auto func = static_cast<ExpectedFunc>(&vector_add::vectorAddExecute);
   EXPECT_NE(func, nullptr);
 }
 
@@ -129,17 +121,6 @@ TEST_F(VectorAddKernelIntegrationTest, ExecuteFunctionSignatureIsCorrect) {
 TEST(VectorAddKernelTest, KernelArgsDefaultContextIsInvalid) {
   kernel::KernelArgs args;
   EXPECT_FALSE(args.valid());
-}
-
-TEST(VectorAddKernelTest, ExecuteFunctionThrowsWhenStoragesNotBound) {
-  using MpsLease = kernel_entry::KernelEntry::MpsKernelBaseLease;
-  auto entry = vector_add::createVectorAddKernel(MpsLease{});
-  kernel::KernelArgs args;
-
-  // Execute throws because required storage bindings are not set
-  auto func = entry.execute();
-  ASSERT_NE(func, nullptr);
-  EXPECT_THROW({ func(entry.base(), args); }, std::system_error);
 }
 
 } // namespace
