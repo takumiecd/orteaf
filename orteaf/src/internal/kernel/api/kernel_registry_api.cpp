@@ -2,9 +2,9 @@
 
 namespace orteaf::internal::kernel::api {
 
-::orteaf::internal::kernel::registry::KernelRegistry &kernelRegistry() noexcept {
-  static ::orteaf::internal::kernel::registry::KernelRegistry instance;
-  return instance;
+KernelRegistryApi::Registry &KernelRegistryApi::instance() noexcept {
+  static KernelRegistryApi::Registry registry;
+  return registry;
 }
 
 } // namespace orteaf::internal::kernel::api
