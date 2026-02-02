@@ -10,6 +10,8 @@
 #include <orteaf/internal/kernel/core/kernel_args.h>
 #include <orteaf/internal/kernel/core/kernel_entry.h>
 #include <orteaf/internal/execution/mps/resource/mps_kernel_base.h>
+#include <orteaf/internal/execution/mps/api/mps_execution_api.h>
+#include <orteaf/internal/kernel/core/kernel_metadata.h>
 #include <orteaf/internal/kernel/mps/mps_kernel_session.h>
 #include <orteaf/internal/kernel/param/param_id.h>
 #include <orteaf/internal/kernel/storage/operand_id.h>
@@ -78,19 +80,29 @@ inline void vectorAddExecute(mps_resource::MpsKernelBase &base,
 }
 
 /**
+ * @brief Create metadata for the vector add kernel.
+ *
+ * Metadata is the single source of truth and can rebuild a KernelEntry.
+ */
+inline kernel::core::KernelMetadataLease createVectorAddMetadata() {
+  using MpsExecutionApi =
+      ::orteaf::internal::execution::mps::api::MpsExecutionApi;
+  typename MpsExecutionApi::KernelKeys keys;
+  auto metadata_lease = MpsExecutionApi::acquireKernelMetadata(keys);
+  if (auto *meta_ptr = metadata_lease.operator->()) {
+    meta_ptr->setExecute(vectorAddExecute);
+  }
+  return kernel::core::KernelMetadataLease{std::move(metadata_lease)};
+}
+
+/**
  * @brief Create and initialize a vector add kernel entry.
  *
- * This factory function creates a KernelEntry configured for vector add.
- *
- * @param lease Kernel base lease with registered library/function keys
- * @return KernelEntry for vector add operations
+ * This factory function rebuilds an entry from metadata.
  */
-inline kernel::core::KernelEntry createVectorAddKernel(
-    kernel::core::KernelEntry::MpsKernelBaseLease lease) {
-  kernel::core::KernelEntry entry;
-  entry.setBase(
-      kernel::core::KernelEntry::KernelBaseLease{std::move(lease)});
-  return entry;
+inline kernel::core::KernelEntry createVectorAddKernel() {
+  auto metadata = createVectorAddMetadata();
+  return metadata.rebuild();
 }
 
 } // namespace orteaf::extension::kernel::mps::ops

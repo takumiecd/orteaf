@@ -7,6 +7,7 @@
 
 #include <orteaf/internal/execution/cpu/api/cpu_execution_api.h>
 #include <orteaf/internal/execution/cpu/resource/cpu_kernel_base.h>
+#include <orteaf/internal/kernel/core/kernel_metadata.h>
 #include <orteaf/internal/kernel/schema/kernel_param_schema.h>
 #include <orteaf/internal/kernel/core/kernel_args.h>
 #include <orteaf/internal/kernel/core/kernel_entry.h>
@@ -44,13 +45,13 @@ inline void scopedParamExecute(
 }
 
 /**
- * @brief Create and initialize a scoped-param kernel entry.
+ * @brief Create metadata for the scoped-param kernel.
  */
-inline kernel::core::KernelEntry createScopedParamKernel() {
+inline kernel::core::KernelMetadataLease createScopedParamMetadata() {
   using CpuExecutionApi =
       ::orteaf::internal::execution::cpu::api::CpuExecutionApi;
-  auto lease = CpuExecutionApi::acquireKernelBase(scopedParamExecute);
-  return kernel::core::KernelEntry(std::move(lease));
+  auto metadata_lease = CpuExecutionApi::acquireKernelMetadata(scopedParamExecute);
+  return kernel::core::KernelMetadataLease{std::move(metadata_lease)};
 }
 
 } // namespace orteaf::extension::kernel::mps::ops

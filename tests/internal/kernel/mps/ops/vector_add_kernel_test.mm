@@ -13,6 +13,8 @@
 #include <orteaf/internal/execution_context/mps/context.h>
 #include <orteaf/internal/kernel/core/kernel_args.h>
 #include <orteaf/internal/kernel/core/kernel_entry.h>
+#include <orteaf/internal/execution/mps/api/mps_execution_api.h>
+#include <orteaf/internal/execution/mps/platform/mps_slow_ops.h>
 #include <orteaf/internal/kernel/param/param.h>
 #include <orteaf/internal/kernel/param/param_id.h>
 #include <orteaf/internal/kernel/storage/operand_id.h>
@@ -24,9 +26,71 @@ namespace kernel = orteaf::internal::kernel;
 namespace kernel_entry = ::orteaf::internal::kernel::core;
 namespace mps_wrapper = orteaf::internal::execution::mps::platform::wrapper;
 namespace mps_resource = ::orteaf::internal::execution::mps::resource;
+namespace mps_api = ::orteaf::internal::execution::mps::api;
 namespace vector_add = orteaf::extension::kernel::mps::ops;
 
 namespace {
+
+struct MpsExecutionGuard {
+  bool ok{false};
+
+  MpsExecutionGuard() {
+    using SlowOpsImpl =
+        ::orteaf::internal::execution::mps::platform::MpsSlowOpsImpl;
+    auto *ops = new SlowOpsImpl();
+
+    mps_api::MpsExecutionApi::ExecutionManager::Config config{};
+    config.slow_ops = ops;
+
+    const int device_count = ops->getDeviceCount();
+    const std::size_t capacity =
+        device_count <= 0 ? 0u : static_cast<std::size_t>(device_count);
+
+    auto &device_cfg = config.device_config;
+    const std::size_t block_size = capacity > 0 ? capacity : 1;
+    device_cfg.control_block_capacity = capacity;
+    device_cfg.control_block_block_size = block_size;
+    device_cfg.control_block_growth_chunk_size = 1;
+    device_cfg.payload_capacity = capacity;
+    device_cfg.payload_block_size = block_size;
+    device_cfg.payload_growth_chunk_size = 1;
+
+    auto configure_pool = [](auto &cfg, std::size_t pool_capacity) {
+      cfg.control_block_capacity = pool_capacity;
+      cfg.control_block_block_size = pool_capacity;
+      cfg.control_block_growth_chunk_size = 1;
+      cfg.payload_capacity = pool_capacity;
+      cfg.payload_block_size = pool_capacity;
+      cfg.payload_growth_chunk_size = 1;
+    };
+
+    configure_pool(device_cfg.command_queue_config, 1);
+    configure_pool(device_cfg.event_config, 1);
+    configure_pool(device_cfg.fence_config, 1);
+    configure_pool(device_cfg.heap_config, 1);
+    configure_pool(device_cfg.library_config, 1);
+    configure_pool(device_cfg.graph_config, 1);
+
+    configure_pool(config.kernel_base_config, 1);
+    configure_pool(config.kernel_metadata_config, 1);
+    // FixedSlotStore payloads need slot 0 created via growth on first acquire.
+    config.kernel_metadata_config.payload_capacity = 0;
+
+    try {
+      mps_api::MpsExecutionApi::configure(config);
+      ok = true;
+    } catch (...) {
+      delete ops;
+      ok = false;
+    }
+  }
+
+  ~MpsExecutionGuard() {
+    if (ok) {
+      mps_api::MpsExecutionApi::shutdown();
+    }
+  }
+};
 
 // =============================================================================
 // Schema Tests
@@ -49,10 +113,15 @@ TEST(VectorAddKernelTest, ParamSchemaHasNumElements) {
 }
 
 TEST(VectorAddKernelTest, CreateKernelEntryHasCorrectStructure) {
-  using MpsLease = kernel_entry::KernelEntry::MpsKernelBaseLease;
-  auto entry = vector_add::createVectorAddKernel(MpsLease{});
+  MpsExecutionGuard guard;
+  if (!guard.ok) {
+    GTEST_SKIP() << "Failed to configure MPS execution";
+  }
+  auto metadata = vector_add::createVectorAddMetadata();
+  auto entry = metadata.rebuild();
 
   // Check lease variant (MPS lease is expected, may be invalid)
+  using MpsLease = kernel_entry::KernelEntry::MpsKernelBaseLease;
   EXPECT_TRUE(std::holds_alternative<MpsLease>(entry.base()));
 }
 
@@ -90,9 +159,14 @@ protected:
 };
 
 TEST_F(VectorAddKernelIntegrationTest, KernelEntryCanBeCreated) {
-  using MpsLease = kernel_entry::KernelEntry::MpsKernelBaseLease;
-  auto entry = vector_add::createVectorAddKernel(MpsLease{});
+  MpsExecutionGuard guard;
+  if (!guard.ok) {
+    GTEST_SKIP() << "Failed to configure MPS execution";
+  }
+  auto metadata = vector_add::createVectorAddMetadata();
+  auto entry = metadata.rebuild();
 
+  using MpsLease = kernel_entry::KernelEntry::MpsKernelBaseLease;
   EXPECT_TRUE(std::holds_alternative<MpsLease>(entry.base()));
 }
 

@@ -41,7 +41,8 @@ TEST(ScopedParamKernelTest, ExecuteExtractsScopedParam) {
   args.addParam(kernel::Param(key, static_cast<std::uint32_t>(7)));
 
   {
-    auto entry = scoped_kernel::createScopedParamKernel();
+    auto metadata = scoped_kernel::createScopedParamMetadata();
+    auto entry = metadata.rebuild();
     entry.run(args);
   }
 
