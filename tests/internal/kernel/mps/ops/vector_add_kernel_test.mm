@@ -14,7 +14,6 @@
 #include <orteaf/internal/kernel/core/kernel_args.h>
 #include <orteaf/internal/kernel/core/kernel_entry.h>
 #include <orteaf/internal/execution/mps/api/mps_execution_api.h>
-#include <orteaf/internal/execution/mps/platform/mps_slow_ops.h>
 #include <orteaf/internal/kernel/param/param.h>
 #include <orteaf/internal/kernel/param/param_id.h>
 #include <orteaf/internal/kernel/storage/operand_id.h>
@@ -35,16 +34,13 @@ struct MpsExecutionGuard {
   bool ok{false};
 
   MpsExecutionGuard() {
-    using SlowOpsImpl =
-        ::orteaf::internal::execution::mps::platform::MpsSlowOpsImpl;
-    auto *ops = new SlowOpsImpl();
-
     mps_api::MpsExecutionApi::ExecutionManager::Config config{};
-    config.slow_ops = ops;
-
-    const int device_count = ops->getDeviceCount();
+    const int device_count = mps_wrapper::getDeviceCount();
     const std::size_t capacity =
         device_count <= 0 ? 0u : static_cast<std::size_t>(device_count);
+    if (capacity == 0) {
+      return;
+    }
 
     auto &device_cfg = config.device_config;
     const std::size_t block_size = capacity > 0 ? capacity : 1;
@@ -80,7 +76,7 @@ struct MpsExecutionGuard {
       mps_api::MpsExecutionApi::configure(config);
       ok = true;
     } catch (...) {
-      delete ops;
+      mps_api::MpsExecutionApi::shutdown();
       ok = false;
     }
   }
