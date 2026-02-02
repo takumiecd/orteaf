@@ -82,9 +82,7 @@ struct MpsExecutionGuard {
   }
 
   ~MpsExecutionGuard() {
-    if (ok) {
-      mps_api::MpsExecutionApi::shutdown();
-    }
+    mps_api::MpsExecutionApi::shutdown();
   }
 };
 
