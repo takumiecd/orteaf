@@ -43,6 +43,8 @@ struct KernelBasePayloadPoolTraits {
 
   struct Context {};
 
+  static constexpr bool destroy_on_release = true;
+
   static bool create(Payload &payload, const Request &request,
                      const Context &context);
 

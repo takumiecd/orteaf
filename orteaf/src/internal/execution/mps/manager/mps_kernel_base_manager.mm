@@ -68,11 +68,16 @@ MpsKernelBaseManager::acquire(
   request.keys = keys;
   const KernelBasePayloadPoolTraits::Context context{};
   
-  auto handle = core_.acquirePayloadOrGrowAndCreate(request, context);
+  auto handle = core_.reserveUncreatedPayloadOrGrow();
   if (!handle.isValid()) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::OutOfRange,
         "MPS kernel base manager has no available slots");
+  }
+  if (!core_.emplacePayload(handle, request, context)) {
+    ::orteaf::internal::diagnostics::error::throwError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+        "MPS kernel base manager failed to create payload");
   }
   
   return core_.acquireStrongLease(handle);
