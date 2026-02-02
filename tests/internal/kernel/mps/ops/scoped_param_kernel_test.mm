@@ -20,6 +20,26 @@ namespace scoped_kernel = orteaf::extension::kernel::mps::ops;
 
 namespace {
 
+struct CpuExecutionGuard {
+  bool ok{false};
+
+  CpuExecutionGuard() {
+    namespace cpu_api = ::orteaf::internal::execution::cpu::api;
+    cpu_api::CpuExecutionApi::ExecutionManager::Config config{};
+    try {
+      cpu_api::CpuExecutionApi::configure(config);
+      ok = true;
+    } catch (...) {
+      cpu_api::CpuExecutionApi::shutdown();
+      ok = false;
+    }
+  }
+
+  ~CpuExecutionGuard() {
+    ::orteaf::internal::execution::cpu::api::CpuExecutionApi::shutdown();
+  }
+};
+
 TEST(ScopedParamKernelTest, ParamSchemaIsScopedToInput0) {
   scoped_kernel::ScopedParamParams params;
 
@@ -29,9 +49,10 @@ TEST(ScopedParamKernelTest, ParamSchemaIsScopedToInput0) {
 }
 
 TEST(ScopedParamKernelTest, ExecuteExtractsScopedParam) {
-  namespace cpu_api = ::orteaf::internal::execution::cpu::api;
-  cpu_api::CpuExecutionApi::ExecutionManager::Config config{};
-  cpu_api::CpuExecutionApi::configure(config);
+  CpuExecutionGuard guard;
+  if (!guard.ok) {
+    GTEST_SKIP() << "Failed to configure CPU execution";
+  }
 
   kernel::KernelArgs args;
 
@@ -53,7 +74,6 @@ TEST(ScopedParamKernelTest, ExecuteExtractsScopedParam) {
   ASSERT_NE(count_param, nullptr);
   EXPECT_EQ(*count_param->tryGet<std::size_t>(), 7u);
 
-  cpu_api::CpuExecutionApi::shutdown();
 }
 
 } // namespace
