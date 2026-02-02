@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <cstddef>
-#include <stdexcept>
+#include <system_error>
 #include <variant>
 
 #include <orteaf/internal/kernel/core/kernel_args.h>
@@ -20,7 +20,7 @@ TEST(MpsKernelEntryTest, DefaultConstruction) {
 TEST(MpsKernelEntryTest, RunThrowsOnEmptyBase) {
   kernel_entry::KernelEntry entry;
   kernel::KernelArgs args;
-  EXPECT_THROW({ entry.run(args); }, std::runtime_error);
+  EXPECT_THROW({ entry.run(args); }, std::system_error);
 }
 
 } // namespace
