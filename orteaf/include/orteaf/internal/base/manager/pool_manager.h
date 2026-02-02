@@ -382,6 +382,32 @@ public:
   }
 
   /**
+   * @brief 未作成スロットを確保し、Payloadを作成して返す（失敗時は例外）。
+   */
+  template <typename Request, typename Context>
+  PayloadHandle reserveUncreatedPayloadOrGrowAndEmplaceOrThrow(
+      const Request &request, const Context &context)
+    requires requires(PayloadPool &pool, PayloadHandle h, const Request &req,
+                      const Context &ctx) {
+      { pool.tryReserveUncreated() } -> std::same_as<PayloadHandle>;
+      { pool.emplace(h, req, ctx) } -> std::convertible_to<bool>;
+    }
+  {
+    auto handle = reserveUncreatedPayloadOrGrow();
+    if (!handle.isValid()) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::OutOfRange,
+          std::string(managerName()) + " has no available slots");
+    }
+    if (!emplacePayload(handle, request, context)) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+          std::string(managerName()) + " failed to create payload");
+    }
+    return handle;
+  }
+
+  /**
    * @brief Payload Pool から作成済みスロットを取得（必要なら拡張＋作成）
    *
    * @param grow_by 追加で確保するスロット数
