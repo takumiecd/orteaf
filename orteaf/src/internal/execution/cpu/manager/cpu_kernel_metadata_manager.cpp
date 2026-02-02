@@ -1,36 +1,35 @@
-#if ORTEAF_ENABLE_MPS
+#include "orteaf/internal/execution/cpu/manager/cpu_kernel_metadata_manager.h"
 
-#include "orteaf/internal/execution/mps/manager/mps_kernel_metadata_manager.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 
-namespace orteaf::internal::execution::mps::manager {
+namespace orteaf::internal::execution::cpu::manager {
 
 // =============================================================================
-// PayloadPoolTraits implementation
+// Payload Pool Traits Implementation
 // =============================================================================
 
 bool KernelMetadataPayloadPoolTraits::create(Payload &payload,
                                              const Request &request,
-                                             const Context &) {
-  return payload.initialize(request.keys);
+                                             const Context & /*context*/) {
+  payload.setExecute(request.execute);
+  return true;
 }
 
 void KernelMetadataPayloadPoolTraits::destroy(Payload &payload,
-                                              const Request &,
-                                              const Context &) {
-  payload.reset();
+                                              const Request & /*request*/,
+                                              const Context & /*context*/) {
+  payload.setExecute(nullptr);
 }
 
 // =============================================================================
-// MpsKernelMetadataManager implementation
+// CpuKernelMetadataManager Implementation
 // =============================================================================
 
-void MpsKernelMetadataManager::configure(const InternalConfig &config) {
+void CpuKernelMetadataManager::configure(const InternalConfig &config) {
   shutdown();
 
   const auto &cfg = config.public_config;
   const KernelMetadataPayloadPoolTraits::Request payload_request{};
-  const KernelMetadataPayloadPoolTraits::Context payload_context{};
 
   Core::Builder<KernelMetadataPayloadPoolTraits::Request,
                 KernelMetadataPayloadPoolTraits::Context>{}
@@ -41,11 +40,11 @@ void MpsKernelMetadataManager::configure(const InternalConfig &config) {
       .withPayloadBlockSize(cfg.payload_block_size)
       .withPayloadGrowthChunkSize(cfg.payload_growth_chunk_size)
       .withRequest(payload_request)
-      .withContext(payload_context)
+      .withContext({})
       .configure(core_);
 }
 
-void MpsKernelMetadataManager::shutdown() {
+void CpuKernelMetadataManager::shutdown() {
   if (!core_.isConfigured()) {
     return;
   }
@@ -55,21 +54,24 @@ void MpsKernelMetadataManager::shutdown() {
   core_.shutdown(payload_request, payload_context);
 }
 
-MpsKernelMetadataManager::MpsKernelMetadataLease
-MpsKernelMetadataManager::acquire(
-    const ::orteaf::internal::base::HeapVector<Key> &keys) {
+CpuKernelMetadataManager::CpuKernelMetadataLease
+CpuKernelMetadataManager::acquire(ExecuteFunc execute) {
   core_.ensureConfigured();
 
-  KernelMetadataPayloadPoolTraits::Request request{};
-  request.keys = keys;
+  if (!execute) {
+    ::orteaf::internal::diagnostics::error::throwError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+        "ExecuteFunc must be valid");
+  }
 
+  KernelMetadataPayloadPoolTraits::Request request{};
+  request.execute = execute;
   const KernelMetadataPayloadPoolTraits::Context context{};
+
   auto handle = core_.reserveUncreatedPayloadOrGrowAndEmplaceOrThrow(request,
                                                                      context);
 
   return core_.acquireStrongLease(handle);
 }
 
-} // namespace orteaf::internal::execution::mps::manager
-
-#endif // ORTEAF_ENABLE_MPS
+} // namespace orteaf::internal::execution::cpu::manager

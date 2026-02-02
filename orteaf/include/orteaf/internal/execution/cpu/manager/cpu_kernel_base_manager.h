@@ -1,44 +1,30 @@
 #pragma once
 
-#if ORTEAF_ENABLE_MPS
-
 #include <cstddef>
-#include <utility>
 
-#include "orteaf/internal/base/heap_vector.h"
 #include "orteaf/internal/base/lease/control_block/strong.h"
 #include "orteaf/internal/base/manager/pool_manager.h"
 #include "orteaf/internal/base/pool/slot_pool.h"
-#include "orteaf/internal/execution/mps/manager/mps_device_manager.h"
-#include "orteaf/internal/execution/mps/mps_handles.h"
-#include "orteaf/internal/execution/mps/resource/mps_kernel_base.h"
-#include "orteaf/internal/execution/mps/platform/mps_slow_ops.h"
+#include "orteaf/internal/execution/cpu/cpu_handles.h"
+#include "orteaf/internal/execution/cpu/resource/cpu_kernel_base.h"
 
-namespace orteaf::internal::execution::mps::manager {
+namespace orteaf::internal::execution::cpu::manager {
 
 // Forward declaration
-class MpsKernelBaseManager;
-class MpsExecutionManager;
+class CpuKernelBaseManager;
+class CpuExecutionManager;
 
-// =============================================================================
-// Payload (Kernel Base Resource)
-// =============================================================================
-
-// =============================================================================
+//  =============================================================================
 // Payload Pool Traits
 // =============================================================================
 
 struct KernelBasePayloadPoolTraits {
-  using Payload = ::orteaf::internal::execution::mps::resource::MpsKernelBase;
-  using Handle = ::orteaf::internal::execution::mps::MpsKernelBaseHandle;
-  using DeviceLease = ::orteaf::internal::execution::mps::manager::
-      MpsDeviceManager::DeviceLease;
-  using LibraryKey = ::orteaf::internal::execution::mps::manager::LibraryKey;
-  using FunctionKey = ::orteaf::internal::execution::mps::manager::FunctionKey;
-  using Key = std::pair<LibraryKey, FunctionKey>;
+  using Payload = ::orteaf::internal::execution::cpu::resource::CpuKernelBase;
+  using Handle = ::orteaf::internal::execution::cpu::CpuKernelBaseHandle;
+  using ExecuteFunc = Payload::ExecuteFunc;
 
   struct Request {
-    ::orteaf::internal::base::HeapVector<Key> keys;
+    ExecuteFunc execute{nullptr};
   };
 
   struct Context {};
@@ -62,49 +48,46 @@ using KernelBasePayloadPool =
 struct KernelBaseControlBlockTag {};
 
 using KernelBaseControlBlock = ::orteaf::internal::base::StrongControlBlock<
-    ::orteaf::internal::execution::mps::MpsKernelBaseHandle,
-    ::orteaf::internal::execution::mps::resource::MpsKernelBase,
+    ::orteaf::internal::execution::cpu::CpuKernelBaseHandle,
+    ::orteaf::internal::execution::cpu::resource::CpuKernelBase,
     KernelBasePayloadPool>;
 
 // =============================================================================
 // Manager Traits for PoolManager
 // =============================================================================
 
-struct MpsKernelBaseManagerTraits {
+struct CpuKernelBaseManagerTraits {
   using PayloadPool = KernelBasePayloadPool;
   using ControlBlock = KernelBaseControlBlock;
   struct ControlBlockTag {};
-  using PayloadHandle = ::orteaf::internal::execution::mps::MpsKernelBaseHandle;
-  static constexpr const char *Name = "MpsKernelBaseManager";
+  using PayloadHandle = ::orteaf::internal::execution::cpu::CpuKernelBaseHandle;
+  static constexpr const char *Name = "CpuKernelBaseManager";
 };
 
 // =============================================================================
-// MpsKernelBaseManager
+// CpuKernelBaseManager
 // =============================================================================
 
 /**
- * @brief Manager for MPS kernel base resources.
+ * @brief Manager for CPU kernel base resources.
  *
  * Manages kernel base instances via PoolManager pattern.
- * Each kernel base holds pipeline state leases for kernel execution.
+ * Each kernel base holds an ExecuteFunc for kernel execution.
  *
- * Design pattern: Same as MpsEventManager, MpsDeviceManager, etc.
+ * Design pattern: Same as MpsKernelBaseManager, CpuBufferManager, etc.
  * - PoolManager for lifecycle management
  * - StrongLease for reference counting
- * - Payload holds actual resources (pipeline leases)
+ * - Payload holds actual resources (ExecuteFunc)
  */
-class MpsKernelBaseManager {
-  using Core = ::orteaf::internal::base::PoolManager<MpsKernelBaseManagerTraits>;
+class CpuKernelBaseManager {
+  using Core =
+      ::orteaf::internal::base::PoolManager<CpuKernelBaseManagerTraits>;
 
 public:
-  using SlowOps = ::orteaf::internal::execution::mps::platform::MpsSlowOps;
-  using DeviceLease = ::orteaf::internal::execution::mps::manager::
-      MpsDeviceManager::DeviceLease;
   using KernelBaseHandle =
-      ::orteaf::internal::execution::mps::MpsKernelBaseHandle;
-  using LibraryKey = ::orteaf::internal::execution::mps::manager::LibraryKey;
-  using FunctionKey = ::orteaf::internal::execution::mps::manager::FunctionKey;
-  using Key = std::pair<LibraryKey, FunctionKey>;
+      ::orteaf::internal::execution::cpu::CpuKernelBaseHandle;
+  using ExecuteFunc =
+      ::orteaf::internal::execution::cpu::resource::CpuKernelBase::ExecuteFunc;
 
   using ControlBlock = Core::ControlBlock;
   using ControlBlockHandle = Core::ControlBlockHandle;
@@ -124,12 +107,12 @@ public:
     std::size_t payload_growth_chunk_size{1};
   };
 
-  MpsKernelBaseManager() = default;
-  MpsKernelBaseManager(const MpsKernelBaseManager &) = delete;
-  MpsKernelBaseManager &operator=(const MpsKernelBaseManager &) = delete;
-  MpsKernelBaseManager(MpsKernelBaseManager &&) = default;
-  MpsKernelBaseManager &operator=(MpsKernelBaseManager &&) = default;
-  ~MpsKernelBaseManager() = default;
+  CpuKernelBaseManager() = default;
+  CpuKernelBaseManager(const CpuKernelBaseManager &) = delete;
+  CpuKernelBaseManager &operator=(const CpuKernelBaseManager &) = delete;
+  CpuKernelBaseManager(CpuKernelBaseManager &&) = default;
+  CpuKernelBaseManager &operator=(CpuKernelBaseManager &&) = default;
+  ~CpuKernelBaseManager() = default;
 
 private:
   struct InternalConfig {
@@ -138,7 +121,7 @@ private:
 
   void configure(const InternalConfig &config);
 
-  friend class MpsExecutionManager;
+  friend class CpuExecutionManager;
 
 public:
   void shutdown();
@@ -146,13 +129,12 @@ public:
   /**
    * @brief Acquire a kernel base lease.
    *
-   * Creates a new kernel base with the specified library/function keys.
-   * The returned lease holds the key list but does not configure pipelines.
+   * Creates a new kernel base with the specified ExecuteFunc.
    *
-   * @param keys Library/function key pairs for kernel functions
+   * @param execute ExecuteFunc for kernel execution
    * @return Strong lease to kernel base resource
    */
-  KernelBaseLease acquire(const ::orteaf::internal::base::HeapVector<Key> &keys);
+  KernelBaseLease acquire(ExecuteFunc execute);
 
 #if ORTEAF_ENABLE_TEST
   void configureForTest(const Config &config) {
@@ -190,6 +172,4 @@ private:
   Core core_{};
 };
 
-} // namespace orteaf::internal::execution::mps::manager
-
-#endif // ORTEAF_ENABLE_MPS
+} // namespace orteaf::internal::execution::cpu::manager

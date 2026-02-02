@@ -51,6 +51,7 @@ docs/api-tests/
 
 build/
 build*/
+*build/
 
 .gemini/
 gha-creds-*.json

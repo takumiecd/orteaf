@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 
+#include <orteaf/internal/execution/cpu/api/cpu_execution_api.h>
 #include <orteaf/internal/kernel/core/kernel_args.h>
 #include <orteaf/internal/kernel/core/kernel_entry.h>
 #include <orteaf/internal/kernel/param/param.h>
@@ -19,6 +20,26 @@ namespace scoped_kernel = orteaf::extension::kernel::mps::ops;
 
 namespace {
 
+struct CpuExecutionGuard {
+  bool ok{false};
+
+  CpuExecutionGuard() {
+    namespace cpu_api = ::orteaf::internal::execution::cpu::api;
+    cpu_api::CpuExecutionApi::ExecutionManager::Config config{};
+    try {
+      cpu_api::CpuExecutionApi::configure(config);
+      ok = true;
+    } catch (...) {
+      cpu_api::CpuExecutionApi::shutdown();
+      ok = false;
+    }
+  }
+
+  ~CpuExecutionGuard() {
+    ::orteaf::internal::execution::cpu::api::CpuExecutionApi::shutdown();
+  }
+};
+
 TEST(ScopedParamKernelTest, ParamSchemaIsScopedToInput0) {
   scoped_kernel::ScopedParamParams params;
 
@@ -28,6 +49,11 @@ TEST(ScopedParamKernelTest, ParamSchemaIsScopedToInput0) {
 }
 
 TEST(ScopedParamKernelTest, ExecuteExtractsScopedParam) {
+  CpuExecutionGuard guard;
+  if (!guard.ok) {
+    GTEST_SKIP() << "Failed to configure CPU execution";
+  }
+
   kernel::KernelArgs args;
 
   const auto key = kernel::ParamKey::scoped(
@@ -35,10 +61,11 @@ TEST(ScopedParamKernelTest, ExecuteExtractsScopedParam) {
       kernel::makeOperandKey(kernel::OperandId::Input0));
   args.addParam(kernel::Param(key, static_cast<std::uint32_t>(7)));
 
-  auto entry = scoped_kernel::createScopedParamKernel();
-  auto func = entry.execute();
-  ASSERT_NE(func, nullptr);
-  func(entry.base(), args);
+  {
+    auto metadata = scoped_kernel::createScopedParamMetadata();
+    auto entry = metadata.rebuild();
+    entry.run(args);
+  }
 
   // Global lookup should not match scoped params.
   EXPECT_EQ(args.findParam(kernel::ParamId::NumElements), nullptr);
@@ -46,6 +73,7 @@ TEST(ScopedParamKernelTest, ExecuteExtractsScopedParam) {
   const auto *count_param = args.findParam(kernel::ParamId::Count);
   ASSERT_NE(count_param, nullptr);
   EXPECT_EQ(*count_param->tryGet<std::size_t>(), 7u);
+
 }
 
 } // namespace

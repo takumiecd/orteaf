@@ -2,6 +2,9 @@
 
 #if ORTEAF_ENABLE_MPS
 
+#include "orteaf/internal/diagnostics/error/error.h"
+#include "orteaf/internal/kernel/core/kernel_args.h"
+
 namespace orteaf::internal::execution::mps::resource {
 
 void MpsKernelBase::configurePipelines(
@@ -78,6 +81,28 @@ bool MpsKernelBase::ensurePipelines(
     }
   }
   return true;
+}
+
+void MpsKernelBase::run(::orteaf::internal::kernel::KernelArgs &args) {
+  auto *context =
+      args.context()
+          .tryAs<::orteaf::internal::execution_context::mps::Context>();
+  if (!context) {
+    ::orteaf::internal::diagnostics::error::throwError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+        "MPS kernel requires MPS execution context");
+  }
+  if (!ensurePipelines(context->device)) {
+    ::orteaf::internal::diagnostics::error::throwError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+        "MPS kernel base could not be initialized");
+  }
+  if (!execute_) {
+    ::orteaf::internal::diagnostics::error::throwError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+        "Kernel execute function is invalid");
+  }
+  execute_(*this, args);
 }
 
 } // namespace orteaf::internal::execution::mps::resource

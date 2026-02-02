@@ -1,22 +1,18 @@
 #pragma once
 
-#if ORTEAF_ENABLE_MPS
-
 #include <cstddef>
-#include <utility>
 
-#include "orteaf/internal/base/heap_vector.h"
 #include "orteaf/internal/base/lease/control_block/strong.h"
 #include "orteaf/internal/base/manager/pool_manager.h"
 #include "orteaf/internal/base/pool/slot_pool.h"
-#include "orteaf/internal/execution/mps/mps_handles.h"
-#include "orteaf/internal/execution/mps/resource/mps_kernel_metadata.h"
+#include "orteaf/internal/execution/cpu/cpu_handles.h"
+#include "orteaf/internal/execution/cpu/resource/cpu_kernel_metadata.h"
 
-namespace orteaf::internal::execution::mps::manager {
+namespace orteaf::internal::execution::cpu::manager {
 
 // Forward declaration
-class MpsKernelMetadataManager;
-class MpsExecutionManager;
+class CpuKernelMetadataManager;
+class CpuExecutionManager;
 
 // =============================================================================
 // Payload Pool Traits
@@ -24,22 +20,19 @@ class MpsExecutionManager;
 
 struct KernelMetadataPayloadPoolTraits {
   using Payload =
-      ::orteaf::internal::execution::mps::resource::MpsKernelMetadata;
-  using Handle = ::orteaf::internal::execution::mps::MpsKernelMetadataHandle;
-  using LibraryKey = ::orteaf::internal::execution::mps::manager::LibraryKey;
-  using FunctionKey = ::orteaf::internal::execution::mps::manager::FunctionKey;
-  using Key = std::pair<LibraryKey, FunctionKey>;
+      ::orteaf::internal::execution::cpu::resource::CpuKernelMetadata;
+  using Handle = ::orteaf::internal::execution::cpu::CpuKernelMetadataHandle;
+  using ExecuteFunc = Payload::ExecuteFunc;
 
   struct Request {
-    ::orteaf::internal::base::HeapVector<Key> keys;
+    ExecuteFunc execute;
   };
 
   struct Context {};
 
   static constexpr bool destroy_on_release = true;
 
-  static bool create(Payload &payload, const Request &request,
-                     const Context &);
+  static bool create(Payload &payload, const Request &request, const Context &);
 
   static void destroy(Payload &payload, const Request &, const Context &);
 };
@@ -54,46 +47,45 @@ using KernelMetadataPayloadPool =
 struct KernelMetadataControlBlockTag {};
 
 using KernelMetadataControlBlock = ::orteaf::internal::base::StrongControlBlock<
-    ::orteaf::internal::execution::mps::MpsKernelMetadataHandle,
-    ::orteaf::internal::execution::mps::resource::MpsKernelMetadata,
+    ::orteaf::internal::execution::cpu::CpuKernelMetadataHandle,
+    ::orteaf::internal::execution::cpu::resource::CpuKernelMetadata,
     KernelMetadataPayloadPool>;
 
 // =============================================================================
 // Manager Traits for PoolManager
 // =============================================================================
 
-struct MpsKernelMetadataManagerTraits {
+struct CpuKernelMetadataManagerTraits {
   using PayloadPool = KernelMetadataPayloadPool;
   using ControlBlock = KernelMetadataControlBlock;
   struct ControlBlockTag {};
   using PayloadHandle =
-      ::orteaf::internal::execution::mps::MpsKernelMetadataHandle;
-  static constexpr const char *Name = "MpsKernelMetadataManager";
+      ::orteaf::internal::execution::cpu::CpuKernelMetadataHandle;
+  static constexpr const char *Name = "CpuKernelMetadataManager";
 };
 
 // =============================================================================
-// MpsKernelMetadataManager
+// CpuKernelMetadataManager
 // =============================================================================
 
 /**
- * @brief Manager for MPS kernel metadata resources.
+ * @brief Manager for CPU kernel metadata resources.
  */
-class MpsKernelMetadataManager {
+class CpuKernelMetadataManager {
   using Core =
-      ::orteaf::internal::base::PoolManager<MpsKernelMetadataManagerTraits>;
+      ::orteaf::internal::base::PoolManager<CpuKernelMetadataManagerTraits>;
 
 public:
   using KernelMetadataHandle =
-      ::orteaf::internal::execution::mps::MpsKernelMetadataHandle;
-  using LibraryKey = ::orteaf::internal::execution::mps::manager::LibraryKey;
-  using FunctionKey = ::orteaf::internal::execution::mps::manager::FunctionKey;
-  using Key = std::pair<LibraryKey, FunctionKey>;
+      ::orteaf::internal::execution::cpu::CpuKernelMetadataHandle;
+  using ExecuteFunc = ::orteaf::internal::execution::cpu::resource::
+      CpuKernelMetadata::ExecuteFunc;
 
   using ControlBlock = Core::ControlBlock;
   using ControlBlockHandle = Core::ControlBlockHandle;
   using ControlBlockPool = Core::ControlBlockPool;
 
-  using MpsKernelMetadataLease = Core::StrongLeaseType;
+  using CpuKernelMetadataLease = Core::StrongLeaseType;
 
 public:
   struct Config {
@@ -106,13 +98,13 @@ public:
     std::size_t payload_growth_chunk_size{1};
   };
 
-  MpsKernelMetadataManager() = default;
-  MpsKernelMetadataManager(const MpsKernelMetadataManager &) = delete;
-  MpsKernelMetadataManager &
-  operator=(const MpsKernelMetadataManager &) = delete;
-  MpsKernelMetadataManager(MpsKernelMetadataManager &&) = default;
-  MpsKernelMetadataManager &operator=(MpsKernelMetadataManager &&) = default;
-  ~MpsKernelMetadataManager() = default;
+  CpuKernelMetadataManager() = default;
+  CpuKernelMetadataManager(const CpuKernelMetadataManager &) = delete;
+  CpuKernelMetadataManager &
+  operator=(const CpuKernelMetadataManager &) = delete;
+  CpuKernelMetadataManager(CpuKernelMetadataManager &&) = default;
+  CpuKernelMetadataManager &operator=(CpuKernelMetadataManager &&) = default;
+  ~CpuKernelMetadataManager() = default;
 
 private:
   struct InternalConfig {
@@ -121,13 +113,12 @@ private:
 
   void configure(const InternalConfig &config);
 
-  friend class MpsExecutionManager;
+  friend class CpuExecutionManager;
 
 public:
   void shutdown();
 
-  MpsKernelMetadataLease acquire(
-      const ::orteaf::internal::base::HeapVector<Key> &keys);
+  CpuKernelMetadataLease acquire(ExecuteFunc execute);
 
 #if ORTEAF_ENABLE_TEST
   void configureForTest(const Config &config) {
@@ -165,6 +156,4 @@ private:
   Core core_{};
 };
 
-} // namespace orteaf::internal::execution::mps::manager
-
-#endif // ORTEAF_ENABLE_MPS
+} // namespace orteaf::internal::execution::cpu::manager

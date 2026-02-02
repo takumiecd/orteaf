@@ -15,7 +15,7 @@ TEST(KernelMetadataTest, DefaultConstructionIsEmpty) {
       std::holds_alternative<std::monostate>(metadata.lease()));
 
   auto entry = metadata.rebuild();
-  EXPECT_EQ(entry.execute(), nullptr);
+  EXPECT_TRUE(std::holds_alternative<std::monostate>(entry.base()));
 }
 
 TEST(KernelMetadataTest, SetLeaseMonostateKeepsEmpty) {
@@ -25,7 +25,7 @@ TEST(KernelMetadataTest, SetLeaseMonostateKeepsEmpty) {
   EXPECT_TRUE(
       std::holds_alternative<std::monostate>(metadata.lease()));
   auto entry = metadata.rebuild();
-  EXPECT_EQ(entry.execute(), nullptr);
+  EXPECT_TRUE(std::holds_alternative<std::monostate>(entry.base()));
 }
 
 } // namespace

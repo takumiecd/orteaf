@@ -16,13 +16,17 @@
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_fence.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_size.h"
 #include "orteaf/internal/execution_context/mps/context.h"
+#include "orteaf/internal/kernel/param/param.h"
 #include "orteaf/internal/kernel/schema/kernel_param_schema.h"
 #include "orteaf/internal/kernel/schema/kernel_storage_schema.h"
 #include "orteaf/internal/kernel/storage/storage_binding.h"
-#include "orteaf/internal/kernel/param/param.h"
-#include "orteaf/internal/storage/storage_lease.h"
-#include "orteaf/internal/storage/registry/storage_types.h"
 #include "orteaf/internal/storage/mps/mps_storage.h"
+#include "orteaf/internal/storage/registry/storage_types.h"
+#include "orteaf/internal/storage/storage_lease.h"
+
+namespace orteaf::internal::kernel {
+class KernelArgs;
+} // namespace orteaf::internal::kernel
 
 namespace orteaf::internal::execution::mps::resource {
 
@@ -39,6 +43,8 @@ struct MpsKernelMetadata;
  * Each MpsKernelBase can manage multiple kernels (library/function pairs).
  */
 struct MpsKernelBase {
+  using ExecuteFunc = void (*)(MpsKernelBase &,
+                               ::orteaf::internal::kernel::KernelArgs &);
   using MetadataType = MpsKernelMetadata;
   using PipelineLease = ::orteaf::internal::execution::mps::manager::
       MpsComputePipelineStateManager::PipelineLease;
@@ -162,6 +168,9 @@ struct MpsKernelBase {
   const ::orteaf::internal::base::HeapVector<Key> &keys() const noexcept {
     return keys_;
   }
+
+  // Public getter for ExecuteFunc (needed by Metadata)
+  ExecuteFunc execute() const noexcept { return execute_; }
 
   /**
    * @brief Create a command buffer from the context's command queue.
@@ -366,10 +375,11 @@ struct MpsKernelBase {
   template <::orteaf::internal::kernel::OperandId ID,
             ::orteaf::internal::kernel::Role Role =
                 ::orteaf::internal::kernel::Role::Data>
-  void setBuffer(::orteaf::internal::execution::mps::platform::wrapper::
-                     MpsComputeCommandEncoder_t encoder,
-                 const ::orteaf::internal::kernel::StorageField<ID, Role> &field,
-                 std::size_t index) const {
+  void
+  setBuffer(::orteaf::internal::execution::mps::platform::wrapper::
+                MpsComputeCommandEncoder_t encoder,
+            const ::orteaf::internal::kernel::StorageField<ID, Role> &field,
+            std::size_t index) const {
     if (encoder == nullptr) {
       return;
     }
@@ -937,8 +947,17 @@ private:
     }
   }
 
+private:
+  friend class ::orteaf::internal::kernel::core::KernelEntry;
+  friend struct MpsKernelMetadata;
+
+  void run(::orteaf::internal::kernel::KernelArgs &args);
+
+  void setExecute(ExecuteFunc execute) noexcept { execute_ = execute; }
+
   ::orteaf::internal::base::HeapVector<DevicePipelines> device_pipelines_{};
   ::orteaf::internal::base::HeapVector<Key> keys_{};
+  ExecuteFunc execute_{nullptr};
   static constexpr std::size_t kInvalidIndex =
       std::numeric_limits<std::size_t>::max();
 };

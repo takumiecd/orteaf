@@ -1,9 +1,9 @@
 #pragma once
 
 #include "orteaf/internal/diagnostics/error/error.h"
+#include "orteaf/internal/execution/cpu/cpu_handles.h"
 #include "orteaf/internal/execution/cpu/manager/cpu_execution_manager.h"
 #include "orteaf/internal/execution/cpu/platform/cpu_slow_ops.h"
-#include "orteaf/internal/execution/cpu/cpu_handles.h"
 
 namespace orteaf::internal::execution::cpu::api {
 
@@ -12,8 +12,14 @@ public:
   using ExecutionManager =
       ::orteaf::internal::execution::cpu::manager::CpuExecutionManager;
   using DeviceHandle = ::orteaf::internal::execution::cpu::CpuDeviceHandle;
-  using DeviceLease =
-      ::orteaf::internal::execution::cpu::manager::CpuDeviceManager::DeviceLease;
+  using DeviceLease = ::orteaf::internal::execution::cpu::manager::
+      CpuDeviceManager::DeviceLease;
+  using KernelBaseLease = ::orteaf::internal::execution::cpu::manager::
+      CpuKernelBaseManager::KernelBaseLease;
+  using KernelMetadataLease = ::orteaf::internal::execution::cpu::manager::
+      CpuKernelMetadataManager::CpuKernelMetadataLease;
+  using ExecuteFunc =
+      ::orteaf::internal::execution::cpu::resource::CpuKernelBase::ExecuteFunc;
   using SlowOps = ::orteaf::internal::execution::cpu::platform::CpuSlowOps;
 
   CpuExecutionApi() = delete;
@@ -33,6 +39,14 @@ public:
           "CPU device lease has no payload");
     }
     return device_lease;
+  }
+
+  static KernelBaseLease acquireKernelBase(ExecuteFunc execute) {
+    return manager().kernelBaseManager().acquire(execute);
+  }
+
+  static KernelMetadataLease acquireKernelMetadata(ExecuteFunc execute) {
+    return manager().kernelMetadataManager().acquire(execute);
   }
 
 private:

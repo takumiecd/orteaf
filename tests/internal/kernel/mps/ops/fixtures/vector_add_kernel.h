@@ -9,6 +9,9 @@
 #include <orteaf/internal/kernel/schema/kernel_storage_schema.h>
 #include <orteaf/internal/kernel/core/kernel_args.h>
 #include <orteaf/internal/kernel/core/kernel_entry.h>
+#include <orteaf/internal/execution/mps/resource/mps_kernel_base.h>
+#include <orteaf/internal/execution/mps/api/mps_execution_api.h>
+#include <orteaf/internal/kernel/core/kernel_metadata.h>
 #include <orteaf/internal/kernel/mps/mps_kernel_session.h>
 #include <orteaf/internal/kernel/param/param_id.h>
 #include <orteaf/internal/kernel/storage/operand_id.h>
@@ -51,35 +54,18 @@ struct VectorAddParams : kernel::ParamSchema<VectorAddParams> {
  * @brief Execute function for vector add kernel.
  *
  * Encodes and dispatches the vector add compute shader.
- * This function is called by KernelEntry::run().
  *
- * @param lease KernelBaseLease reference (may hold an MpsKernelBase lease)
+ * @param base Kernel base reference
  * @param args Kernel arguments containing storages and parameters
  */
-inline mps_resource::MpsKernelBase *
-getMpsBase(kernel::core::KernelEntry::KernelBaseLease &lease) {
-  using LeaseT = kernel::core::KernelEntry::MpsKernelBaseLease;
-  auto *mps_lease = std::get_if<LeaseT>(&lease);
-  if (!mps_lease || !(*mps_lease)) {
-    return nullptr;
-  }
-  return mps_lease->operator->();
-}
-
-inline void vectorAddExecute(kernel::core::KernelEntry::KernelBaseLease &lease,
+inline void vectorAddExecute(mps_resource::MpsKernelBase &base,
                              ::orteaf::internal::kernel::KernelArgs &args) {
-  auto *base_ptr = getMpsBase(lease);
-  if (!base_ptr) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-        "MPS kernel base lease is invalid");
-  }
   // Extract storages and params
   auto storages = VectorAddStorages::extract(args);
   auto params = VectorAddParams::extract(args);
 
   // Begin session (auto cleanup on scope exit)
-  auto session = mps_kernel::MpsKernelSession::begin(*base_ptr, args, 0);
+  auto session = mps_kernel::MpsKernelSession::begin(base, args, 0);
   if (!session)
     return;
 
@@ -94,21 +80,29 @@ inline void vectorAddExecute(kernel::core::KernelEntry::KernelBaseLease &lease,
 }
 
 /**
+ * @brief Create metadata for the vector add kernel.
+ *
+ * Metadata is the single source of truth and can rebuild a KernelEntry.
+ */
+inline kernel::core::KernelMetadataLease createVectorAddMetadata() {
+  using MpsExecutionApi =
+      ::orteaf::internal::execution::mps::api::MpsExecutionApi;
+  typename MpsExecutionApi::KernelKeys keys;
+  auto metadata_lease = MpsExecutionApi::acquireKernelMetadata(keys);
+  if (auto *meta_ptr = metadata_lease.operator->()) {
+    meta_ptr->setExecute(vectorAddExecute);
+  }
+  return kernel::core::KernelMetadataLease{std::move(metadata_lease)};
+}
+
+/**
  * @brief Create and initialize a vector add kernel entry.
  *
- * This factory function creates a KernelEntry configured for vector add.
- *
- * @param lease Kernel base lease with registered library/function keys
- * @return KernelEntry for vector add operations
+ * This factory function rebuilds an entry from metadata.
  */
-inline kernel::core::KernelEntry createVectorAddKernel(
-    kernel::core::KernelEntry::MpsKernelBaseLease lease) {
-  kernel::core::KernelEntry entry;
-  entry.setBase(
-      kernel::core::KernelEntry::KernelBaseLease{std::move(lease)});
-  entry.setExecute(vectorAddExecute);
-
-  return entry;
+inline kernel::core::KernelEntry createVectorAddKernel() {
+  auto metadata = createVectorAddMetadata();
+  return metadata.rebuild();
 }
 
 } // namespace orteaf::extension::kernel::mps::ops

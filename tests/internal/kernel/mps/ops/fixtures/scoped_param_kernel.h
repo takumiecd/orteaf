@@ -5,6 +5,9 @@
 #include <cstddef>
 #include <cstdint>
 
+#include <orteaf/internal/execution/cpu/api/cpu_execution_api.h>
+#include <orteaf/internal/execution/cpu/resource/cpu_kernel_base.h>
+#include <orteaf/internal/kernel/core/kernel_metadata.h>
 #include <orteaf/internal/kernel/schema/kernel_param_schema.h>
 #include <orteaf/internal/kernel/core/kernel_args.h>
 #include <orteaf/internal/kernel/core/kernel_entry.h>
@@ -33,20 +36,22 @@ struct ScopedParamParams : kernel::ParamSchema<ScopedParamParams> {
  *
  * Extracts a scoped parameter and writes a global Count param as a side effect.
  */
-inline void scopedParamExecute(kernel::core::KernelEntry::KernelBaseLease & /*lease*/,
-                               ::orteaf::internal::kernel::KernelArgs &args) {
+inline void scopedParamExecute(
+    ::orteaf::internal::execution::cpu::resource::CpuKernelBase & /*base*/,
+    ::orteaf::internal::kernel::KernelArgs &args) {
   auto params = ScopedParamParams::extract(args);
   args.addParam(kernel::Param(kernel::ParamId::Count,
                               static_cast<std::size_t>(params.num_elements)));
 }
 
 /**
- * @brief Create and initialize a scoped-param kernel entry.
+ * @brief Create metadata for the scoped-param kernel.
  */
-inline kernel::core::KernelEntry createScopedParamKernel() {
-  kernel::core::KernelEntry entry;
-  entry.setExecute(scopedParamExecute);
-  return entry;
+inline kernel::core::KernelMetadataLease createScopedParamMetadata() {
+  using CpuExecutionApi =
+      ::orteaf::internal::execution::cpu::api::CpuExecutionApi;
+  auto metadata_lease = CpuExecutionApi::acquireKernelMetadata(scopedParamExecute);
+  return kernel::core::KernelMetadataLease{std::move(metadata_lease)};
 }
 
 } // namespace orteaf::extension::kernel::mps::ops
