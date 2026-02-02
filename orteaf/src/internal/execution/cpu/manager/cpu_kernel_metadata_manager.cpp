@@ -68,11 +68,16 @@ CpuKernelMetadataManager::acquire(ExecuteFunc execute) {
   request.execute = execute;
   const KernelMetadataPayloadPoolTraits::Context context{};
 
-  auto handle = core_.acquirePayloadOrGrowAndCreate(request, context);
+  auto handle = core_.reserveUncreatedPayloadOrGrow();
   if (!handle.isValid()) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::OutOfRange,
         "CPU kernel metadata manager has no available slots");
+  }
+  if (!core_.emplacePayload(handle, request, context)) {
+    ::orteaf::internal::diagnostics::error::throwError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+        "CPU kernel metadata manager failed to create payload");
   }
 
   return core_.acquireStrongLease(handle);

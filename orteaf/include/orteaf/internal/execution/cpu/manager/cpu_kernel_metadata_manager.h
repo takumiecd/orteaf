@@ -4,7 +4,7 @@
 
 #include "orteaf/internal/base/lease/control_block/strong.h"
 #include "orteaf/internal/base/manager/pool_manager.h"
-#include "orteaf/internal/base/pool/fixed_slot_store.h"
+#include "orteaf/internal/base/pool/slot_pool.h"
 #include "orteaf/internal/execution/cpu/cpu_handles.h"
 #include "orteaf/internal/execution/cpu/resource/cpu_kernel_metadata.h"
 
@@ -30,14 +30,15 @@ struct KernelMetadataPayloadPoolTraits {
 
   struct Context {};
 
+  static constexpr bool destroy_on_release = true;
+
   static bool create(Payload &payload, const Request &request, const Context &);
 
   static void destroy(Payload &payload, const Request &, const Context &);
 };
 
 using KernelMetadataPayloadPool =
-    ::orteaf::internal::base::pool::FixedSlotStore<
-        KernelMetadataPayloadPoolTraits>;
+    ::orteaf::internal::base::pool::SlotPool<KernelMetadataPayloadPoolTraits>;
 
 // =============================================================================
 // Control Block
