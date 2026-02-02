@@ -241,11 +241,6 @@ TEST_F(DispatcherTest, DispatchKernelSuccess) {
 
 TEST_F(DispatcherTest, DispatchKernelMultipleTimes) {
   // Register and set up kernel with CPU base
-  auto key =
-      kernel::kernel_key::make(static_cast<Op>(1), Architecture::CpuGeneric,
-                               static_cast<kernel::Layout>(0), DType::F32,
-                               static_cast<kernel::Variant>(0));
-
   registerTestKernelWithExecute(static_cast<Op>(1), Architecture::CpuGeneric,
                                 static_cast<kernel::Layout>(0), DType::F32,
                                 static_cast<kernel::Variant>(0));
