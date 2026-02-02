@@ -207,20 +207,12 @@ TEST_F(DispatcherTest, DispatchKernelSuccess) {
                                static_cast<kernel::Layout>(0), DType::F32,
                                static_cast<kernel::Variant>(0));
 
-  // Create a KernelEntry with CPU base and execute function
-  auto entry = makeTestCpuEntry();
-
-  // Manually insert into registry (bypass metadata rebuild for this test)
-  auto &registry = api::KernelRegistryApi::instance();
-  // Note: We can't directly insert KernelEntry, so we'll test via metadata
-
-  // Actually, let's use a different approach - register with execute function
-  // then manually fix up the entry after lookup
+  // Register via metadata and rebuild on lookup.
   registerTestKernelWithExecute(static_cast<Op>(1), Architecture::CpuGeneric,
                                 static_cast<kernel::Layout>(0), DType::F32,
                                 static_cast<kernel::Variant>(0));
 
-  // Look up and replace the base (metadata needs to rebuild properly now)
+  auto &registry = api::KernelRegistryApi::instance();
   auto *lookup_entry = registry.lookup(key);
   ASSERT_NE(lookup_entry, nullptr);
 
