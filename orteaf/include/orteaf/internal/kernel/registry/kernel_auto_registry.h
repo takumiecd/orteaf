@@ -15,8 +15,14 @@ void registerAllKernels();
 #define ORTEAF_INTERNAL_CONCAT_IMPL(a, b) a##b
 #define ORTEAF_INTERNAL_CONCAT(a, b) ORTEAF_INTERNAL_CONCAT_IMPL(a, b)
 
+#ifdef __COUNTER__
+#define ORTEAF_INTERNAL_UNIQUE_ID(base) ORTEAF_INTERNAL_CONCAT(base, __COUNTER__)
+#else
+#define ORTEAF_INTERNAL_UNIQUE_ID(base) ORTEAF_INTERNAL_CONCAT(base, __LINE__)
+#endif
+
 #define ORTEAF_REGISTER_KERNEL(fn)                                             \
   namespace {                                                                  \
-  const bool ORTEAF_INTERNAL_CONCAT(_orteaf_kernel_reg_, __LINE__) =            \
+  const bool ORTEAF_INTERNAL_UNIQUE_ID(_orteaf_kernel_reg_) =                  \
       ::orteaf::internal::kernel::registry::addKernelRegistrar(fn);            \
   }
