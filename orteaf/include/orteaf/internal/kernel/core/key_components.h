@@ -88,6 +88,15 @@ constexpr KernelKey makeKey(const FixedKeyComponents &fixed,
                           variable.variant);
 }
 
+/**
+ * @brief Create a KernelKey that matches any dtype.
+ */
+constexpr KernelKey makeKeyAnyDType(const FixedKeyComponents &fixed,
+                                    const VariableKeyComponents &variable) noexcept {
+  return kernel_key::makeAnyDType(fixed.op, variable.arch, variable.layout,
+                                  variable.variant);
+}
+
 // Forward declaration for KernelArgs
 class KernelArgs;
 

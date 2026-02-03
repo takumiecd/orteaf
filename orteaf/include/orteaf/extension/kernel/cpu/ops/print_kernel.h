@@ -9,10 +9,13 @@
 
 #include <orteaf/extension/kernel/cpu/print.h>
 #include <orteaf/internal/base/inline_vector.h>
+#include <orteaf/internal/architecture/architecture.h>
 #include <orteaf/internal/diagnostics/error/error.h>
 #include <orteaf/internal/execution/cpu/api/cpu_execution_api.h>
+#include <orteaf/internal/kernel/api/kernel_registry_api.h>
 #include <orteaf/internal/kernel/core/kernel_args.h>
 #include <orteaf/internal/kernel/core/kernel_entry.h>
+#include <orteaf/internal/kernel/core/kernel_key.h>
 #include <orteaf/internal/kernel/core/kernel_metadata.h>
 #include <orteaf/internal/kernel/param/param_id.h>
 #include <orteaf/internal/kernel/param/transform/array_view_inline_vector.h>
@@ -76,6 +79,18 @@ inline kernel::core::KernelMetadataLease createPrintMetadata() {
       ::orteaf::internal::execution::cpu::api::CpuExecutionApi;
   auto metadata_lease = CpuExecutionApi::acquireKernelMetadata(printExecute);
   return kernel::core::KernelMetadataLease{std::move(metadata_lease)};
+}
+
+inline void registerPrintKernel(
+    ::orteaf::internal::architecture::Architecture architecture =
+        ::orteaf::internal::architecture::Architecture::CpuGeneric) {
+  auto metadata = createPrintMetadata();
+  auto key = ::orteaf::internal::kernel::kernel_key::makeAnyDType(
+      ::orteaf::internal::ops::Op::Print, architecture,
+      static_cast<::orteaf::internal::kernel::Layout>(0),
+      static_cast<::orteaf::internal::kernel::Variant>(0));
+  ::orteaf::internal::kernel::api::KernelRegistryApi::registerKernel(
+      key, std::move(metadata));
 }
 
 }  // namespace orteaf::extension::kernel::cpu::ops
