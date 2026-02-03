@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <limits>
 #include <span>
 #include <sstream>
 
@@ -84,6 +85,26 @@ TEST(CpuPrintTest, Prints1DFloat64) {
       orteaf::internal::DType::F64, os);
 
   EXPECT_EQ(os.str(), "[0.125, -2.5, 100]");
+}
+
+TEST(CpuPrintTest, RejectsStrideOverflow) {
+  std::array<std::int32_t, 1> data{{0}};
+  const std::uint64_t max_size =
+      std::numeric_limits<std::size_t>::max();
+  const std::uint64_t max_i64 =
+      static_cast<std::uint64_t>(std::numeric_limits<std::int64_t>::max());
+  const std::uint64_t half_plus_one = max_size / 2 + 1;
+  const std::uint64_t capped =
+      half_plus_one > max_i64 ? max_i64 : half_plus_one;
+  const std::int64_t big = static_cast<std::int64_t>(capped);
+  std::array<std::int64_t, 3> shape{{1, big, big}};
+
+  std::ostringstream os;
+  orteaf::extension::kernel::cpu::printTensor(
+      std::span<const std::int64_t>(shape.data(), shape.size()), data.data(),
+      orteaf::internal::DType::I32, os);
+
+  EXPECT_EQ(os.str(), "<invalid shape>");
 }
 
 }  // namespace

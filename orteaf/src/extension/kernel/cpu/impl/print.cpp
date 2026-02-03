@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <iomanip>
+#include <limits>
 #include <ostream>
 #include <vector>
 
@@ -73,6 +74,11 @@ void printTensorImpl(std::span<const std::int64_t> shape, const void *buffer,
       os << "<invalid shape>";
       return;
     }
+    if (static_cast<std::uint64_t>(dim) >
+        std::numeric_limits<std::size_t>::max()) {
+      os << "<invalid shape>";
+      return;
+    }
   }
 
   if (shape.empty()) {
@@ -87,7 +93,12 @@ void printTensorImpl(std::span<const std::int64_t> shape, const void *buffer,
   }
 
   std::vector<std::size_t> strides(shape.size(), 1);
+  const auto max_size = std::numeric_limits<std::size_t>::max();
   for (std::size_t i = shape.size(); i-- > 1;) {
+    if (dims[i] != 0 && strides[i] > max_size / dims[i]) {
+      os << "<invalid shape>";
+      return;
+    }
     strides[i - 1] = strides[i] * dims[i];
   }
 
