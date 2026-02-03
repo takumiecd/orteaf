@@ -46,11 +46,15 @@ inline constexpr int kVersionShift = 60;
 
 // Bit mask constants
 inline constexpr std::uint64_t kDTypeMask = 0xFFF;         // 12 bits
+inline constexpr std::uint64_t kDTypeWildcard = kDTypeMask; // 0xFFF reserved
 inline constexpr std::uint64_t kOpMask = 0xFFFF;           // 16 bits
 inline constexpr std::uint64_t kArchitectureMask = 0xFFFF; // 16 bits
 inline constexpr std::uint64_t kLayoutMask = 0xFF;         // 8 bits
 inline constexpr std::uint64_t kVariantMask = 0xFF;        // 8 bits
 inline constexpr std::uint64_t kVersionMask = 0xF;         // 4 bits
+
+static_assert(::orteaf::internal::kDTypeCount <= kDTypeMask,
+              "DType::Count must be <= 0xFFF because 0xFFF is reserved for wildcard");
 
 /**
  * @brief Create a KernelKey from individual components.
@@ -84,6 +88,35 @@ make(::orteaf::internal::ops::Op op,
                                 << kOpShift;
   const std::uint64_t dtype_bits =
       (static_cast<std::uint64_t>(dtype) & kDTypeMask) << kDTypeShift;
+
+  return static_cast<KernelKey>(version_bits | variant_bits | layout_bits |
+                                arch_bits | op_bits | dtype_bits);
+}
+
+/**
+ * @brief Create a KernelKey that matches any dtype.
+ *
+ * Uses a reserved dtype bit pattern that does not correspond to valid DType
+ * values. Intended for dtype-agnostic kernels.
+ */
+constexpr KernelKey
+makeAnyDType(::orteaf::internal::ops::Op op,
+             ::orteaf::internal::architecture::Architecture architecture,
+             Layout layout, Variant variant,
+             std::uint8_t version = kCurrentVersion) noexcept {
+  const std::uint64_t version_bits =
+      (static_cast<std::uint64_t>(version) & kVersionMask) << kVersionShift;
+  const std::uint64_t variant_bits =
+      (static_cast<std::uint64_t>(variant) & kVariantMask) << kVariantShift;
+  const std::uint64_t layout_bits =
+      (static_cast<std::uint64_t>(layout) & kLayoutMask) << kLayoutShift;
+  const std::uint64_t arch_bits =
+      (static_cast<std::uint64_t>(architecture) & kArchitectureMask)
+      << kArchitectureShift;
+  const std::uint64_t op_bits = (static_cast<std::uint64_t>(op) & kOpMask)
+                                << kOpShift;
+  const std::uint64_t dtype_bits = (kDTypeWildcard & kDTypeMask)
+                                   << kDTypeShift;
 
   return static_cast<KernelKey>(version_bits | variant_bits | layout_bits |
                                 arch_bits | op_bits | dtype_bits);
@@ -139,6 +172,14 @@ constexpr ::orteaf::internal::DType getDType(KernelKey key) noexcept {
   const std::uint64_t value = static_cast<std::uint64_t>(key);
   return static_cast<::orteaf::internal::DType>((value >> kDTypeShift) &
                                                 kDTypeMask);
+}
+
+/**
+ * @brief Check whether a KernelKey encodes a wildcard dtype.
+ */
+constexpr bool isWildcardDType(KernelKey key) noexcept {
+  const std::uint64_t value = static_cast<std::uint64_t>(key);
+  return ((value >> kDTypeShift) & kDTypeMask) == kDTypeWildcard;
 }
 
 /**

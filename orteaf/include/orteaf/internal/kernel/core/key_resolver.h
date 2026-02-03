@@ -85,6 +85,10 @@ std::optional<KernelKey> resolve(const Registry &registry,
       if (registry.contains(key)) {
         return key;
       }
+      auto any_key = makeKeyAnyDType(context.fixed, rule.components);
+      if (registry.contains(any_key)) {
+        return any_key;
+      }
     }
   }
 

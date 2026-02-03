@@ -6,6 +6,7 @@
 #include <orteaf/internal/dtype/dtype.h>
 #include <orteaf/internal/execution/cpu/api/cpu_execution_api.h>
 #include <orteaf/internal/execution/cpu/manager/cpu_device_manager.h>
+#include <orteaf/internal/execution/cpu/resource/cpu_buffer_view.h>
 #include <orteaf/internal/execution/execution.h>
 #include <orteaf/internal/storage/cpu/cpu_storage_layout.h>
 
@@ -20,6 +21,8 @@ public:
   using DeviceHandle = DeviceManager::DeviceHandle;
   using DeviceLease = DeviceManager::DeviceLease;
   using BufferLease = BufferManager::BufferLease;
+  using BufferView =
+      ::orteaf::internal::execution::cpu::resource::CpuBufferView;
   using Layout = ::orteaf::internal::storage::cpu::CpuStorageLayout;
   using DType = ::orteaf::internal::DType;
   using Execution = ::orteaf::internal::execution::Execution;
@@ -135,6 +138,45 @@ public:
   /// @brief Return the size of the storage in bytes.
   std::size_t sizeInBytes() const {
     return numel_ * ::orteaf::internal::sizeOf(dtype_);
+  }
+
+  /// @brief Get the buffer lease.
+  const BufferLease &bufferLease() const { return buffer_lease_; }
+
+  /// @brief Get the buffer lease (mutable).
+  BufferLease &bufferLease() { return buffer_lease_; }
+
+  /**
+   * @brief Get the buffer view.
+   * @return CpuBufferView if valid, empty view otherwise.
+   */
+  BufferView bufferView() const {
+    if (!buffer_lease_) {
+      return BufferView{};
+    }
+    auto *buffer_payload = buffer_lease_.operator->();
+    if (buffer_payload == nullptr || !buffer_payload->valid()) {
+      return BufferView{};
+    }
+    return buffer_payload->view;
+  }
+
+  /**
+   * @brief Get the raw buffer pointer.
+   * @return Pointer to buffer base if valid, nullptr otherwise.
+   */
+  void *buffer() const {
+    auto view = bufferView();
+    return view ? view.raw() : nullptr;
+  }
+
+  /**
+   * @brief Get the buffer offset in bytes.
+   * @return Offset in bytes, or 0 if buffer is invalid.
+   */
+  std::size_t bufferOffset() const {
+    auto view = bufferView();
+    return view ? view.offset() : 0;
   }
 
 private:

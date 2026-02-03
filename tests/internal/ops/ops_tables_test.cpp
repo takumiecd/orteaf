@@ -157,3 +157,16 @@ TEST(OpsTablesTest, ReluMetadataAndShape) {
     EXPECT_TRUE(shape.function.empty());
 }
 
+TEST(OpsTablesTest, PrintIsOutputless) {
+    constexpr auto op = ops::Op::Print;
+    EXPECT_EQ(ops::arityOf(op), 1U);
+
+    const auto outputs = ops::outputsOf(op);
+    EXPECT_TRUE(outputs.empty());
+
+    const auto& shape = ops::shapeInferenceOf(op);
+    EXPECT_EQ(shape.kind, "none");
+
+    const auto& metadata = ops::metadataOf(op);
+    EXPECT_FALSE(metadata.differentiable);
+}

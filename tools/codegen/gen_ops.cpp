@@ -986,11 +986,6 @@ std::vector<ResolvedOp> ResolveOps(const ParsedOpsFile& parsed, const DTypeCatal
             resolved_op.inputs.emplace_back(std::move(resolved_input));
         }
 
-        if (op.outputs.empty()) {
-            std::ostringstream oss;
-            oss << "Op '" << op.id << "' must declare at least one output";
-            Fail(oss.str());
-        }
         resolved_op.outputs.reserve(op.outputs.size());
         std::unordered_set<std::string> output_names;
         for (std::size_t i = 0; i < op.outputs.size(); ++i) {
@@ -1597,5 +1592,4 @@ int main(int argc, char** argv) try {
     std::cerr << "gen_ops error: " << e.what() << "\n";
     return 1;
 }
-
 

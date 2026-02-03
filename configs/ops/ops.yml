@@ -12,12 +12,15 @@ catalogs:
       description: "Pointwise neural activation functions"
     spiking:
       description: "Spiking neural network primitives"
+    utility:
+      description: "Utility and debugging operators"
   dtype_categories:
     boolean: "Boolean and mask tensors"
     signed_integer: "Signed integral tensors"
     unsigned_integer: "Unsigned integral tensors"
     floating_point: "IEEE754 floating point tensors"
   shape_kinds:
+    none: "No output shape (side-effect op)"
     elementwise: "Follows elementwise broadcasting semantics"
     broadcast: "Broadcasts operands to a shared shape"
     matmul: "Matrix multiplication or batched GEMM semantics"
@@ -26,6 +29,64 @@ catalogs:
     custom: "Requires custom inference callback"
 
 ops:
+  - id: "Fill"
+    display_name: "Fill"
+    category: "utility"
+    arity: 2
+    inputs:
+      - name: "input"
+        description: "Template tensor providing shape and dtype"
+        dtype_constraints:
+          mode: "allow"
+          categories: ["floating_point", "signed_integer", "unsigned_integer", "boolean"]
+      - name: "value"
+        description: "Fill value (scalar or tensor)"
+        dtype_constraints:
+          mode: "match"
+          reference: "input"
+          allow_promotion: false
+          require_same_shape: false
+    outputs:
+      - name: "output"
+        description: "Filled tensor"
+        dtype_rule:
+          kind: "same_as"
+          input: "input"
+    compute_policy:
+      kind: "same_as"
+      input: "input"
+    shape_inference:
+      kind: "identity"
+      description: "Matches the input shape"
+    metadata:
+      description: "Fills a tensor with the provided value"
+      tags: ["fill", "utility"]
+      commutative: false
+      differentiable: false
+
+  - id: "Print"
+    display_name: "Print"
+    category: "utility"
+    arity: 1
+    inputs:
+      - name: "input"
+        description: "Tensor to print"
+        dtype_constraints:
+          mode: "allow"
+          categories: ["floating_point", "signed_integer", "unsigned_integer", "boolean"]
+    outputs: []
+    compute_policy:
+      kind: "same_as"
+      input: "input"
+    shape_inference:
+      kind: "none"
+      description: "No outputs to infer"
+    metadata:
+      description: "Prints the tensor"
+      tags: ["debug", "io"]
+      commutative: false
+      differentiable: false
+
   - id: "Add"
     display_name: "Add"
     category: "arithmetic"

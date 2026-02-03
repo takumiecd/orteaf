@@ -96,6 +96,10 @@ The generator validates every section (inputs, dtype rules, shape kinds, etc.) a
 flattens the data into `ops_tables.h`. When adding or removing ops, update any
 execution kernels that rely on the affected IDs.
 
+Ops may omit outputs entirely for side-effect-only operators (for example,
+logging/printing). Use `outputs: []` and set `shape_inference.kind` to `none`
+to make the intent explicit.
+
 ---
 
 ## Executions
