@@ -53,6 +53,9 @@ inline constexpr std::uint64_t kLayoutMask = 0xFF;         // 8 bits
 inline constexpr std::uint64_t kVariantMask = 0xFF;        // 8 bits
 inline constexpr std::uint64_t kVersionMask = 0xF;         // 4 bits
 
+static_assert(::orteaf::internal::kDTypeCount <= kDTypeMask,
+              "DType::Count must be <= 0xFFF because 0xFFF is reserved for wildcard");
+
 /**
  * @brief Create a KernelKey from individual components.
  *
