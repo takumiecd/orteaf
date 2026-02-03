@@ -32,9 +32,8 @@ inline constexpr std::uint8_t kPrintShapeInlineCapacity = 8;
 
 struct PrintStorages : kernel::StorageSchema<PrintStorages> {
   kernel::StorageField<kernel::OperandId::Input0> input;
-  kernel::OptionalStorageField<kernel::OperandId::Output> output;
 
-  ORTEAF_EXTRACT_STORAGES(input, output)
+  ORTEAF_EXTRACT_STORAGES(input)
 };
 
 struct PrintParams : kernel::ParamSchema<PrintParams> {
