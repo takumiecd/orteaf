@@ -62,4 +62,28 @@ TEST(CpuPrintTest, PrintsBoolInlineVectorShape) {
   EXPECT_EQ(os.str(), "[\n  [true, false]\n]");
 }
 
+TEST(CpuPrintTest, Prints2DFloat32) {
+  std::array<float, 4> data{{1.5f, -2.25f, 3.0f, 0.0f}};
+  std::array<std::int64_t, 2> shape{{2, 2}};
+
+  std::ostringstream os;
+  orteaf::extension::kernel::cpu::printTensor(
+      std::span<const std::int64_t>(shape.data(), shape.size()), data.data(),
+      orteaf::internal::DType::F32, os);
+
+  EXPECT_EQ(os.str(), "[\n  [1.5, -2.25],\n  [3, 0]\n]");
+}
+
+TEST(CpuPrintTest, Prints1DFloat64) {
+  std::array<double, 3> data{{0.125, -2.5, 100.0}};
+  std::array<std::int64_t, 1> shape{{3}};
+
+  std::ostringstream os;
+  orteaf::extension::kernel::cpu::printTensor(
+      std::span<const std::int64_t>(shape.data(), shape.size()), data.data(),
+      orteaf::internal::DType::F64, os);
+
+  EXPECT_EQ(os.str(), "[0.125, -2.5, 100]");
+}
+
 }  // namespace
