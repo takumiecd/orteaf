@@ -5,6 +5,8 @@
 #include <ostream>
 #include <vector>
 
+#include <orteaf/internal/diagnostics/error/error.h>
+
 namespace orteaf::extension::kernel::cpu {
 
 namespace {
@@ -138,6 +140,11 @@ void printTensorImpl(std::span<const std::int64_t> shape, const void *buffer,
 
 void printTensor(std::span<const std::int64_t> shape, const void *buffer,
                  ::orteaf::internal::DType dtype, std::ostream &os) {
+  if (!os) {
+    ::orteaf::internal::diagnostics::error::throwError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+        "printTensor: output stream is not ready");
+  }
   StreamStateGuard guard(os);
   os << std::setprecision(6) << std::defaultfloat;
 
@@ -187,6 +194,12 @@ void printTensor(std::span<const std::int64_t> shape, const void *buffer,
   default:
     os << "<unsupported dtype>";
     break;
+  }
+
+  if (!os) {
+    ::orteaf::internal::diagnostics::error::throwError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::OperationFailed,
+        "printTensor: failed to write to output stream");
   }
 }
 
