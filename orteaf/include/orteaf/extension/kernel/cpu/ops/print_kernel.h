@@ -93,6 +93,8 @@ inline void registerPrintKernel(
       key, std::move(metadata));
 }
 
+inline void registerPrintKernelDefault() { registerPrintKernel(); }
+
 }  // namespace orteaf::extension::kernel::cpu::ops
 
 #endif  // ORTEAF_ENABLE_CPU

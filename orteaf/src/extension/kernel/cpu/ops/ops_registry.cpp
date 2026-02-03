@@ -3,4 +3,4 @@
 #include <orteaf/internal/kernel/registry/kernel_auto_registry.h>
 
 ORTEAF_REGISTER_KERNEL(
-    ::orteaf::extension::kernel::cpu::ops::registerPrintKernel);
+    ::orteaf::extension::kernel::cpu::ops::registerPrintKernelDefault);
