@@ -59,3 +59,7 @@ params:
   - id: Offset
     cpp_type: "std::int64_t"
     description: "Tensor element offset (int64)"
+
+  - id: Value
+    cpp_type: "double"
+    description: "Scalar fill value (double)"

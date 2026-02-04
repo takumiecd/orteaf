@@ -32,34 +32,28 @@ ops:
   - id: "Fill"
     display_name: "Fill"
     category: "utility"
-    arity: 2
-    inputs:
-      - name: "input"
-        description: "Template tensor providing shape and dtype"
-        dtype_constraints:
-          mode: "allow"
-          categories: ["floating_point", "signed_integer", "unsigned_integer", "boolean"]
-      - name: "value"
-        description: "Fill value (scalar or tensor)"
-        dtype_constraints:
-          mode: "match"
-          reference: "input"
-          allow_promotion: false
-          require_same_shape: false
+    arity: 0
+    inputs: []
     outputs:
       - name: "output"
         description: "Filled tensor"
         dtype_rule:
-          kind: "same_as"
-          input: "input"
+          kind: "custom"
+          function: "FillOutputDType"
+    attributes:
+      - name: "value"
+        type: "double"
+        required: true
+        description: "Scalar fill value"
     compute_policy:
-      kind: "same_as"
-      input: "input"
+      kind: "custom"
+      handler: "FillComputePolicy"
     shape_inference:
-      kind: "identity"
-      description: "Matches the input shape"
+      kind: "custom"
+      function: "FillOutputShape"
+      description: "Uses output shape provided by caller"
     metadata:
-      description: "Fills a tensor with the provided value"
+      description: "Fills the output tensor with a scalar value"
       tags: ["fill", "utility"]
       commutative: false
       differentiable: false
