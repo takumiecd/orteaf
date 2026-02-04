@@ -1,5 +1,3 @@
-#pragma once
-
 #if ORTEAF_ENABLE_CPU
 
 #include <cstddef>
@@ -21,9 +19,10 @@
 #include <orteaf/internal/kernel/param/transform/array_view_inline_vector.h>
 #include <orteaf/internal/kernel/schema/kernel_param_schema.h>
 #include <orteaf/internal/kernel/schema/kernel_storage_schema.h>
+#include <orteaf/internal/kernel/registry/kernel_auto_registry.h>
 #include <orteaf/internal/storage/registry/storage_types.h>
 
-namespace orteaf::extension::kernel::cpu::ops {
+namespace orteaf::extension::kernel::cpu {
 
 namespace kernel = ::orteaf::internal::kernel;
 namespace error = ::orteaf::internal::diagnostics::error;
@@ -48,7 +47,7 @@ struct PrintParams : kernel::ParamSchema<PrintParams> {
   ORTEAF_EXTRACT_FIELDS(shape)
 };
 
-inline void printExecute(
+void printExecute(
     ::orteaf::internal::execution::cpu::resource::CpuKernelBase & /*base*/,
     kernel::KernelArgs &args) {
   auto storages = PrintStorages::extract(args);
@@ -73,14 +72,14 @@ inline void printExecute(
   std::cout << '\n';
 }
 
-inline kernel::core::KernelMetadataLease createPrintMetadata() {
+kernel::core::KernelMetadataLease createPrintMetadata() {
   using CpuExecutionApi =
       ::orteaf::internal::execution::cpu::api::CpuExecutionApi;
   auto metadata_lease = CpuExecutionApi::acquireKernelMetadata(printExecute);
   return kernel::core::KernelMetadataLease{std::move(metadata_lease)};
 }
 
-inline void registerPrintKernel(
+void registerPrintKernel(
     ::orteaf::internal::architecture::Architecture architecture =
         ::orteaf::internal::architecture::Architecture::CpuGeneric) {
   auto metadata = createPrintMetadata();
@@ -92,8 +91,11 @@ inline void registerPrintKernel(
       key, std::move(metadata));
 }
 
-inline void registerPrintKernelDefault() { registerPrintKernel(); }
+void registerPrintKernelDefault() { registerPrintKernel(); }
 
-}  // namespace orteaf::extension::kernel::cpu::ops
+ORTEAF_REGISTER_KERNEL(
+    ::orteaf::extension::kernel::cpu::registerPrintKernelDefault);
+
+}  // namespace orteaf::extension::kernel::cpu
 
 #endif  // ORTEAF_ENABLE_CPU
