@@ -66,10 +66,20 @@ set(ORTEAF_SOURCES
     ${ORTEAF_SOURCES_MPS}
 )
 
+if(DEFINED KERNEL_REGISTRY_GEN_DIR)
+    list(APPEND ORTEAF_SOURCES
+        ${KERNEL_REGISTRY_GEN_DIR}/kernel_registry.cpp
+    )
+endif()
+
 if(ORTEAF_SOURCES)
     add_library(orteaf STATIC ${ORTEAF_SOURCES})
 else()
     add_library(orteaf STATIC)
+endif()
+
+if(TARGET generate_kernel_registry)
+    add_dependencies(orteaf generate_kernel_registry)
 endif()
 
 target_link_libraries(orteaf

@@ -59,6 +59,7 @@ set(DEVICE_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/orteaf/device CACHE INT
 set(PARAM_ID_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/orteaf/kernel CACHE INTERNAL "")
 set(OPERAND_ID_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/orteaf/kernel CACHE INTERNAL "")
 set(ROLE_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/orteaf/kernel CACHE INTERNAL "")
+set(KERNEL_REGISTRY_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/orteaf/extension/kernel CACHE INTERNAL "")
 
 
 orteaf_add_cuda_kernel_binaries()
@@ -230,6 +231,34 @@ add_custom_target(generate_roles
         ${ROLE_GEN_DIR}/role.def
         ${ROLE_GEN_DIR}/role_tables.h
 )
+
+file(GLOB_RECURSE ORTEAF_KERNEL_REGISTRY_INPUTS CONFIGURE_DEPENDS
+    ${ORTEAF_SOURCE_ROOT}/src/extension/kernel/*.cpp
+    ${ORTEAF_SOURCE_ROOT}/src/extension/kernel/*.cc
+    ${ORTEAF_SOURCE_ROOT}/src/extension/kernel/*.cxx
+    ${ORTEAF_SOURCE_ROOT}/src/extension/kernel/*.mm
+    ${ORTEAF_SOURCE_ROOT}/src/extension/kernel/*.cu
+)
+# NOTE: Some CMake generators may not reliably pick up new files with
+# CONFIGURE_DEPENDS. Re-run CMake when adding new kernel sources.
+
+add_custom_command(
+    OUTPUT
+        ${KERNEL_REGISTRY_GEN_DIR}/kernel_registry.cpp
+    COMMAND $<TARGET_FILE:gen_kernel_registry> ${ORTEAF_SOURCE_ROOT} ${KERNEL_REGISTRY_GEN_DIR}
+    DEPENDS
+        ${ORTEAF_KERNEL_REGISTRY_INPUTS}
+        gen_kernel_registry
+    COMMENT "Generating kernel registry"
+    VERBATIM
+)
+
+add_custom_target(generate_kernel_registry
+    DEPENDS
+        ${KERNEL_REGISTRY_GEN_DIR}/kernel_registry.cpp
+)
+
+add_dependencies(generate_kernel_registry generate_dtypes generate_param_ids)
 
 
 # Warn if CPU execution is disabled (unusual)

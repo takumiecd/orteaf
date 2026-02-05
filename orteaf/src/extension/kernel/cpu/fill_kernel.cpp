@@ -3,8 +3,10 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <span>
 
 #include <orteaf/internal/base/inline_vector.h>
+#include <orteaf/internal/base/checked_int.h>
 #include <orteaf/internal/architecture/architecture.h>
 #include <orteaf/internal/diagnostics/error/error.h>
 #include <orteaf/internal/execution/cpu/api/cpu_execution_api.h>
@@ -19,6 +21,7 @@
 #include <orteaf/internal/kernel/schema/kernel_param_schema.h>
 #include <orteaf/internal/kernel/schema/kernel_storage_schema.h>
 #include <orteaf/internal/storage/registry/storage_types.h>
+#include <orteaf/internal/dtype/dtype.h>
 
 namespace orteaf::extension::kernel::cpu {
 
@@ -27,6 +30,10 @@ namespace error = ::orteaf::internal::diagnostics::error;
 
 void fillTensor(void *data, std::size_t count,
                 ::orteaf::internal::DType dtype, double value);
+void fillTensorStrided(void *data, std::span<const std::int64_t> shape,
+                       std::span<const std::int64_t> strides,
+                       std::int64_t offset, ::orteaf::internal::DType dtype,
+                       double value);
 
 inline constexpr std::uint8_t kFillShapeInlineCapacity = 8;
 
@@ -42,22 +49,63 @@ struct FillParams : kernel::ParamSchema<FillParams> {
                                              kFillShapeInlineCapacity>;
 
   kernel::Field<kernel::ParamId::Value, double> value;
-  kernel::OptionalField<kernel::ParamId::Shape, ShapeVector> shape;
+  kernel::ScopedField<kernel::ParamId::Shape, ShapeVector,
+                      kernel::OperandId::Output>
+      shape;
+  kernel::ScopedField<kernel::ParamId::Strides, ShapeVector,
+                      kernel::OperandId::Output>
+      strides;
+  kernel::ScopedField<kernel::ParamId::Offset, std::int64_t,
+                      kernel::OperandId::Output>
+      offset;
 
-  ORTEAF_EXTRACT_FIELDS(value, shape)
+  ORTEAF_EXTRACT_FIELDS(value, shape, strides, offset)
 };
 
 namespace {
 
-std::size_t computeShapeSize(const FillParams::ShapeVector &shape) {
+struct LayoutStats {
+  std::size_t numel{};
+  bool has_zero{};
+  bool contiguous{};
+  std::int64_t min_index{};
+  std::int64_t max_index{};
+};
+
+LayoutStats analyzeLayout(const FillParams::ShapeVector &shape,
+                          const FillParams::ShapeVector &strides,
+                          std::int64_t offset) {
+  const auto rank = shape.size;
+  if (rank != strides.size) {
+    error::throwError(error::OrteafErrc::InvalidParameter,
+                      "Fill kernel received mismatched shape/strides");
+  }
+
+  LayoutStats stats{};
+  stats.numel = 1;
+  stats.has_zero = false;
+  stats.contiguous = true;
+  stats.min_index = offset;
+  stats.max_index = offset;
+
+  if (rank == 0) {
+    return stats;
+  }
+
   std::size_t product = 1;
   constexpr std::size_t kMaxSize =
       std::numeric_limits<std::size_t>::max();
-  for (std::uint8_t i = 0; i < shape.size; ++i) {
+  std::size_t expected_stride = 1;
+  for (std::size_t i = rank; i-- > 0;) {
     const auto dim = shape.data[i];
     if (dim < 0) {
       error::throwError(error::OrteafErrc::InvalidParameter,
                         "Fill kernel received negative shape dimension");
+    }
+    if (dim == 0) {
+      stats.has_zero = true;
+      stats.numel = 0;
+      return stats;
     }
     const std::size_t dim_size = static_cast<std::size_t>(dim);
     if (dim_size != 0 && product > kMaxSize / dim_size) {
@@ -65,8 +113,46 @@ std::size_t computeShapeSize(const FillParams::ShapeVector &shape) {
                         "Fill kernel shape is too large");
     }
     product *= dim_size;
+    if (strides.data[i] != static_cast<std::int64_t>(expected_stride)) {
+      stats.contiguous = false;
+    }
+    if (expected_stride > kMaxSize / dim_size) {
+      error::throwError(error::OrteafErrc::InvalidParameter,
+                        "Fill kernel shape is too large");
+    }
+    expected_stride *= dim_size;
   }
-  return product;
+  stats.numel = product;
+
+  std::int64_t min_index = offset;
+  std::int64_t max_index = offset;
+  for (std::uint8_t i = 0; i < rank; ++i) {
+    const auto dim = shape.data[i];
+    if (dim <= 0) {
+      continue;
+    }
+    const auto stride = strides.data[i];
+    std::int64_t span = 0;
+    if (::orteaf::internal::base::mulOverflowI64(stride, dim - 1, span)) {
+      error::throwError(error::OrteafErrc::InvalidParameter,
+                        "Fill kernel index range overflow");
+    }
+    if (stride >= 0) {
+      if (::orteaf::internal::base::addOverflowI64(max_index, span, max_index)) {
+        error::throwError(error::OrteafErrc::InvalidParameter,
+                          "Fill kernel index range overflow");
+      }
+    } else {
+      if (::orteaf::internal::base::addOverflowI64(min_index, span, min_index)) {
+        error::throwError(error::OrteafErrc::InvalidParameter,
+                          "Fill kernel index range overflow");
+      }
+    }
+  }
+
+  stats.min_index = min_index;
+  stats.max_index = max_index;
+  return stats;
 }
 
 }  // namespace
@@ -85,17 +171,49 @@ void fillExecute(
                       "Fill kernel requires CPU storage for Output");
   }
 
-  const std::size_t numel = lease.numel();
-  if (params.shape) {
-    const auto expected = computeShapeSize(params.shape.value);
-    if (expected != numel) {
-      error::throwError(error::OrteafErrc::InvalidParameter,
-                        "Fill kernel shape does not match output size");
-    }
+  const auto raw_storage_numel = lease.numel();
+  if (raw_storage_numel >
+      static_cast<std::size_t>(std::numeric_limits<std::int64_t>::max())) {
+    error::throwError(error::OrteafErrc::InvalidParameter,
+                      "Fill kernel storage size exceeds index range");
   }
+  const auto storage_numel =
+      static_cast<std::int64_t>(raw_storage_numel);
+  const auto shape = params.shape.get();
+  const auto strides = params.strides.get();
+  const auto offset = params.offset.get();
+  const auto stats = analyzeLayout(shape, strides, offset);
 
   auto view = (*cpu_lease)->bufferView();
-  fillTensor(view.data(), numel, lease.dtype(), params.value.get());
+  if (stats.has_zero) {
+    return;
+  }
+
+  if (stats.min_index < 0 || stats.max_index < 0 ||
+      stats.max_index >= storage_numel) {
+    error::throwError(error::OrteafErrc::InvalidParameter,
+                      "Fill kernel view exceeds output storage bounds");
+  }
+
+  if (stats.contiguous) {
+    const auto elem_size = ::orteaf::internal::sizeOf(lease.dtype());
+    if (offset < 0 ||
+        static_cast<std::uint64_t>(offset) >
+            std::numeric_limits<std::size_t>::max() / elem_size) {
+      error::throwError(error::OrteafErrc::InvalidParameter,
+                        "Fill kernel byte offset exceeds addressable range");
+    }
+    const auto byte_offset =
+        static_cast<std::size_t>(offset) * elem_size;
+    auto *data = static_cast<std::byte *>(view.data()) + byte_offset;
+    fillTensor(data, stats.numel, lease.dtype(), params.value.get());
+    return;
+  }
+
+  fillTensorStrided(view.data(),
+                    std::span<const std::int64_t>(shape.data, shape.size),
+                    std::span<const std::int64_t>(strides.data, strides.size),
+                    offset, lease.dtype(), params.value.get());
 }
 
 kernel::core::KernelMetadataLease createFillMetadata() {
