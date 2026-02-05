@@ -6,6 +6,7 @@
 #include <span>
 
 #include <orteaf/internal/base/inline_vector.h>
+#include <orteaf/internal/base/checked_int.h>
 #include <orteaf/internal/architecture/architecture.h>
 #include <orteaf/internal/diagnostics/error/error.h>
 #include <orteaf/internal/execution/cpu/api/cpu_execution_api.h>
@@ -123,29 +124,34 @@ LayoutStats analyzeLayout(const FillParams::ShapeVector &shape,
   }
   stats.numel = product;
 
-  __int128 min_index = offset;
-  __int128 max_index = offset;
+  std::int64_t min_index = offset;
+  std::int64_t max_index = offset;
   for (std::uint8_t i = 0; i < rank; ++i) {
     const auto dim = shape.data[i];
     if (dim <= 0) {
       continue;
     }
     const auto stride = strides.data[i];
-    const __int128 span = static_cast<__int128>(stride) * (dim - 1);
+    std::int64_t span = 0;
+    if (::orteaf::internal::base::mulOverflowI64(stride, dim - 1, span)) {
+      error::throwError(error::OrteafErrc::InvalidParameter,
+                        "Fill kernel index range overflow");
+    }
     if (stride >= 0) {
-      max_index += span;
+      if (::orteaf::internal::base::addOverflowI64(max_index, span, max_index)) {
+        error::throwError(error::OrteafErrc::InvalidParameter,
+                          "Fill kernel index range overflow");
+      }
     } else {
-      min_index += span;
+      if (::orteaf::internal::base::addOverflowI64(min_index, span, min_index)) {
+        error::throwError(error::OrteafErrc::InvalidParameter,
+                          "Fill kernel index range overflow");
+      }
     }
   }
 
-  if (min_index < std::numeric_limits<std::int64_t>::min() ||
-      max_index > std::numeric_limits<std::int64_t>::max()) {
-    error::throwError(error::OrteafErrc::InvalidParameter,
-                      "Fill kernel index range overflow");
-  }
-  stats.min_index = static_cast<std::int64_t>(min_index);
-  stats.max_index = static_cast<std::int64_t>(max_index);
+  stats.min_index = min_index;
+  stats.max_index = max_index;
   return stats;
 }
 

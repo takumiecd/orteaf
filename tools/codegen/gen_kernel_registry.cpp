@@ -45,6 +45,128 @@ std::string trim(std::string_view value) {
   return std::string(value.substr(begin, end - begin));
 }
 
+std::string stripCommentsAndStrings(std::string_view content) {
+  std::string out;
+  out.reserve(content.size());
+  enum class State {
+    Normal,
+    LineComment,
+    BlockComment,
+    StringLiteral,
+    CharLiteral,
+    RawString
+  };
+  State state = State::Normal;
+  std::string raw_delim;
+  std::string raw_end;
+
+  auto push_space = [&](std::size_t count = 1) {
+    out.append(count, ' ');
+  };
+
+  for (std::size_t i = 0; i < content.size(); ++i) {
+    const char c = content[i];
+    const char next = (i + 1 < content.size()) ? content[i + 1] : '\0';
+
+    switch (state) {
+    case State::Normal:
+      if (c == '/' && next == '/') {
+        state = State::LineComment;
+        push_space(2);
+        ++i;
+      } else if (c == '/' && next == '*') {
+        state = State::BlockComment;
+        push_space(2);
+        ++i;
+      } else if (c == '"') {
+        state = State::StringLiteral;
+        push_space();
+      } else if (c == '\'') {
+        state = State::CharLiteral;
+        push_space();
+      } else if (c == 'R' && next == '"') {
+        std::size_t delim_start = i + 2;
+        std::size_t delim_end = delim_start;
+        while (delim_end < content.size() && content[delim_end] != '(') {
+          ++delim_end;
+        }
+        if (delim_end < content.size()) {
+          raw_delim = std::string(content.substr(delim_start, delim_end - delim_start));
+          raw_end = ")" + raw_delim + "\"";
+          state = State::RawString;
+          push_space(delim_end - i + 1);
+          i = delim_end;
+        } else {
+          out.push_back(c);
+        }
+      } else {
+        out.push_back(c);
+      }
+      break;
+    case State::LineComment:
+      if (c == '\n') {
+        state = State::Normal;
+        out.push_back('\n');
+      } else {
+        push_space();
+      }
+      break;
+    case State::BlockComment:
+      if (c == '*' && next == '/') {
+        state = State::Normal;
+        push_space(2);
+        ++i;
+      } else if (c == '\n') {
+        out.push_back('\n');
+      } else {
+        push_space();
+      }
+      break;
+    case State::StringLiteral:
+      if (c == '\\' && next != '\0') {
+        push_space(2);
+        ++i;
+      } else if (c == '"') {
+        state = State::Normal;
+        push_space();
+      } else if (c == '\n') {
+        out.push_back('\n');
+      } else {
+        push_space();
+      }
+      break;
+    case State::CharLiteral:
+      if (c == '\\' && next != '\0') {
+        push_space(2);
+        ++i;
+      } else if (c == '\'') {
+        state = State::Normal;
+        push_space();
+      } else if (c == '\n') {
+        out.push_back('\n');
+      } else {
+        push_space();
+      }
+      break;
+    case State::RawString:
+      if (!raw_end.empty() &&
+          i + raw_end.size() <= content.size() &&
+          content.substr(i, raw_end.size()) == raw_end) {
+        state = State::Normal;
+        push_space(raw_end.size());
+        i += raw_end.size() - 1;
+      } else if (c == '\n') {
+        out.push_back('\n');
+      } else {
+        push_space();
+      }
+      break;
+    }
+  }
+
+  return out;
+}
+
 std::string detectGuard(const fs::path &path) {
   for (const auto &part : path) {
     const auto name = part.string();
@@ -166,7 +288,8 @@ int run(const fs::path &source_root, const fs::path &output_dir) {
       }
       std::string content((std::istreambuf_iterator<char>(input)),
                           std::istreambuf_iterator<char>());
-      extractKernelRegistrars(content, detectGuard(entry.path()), entries);
+      const auto sanitized = stripCommentsAndStrings(content);
+      extractKernelRegistrars(sanitized, detectGuard(entry.path()), entries);
     }
   }
 

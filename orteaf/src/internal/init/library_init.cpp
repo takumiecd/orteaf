@@ -5,6 +5,9 @@
 #include <orteaf/internal/kernel/api/kernel_registry_api.h>
 #include <orteaf/internal/kernel/registry/kernel_auto_registry.h>
 
+#include <atomic>
+#include <mutex>
+
 #if ORTEAF_ENABLE_MPS
 #include <orteaf/internal/execution_context/mps/current_context.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_device.h>
@@ -20,7 +23,8 @@ namespace orteaf::internal::init {
 
 namespace {
 
-bool g_initialized = false;
+std::atomic<bool> g_initialized{false};
+std::mutex g_init_mutex;
 
 template <typename PoolConfig>
 void ensurePoolConfig(PoolConfig &cfg, std::size_t capacity) {
@@ -144,6 +148,7 @@ void applyCudaDefaults(LibraryConfig &config) {
 }  // namespace
 
 void initialize(const LibraryConfig &config) {
+  std::lock_guard<std::mutex> lock(g_init_mutex);
   if (g_initialized) {
     ::orteaf::internal::diagnostics::error::throwError(
         ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
@@ -175,10 +180,11 @@ void initialize(const LibraryConfig &config) {
     ::orteaf::internal::kernel::registry::registerAllKernels();
   }
 
-  g_initialized = true;
+  g_initialized.store(true);
 }
 
 void shutdown() {
+  std::lock_guard<std::mutex> lock(g_init_mutex);
   if (!g_initialized) {
     return;
   }
@@ -196,9 +202,9 @@ void shutdown() {
   ::orteaf::internal::execution_context::cuda::reset();
 #endif
 
-  g_initialized = false;
+  g_initialized.store(false);
 }
 
-bool isInitialized() noexcept { return g_initialized; }
+bool isInitialized() noexcept { return g_initialized.load(); }
 
 }  // namespace orteaf::internal::init
