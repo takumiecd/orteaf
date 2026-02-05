@@ -154,7 +154,7 @@ TEST(ParamId, ConstexprSupport) {
 // ============================================================
 
 TEST(ParamIdTables, ParamIdCountCorrect) {
-  EXPECT_EQ(param_tables::kParamIdCount, 13);
+  EXPECT_EQ(param_tables::kParamIdCount, 14);
 }
 
 // ============================================================
