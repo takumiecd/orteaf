@@ -4,11 +4,6 @@
 
 namespace orteaf::internal::kernel::registry {
 
-bool addKernelRegistrar(RegisterFn /*fn*/) {
-  // Dynamic registrars are currently disabled.
-  return false;
-}
-
 void registerAllKernels() {
   registerAllGeneratedKernels();
 }

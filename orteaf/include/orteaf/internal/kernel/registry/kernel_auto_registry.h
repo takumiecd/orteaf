@@ -4,12 +4,6 @@
 
 namespace orteaf::internal::kernel::registry {
 
-using RegisterFn = void (*)();
-
-// NOTE: Dynamic kernel registrars are currently disabled. The auto registry
-// is preserved for API compatibility, but addKernelRegistrar is a no-op.
-bool addKernelRegistrar(RegisterFn fn);
-
 // Register kernels discovered by the generated registry.
 void registerAllKernels();
 
