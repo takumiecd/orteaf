@@ -239,6 +239,8 @@ file(GLOB_RECURSE ORTEAF_KERNEL_REGISTRY_INPUTS CONFIGURE_DEPENDS
     ${ORTEAF_SOURCE_ROOT}/src/extension/kernel/*.mm
     ${ORTEAF_SOURCE_ROOT}/src/extension/kernel/*.cu
 )
+# NOTE: Some CMake generators may not reliably pick up new files with
+# CONFIGURE_DEPENDS. Re-run CMake when adding new kernel sources.
 
 add_custom_command(
     OUTPUT
