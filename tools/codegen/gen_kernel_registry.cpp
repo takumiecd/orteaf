@@ -345,6 +345,12 @@ int run(const fs::path &source_root, const fs::path &output_dir) {
   out << "}\n\n";
   out << "} // namespace orteaf::internal::kernel::registry\n";
 
+  out.flush();
+  if (!out) {
+    std::cerr << "Failed to fully write " << output_path << "\n";
+    return 1;
+  }
+
   return 0;
 }
 
