@@ -79,3 +79,6 @@ target_link_libraries(gen_roles
 )
 
 target_compile_features(gen_roles PRIVATE cxx_std_20)
+
+add_executable(gen_kernel_registry gen_kernel_registry.cpp)
+target_compile_features(gen_kernel_registry PRIVATE cxx_std_20)

@@ -6,8 +6,11 @@ namespace orteaf::internal::kernel::registry {
 
 using RegisterFn = void (*)();
 
+// NOTE: Dynamic kernel registrars are currently disabled. The auto registry
+// is preserved for API compatibility, but addKernelRegistrar is a no-op.
 bool addKernelRegistrar(RegisterFn fn);
 
+// Register kernels discovered by the generated registry.
 void registerAllKernels();
 
 }  // namespace orteaf::internal::kernel::registry
@@ -21,8 +24,5 @@ void registerAllKernels();
 #define ORTEAF_INTERNAL_UNIQUE_ID(base) ORTEAF_INTERNAL_CONCAT(base, __LINE__)
 #endif
 
-#define ORTEAF_REGISTER_KERNEL(fn)                                             \
-  namespace {                                                                  \
-  const bool ORTEAF_INTERNAL_UNIQUE_ID(_orteaf_kernel_reg_) =                  \
-      ::orteaf::internal::kernel::registry::addKernelRegistrar(fn);            \
-  }
+// Marker macro for the generated kernel registry (no-op at runtime).
+#define ORTEAF_REGISTER_KERNEL(fn) /* used by codegen only */
