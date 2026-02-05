@@ -1,6 +1,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <vector>
 
 #include <orteaf/internal/diagnostics/error/error.h>
 #include <orteaf/internal/dtype/dtype.h>
@@ -40,27 +41,6 @@ void fillTyped(void *data, std::size_t count, double value) {
 }
 
 template <typename T>
-void fillStridedRecursive(T *base, std::span<const std::int64_t> shape,
-                          std::span<const std::int64_t> strides,
-                          std::size_t dim, std::int64_t offset, T value) {
-  if (dim == shape.size()) {
-    base[offset] = value;
-    return;
-  }
-
-  const auto extent = shape[dim];
-  if (extent == 0) {
-    return;
-  }
-
-  const auto stride = strides[dim];
-  for (std::int64_t i = 0; i < extent; ++i) {
-    fillStridedRecursive(base, shape, strides, dim + 1,
-                         offset + i * stride, value);
-  }
-}
-
-template <typename T>
 void fillStridedTyped(void *data, std::span<const std::int64_t> shape,
                       std::span<const std::int64_t> strides,
                       std::int64_t offset, double value) {
@@ -82,7 +62,39 @@ void fillStridedTyped(void *data, std::span<const std::int64_t> shape,
 
   const T casted = castFillValue<T>(value);
   auto *typed = static_cast<T *>(data);
-  fillStridedRecursive(typed, shape, strides, 0, offset, casted);
+  const std::size_t rank = shape.size();
+  for (auto extent : shape) {
+    if (extent == 0) {
+      return;
+    }
+  }
+  std::vector<std::int64_t> indices(rank, 0);
+  std::int64_t current_offset = offset;
+
+  while (true) {
+    typed[current_offset] = casted;
+
+    std::size_t dim = rank;
+    while (dim > 0) {
+      --dim;
+      const auto extent = shape[dim];
+      if (extent == 0) {
+        return;
+      }
+      const auto stride = strides[dim];
+      if (indices[dim] + 1 < extent) {
+        ++indices[dim];
+        current_offset += stride;
+        break;
+      }
+      current_offset -= indices[dim] * stride;
+      indices[dim] = 0;
+    }
+
+    if (dim == 0 && indices[0] == 0) {
+      break;
+    }
+  }
 }
 
 }  // namespace

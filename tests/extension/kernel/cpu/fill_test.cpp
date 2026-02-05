@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <span>
 #include <vector>
+#include <algorithm>
 
 #include <orteaf/internal/dtype/dtype.h>
 #include <orteaf/internal/dtype/float16.h>
@@ -119,6 +120,31 @@ TEST(CpuFillTest, FillsOffsetView1D) {
       EXPECT_FLOAT_EQ(data[i], -1.0f);
     } else {
       EXPECT_FLOAT_EQ(data[i], static_cast<float>(200 + i));
+    }
+  }
+}
+
+TEST(CpuFillTest, FillsHighRankStridedView) {
+  std::vector<float> data(32);
+  std::fill(data.begin(), data.end(), 0.0f);
+
+  const std::array<std::int64_t, 8> shape{{1, 1, 1, 1, 1, 1, 2, 2}};
+  const std::array<std::int64_t, 8> strides{{16, 16, 16, 16, 16, 8, 2, 1}};
+  const std::int64_t offset = 3;
+
+  orteaf::extension::kernel::cpu::fillTensorStrided(
+      data.data(), std::span<const std::int64_t>(shape.data(), shape.size()),
+      std::span<const std::int64_t>(strides.data(), strides.size()), offset,
+      orteaf::internal::DType::F32, 7.0);
+
+  const std::array<std::size_t, 4> expected{{3, 4, 5, 6}};
+  for (std::size_t i = 0; i < data.size(); ++i) {
+    const bool should_fill =
+        std::find(expected.begin(), expected.end(), i) != expected.end();
+    if (should_fill) {
+      EXPECT_FLOAT_EQ(data[i], 7.0f);
+    } else {
+      EXPECT_FLOAT_EQ(data[i], 0.0f);
     }
   }
 }

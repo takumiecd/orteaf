@@ -46,15 +46,17 @@ std::string trim(std::string_view value) {
 }
 
 std::string detectGuard(const fs::path &path) {
-  const auto generic = path.generic_string();
-  if (generic.find("/cpu/") != std::string::npos) {
-    return "ORTEAF_ENABLE_CPU";
-  }
-  if (generic.find("/cuda/") != std::string::npos) {
-    return "ORTEAF_ENABLE_CUDA";
-  }
-  if (generic.find("/mps/") != std::string::npos) {
-    return "ORTEAF_ENABLE_MPS";
+  for (const auto &part : path) {
+    const auto name = part.string();
+    if (name == "cpu") {
+      return "ORTEAF_ENABLE_CPU";
+    }
+    if (name == "cuda") {
+      return "ORTEAF_ENABLE_CUDA";
+    }
+    if (name == "mps") {
+      return "ORTEAF_ENABLE_MPS";
+    }
   }
   return {};
 }
