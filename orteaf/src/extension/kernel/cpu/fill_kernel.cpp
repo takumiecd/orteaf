@@ -190,8 +190,15 @@ void fillExecute(
   }
 
   if (stats.contiguous) {
+    const auto elem_size = ::orteaf::internal::sizeOf(lease.dtype());
+    if (offset < 0 ||
+        static_cast<std::uint64_t>(offset) >
+            std::numeric_limits<std::size_t>::max() / elem_size) {
+      error::throwError(error::OrteafErrc::InvalidParameter,
+                        "Fill kernel byte offset exceeds addressable range");
+    }
     const auto byte_offset =
-        static_cast<std::size_t>(offset) * ::orteaf::internal::sizeOf(lease.dtype());
+        static_cast<std::size_t>(offset) * elem_size;
     auto *data = static_cast<std::byte *>(view.data()) + byte_offset;
     fillTensor(data, stats.numel, lease.dtype(), params.value.get());
     return;
