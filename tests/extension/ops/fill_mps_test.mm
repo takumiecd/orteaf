@@ -6,12 +6,11 @@
 #include <cstddef>
 #include <cstdint>
 
+#include <orteaf/extension/ops/copy_mps_to_host.h>
 #include <orteaf/extension/ops/fill.h>
 #include <orteaf/extension/tensor/dense_tensor_impl.h>
 #include <orteaf/internal/dtype/dtype.h>
 #include <orteaf/internal/execution/execution.h>
-#include <orteaf/internal/execution/mps/platform/wrapper/mps_buffer.h>
-#include <orteaf/internal/execution/mps/platform/wrapper/mps_command_buffer.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_device.h>
 #include <orteaf/internal/execution_context/mps/current_context.h>
 #include <orteaf/internal/init/library_init.h>
@@ -27,11 +26,11 @@ namespace mps_wrapper = ::orteaf::internal::execution::mps::platform::wrapper;
 using DType = ::orteaf::internal::DType;
 using Execution = ::orteaf::internal::execution::Execution;
 using DenseTensorImpl = ::orteaf::extension::tensor::DenseTensorImpl;
-using MpsStorageLease = ::orteaf::internal::storage::MpsStorageLease;
+using CpuStorageLease = ::orteaf::internal::storage::CpuStorageLease;
 
 namespace {
 
-const float *getMpsBuffer(const tensor::Tensor &t) {
+float *getCpuBuffer(tensor::Tensor &t) {
   auto *lease = t.tryAs<DenseTensorImpl>();
   if (!lease || !(*lease)) {
     return nullptr;
@@ -40,29 +39,21 @@ const float *getMpsBuffer(const tensor::Tensor &t) {
   if (impl == nullptr) {
     return nullptr;
   }
-  auto *mps_lease = impl->storageLease().tryAs<MpsStorageLease>();
-  if (!mps_lease || !(*mps_lease)) {
+  auto *cpu_lease = impl->storageLease().tryAs<CpuStorageLease>();
+  if (!cpu_lease || !(*cpu_lease)) {
     return nullptr;
   }
-  auto *storage = mps_lease->operator->();
+  auto *storage = cpu_lease->operator->();
   if (storage == nullptr || storage->buffer() == nullptr) {
     return nullptr;
   }
-  return static_cast<const float *>(
-      mps_wrapper::getBufferContentsConst(storage->buffer()));
+  return static_cast<float *>(storage->buffer());
 }
 
-void syncCurrentMpsQueue() {
-  auto queue_lease = mps_context::currentCommandQueue();
-  auto *resource = queue_lease.operator->();
-  ASSERT_NE(resource, nullptr);
-  ASSERT_NE(resource->queue(), nullptr);
-
-  auto command_buffer = mps_wrapper::createCommandBuffer(resource->queue());
-  ASSERT_NE(command_buffer, nullptr);
-  mps_wrapper::commit(command_buffer);
-  mps_wrapper::waitUntilCompleted(command_buffer);
-  mps_wrapper::destroyCommandBuffer(command_buffer);
+tensor::Tensor copyToHost(const tensor::Tensor &src) {
+  auto host = tensor::Tensor::dense(src.shape(), src.dtype(), Execution::Cpu);
+  ops::copyMpsToHost(host, src);
+  return host;
 }
 
 } // namespace
@@ -87,11 +78,11 @@ TEST_F(FillMpsOpTest, FillsDenseTensorF32) {
   auto t = tensor::Tensor::dense(shape, DType::F32, Execution::Mps);
 
   ops::fill(t, 3.5);
-  syncCurrentMpsQueue();
+  auto host = copyToHost(t);
 
-  const float *data = getMpsBuffer(t);
+  float *data = getCpuBuffer(host);
   ASSERT_NE(data, nullptr);
-  for (std::size_t i = 0; i < static_cast<std::size_t>(t.numel()); ++i) {
+  for (std::size_t i = 0; i < static_cast<std::size_t>(host.numel()); ++i) {
     EXPECT_FLOAT_EQ(data[i], 3.5f);
   }
 }
@@ -101,7 +92,6 @@ TEST_F(FillMpsOpTest, FillsContiguousSliceViewF32) {
   auto base = tensor::Tensor::dense(shape, DType::F32, Execution::Mps);
 
   ops::fill(base, -1.0);
-  syncCurrentMpsQueue();
 
   std::array<std::int64_t, 1> starts{2};
   std::array<std::int64_t, 1> sizes{3};
@@ -110,11 +100,11 @@ TEST_F(FillMpsOpTest, FillsContiguousSliceViewF32) {
   ASSERT_TRUE(view.isContiguous());
 
   ops::fill(view, 2.25);
-  syncCurrentMpsQueue();
+  auto host = copyToHost(base);
 
-  const float *data = getMpsBuffer(base);
+  float *data = getCpuBuffer(host);
   ASSERT_NE(data, nullptr);
-  for (std::size_t i = 0; i < static_cast<std::size_t>(base.numel()); ++i) {
+  for (std::size_t i = 0; i < static_cast<std::size_t>(host.numel()); ++i) {
     const bool should_fill = (i >= 2u && i < 5u);
     EXPECT_FLOAT_EQ(data[i], should_fill ? 2.25f : -1.0f);
   }
@@ -125,7 +115,6 @@ TEST_F(FillMpsOpTest, FillsNonContiguousSliceViewF32) {
   auto base = tensor::Tensor::dense(shape, DType::F32, Execution::Mps);
 
   ops::fill(base, -3.0);
-  syncCurrentMpsQueue();
 
   std::array<std::int64_t, 2> starts{1, 0};
   std::array<std::int64_t, 2> sizes{2, 3};
@@ -134,11 +123,11 @@ TEST_F(FillMpsOpTest, FillsNonContiguousSliceViewF32) {
   ASSERT_FALSE(view.isContiguous());
 
   ops::fill(view, 7.0);
-  syncCurrentMpsQueue();
+  auto host = copyToHost(base);
 
-  const float *data = getMpsBuffer(base);
+  float *data = getCpuBuffer(host);
   ASSERT_NE(data, nullptr);
-  for (std::size_t i = 0; i < static_cast<std::size_t>(base.numel()); ++i) {
+  for (std::size_t i = 0; i < static_cast<std::size_t>(host.numel()); ++i) {
     const bool should_fill =
         (i == 4u || i == 5u || i == 6u || i == 8u || i == 9u || i == 10u);
     EXPECT_FLOAT_EQ(data[i], should_fill ? 7.0f : -3.0f);

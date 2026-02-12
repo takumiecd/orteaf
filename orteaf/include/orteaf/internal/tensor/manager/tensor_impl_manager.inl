@@ -71,6 +71,9 @@ struct StorageLeaseFactory<::orteaf::internal::execution::Execution::Mps> {
                             ::orteaf::internal::sizeOf(req.dtype);
     storage_request.heap_key =
         MpsStorage::HeapDescriptorKey::Sized(numel_size);
+    storage_request.heap_key.storage_mode =
+        ::orteaf::internal::execution::mps::platform::wrapper::
+            kMPSStorageModePrivate;
     storage_request.dtype = req.dtype;
     storage_request.numel = static_cast<std::size_t>(numel);
     storage_request.alignment = req.alignment;
