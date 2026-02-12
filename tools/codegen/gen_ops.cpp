@@ -635,6 +635,7 @@ ParsedOpsFile ParseOpsFile(const fs::path &ops_input_path) {
     }
 
     // Merge catalogs from any file that has them
+    const bool has_catalogs = root["catalogs"] && root["catalogs"].IsMap();
     CatalogInfo file_catalogs = ParseCatalogs(root);
     parsed.catalogs.op_categories.insert(file_catalogs.op_categories.begin(),
                                          file_catalogs.op_categories.end());
@@ -647,7 +648,14 @@ ParsedOpsFile ParseOpsFile(const fs::path &ops_input_path) {
     // Merge ops from any file that has them
     const auto ops_node = root["ops"];
     if (!ops_node) {
-      continue; // Skip files without 'ops' key (e.g. catalogs.yml)
+      if (!has_catalogs) {
+        std::ostringstream oss;
+        oss << "File '" << yaml_path
+            << "' contains neither 'ops' nor 'catalogs' — possibly a typo or "
+               "empty file";
+        Fail(oss.str());
+      }
+      continue; // Catalogs-only file (e.g. catalogs.yml)
     }
     if (!ops_node.IsSequence()) {
       std::ostringstream oss;
