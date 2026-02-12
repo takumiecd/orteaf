@@ -10,6 +10,7 @@
 
 namespace cuda_rt = orteaf::internal::execution::cuda::manager;
 namespace base = orteaf::internal::base;
+namespace kernel = orteaf::internal::kernel;
 
 namespace {
 
@@ -21,6 +22,10 @@ cuda_rt::CudaKernelBaseManager::Config makeConfig() {
   config.payload_block_size = 2;
   return config;
 }
+
+void dummyExecute(
+    ::orteaf::internal::execution::cuda::resource::CudaKernelBase &,
+    kernel::KernelArgs &) {}
 
 } // namespace
 
@@ -64,6 +69,41 @@ TEST(CudaKernelBaseManagerTest, AcquireCopiesKeysIntoPayload) {
   EXPECT_EQ(lease->keys()[0].second, "kernel_a");
   EXPECT_EQ(lease->keys()[1].first.identifier, "embedded_a");
   EXPECT_EQ(lease->keys()[1].second, "kernel_b");
+}
+
+TEST(CudaKernelBaseManagerTest, AcquireFromMetadataCopiesKeysAndExecute) {
+  cuda_rt::CudaKernelBaseManager manager;
+  manager.configureForTest(makeConfig());
+
+  base::HeapVector<cuda_rt::CudaKernelBaseManager::Key> keys;
+  keys.pushBack({cuda_rt::ModuleKey::File("module.bin"), "kernel_a"});
+
+  ::orteaf::internal::execution::cuda::resource::CudaKernelMetadata metadata{};
+  ASSERT_TRUE(metadata.initialize(keys));
+  metadata.setExecute(dummyExecute);
+
+  auto lease = manager.acquire(metadata);
+  ASSERT_TRUE(lease);
+  ASSERT_NE(lease.operator->(), nullptr);
+  ASSERT_EQ(lease->keys().size(), 1u);
+  EXPECT_EQ(lease->keys()[0].first.identifier, "module.bin");
+  EXPECT_EQ(lease->keys()[0].second, "kernel_a");
+  EXPECT_EQ(lease->execute(), dummyExecute);
+}
+
+TEST(CudaKernelBaseManagerTest, GetFunctionLeaseReturnsInvalidWhenUnconfigured) {
+  cuda_rt::CudaKernelBaseManager manager;
+  manager.configureForTest(makeConfig());
+
+  base::HeapVector<cuda_rt::CudaKernelBaseManager::Key> keys;
+  keys.pushBack({cuda_rt::ModuleKey::File("module.bin"), "kernel_a"});
+
+  auto base_lease = manager.acquire(keys);
+  ASSERT_TRUE(base_lease);
+
+  auto function_lease = base_lease->getFunctionLease(
+      ::orteaf::internal::execution::cuda::CudaContextHandle{}, 0);
+  EXPECT_FALSE(function_lease);
 }
 
 #endif // ORTEAF_ENABLE_CUDA

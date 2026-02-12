@@ -120,6 +120,10 @@ public:
 
   CpuKernelMetadataLease acquire(ExecuteFunc execute);
 
+  CpuKernelMetadataLease acquire(
+      const ::orteaf::internal::execution::cpu::resource::CpuKernelMetadata
+          &metadata);
+
 #if ORTEAF_ENABLE_TEST
   void configureForTest(const Config &config) {
     InternalConfig internal{};

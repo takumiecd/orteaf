@@ -86,13 +86,11 @@ public:
     return context_lease;
   }
 
-  static KernelBaseLease acquireKernelBase(const KernelKeys &keys) {
-    return manager().kernelBaseManager().acquire(keys);
-  }
-
   static KernelMetadataLease acquireKernelMetadata(const KernelKeys &keys) {
     return manager().kernelMetadataManager().acquire(keys);
   }
+
+  static ExecutionManager &executionManager() { return manager(); }
 
 private:
   // Singleton access to the execution manager (hidden from external callers).

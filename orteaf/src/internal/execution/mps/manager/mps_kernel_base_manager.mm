@@ -16,7 +16,9 @@ using DeviceLease = ::orteaf::internal::execution::mps::manager::
 bool KernelBasePayloadPoolTraits::create(Payload &payload,
                                         const Request &request,
                                         const Context &) {
-  return payload.setKeys(request.keys);
+  const bool key_ok = payload.setKeys(request.keys);
+  payload.setExecute(request.execute);
+  return key_ok;
 }
 
 void KernelBasePayloadPoolTraits::destroy(Payload &payload,
@@ -66,11 +68,28 @@ MpsKernelBaseManager::acquire(
   
   KernelBasePayloadPoolTraits::Request request{};
   request.keys = keys;
+  request.execute = nullptr;
   const KernelBasePayloadPoolTraits::Context context{};
   
   auto handle = core_.reserveUncreatedPayloadOrGrowAndEmplaceOrThrow(request,
                                                                      context);
   
+  return core_.acquireStrongLease(handle);
+}
+
+MpsKernelBaseManager::KernelBaseLease
+MpsKernelBaseManager::acquire(
+    const ::orteaf::internal::execution::mps::resource::MpsKernelMetadata
+        &metadata) {
+  core_.ensureConfigured();
+
+  KernelBasePayloadPoolTraits::Request request{};
+  request.keys = metadata.keys();
+  request.execute = metadata.execute();
+  const KernelBasePayloadPoolTraits::Context context{};
+
+  auto handle = core_.reserveUncreatedPayloadOrGrowAndEmplaceOrThrow(request,
+                                                                     context);
   return core_.acquireStrongLease(handle);
 }
 

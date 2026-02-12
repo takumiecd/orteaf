@@ -62,15 +62,16 @@ public:
   /**
    * @brief Rebuild a KernelEntry from this metadata.
    *
-   * Delegates to the backend-specific Metadata::rebuild() method.
+   * Rebuilds backend-specific KernelBase via the corresponding
+   * KernelBaseManager::acquire(metadata) path.
    */
   ::orteaf::internal::kernel::core::KernelEntry rebuild() const;
 
   /**
    * @brief Build metadata from a KernelEntry.
    *
-   * Delegates to backend-specific Metadata::buildMetadataLeaseFromBase()
-   * methods for lease acquisition.
+   * Extracts metadata data from backend KernelBase payload and acquires a
+   * backend metadata lease via KernelMetadataManager.
    */
   static KernelMetadataLease
   fromEntry(const ::orteaf::internal::kernel::core::KernelEntry &entry);

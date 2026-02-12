@@ -29,9 +29,12 @@ struct KernelMetadataPayloadPoolTraits {
   using LibraryKey = ::orteaf::internal::execution::mps::manager::LibraryKey;
   using FunctionKey = ::orteaf::internal::execution::mps::manager::FunctionKey;
   using Key = std::pair<LibraryKey, FunctionKey>;
+  using ExecuteFunc =
+      ::orteaf::internal::execution::mps::resource::MpsKernelMetadata::ExecuteFunc;
 
   struct Request {
     ::orteaf::internal::base::HeapVector<Key> keys;
+    ExecuteFunc execute{nullptr};
   };
 
   struct Context {};
@@ -88,6 +91,8 @@ public:
   using LibraryKey = ::orteaf::internal::execution::mps::manager::LibraryKey;
   using FunctionKey = ::orteaf::internal::execution::mps::manager::FunctionKey;
   using Key = std::pair<LibraryKey, FunctionKey>;
+  using ExecuteFunc =
+      ::orteaf::internal::execution::mps::resource::MpsKernelMetadata::ExecuteFunc;
 
   using ControlBlock = Core::ControlBlock;
   using ControlBlockHandle = Core::ControlBlockHandle;
@@ -128,6 +133,10 @@ public:
 
   MpsKernelMetadataLease acquire(
       const ::orteaf::internal::base::HeapVector<Key> &keys);
+
+  MpsKernelMetadataLease acquire(
+      const ::orteaf::internal::execution::mps::resource::MpsKernelMetadata
+          &metadata);
 
 #if ORTEAF_ENABLE_TEST
   void configureForTest(const Config &config) {

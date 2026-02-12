@@ -62,8 +62,6 @@ struct CudaKernelBase {
 
   void configureFunctions(ContextLease &context_lease);
 
-  bool setKeys(const ::orteaf::internal::base::HeapVector<Key> &keys);
-
   bool ensureFunctions(ContextLease &context_lease);
 
   void reset() noexcept {
@@ -71,57 +69,33 @@ struct CudaKernelBase {
     keys_.clear();
   }
 
-  FunctionLease *
-  getFunctionLease(::orteaf::internal::execution::cuda::CudaContextHandle context,
-                   std::size_t index) noexcept {
-    const auto idx = findContextIndex(context);
-    if (idx == kInvalidIndex) {
-      return nullptr;
-    }
-    auto &entry = context_functions_[idx];
-    if (!entry.configured || index >= entry.functions.size()) {
-      return nullptr;
-    }
-    return &entry.functions[index];
-  }
-
-  const FunctionLease *
+  FunctionLease
   getFunctionLease(::orteaf::internal::execution::cuda::CudaContextHandle context,
                    std::size_t index) const noexcept {
     const auto idx = findContextIndex(context);
     if (idx == kInvalidIndex) {
-      return nullptr;
+      return FunctionLease{};
     }
     const auto &entry = context_functions_[idx];
     if (!entry.configured || index >= entry.functions.size()) {
-      return nullptr;
+      return FunctionLease{};
     }
-    return &entry.functions[index];
+    return entry.functions[index];
   }
 
   FunctionType
   getFunction(::orteaf::internal::execution::cuda::CudaContextHandle context,
               std::size_t index) const noexcept {
-    const auto *lease = getFunctionLease(context, index);
-    if (lease == nullptr || !(*lease)) {
+    auto lease = getFunctionLease(context, index);
+    if (!lease) {
       return nullptr;
     }
-    auto *payload = lease->operator->();
+    auto *payload = lease.operator->();
     if (payload == nullptr || *payload == nullptr) {
       return nullptr;
     }
     return *payload;
   }
-
-  void addKey(const ModuleKey &module_key, const char *function_name) {
-    keys_.pushBack(Key{module_key, std::string(function_name)});
-  }
-
-  void addKey(const ModuleKey &module_key, std::string function_name) {
-    keys_.pushBack(Key{module_key, std::move(function_name)});
-  }
-
-  void reserveKeys(std::size_t count) { keys_.reserve(count); }
 
   std::size_t kernelCount() const noexcept { return keys_.size(); }
 
@@ -157,6 +131,8 @@ private:
       KernelBasePayloadPoolTraits;
 
   void run(::orteaf::internal::kernel::KernelArgs &args);
+
+  bool setKeys(const ::orteaf::internal::base::HeapVector<Key> &keys);
 
   void setExecute(ExecuteFunc execute) noexcept { execute_ = execute; }
 

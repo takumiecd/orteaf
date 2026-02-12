@@ -76,4 +76,11 @@ CpuKernelBaseManager::acquire(ExecuteFunc execute) {
   return core_.acquireStrongLease(handle);
 }
 
+CpuKernelBaseManager::KernelBaseLease
+CpuKernelBaseManager::acquire(
+    const ::orteaf::internal::execution::cpu::resource::CpuKernelMetadata
+        &metadata) {
+  return acquire(metadata.execute());
+}
+
 } // namespace orteaf::internal::execution::cpu::manager

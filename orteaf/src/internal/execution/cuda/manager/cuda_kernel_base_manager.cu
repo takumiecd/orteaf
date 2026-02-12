@@ -7,7 +7,9 @@ namespace orteaf::internal::execution::cuda::manager {
 bool KernelBasePayloadPoolTraits::create(Payload &payload,
                                          const Request &request,
                                          const Context &) {
-  return payload.setKeys(request.keys);
+  const bool key_ok = payload.setKeys(request.keys);
+  payload.setExecute(request.execute);
+  return key_ok;
 }
 
 void KernelBasePayloadPoolTraits::destroy(Payload &payload, const Request &,
@@ -51,6 +53,22 @@ CudaKernelBaseManager::KernelBaseLease CudaKernelBaseManager::acquire(
 
   KernelBasePayloadPoolTraits::Request request{};
   request.keys = keys;
+  request.execute = nullptr;
+  const KernelBasePayloadPoolTraits::Context context{};
+
+  auto handle = core_.reserveUncreatedPayloadOrGrowAndEmplaceOrThrow(request,
+                                                                     context);
+  return core_.acquireStrongLease(handle);
+}
+
+CudaKernelBaseManager::KernelBaseLease CudaKernelBaseManager::acquire(
+    const ::orteaf::internal::execution::cuda::resource::CudaKernelMetadata
+        &metadata) {
+  core_.ensureConfigured();
+
+  KernelBasePayloadPoolTraits::Request request{};
+  request.keys = metadata.keys();
+  request.execute = metadata.execute();
   const KernelBasePayloadPoolTraits::Context context{};
 
   auto handle = core_.reserveUncreatedPayloadOrGrowAndEmplaceOrThrow(request,

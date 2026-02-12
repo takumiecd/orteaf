@@ -10,6 +10,7 @@
 #include "orteaf/internal/base/pool/slot_pool.h"
 #include "orteaf/internal/execution/cuda/cuda_handles.h"
 #include "orteaf/internal/execution/cuda/resource/cuda_kernel_base.h"
+#include "orteaf/internal/execution/cuda/resource/cuda_kernel_metadata.h"
 
 namespace orteaf::internal::execution::cuda::manager {
 
@@ -20,9 +21,12 @@ struct KernelBasePayloadPoolTraits {
   using Payload = ::orteaf::internal::execution::cuda::resource::CudaKernelBase;
   using Handle = ::orteaf::internal::execution::cuda::CudaKernelBaseHandle;
   using Key = ::orteaf::internal::execution::cuda::resource::CudaKernelBase::Key;
+  using ExecuteFunc =
+      ::orteaf::internal::execution::cuda::resource::CudaKernelBase::ExecuteFunc;
 
   struct Request {
     ::orteaf::internal::base::HeapVector<Key> keys;
+    ExecuteFunc execute{nullptr};
   };
 
   struct Context {};
@@ -60,6 +64,8 @@ public:
   using KernelBaseHandle =
       ::orteaf::internal::execution::cuda::CudaKernelBaseHandle;
   using Key = ::orteaf::internal::execution::cuda::resource::CudaKernelBase::Key;
+  using ExecuteFunc =
+      ::orteaf::internal::execution::cuda::resource::CudaKernelBase::ExecuteFunc;
 
   using ControlBlock = Core::ControlBlock;
   using ControlBlockHandle = Core::ControlBlockHandle;
@@ -97,6 +103,10 @@ public:
 
   KernelBaseLease acquire(
       const ::orteaf::internal::base::HeapVector<Key> &keys);
+
+  KernelBaseLease acquire(
+      const ::orteaf::internal::execution::cuda::resource::CudaKernelMetadata
+          &metadata);
 
 #if ORTEAF_ENABLE_TEST
   void configureForTest(const Config &config) {

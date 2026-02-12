@@ -7,6 +7,7 @@
 #include "orteaf/internal/base/pool/slot_pool.h"
 #include "orteaf/internal/execution/cpu/cpu_handles.h"
 #include "orteaf/internal/execution/cpu/resource/cpu_kernel_base.h"
+#include "orteaf/internal/execution/cpu/resource/cpu_kernel_metadata.h"
 
 namespace orteaf::internal::execution::cpu::manager {
 
@@ -135,6 +136,13 @@ public:
    * @return Strong lease to kernel base resource
    */
   KernelBaseLease acquire(ExecuteFunc execute);
+
+  /**
+   * @brief Acquire a kernel base lease from metadata.
+   */
+  KernelBaseLease acquire(
+      const ::orteaf::internal::execution::cpu::resource::CpuKernelMetadata
+          &metadata);
 
 #if ORTEAF_ENABLE_TEST
   void configureForTest(const Config &config) {

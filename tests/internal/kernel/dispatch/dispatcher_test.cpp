@@ -40,15 +40,6 @@ kernel::core::KernelMetadataLease makeTestMetadataWithCpuBase() {
   return kernel::core::KernelMetadataLease{std::move(metadata_lease)};
 }
 
-// Helper to create a test kernel entry with CPU base
-kernel::core::KernelEntry makeTestCpuEntry() {
-  using CpuExecutionApi =
-      ::orteaf::internal::execution::cpu::api::CpuExecutionApi;
-  // Acquire a CPU kernel base lease with execute function
-  auto lease = CpuExecutionApi::acquireKernelBase(mockExecuteFunc);
-  return kernel::core::KernelEntry(std::move(lease));
-}
-
 // Helper to create a test metadata
 kernel::core::KernelMetadataLease makeTestMetadata() {
   return kernel::core::KernelMetadataLease{};

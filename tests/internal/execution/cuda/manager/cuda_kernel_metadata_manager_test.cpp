@@ -10,6 +10,7 @@
 
 namespace cuda_rt = orteaf::internal::execution::cuda::manager;
 namespace base = orteaf::internal::base;
+namespace kernel = orteaf::internal::kernel;
 
 namespace {
 
@@ -21,6 +22,10 @@ cuda_rt::CudaKernelMetadataManager::Config makeConfig() {
   config.payload_block_size = 2;
   return config;
 }
+
+void dummyExecute(
+    ::orteaf::internal::execution::cuda::resource::CudaKernelBase &,
+    kernel::KernelArgs &) {}
 
 } // namespace
 
@@ -63,6 +68,26 @@ TEST(CudaKernelMetadataManagerTest, AcquireCopiesKeysIntoPayload) {
   EXPECT_EQ(lease->keys()[0].second, "kernel_a");
   EXPECT_EQ(lease->keys()[1].first.identifier, "embedded_a");
   EXPECT_EQ(lease->keys()[1].second, "kernel_b");
+}
+
+TEST(CudaKernelMetadataManagerTest, AcquireFromMetadataCopiesKeysAndExecute) {
+  cuda_rt::CudaKernelMetadataManager manager;
+  manager.configureForTest(makeConfig());
+
+  base::HeapVector<cuda_rt::CudaKernelMetadataManager::Key> keys;
+  keys.pushBack({cuda_rt::ModuleKey::File("module.bin"), "kernel_a"});
+
+  ::orteaf::internal::execution::cuda::resource::CudaKernelMetadata metadata{};
+  ASSERT_TRUE(metadata.initialize(keys));
+  metadata.setExecute(dummyExecute);
+
+  auto lease = manager.acquire(metadata);
+  ASSERT_TRUE(lease);
+  ASSERT_NE(lease.operator->(), nullptr);
+  ASSERT_EQ(lease->keys().size(), 1u);
+  EXPECT_EQ(lease->keys()[0].first.identifier, "module.bin");
+  EXPECT_EQ(lease->keys()[0].second, "kernel_a");
+  EXPECT_EQ(lease->execute(), dummyExecute);
 }
 
 #endif // ORTEAF_ENABLE_CUDA

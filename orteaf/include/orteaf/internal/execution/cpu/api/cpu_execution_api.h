@@ -41,13 +41,11 @@ public:
     return device_lease;
   }
 
-  static KernelBaseLease acquireKernelBase(ExecuteFunc execute) {
-    return manager().kernelBaseManager().acquire(execute);
-  }
-
   static KernelMetadataLease acquireKernelMetadata(ExecuteFunc execute) {
     return manager().kernelMetadataManager().acquire(execute);
   }
+
+  static ExecutionManager &executionManager() { return manager(); }
 
 private:
   static ExecutionManager &manager() {

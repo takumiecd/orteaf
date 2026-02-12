@@ -22,9 +22,12 @@ struct KernelMetadataPayloadPoolTraits {
   using Handle = ::orteaf::internal::execution::cuda::CudaKernelMetadataHandle;
   using Key = ::orteaf::internal::execution::cuda::resource::
       CudaKernelMetadata::Key;
+  using ExecuteFunc =
+      ::orteaf::internal::execution::cuda::resource::CudaKernelMetadata::ExecuteFunc;
 
   struct Request {
     ::orteaf::internal::base::HeapVector<Key> keys;
+    ExecuteFunc execute{nullptr};
   };
 
   struct Context {};
@@ -63,6 +66,8 @@ public:
       ::orteaf::internal::execution::cuda::CudaKernelMetadataHandle;
   using Key = ::orteaf::internal::execution::cuda::resource::
       CudaKernelMetadata::Key;
+  using ExecuteFunc =
+      ::orteaf::internal::execution::cuda::resource::CudaKernelMetadata::ExecuteFunc;
 
   using ControlBlock = Core::ControlBlock;
   using ControlBlockHandle = Core::ControlBlockHandle;
@@ -101,6 +106,10 @@ public:
 
   CudaKernelMetadataLease
   acquire(const ::orteaf::internal::base::HeapVector<Key> &keys);
+
+  CudaKernelMetadataLease acquire(
+      const ::orteaf::internal::execution::cuda::resource::CudaKernelMetadata
+          &metadata);
 
 #if ORTEAF_ENABLE_TEST
   void configureForTest(const Config &config) {

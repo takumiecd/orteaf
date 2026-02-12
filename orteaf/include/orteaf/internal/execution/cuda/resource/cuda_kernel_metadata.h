@@ -5,11 +5,6 @@
 #include "orteaf/internal/base/heap_vector.h"
 #include "orteaf/internal/execution/cuda/resource/cuda_kernel_base.h"
 
-namespace orteaf::internal::kernel::core {
-class KernelMetadataLease;
-class KernelEntry;
-}
-
 namespace orteaf::internal::execution::cuda::resource {
 
 struct CudaKernelMetadata {
@@ -34,17 +29,6 @@ struct CudaKernelMetadata {
 
   ExecuteFunc execute() const noexcept { return execute_; }
   void setExecute(ExecuteFunc execute) noexcept { execute_ = execute; }
-
-  void rebuild(::orteaf::internal::kernel::core::KernelEntry &entry) const;
-
-  static CudaKernelMetadata buildFromBase(
-      const ::orteaf::internal::execution::cuda::resource::CudaKernelBase
-          &base);
-
-  static ::orteaf::internal::kernel::core::KernelMetadataLease
-  buildMetadataLeaseFromBase(
-      const ::orteaf::internal::execution::cuda::resource::CudaKernelBase
-          &base);
 
 private:
   ::orteaf::internal::base::HeapVector<Key> keys_{};
