@@ -620,12 +620,17 @@ ParsedOpsFile ParseOpsFile(const fs::path &ops_input_path) {
       Fail(oss.str());
     }
 
-    // Read schema_version from the first file that has it
-    if (!schema_version_set) {
-      if (auto sv =
-              ReadOptionalString(root, "schema_version", yaml_path.string())) {
+    // Read and validate schema_version across all files
+    if (auto sv =
+            ReadOptionalString(root, "schema_version", yaml_path.string())) {
+      if (!schema_version_set) {
         parsed.schema_version = *sv;
         schema_version_set = true;
+      } else if (*sv != parsed.schema_version) {
+        std::ostringstream oss;
+        oss << "schema_version mismatch in '" << yaml_path << "': expected '"
+            << parsed.schema_version << "', found '" << *sv << "'";
+        Fail(oss.str());
       }
     }
 
