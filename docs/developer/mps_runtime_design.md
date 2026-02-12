@@ -37,7 +37,7 @@ graph BT
 ## KernelBase と Session の責務境界
 - `MpsKernelBase` は「カーネルキーと device ごとの pipeline lease キャッシュ」のみを責務に持つ。
 - `MpsKernelSession` は RAII でコマンド発行のライフサイクル（begin/finish）を担う。
-  - `begin` 途中失敗時に中間ハンドルを回収し、`finish` で `endEncoding/commit` 後に encoder / command buffer を解放する。
+  - `begin` 途中失敗時に中間ハンドルを回収し、`finish` で `endEncoding/commit` と encoder 解放を行う。
 - `MpsKernelSessionOps` はバインド・dispatch・同期トークン更新など、実行時オペレーションのユーティリティを担う。
 - 実装上は `MpsKernelSessionOps` の同期処理を `mps_kernel_session_sync_ops.h` に分離し、依存の重い処理を局所化する。
 - 運用ルールとして、新しい「便利メソッド」は `MpsKernelBase` に追加せず、`MpsKernelSessionOps` またはその detail ヘッダへ追加する。

@@ -170,9 +170,7 @@ private:
       Ops::endEncoding(encoder_);
       Ops::commit(command_buffer_);
       Ops::destroyComputeCommandEncoder(encoder_);
-      Ops::destroyCommandBuffer(command_buffer_);
       args_ = nullptr;
-      command_buffer_ = nullptr;
       encoder_ = nullptr;
       committed_ = true;
     }
