@@ -7,22 +7,14 @@
 #include <orteaf/extension/ops/tensor_ops.h>
 #include <orteaf/extension/tensor/dense_tensor_impl.h>
 #include <orteaf/internal/dtype/dtype.h>
-#include <orteaf/internal/execution/cpu/api/cpu_execution_api.h>
 #include <orteaf/internal/execution/execution.h>
-#include <orteaf/internal/execution_context/cpu/current_context.h>
-#include <orteaf/internal/kernel/api/kernel_registry_api.h>
-#include <orteaf/internal/kernel/registry/kernel_auto_registry.h>
+#include <orteaf/internal/init/library_init.h>
 #include <orteaf/internal/storage/registry/storage_types.h>
-#include <orteaf/internal/tensor/api/tensor_api.h>
 #include <orteaf/user/tensor/tensor.h>
 
 namespace ops = ::orteaf::extension::ops;
 namespace tensor = ::orteaf::user::tensor;
-namespace tensor_api = ::orteaf::internal::tensor::api;
-namespace cpu_api = ::orteaf::internal::execution::cpu::api;
-namespace kernel_registry = ::orteaf::internal::kernel::registry;
-namespace kernel_api = ::orteaf::internal::kernel::api;
-namespace cpu_context = ::orteaf::internal::execution_context::cpu;
+namespace init = ::orteaf::internal::init;
 
 using DType = ::orteaf::internal::DType;
 using Execution = ::orteaf::internal::execution::Execution;
@@ -55,22 +47,9 @@ float *getCpuBuffer(tensor::Tensor &t) {
 
 class FillOpTest : public ::testing::Test {
 protected:
-  void SetUp() override {
-    cpu_api::CpuExecutionApi::ExecutionManager::Config cpu_config{};
-    cpu_api::CpuExecutionApi::configure(cpu_config);
+  void SetUp() override { init::initialize(); }
 
-    tensor_api::TensorApi::Config tensor_config{};
-    tensor_api::TensorApi::configure(tensor_config);
-
-    kernel_registry::registerAllKernels();
-  }
-
-  void TearDown() override {
-    cpu_context::reset();
-    kernel_api::KernelRegistryApi::clear();
-    tensor_api::TensorApi::shutdown();
-    cpu_api::CpuExecutionApi::shutdown();
-  }
+  void TearDown() override { init::shutdown(); }
 };
 
 TEST_F(FillOpTest, FillsDenseTensor) {
