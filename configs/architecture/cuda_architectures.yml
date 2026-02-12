@@ -1,0 +1,32 @@
+schema_version: "1.0"
+
+architectures:
+  - id: "Sm80"
+    display_name: "CUDA SM80"
+    execution: "Cuda"
+    metadata:
+      parent: "CudaGeneric"
+      description: "Ampere 世代 GPU (A100 など) 向け最適化"
+      detect:
+        vendor: "nvidia"
+        compute_capability: 80
+
+  - id: "Sm86"
+    display_name: "CUDA SM86"
+    execution: "Cuda"
+    metadata:
+      parent: "Sm80"
+      description: "Ampere 世代 GPU (RTX 30 シリーズ) 向け最適化"
+      detect:
+        vendor: "nvidia"
+        compute_capability: 86
+
+  - id: "Sm90"
+    display_name: "CUDA SM90"
+    execution: "Cuda"
+    metadata:
+      parent: "Sm80"
+      description: "Hopper 世代 GPU (H100 など) 向け最適化"
+      detect:
+        vendor: "nvidia"
+        compute_capability: 90

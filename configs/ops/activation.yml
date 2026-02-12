@@ -1,0 +1,29 @@
+schema_version: "1.0"
+
+ops:
+  - id: "Relu"
+    display_name: "ReLU"
+    category: "activation"
+    arity: 1
+    inputs:
+      - name: "input"
+        description: "Input tensor"
+        dtype_constraints:
+          mode: "allow"
+          categories: ["floating_point"]
+    outputs:
+      - name: "output"
+        description: "Rectified tensor"
+        dtype_rule:
+          kind: "same_as"
+          input: "input"
+    compute_policy:
+      kind: "same_as"
+      input: "input"
+    shape_inference:
+      kind: "identity"
+    metadata:
+      description: "Rectified Linear Unit activation"
+      tags: ["elementwise", "activation"]
+      commutative: false
+      differentiable: true

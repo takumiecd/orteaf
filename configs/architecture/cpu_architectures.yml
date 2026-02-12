@@ -1,0 +1,37 @@
+schema_version: "1.0"
+
+architectures:
+  - id: "Zen4"
+    display_name: "Zen 4 AVX512"
+    execution: "Cpu"
+    metadata:
+      parent: "CpuGeneric"
+      description: "Zen 4 / AVX-512 対応 CPU 向け最適化"
+      detect:
+        vendor: "amd"
+        family: 25
+        features: ["avx512"]
+
+  - id: "Skylake"
+    display_name: "Skylake AVX512"
+    execution: "Cpu"
+    metadata:
+      parent: "CpuGeneric"
+      description: "Intel Skylake-X / AVX-512 対応 CPU 向け最適化"
+      detect:
+        vendor: "intel"
+        family: 6
+        model: [85]
+        features: ["avx512"]
+
+  - id: "IntelCometLake"
+    display_name: "Intel Comet Lake"
+    execution: "Cpu"
+    metadata:
+      parent: "CpuGeneric"
+      description: "Comet Lake ファミリ (Core i9-10850K など) 向けの AVX2 最適化"
+      detect:
+        vendor: "intel"
+        family: 6
+        model: [165, 166]
+        features: ["avx2"]

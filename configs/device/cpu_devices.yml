@@ -1,0 +1,24 @@
+schema_version: "1.0"
+
+devices:
+  - id: "CpuGeneric"
+    display_name: "Generic CPU"
+    execution: "Cpu"
+    architecture: "Generic"
+    memory:
+      max_bytes: 17179869184   # 16 GiB
+    supported_dtypes: ["F32", "F64", "I32", "I64"]
+    supported_ops: ["Add", "MatMul", "Relu", "SpikeThreshold"]
+    capabilities:
+      isa: "SSE4.2"
+
+  - id: "CpuZen4"
+    display_name: "Zen 4 (AVX-512)"
+    execution: "Cpu"
+    architecture: "Zen4"
+    memory:
+      max_bytes: 34359738368   # 32 GiB
+    supported_dtypes: ["F32", "F64", "F16"]
+    supported_ops: ["Add", "MatMul", "Relu", "SpikeThreshold", "CustomQuantize"]
+    capabilities:
+      isa: "AVX-512 + BF16"

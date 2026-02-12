@@ -1,0 +1,32 @@
+schema_version: "1.0"
+
+architectures:
+  - id: "M2"
+    display_name: "Apple M2 GPU"
+    execution: "Mps"
+    metadata:
+      parent: "MpsGeneric"
+      description: "Apple Silicon M2 世代 GPU 向け最適化"
+      detect:
+        vendor: "apple"
+        metal_family: "m2"
+
+  - id: "M3"
+    display_name: "Apple M3 GPU"
+    execution: "Mps"
+    metadata:
+      parent: "MpsGeneric"
+      description: "Apple Silicon M3 世代 GPU 向け最適化"
+      detect:
+        vendor: "apple"
+        metal_family: "m3"
+
+  - id: "M4"
+    display_name: "Apple M4 GPU"
+    execution: "Mps"
+    metadata:
+      parent: "MpsGeneric"
+      description: "Apple Silicon M4 世代 GPU 向け最適化"
+      detect:
+        vendor: "apple"
+        metal_family: "m4"

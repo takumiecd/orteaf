@@ -1,0 +1,29 @@
+schema_version: "1.0"
+
+catalogs:
+  categories:
+    arithmetic:
+      description: "Elementwise arithmetic operations (e.g. adds, multiplies)"
+    linear_algebra:
+      description: "Tensor and matrix algebra kernels"
+    reduction:
+      description: "Aggregation operators that reduce axes"
+    activation:
+      description: "Pointwise neural activation functions"
+    spiking:
+      description: "Spiking neural network primitives"
+    utility:
+      description: "Utility and debugging operators"
+  dtype_categories:
+    boolean: "Boolean and mask tensors"
+    signed_integer: "Signed integral tensors"
+    unsigned_integer: "Unsigned integral tensors"
+    floating_point: "IEEE754 floating point tensors"
+  shape_kinds:
+    none: "No output shape (side-effect op)"
+    elementwise: "Follows elementwise broadcasting semantics"
+    broadcast: "Broadcasts operands to a shared shape"
+    matmul: "Matrix multiplication or batched GEMM semantics"
+    reduce: "Reduces selected axes to a lower-rank tensor"
+    identity: "Propagates input shape directly"
+    custom: "Requires custom inference callback"

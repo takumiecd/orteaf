@@ -1,0 +1,38 @@
+schema_version: "1.0"
+
+devices:
+  - id: "MpsGeneric"
+    display_name: "Generic MPS Device"
+    execution: "Mps"
+    architecture: "Generic"
+    memory:
+      max_bytes: 2147483648   # 2 GiB
+    supported_dtypes: ["F32"]
+    supported_ops: ["Add", "Relu"]
+    capabilities:
+      metal_version: "3.0"
+
+  - id: "MpsM3Max40c"
+    display_name: "M3 Max (40-core GPU)"
+    execution: "Mps"
+    architecture: "M3"
+    memory:
+      max_bytes: 34359738368   # 32 GiB
+    supported_dtypes: ["F32", "F16"]
+    supported_ops: ["Add", "MatMul", "Relu", "CustomQuantize"]
+    capabilities:
+      metal_version: "3.1"
+      supports_attention: "true"
+
+  - id: "MpsM4Pro"
+    display_name: "M4 Pro (Integrated GPU)"
+    execution: "Mps"
+    architecture: "M4"
+    memory:
+      max_bytes: 25769803776   # 24 GiB
+    supported_dtypes: ["F32", "F16"]
+    supported_ops: ["Add", "MatMul", "Relu", "CustomQuantize"]
+    capabilities:
+      metal_version: "3.2"
+      neural_engine_accel: "true"
+    notes: "Apple Silicon M4 Pro unified memory GPU"

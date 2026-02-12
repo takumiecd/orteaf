@@ -85,13 +85,15 @@ add_custom_target(generate_dtypes
         ${DTYPE_GEN_DIR}/dtype_tables.h
 )
 
+file(GLOB OPS_YAML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/configs/ops/*.yml")
+
 add_custom_command(
     OUTPUT
         ${OPS_GEN_DIR}/ops.def
         ${OPS_GEN_DIR}/ops_tables.h
-    COMMAND $<TARGET_FILE:gen_ops> ${CMAKE_CURRENT_SOURCE_DIR}/configs/ops/ops.yml ${OPS_GEN_DIR}
+    COMMAND $<TARGET_FILE:gen_ops> ${CMAKE_CURRENT_SOURCE_DIR}/configs/ops ${OPS_GEN_DIR}
     DEPENDS
-        ${CMAKE_CURRENT_SOURCE_DIR}/configs/ops/ops.yml
+        ${OPS_YAML_FILES}
         ${CMAKE_CURRENT_SOURCE_DIR}/configs/dtype/dtypes.yml
         gen_ops
     COMMENT "Generating op metadata"
@@ -122,16 +124,18 @@ add_custom_target(generate_executions
         ${EXECUTION_GEN_DIR}/execution_tables.h
 )
 
+file(GLOB ARCHITECTURE_YAML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/configs/architecture/*.yml")
+
 add_custom_command(
     OUTPUT
         ${ARCHITECTURE_GEN_DIR}/architecture.def
         ${ARCHITECTURE_GEN_DIR}/architecture_tables.h
     COMMAND $<TARGET_FILE:gen_architectures>
-            ${CMAKE_CURRENT_SOURCE_DIR}/configs/architecture/architectures.yml
+            ${CMAKE_CURRENT_SOURCE_DIR}/configs/architecture
             ${CMAKE_CURRENT_SOURCE_DIR}/configs/execution/executions.yml
             ${ARCHITECTURE_GEN_DIR}
     DEPENDS
-        ${CMAKE_CURRENT_SOURCE_DIR}/configs/architecture/architectures.yml
+        ${ARCHITECTURE_YAML_FILES}
         ${CMAKE_CURRENT_SOURCE_DIR}/configs/execution/executions.yml
         gen_architectures
     COMMENT "Generating architecture metadata"
@@ -144,23 +148,25 @@ add_custom_target(generate_architectures
         ${ARCHITECTURE_GEN_DIR}/architecture_tables.h
 )
 
+file(GLOB DEVICE_YAML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/configs/device/*.yml")
+
 add_custom_command(
     OUTPUT
         ${DEVICE_GEN_DIR}/device.def
         ${DEVICE_GEN_DIR}/device_tables.h
     COMMAND $<TARGET_FILE:gen_devices>
-            ${CMAKE_CURRENT_SOURCE_DIR}/configs/device/devices.yml
+            ${CMAKE_CURRENT_SOURCE_DIR}/configs/device
             ${CMAKE_CURRENT_SOURCE_DIR}/configs/execution/executions.yml
-            ${CMAKE_CURRENT_SOURCE_DIR}/configs/architecture/architectures.yml
+            ${CMAKE_CURRENT_SOURCE_DIR}/configs/architecture
             ${CMAKE_CURRENT_SOURCE_DIR}/configs/dtype/dtypes.yml
-            ${CMAKE_CURRENT_SOURCE_DIR}/configs/ops/ops.yml
+            ${CMAKE_CURRENT_SOURCE_DIR}/configs/ops
             ${DEVICE_GEN_DIR}
     DEPENDS
-        ${CMAKE_CURRENT_SOURCE_DIR}/configs/device/devices.yml
+        ${DEVICE_YAML_FILES}
         ${CMAKE_CURRENT_SOURCE_DIR}/configs/execution/executions.yml
-        ${CMAKE_CURRENT_SOURCE_DIR}/configs/architecture/architectures.yml
+        ${ARCHITECTURE_YAML_FILES}
         ${CMAKE_CURRENT_SOURCE_DIR}/configs/dtype/dtypes.yml
-        ${CMAKE_CURRENT_SOURCE_DIR}/configs/ops/ops.yml
+        ${OPS_YAML_FILES}
         gen_devices
     COMMENT "Generating device metadata"
     VERBATIM

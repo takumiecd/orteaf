@@ -349,100 +349,141 @@ ParseExecutionConfig(const fs::path &execution_yaml_path) {
   return executions;
 }
 
-std::vector<ArchitectureInput> ParseArchitectureConfig(
-    const fs::path &architecture_yaml_path,
-    const std::unordered_set<std::string> &valid_executions) {
-  YAML::Node root;
-  try {
-    root = YAML::LoadFile(architecture_yaml_path.string());
-  } catch (const std::exception &e) {
+// Collect all .yml files from a directory (sorted), or return a single file.
+std::vector<fs::path> CollectYamlFiles(const fs::path &input_path) {
+  if (fs::is_regular_file(input_path)) {
+    return {input_path};
+  }
+  if (!fs::is_directory(input_path)) {
     std::ostringstream oss;
-    oss << "Failed to load architecture YAML '" << architecture_yaml_path
-        << "': " << e.what();
+    oss << "Path '" << input_path << "' is neither a file nor a directory";
     Fail(oss.str());
   }
-
-  if (!root || !root.IsMap()) {
-    Fail("Architecture YAML root must be a mapping");
+  std::vector<fs::path> files;
+  for (const auto &entry : fs::directory_iterator(input_path)) {
+    if (entry.is_regular_file() && entry.path().extension() == ".yml") {
+      files.push_back(entry.path());
+    }
   }
-
-  const auto schema_node = root["schema_version"];
-  if (!schema_node || !schema_node.IsScalar()) {
-    Fail("Missing required scalar key 'schema_version' in architecture YAML");
+  std::sort(files.begin(), files.end());
+  if (files.empty()) {
+    std::ostringstream oss;
+    oss << "No .yml files found in directory '" << input_path << "'";
+    Fail(oss.str());
   }
+  return files;
+}
 
-  const auto architectures_node = root["architectures"];
-  if (!architectures_node || !architectures_node.IsSequence()) {
-    Fail("Missing required sequence key 'architectures'");
-  }
+std::vector<ArchitectureInput> ParseArchitectureConfig(
+    const fs::path &architecture_input_path,
+    const std::unordered_set<std::string> &valid_executions) {
+  const auto yaml_files = CollectYamlFiles(architecture_input_path);
 
   std::vector<ArchitectureInput> architectures;
-  architectures.reserve(architectures_node.size());
   std::unordered_map<std::string, std::unordered_set<std::string>>
       seen_per_execution;
+  std::size_t global_index = 0;
 
-  for (std::size_t i = 0; i < architectures_node.size(); ++i) {
-    const auto &node = architectures_node[i];
-    if (!node.IsMap()) {
+  for (const auto &yaml_path : yaml_files) {
+    YAML::Node root;
+    try {
+      root = YAML::LoadFile(yaml_path.string());
+    } catch (const std::exception &e) {
       std::ostringstream oss;
-      oss << "Each architecture entry must be a mapping (index " << i << ")";
-      Fail(oss.str());
-    }
-    const std::string context = "architectures[" + std::to_string(i) + "]";
-
-    ArchitectureInput input;
-    input.id = ReadRequiredString(node, "id", context);
-    if (!LooksLikeIdentifier(input.id)) {
-      std::ostringstream oss;
-      oss << "Architecture id '" << input.id << "' is not a valid identifier ("
-          << context << ")";
+      oss << "Failed to load architecture YAML '" << yaml_path
+          << "': " << e.what();
       Fail(oss.str());
     }
 
-    input.execution_id = ReadRequiredString(node, "execution", context);
-    if (!valid_executions.count(input.execution_id)) {
+    if (!root || !root.IsMap()) {
       std::ostringstream oss;
-      oss << "Architecture '" << input.id << "' references unknown execution '"
-          << input.execution_id << "'";
+      oss << "Architecture YAML root must be a mapping in '" << yaml_path
+          << "'";
       Fail(oss.str());
     }
 
-    if (!seen_per_execution[input.execution_id].insert(input.id).second) {
+    const auto schema_node = root["schema_version"];
+    if (!schema_node || !schema_node.IsScalar()) {
       std::ostringstream oss;
-      oss << "Duplicate architecture id '" << input.id << "' for execution '"
-          << input.execution_id << "'";
+      oss << "Missing required scalar key 'schema_version' in '" << yaml_path
+          << "'";
       Fail(oss.str());
     }
 
-    input.display_name = ReadRequiredString(node, "display_name", context);
+    const auto architectures_node = root["architectures"];
+    if (!architectures_node || !architectures_node.IsSequence()) {
+      std::ostringstream oss;
+      oss << "Missing required sequence key 'architectures' in '" << yaml_path
+          << "'";
+      Fail(oss.str());
+    }
 
-    const auto metadata_node = node["metadata"];
-    if (metadata_node) {
-      if (!metadata_node.IsMap()) {
+    for (std::size_t i = 0; i < architectures_node.size();
+         ++i, ++global_index) {
+      const auto &node = architectures_node[i];
+      if (!node.IsMap()) {
         std::ostringstream oss;
-        oss << "Metadata for " << context << " must be a mapping";
+        oss << "Each architecture entry must be a mapping ("
+            << yaml_path.filename().string() << " index " << i << ")";
         Fail(oss.str());
       }
-      const std::string metadata_context = context + ".metadata";
-      ExpectKeys(metadata_node, metadata_context,
-                 {"description", "detect", "parent"});
-      if (const auto parent =
-              ReadOptionalString(metadata_node, "parent", metadata_context);
-          parent) {
-        input.parent = *parent;
-      }
-      if (const auto desc = ReadOptionalString(metadata_node, "description",
-                                               metadata_context);
-          desc) {
-        input.description = *desc;
-      }
-      if (const auto detect_node = metadata_node["detect"]) {
-        const std::string detect_context = metadata_context + ".detect";
-        input.detect = ParseDetectSpec(detect_node, detect_context);
-      }
-    }
+      const std::string context = yaml_path.filename().string() +
+                                  ":architectures[" + std::to_string(i) + "]";
 
-    architectures.push_back(std::move(input));
+      ArchitectureInput input;
+      input.id = ReadRequiredString(node, "id", context);
+      if (!LooksLikeIdentifier(input.id)) {
+        std::ostringstream oss;
+        oss << "Architecture id '" << input.id
+            << "' is not a valid identifier (" << context << ")";
+        Fail(oss.str());
+      }
+
+      input.execution_id = ReadRequiredString(node, "execution", context);
+      if (!valid_executions.count(input.execution_id)) {
+        std::ostringstream oss;
+        oss << "Architecture '" << input.id
+            << "' references unknown execution '" << input.execution_id << "'";
+        Fail(oss.str());
+      }
+
+      if (!seen_per_execution[input.execution_id].insert(input.id).second) {
+        std::ostringstream oss;
+        oss << "Duplicate architecture id '" << input.id << "' for execution '"
+            << input.execution_id << "'";
+        Fail(oss.str());
+      }
+
+      input.display_name = ReadRequiredString(node, "display_name", context);
+
+      const auto metadata_node = node["metadata"];
+      if (metadata_node) {
+        if (!metadata_node.IsMap()) {
+          std::ostringstream oss;
+          oss << "Metadata for " << context << " must be a mapping";
+          Fail(oss.str());
+        }
+        const std::string metadata_context = context + ".metadata";
+        ExpectKeys(metadata_node, metadata_context,
+                   {"description", "detect", "parent"});
+        if (const auto parent =
+                ReadOptionalString(metadata_node, "parent", metadata_context);
+            parent) {
+          input.parent = *parent;
+        }
+        if (const auto desc = ReadOptionalString(metadata_node, "description",
+                                                 metadata_context);
+            desc) {
+          input.description = *desc;
+        }
+        if (const auto detect_node = metadata_node["detect"]) {
+          const std::string detect_context = metadata_context + ".detect";
+          input.detect = ParseDetectSpec(detect_node, detect_context);
+        }
+      }
+
+      architectures.push_back(std::move(input));
+    }
   }
 
   return architectures;
@@ -933,12 +974,12 @@ void WriteFile(const fs::path &path, const std::string &content) {
 
 int main(int argc, char **argv) {
   if (argc != 4) {
-    std::cerr << "Usage: gen_architectures <architectures.yml> "
+    std::cerr << "Usage: gen_architectures <architectures_dir_or_file> "
                  "<executions.yml> <output_dir>\n";
     return 1;
   }
 
-  const fs::path architecture_yaml = argv[1];
+  const fs::path architecture_input = argv[1];
   const fs::path execution_yaml = argv[2];
   const fs::path output_dir = argv[3];
 
@@ -951,7 +992,7 @@ int main(int argc, char **argv) {
     }
 
     const auto architectures =
-        ParseArchitectureConfig(architecture_yaml, execution_ids);
+        ParseArchitectureConfig(architecture_input, execution_ids);
     const auto generated = GenerateOutputs(executions, architectures);
 
     WriteFile(output_dir / "architecture.def", generated.architecture_def);
