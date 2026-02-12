@@ -95,11 +95,12 @@ struct MpsKernelBase {
           &device_lease);
 
   /**
-   * @brief Clear keys and cached pipelines.
+   * @brief Clear keys, cached pipelines, and execute callback.
    */
   void reset() noexcept {
     device_pipelines_.clear();
     keys_.clear();
+    execute_ = nullptr;
   }
 
   /**

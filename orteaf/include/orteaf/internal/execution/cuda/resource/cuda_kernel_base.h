@@ -67,6 +67,7 @@ struct CudaKernelBase {
   void reset() noexcept {
     context_functions_.clear();
     keys_.clear();
+    execute_ = nullptr;
   }
 
   FunctionLease
