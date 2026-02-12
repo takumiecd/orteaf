@@ -6,8 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#include <orteaf/extension/ops/copy_mps_to_host.h>
-#include <orteaf/extension/ops/fill.h>
+#include <orteaf/extension/ops/tensor_ops.h>
 #include <orteaf/extension/tensor/dense_tensor_impl.h>
 #include <orteaf/internal/dtype/dtype.h>
 #include <orteaf/internal/execution/execution.h>
@@ -52,7 +51,7 @@ float *getCpuBuffer(tensor::Tensor &t) {
 
 tensor::Tensor copyToHost(const tensor::Tensor &src) {
   auto host = tensor::Tensor::dense(src.shape(), src.dtype(), Execution::Cpu);
-  ops::copyMpsToHost(host, src);
+  ops::TensorOps::copyMpsToHost(host, src);
   return host;
 }
 
@@ -77,7 +76,7 @@ TEST_F(FillMpsOpTest, FillsDenseTensorF32) {
   std::array<std::int64_t, 1> shape{8};
   auto t = tensor::Tensor::dense(shape, DType::F32, Execution::Mps);
 
-  ops::fill(t, 3.5);
+  ops::TensorOps::fill(t, 3.5);
   auto host = copyToHost(t);
 
   float *data = getCpuBuffer(host);
@@ -91,7 +90,7 @@ TEST_F(FillMpsOpTest, FillsContiguousSliceViewF32) {
   std::array<std::int64_t, 1> shape{8};
   auto base = tensor::Tensor::dense(shape, DType::F32, Execution::Mps);
 
-  ops::fill(base, -1.0);
+  ops::TensorOps::fill(base, -1.0);
 
   std::array<std::int64_t, 1> starts{2};
   std::array<std::int64_t, 1> sizes{3};
@@ -99,7 +98,7 @@ TEST_F(FillMpsOpTest, FillsContiguousSliceViewF32) {
   ASSERT_TRUE(view.valid());
   ASSERT_TRUE(view.isContiguous());
 
-  ops::fill(view, 2.25);
+  ops::TensorOps::fill(view, 2.25);
   auto host = copyToHost(base);
 
   float *data = getCpuBuffer(host);
@@ -114,7 +113,7 @@ TEST_F(FillMpsOpTest, FillsNonContiguousSliceViewF32) {
   std::array<std::int64_t, 2> shape{4, 4};
   auto base = tensor::Tensor::dense(shape, DType::F32, Execution::Mps);
 
-  ops::fill(base, -3.0);
+  ops::TensorOps::fill(base, -3.0);
 
   std::array<std::int64_t, 2> starts{1, 0};
   std::array<std::int64_t, 2> sizes{2, 3};
@@ -122,7 +121,7 @@ TEST_F(FillMpsOpTest, FillsNonContiguousSliceViewF32) {
   ASSERT_TRUE(view.valid());
   ASSERT_FALSE(view.isContiguous());
 
-  ops::fill(view, 7.0);
+  ops::TensorOps::fill(view, 7.0);
   auto host = copyToHost(base);
 
   float *data = getCpuBuffer(host);

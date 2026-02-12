@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#include <orteaf/extension/ops/fill.h>
+#include <orteaf/extension/ops/tensor_ops.h>
 #include <orteaf/extension/tensor/dense_tensor_impl.h>
 #include <orteaf/internal/dtype/dtype.h>
 #include <orteaf/internal/execution/cpu/api/cpu_execution_api.h>
@@ -77,7 +77,7 @@ TEST_F(FillOpTest, FillsDenseTensor) {
   std::array<std::int64_t, 2> shape{2, 3};
   auto t = tensor::Tensor::dense(shape, DType::F32, Execution::Cpu);
 
-  ops::fill(t, 1.5);
+  ops::TensorOps::fill(t, 1.5);
 
   float *data = getCpuBuffer(t);
   ASSERT_NE(data, nullptr);
@@ -101,7 +101,7 @@ TEST_F(FillOpTest, FillsStridedSliceView) {
   auto view = base.slice(starts, sizes);
   ASSERT_TRUE(view.valid());
 
-  ops::fill(view, -2.0);
+  ops::TensorOps::fill(view, -2.0);
 
   for (std::size_t i = 0; i < static_cast<std::size_t>(base.numel()); ++i) {
     const bool should_fill =

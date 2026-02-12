@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <sstream>
 
-#include <orteaf/extension/ops/print.h>
+#include <orteaf/extension/ops/tensor_ops.h>
 #include <orteaf/extension/tensor/dense_tensor_impl.h>
 #include <orteaf/internal/dtype/dtype.h>
 #include <orteaf/internal/execution/cpu/api/cpu_execution_api.h>
@@ -87,7 +87,7 @@ TEST_F(PrintOpTest, PrintsDenseTensorToStdout) {
 
   std::ostringstream oss;
   auto *old = std::cout.rdbuf(oss.rdbuf());
-  ops::print(t);
+  ops::TensorOps::print(t);
   std::cout.rdbuf(old);
 
   const auto output = oss.str();
@@ -104,5 +104,5 @@ TEST_F(PrintOpTest, ThrowsOnNonContiguousView) {
   std::array<std::int64_t, 2> sizes{2, 3};
   auto view = base.slice(starts, sizes);
 
-  EXPECT_ANY_THROW(ops::print(view));
+  EXPECT_ANY_THROW(ops::TensorOps::print(view));
 }

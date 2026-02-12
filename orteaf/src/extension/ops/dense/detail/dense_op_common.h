@@ -10,6 +10,8 @@
 #include <orteaf/internal/execution_context/cpu/current_context.h>
 #include <orteaf/internal/kernel/core/context_any.h>
 #include <orteaf/internal/kernel/core/kernel_args.h>
+#include <orteaf/internal/kernel/core/key_components.h>
+#include <orteaf/internal/kernel/dispatch/dispatcher.h>
 #include <orteaf/user/tensor/tensor.h>
 
 #if ORTEAF_ENABLE_MPS
@@ -20,7 +22,7 @@
 #include <orteaf/internal/execution_context/cuda/current_context.h>
 #endif
 
-namespace orteaf::extension::ops::detail {
+namespace orteaf::extension::ops::dense::detail {
 
 using Tensor = ::orteaf::user::tensor::Tensor;
 using DenseTensorImpl = ::orteaf::extension::tensor::DenseTensorImpl;
@@ -140,4 +142,29 @@ inline Architecture architectureForArgs(const kernel::KernelArgs &args,
   return arch;
 }
 
-} // namespace orteaf::extension::ops::detail
+inline void dispatchOrThrow(const kernel::KeyRequest &request,
+                            kernel::KernelArgs &args,
+                            const char *not_found_message,
+                            const char *failed_message) {
+  kernel::dispatch::Dispatcher dispatcher;
+  const auto result = dispatcher.dispatch(request, args);
+  if (result.notFound()) {
+    error::throwError(error::OrteafErrc::OperationFailed, not_found_message);
+  }
+  if (result.failed()) {
+    error::throwError(error::OrteafErrc::OperationFailed, failed_message);
+  }
+}
+
+[[noreturn]] inline void throwExecutionUnavailable(const char *op_name,
+                                                   const char *backend_name) {
+  error::throwError(error::OrteafErrc::ExecutionUnavailable,
+                    std::string(op_name) + ": built without " + backend_name +
+                        " support");
+}
+
+[[noreturn]] inline void throwMpsUnavailable(const char *op_name) {
+  throwExecutionUnavailable(op_name, "MPS");
+}
+
+} // namespace orteaf::extension::ops::dense::detail

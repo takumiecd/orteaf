@@ -7,9 +7,7 @@
 #include <cstdint>
 #include <system_error>
 
-#include <orteaf/extension/ops/copy_host_to_mps.h>
-#include <orteaf/extension/ops/copy_mps_to_host.h>
-#include <orteaf/extension/ops/fill.h>
+#include <orteaf/extension/ops/tensor_ops.h>
 #include <orteaf/extension/tensor/dense_tensor_impl.h>
 #include <orteaf/internal/dtype/dtype.h>
 #include <orteaf/internal/execution/execution.h>
@@ -83,10 +81,10 @@ TEST_F(CopyMpsTransferTest, CopiesHostToMpsContiguous) {
   fillSequential(host_src, 1.0f);
 
   auto mps_dst = tensor::Tensor::dense(shape, DType::F32, Execution::Mps);
-  ops::copyHostToMps(mps_dst, host_src);
+  ops::TensorOps::copyHostToMps(mps_dst, host_src);
 
   auto host_out = tensor::Tensor::dense(shape, DType::F32, Execution::Cpu);
-  ops::copyMpsToHost(host_out, mps_dst);
+  ops::TensorOps::copyMpsToHost(host_out, mps_dst);
 
   auto *src_data = getCpuF32Buffer(host_src);
   auto *out_data = getCpuF32Buffer(host_out);
@@ -104,7 +102,7 @@ TEST_F(CopyMpsTransferTest, CopiesHostToMpsIntoStridedView) {
 
   std::array<std::int64_t, 2> base_shape{4, 4};
   auto mps_base = tensor::Tensor::dense(base_shape, DType::F32, Execution::Mps);
-  ops::fill(mps_base, -1.0);
+  ops::TensorOps::fill(mps_base, -1.0);
 
   std::array<std::int64_t, 2> starts{1, 0};
   std::array<std::int64_t, 2> sizes{2, 3};
@@ -112,10 +110,10 @@ TEST_F(CopyMpsTransferTest, CopiesHostToMpsIntoStridedView) {
   ASSERT_TRUE(mps_view.valid());
   ASSERT_FALSE(mps_view.isContiguous());
 
-  ops::copyHostToMps(mps_view, host_src);
+  ops::TensorOps::copyHostToMps(mps_view, host_src);
 
   auto host_base = tensor::Tensor::dense(base_shape, DType::F32, Execution::Cpu);
-  ops::copyMpsToHost(host_base, mps_base);
+  ops::TensorOps::copyMpsToHost(host_base, mps_base);
   auto *base_data = getCpuF32Buffer(host_base);
   ASSERT_NE(base_data, nullptr);
 
@@ -138,7 +136,7 @@ TEST_F(CopyMpsTransferTest, CopiesMpsToHostFromStridedView) {
   fillSequential(host_src, 0.0f);
 
   auto mps_base = tensor::Tensor::dense(base_shape, DType::F32, Execution::Mps);
-  ops::copyHostToMps(mps_base, host_src);
+  ops::TensorOps::copyHostToMps(mps_base, host_src);
 
   std::array<std::int64_t, 2> starts{1, 0};
   std::array<std::int64_t, 2> sizes{2, 3};
@@ -148,7 +146,7 @@ TEST_F(CopyMpsTransferTest, CopiesMpsToHostFromStridedView) {
 
   std::array<std::int64_t, 2> out_shape{2, 3};
   auto host_out = tensor::Tensor::dense(out_shape, DType::F32, Execution::Cpu);
-  ops::copyMpsToHost(host_out, mps_view);
+  ops::TensorOps::copyMpsToHost(host_out, mps_view);
 
   auto *out = getCpuF32Buffer(host_out);
   ASSERT_NE(out, nullptr);
@@ -166,7 +164,7 @@ TEST_F(CopyMpsTransferTest, CopiesMpsToHostIntoStridedView) {
   fillSequential(host_src, 10.0f);
 
   auto mps_src = tensor::Tensor::dense(src_shape, DType::F32, Execution::Mps);
-  ops::copyHostToMps(mps_src, host_src);
+  ops::TensorOps::copyHostToMps(mps_src, host_src);
 
   std::array<std::int64_t, 2> base_shape{4, 4};
   auto host_base = tensor::Tensor::dense(base_shape, DType::F32, Execution::Cpu);
@@ -182,7 +180,7 @@ TEST_F(CopyMpsTransferTest, CopiesMpsToHostIntoStridedView) {
   ASSERT_TRUE(host_view.valid());
   ASSERT_FALSE(host_view.isContiguous());
 
-  ops::copyMpsToHost(host_view, mps_src);
+  ops::TensorOps::copyMpsToHost(host_view, mps_src);
 
   EXPECT_FLOAT_EQ(base_data[4], 10.0f);
   EXPECT_FLOAT_EQ(base_data[5], 11.0f);
@@ -203,10 +201,10 @@ TEST_F(CopyMpsTransferTest, RejectsExecutionMismatch) {
   auto cpu = tensor::Tensor::dense(shape, DType::F32, Execution::Cpu);
   auto mps = tensor::Tensor::dense(shape, DType::F32, Execution::Mps);
 
-  EXPECT_THROW(ops::copyHostToMps(cpu, cpu), std::system_error);
-  EXPECT_THROW(ops::copyHostToMps(mps, mps), std::system_error);
-  EXPECT_THROW(ops::copyMpsToHost(mps, mps), std::system_error);
-  EXPECT_THROW(ops::copyMpsToHost(cpu, cpu), std::system_error);
+  EXPECT_THROW(ops::TensorOps::copyHostToMps(cpu, cpu), std::system_error);
+  EXPECT_THROW(ops::TensorOps::copyHostToMps(mps, mps), std::system_error);
+  EXPECT_THROW(ops::TensorOps::copyMpsToHost(mps, mps), std::system_error);
+  EXPECT_THROW(ops::TensorOps::copyMpsToHost(cpu, cpu), std::system_error);
 }
 
 TEST_F(CopyMpsTransferTest, RejectsDTypeMismatch) {
@@ -215,9 +213,11 @@ TEST_F(CopyMpsTransferTest, RejectsDTypeMismatch) {
   auto cpu_f32 = tensor::Tensor::dense(shape, DType::F32, Execution::Cpu);
   auto mps_f32 = tensor::Tensor::dense(shape, DType::F32, Execution::Mps);
 
-  EXPECT_THROW(ops::copyHostToMps(mps_f32, cpu_i32), std::system_error);
-  EXPECT_THROW(ops::copyMpsToHost(cpu_i32, mps_f32), std::system_error);
-  EXPECT_NO_THROW(ops::copyHostToMps(mps_f32, cpu_f32));
+  EXPECT_THROW(ops::TensorOps::copyHostToMps(mps_f32, cpu_i32),
+               std::system_error);
+  EXPECT_THROW(ops::TensorOps::copyMpsToHost(cpu_i32, mps_f32),
+               std::system_error);
+  EXPECT_NO_THROW(ops::TensorOps::copyHostToMps(mps_f32, cpu_f32));
 }
 
 #endif // ORTEAF_ENABLE_MPS
