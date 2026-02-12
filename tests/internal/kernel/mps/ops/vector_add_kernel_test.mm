@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <variant>
+#include <utility>
 #include <vector>
 
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_buffer.h>
@@ -20,12 +21,15 @@
 
 // Include the kernel under test
 #include "tests/internal/kernel/mps/ops/fixtures/vector_add_kernel.h"
+#include "tests/internal/kernel/mps/test_utils/mps_hardware_test_utils.h"
 
 namespace kernel = orteaf::internal::kernel;
 namespace kernel_entry = ::orteaf::internal::kernel::core;
 namespace mps_wrapper = orteaf::internal::execution::mps::platform::wrapper;
 namespace mps_resource = ::orteaf::internal::execution::mps::resource;
 namespace mps_api = ::orteaf::internal::execution::mps::api;
+namespace mps_test_utils =
+    ::orteaf::tests::internal::kernel::mps::test_utils;
 namespace vector_add = orteaf::extension::kernel::mps::ops;
 
 namespace {
@@ -127,29 +131,14 @@ TEST(VectorAddKernelTest, CreateKernelEntryHasCorrectStructure) {
 class VectorAddKernelIntegrationTest : public ::testing::Test {
 protected:
   void SetUp() override {
-    device_ = mps_wrapper::getDevice();
-    if (device_ == nullptr) {
-      GTEST_SKIP() << "No Metal devices available";
+    auto acquired = mps_test_utils::acquireHardware(false, false);
+    if (!acquired.context) {
+      GTEST_SKIP() << acquired.reason;
     }
-
-    queue_ = mps_wrapper::createCommandQueue(device_);
-    if (queue_ == nullptr) {
-      mps_wrapper::deviceRelease(device_);
-      GTEST_SKIP() << "Failed to create command queue";
-    }
+    hardware_ = std::move(*acquired.context);
   }
 
-  void TearDown() override {
-    if (queue_ != nullptr) {
-      mps_wrapper::destroyCommandQueue(queue_);
-    }
-    if (device_ != nullptr) {
-      mps_wrapper::deviceRelease(device_);
-    }
-  }
-
-  mps_wrapper::MpsDevice_t device_{nullptr};
-  mps_wrapper::MpsCommandQueue_t queue_{nullptr};
+  mps_test_utils::MpsHardwareContext hardware_{};
 };
 
 TEST_F(VectorAddKernelIntegrationTest, KernelEntryCanBeCreated) {

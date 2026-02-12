@@ -6,12 +6,10 @@
 #include <optional>
 #include <utility>
 
-#include "orteaf/internal/execution/mps/platform/wrapper/mps_command_buffer.h"
-#include "orteaf/internal/execution/mps/platform/wrapper/mps_compute_command_encoder.h"
-#include "orteaf/internal/execution/mps/platform/wrapper/mps_size.h"
+#include "orteaf/internal/execution/mps/resource/mps_kernel_base.h"
 #include "orteaf/internal/execution_context/mps/context.h"
 #include "orteaf/internal/kernel/core/kernel_args.h"
-#include "orteaf/internal/execution/mps/resource/mps_kernel_base.h"
+#include "orteaf/internal/kernel/mps/mps_kernel_session_ops.h"
 
 namespace orteaf::internal::kernel::mps {
 
@@ -40,12 +38,10 @@ using MpsKernelBase = ::orteaf::internal::execution::mps::resource::MpsKernelBas
  */
 class MpsKernelSession {
 public:
-  using MpsSize_t =
-      ::orteaf::internal::execution::mps::platform::wrapper::MpsSize_t;
-  using MpsCommandBuffer_t =
-      ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandBuffer_t;
-  using MpsComputeCommandEncoder_t = ::orteaf::internal::execution::mps::
-      platform::wrapper::MpsComputeCommandEncoder_t;
+  using Ops = MpsKernelSessionOps;
+  using MpsSize_t = Ops::MpsSize_t;
+  using MpsCommandBuffer_t = Ops::MpsCommandBuffer_t;
+  using MpsComputeCommandEncoder_t = Ops::MpsComputeCommandEncoder_t;
 
   /**
    * @brief Begin a new kernel session.
@@ -58,154 +54,128 @@ public:
    * @param kernel_index Index of the kernel to execute (default 0)
    * @return Optional session, empty if creation failed
    */
-  static std::optional<MpsKernelSession> begin(MpsKernelBase &base,
-                                               ::orteaf::internal::kernel::KernelArgs &args,
-                                               std::size_t kernel_index = 0) {
+  static std::optional<MpsKernelSession>
+  begin(MpsKernelBase &base, ::orteaf::internal::kernel::KernelArgs &args,
+        std::size_t kernel_index = 0) {
     auto *context =
-        args.context().tryAs<::orteaf::internal::execution_context::mps::Context>();
+        args.context()
+            .tryAs<::orteaf::internal::execution_context::mps::Context>();
     if (context == nullptr) {
       return std::nullopt;
     }
-    auto command_buffer = base.createCommandBuffer(*context);
+
+    auto command_buffer = Ops::createCommandBuffer(*context);
     if (!command_buffer) {
       return std::nullopt;
     }
 
-    auto encoder = base.createComputeCommandEncoder(command_buffer);
+    auto encoder = Ops::createComputeCommandEncoder(command_buffer);
     if (!encoder) {
+      Ops::destroyCommandBuffer(command_buffer);
       return std::nullopt;
     }
 
     auto pipeline =
         base.getPipelineLease(context->device.payloadHandle(), kernel_index);
     if (!pipeline) {
-      base.endEncoding(encoder);
+      Ops::endEncoding(encoder);
+      Ops::destroyComputeCommandEncoder(encoder);
+      Ops::destroyCommandBuffer(command_buffer);
       return std::nullopt;
     }
-    base.setPipelineState(encoder, pipeline);
+    Ops::setPipelineState(encoder, pipeline);
 
-    return MpsKernelSession(base, args, command_buffer, encoder);
+    return MpsKernelSession(args, command_buffer, encoder);
   }
 
-  // Move only
   MpsKernelSession(MpsKernelSession &&other) noexcept
-      : base_(other.base_), args_(other.args_),
-        command_buffer_(other.command_buffer_), encoder_(other.encoder_),
-        committed_(other.committed_) {
-    other.committed_ = true; // Prevent double commit
+      : args_(other.args_), command_buffer_(other.command_buffer_),
+        encoder_(other.encoder_), committed_(other.committed_) {
+    other.args_ = nullptr;
+    other.command_buffer_ = nullptr;
+    other.encoder_ = nullptr;
+    other.committed_ = true;
   }
 
   MpsKernelSession &operator=(MpsKernelSession &&other) noexcept {
     if (this != &other) {
       finish();
-      base_ = other.base_;
       args_ = other.args_;
       command_buffer_ = other.command_buffer_;
       encoder_ = other.encoder_;
       committed_ = other.committed_;
+      other.args_ = nullptr;
+      other.command_buffer_ = nullptr;
+      other.encoder_ = nullptr;
       other.committed_ = true;
     }
     return *this;
   }
 
-  // No copy
   MpsKernelSession(const MpsKernelSession &) = delete;
   MpsKernelSession &operator=(const MpsKernelSession &) = delete;
 
-  /**
-   * @brief Destructor - commits if not already done.
-   */
   ~MpsKernelSession() { finish(); }
 
-  /**
-   * @brief Wait for storage dependencies (RAW hazards).
-   */
   template <typename... Fields> void waitDependencies(Fields &...fields) {
-    base_->waitAllStorageDependencies(encoder_, fields...);
+    Ops::waitAllStorageDependencies(encoder_, fields...);
   }
 
-  /**
-   * @brief Bind storage fields at explicit indices.
-   *
-   * @tparam Is Buffer indices matching Metal shader [[buffer(N)]]
-   */
   template <std::size_t... Is, typename... Fields>
   void bindStorages(const Fields &...fields) {
-    base_->bindStoragesAt(encoder_, std::index_sequence<Is...>{}, fields...);
+    Ops::bindStoragesAt(encoder_, std::index_sequence<Is...>{}, fields...);
   }
 
-  /**
-   * @brief Bind parameter fields at explicit indices.
-   *
-   * @tparam Is Buffer indices matching Metal shader [[buffer(N)]]
-   */
   template <std::size_t... Is, typename... Fields>
   void bindParams(const Fields &...fields) {
-    base_->bindParamsAt(encoder_, std::index_sequence<Is...>{}, fields...);
+    Ops::bindParamsAt(encoder_, std::index_sequence<Is...>{}, fields...);
   }
 
-  /**
-   * @brief Dispatch 1D compute threads.
-   *
-   * @param count Total number of elements to process
-   * @param threads_per_group Threads per threadgroup (default 256)
-   */
   void dispatch1D(std::size_t count, std::size_t threads_per_group = 256) {
-    auto grid = MpsKernelBase::makeGridSize(count);
-    auto tpg = MpsKernelBase::makeThreadsPerThreadgroup(threads_per_group);
-    base_->dispatchThreads(encoder_, grid, tpg);
+    auto grid = Ops::makeGridSize(count);
+    auto tpg = Ops::makeThreadsPerThreadgroup(threads_per_group);
+    Ops::dispatchThreads(encoder_, grid, tpg);
   }
 
-  /**
-   * @brief Dispatch with explicit grid and threadgroup sizes.
-   */
   void dispatch(MpsSize_t grid, MpsSize_t threads_per_group) {
-    base_->dispatchThreadgroups(encoder_, grid, threads_per_group);
+    Ops::dispatchThreadgroups(encoder_, grid, threads_per_group);
   }
 
-  /**
-   * @brief Update fence tokens for all output storages.
-   *
-   * @return true if successful, false if fence acquisition failed
-   */
-  template <typename... Fields>
-  [[nodiscard]] bool updateTokens(Fields &...fields) {
+  template <typename... Fields> [[nodiscard]] bool updateTokens(Fields &...fields) {
     auto *context =
-        args_->context().tryAs<::orteaf::internal::execution_context::mps::Context>();
+        args_->context()
+            .tryAs<::orteaf::internal::execution_context::mps::Context>();
     if (context == nullptr) {
       return false;
     }
-    return base_->updateAllStorageTokens(*context, command_buffer_, encoder_,
-                                         fields...);
+    return Ops::updateAllStorageTokens(*context, command_buffer_, encoder_,
+                                       fields...);
   }
 
-  /**
-   * @brief Get the underlying encoder for advanced operations.
-   */
-  MpsComputeCommandEncoder_t encoder() const noexcept { return encoder_; }
+  void setBytes(const void *bytes, std::size_t length, std::size_t index) {
+    Ops::setBytes(encoder_, bytes, length, index);
+  }
 
-  /**
-   * @brief Get the underlying command buffer.
-   */
+  MpsComputeCommandEncoder_t encoder() const noexcept { return encoder_; }
   MpsCommandBuffer_t commandBuffer() const noexcept { return command_buffer_; }
 
 private:
-  MpsKernelSession(MpsKernelBase &base,
-                   ::orteaf::internal::kernel::KernelArgs &args,
+  MpsKernelSession(::orteaf::internal::kernel::KernelArgs &args,
                    MpsCommandBuffer_t command_buffer,
                    MpsComputeCommandEncoder_t encoder)
-      : base_(&base), args_(&args), command_buffer_(command_buffer),
-        encoder_(encoder) {}
+      : args_(&args), command_buffer_(command_buffer), encoder_(encoder) {}
 
   void finish() {
     if (!committed_) {
-      base_->endEncoding(encoder_);
-      base_->commit(command_buffer_);
+      Ops::endEncoding(encoder_);
+      Ops::commit(command_buffer_);
+      Ops::destroyComputeCommandEncoder(encoder_);
+      args_ = nullptr;
+      encoder_ = nullptr;
       committed_ = true;
     }
   }
 
-  MpsKernelBase *base_;
   ::orteaf::internal::kernel::KernelArgs *args_;
   MpsCommandBuffer_t command_buffer_;
   MpsComputeCommandEncoder_t encoder_;

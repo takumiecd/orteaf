@@ -359,7 +359,7 @@ void extractFields(const KernelArgs &args, Fields &...fields) {
  * Automatically generates the extraction logic for all listed fields.
  * Each field's extract() method is called in sequence during extraction.
  *
- * Note: For binding parameters to encoder, use MpsKernelBase::bindParamsAt()
+ * Note: For binding parameters to encoder, use MpsKernelSessionOps::bindParamsAt()
  * with explicit indices to ensure type safety with Metal shader bindings.
  *
  * Usage:
@@ -373,8 +373,9 @@ void extractFields(const KernelArgs &args, Fields &...fields) {
  * };
  *
  * auto params = MyParams::extract(args);
- * base.bindParamsAt(encoder, base.Indices<0, 1, 2>{},
- *                   params.alpha, params.beta, params.dim);
+ * MpsKernelSessionOps::bindParamsAt(encoder,
+ *                                   MpsKernelSessionOps::Indices<0, 1, 2>{},
+ *                                   params.alpha, params.beta, params.dim);
  * @endcode
  */
 #define ORTEAF_EXTRACT_FIELDS(...)                                             \

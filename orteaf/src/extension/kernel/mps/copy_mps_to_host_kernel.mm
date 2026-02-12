@@ -194,13 +194,11 @@ void copyMpsToHostExecute(
 
   session->waitDependencies(storages.input, storages.output);
   session->bindStorages<0, 1>(storages.input, storages.output);
-  base.setBytes(session->encoder(), &input_offset_u32, sizeof(input_offset_u32),
-                2);
-  base.setBytes(session->encoder(), &output_offset_u32,
-                sizeof(output_offset_u32), 3);
-  base.setBytes(session->encoder(), &numel_u32, sizeof(numel_u32), 4);
-  base.setBytes(session->encoder(), &elem_size_u32, sizeof(elem_size_u32), 5);
-  base.setBytes(session->encoder(), &layout_params, sizeof(layout_params), 6);
+  session->setBytes(&input_offset_u32, sizeof(input_offset_u32), 2);
+  session->setBytes(&output_offset_u32, sizeof(output_offset_u32), 3);
+  session->setBytes(&numel_u32, sizeof(numel_u32), 4);
+  session->setBytes(&elem_size_u32, sizeof(elem_size_u32), 5);
+  session->setBytes(&layout_params, sizeof(layout_params), 6);
   session->dispatch1D(static_cast<std::size_t>(numel_u32));
 
   if (!session->updateTokens(storages.input, storages.output)) {
@@ -257,4 +255,3 @@ ORTEAF_REGISTER_KERNEL(
 } // namespace orteaf::extension::kernel::mps
 
 #endif // ORTEAF_ENABLE_MPS
-
