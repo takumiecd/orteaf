@@ -267,7 +267,7 @@ void extractStorages(const KernelArgs &args, Fields &...fields) {
  *
  * Automatically generates the extraction logic for all listed storage fields.
  *
- * Note: For binding storages to encoder, use MpsKernelBase::bindStoragesAt()
+ * Note: For binding storages to encoder, use MpsKernelSession::bindStoragesAt()
  * with explicit indices to ensure type safety with Metal shader bindings.
  *
  * Usage:
@@ -281,8 +281,10 @@ void extractStorages(const KernelArgs &args, Fields &...fields) {
  * };
  *
  * auto storages = MyStorages::extract(args);
- * base.bindStoragesAt(encoder, base.Indices<0, 1, 2>{},
- *                     storages.input, storages.output, storages.workspace);
+ * MpsKernelSession::bindStoragesAt(encoder,
+ *                                  MpsKernelSession::Indices<0, 1, 2>{},
+ *                                  storages.input, storages.output,
+ *                                  storages.workspace);
  * @endcode
  */
 #define ORTEAF_EXTRACT_STORAGES(...)                                           \

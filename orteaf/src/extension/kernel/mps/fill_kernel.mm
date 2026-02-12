@@ -258,7 +258,7 @@ void fillMpsExecute(
   session->waitDependencies(storages.output);
   session->bindStorages<0>(storages.output);
   session->bindParams<1, 2, 3>(offset_param, numel_param, fill_value_param);
-  base.setBytes(session->encoder(), &layout_params, sizeof(layout_params), 4);
+  session->setBytes(&layout_params, sizeof(layout_params), 4);
   session->dispatch1D(static_cast<std::size_t>(numel_u32));
 
   if (!session->updateTokens(storages.output)) {
