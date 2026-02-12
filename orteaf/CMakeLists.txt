@@ -101,6 +101,12 @@ if(ORTEAF_ENABLE_CUDA_INT)
         set(CMAKE_CUDA_ARCHITECTURES "${_orteaf_default_cuda_archs}" CACHE STRING "CUDA architectures to build for" FORCE)
     endif()
     set_property(TARGET orteaf PROPERTY CUDA_ARCHITECTURES "${CMAKE_CUDA_ARCHITECTURES}")
+
+    target_compile_options(orteaf
+        PRIVATE
+            $<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>
+            $<$<COMPILE_LANGUAGE:CUDA>:-Xcudafe=--diag_suppress=20012>
+    )
     
     target_link_libraries(orteaf PUBLIC CUDA::cudart CUDA::cuda_driver)
 endif()
