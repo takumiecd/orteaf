@@ -4,6 +4,9 @@
 #if ORTEAF_ENABLE_MPS
 #include "orteaf/internal/execution/mps/resource/mps_kernel_metadata.h"
 #endif
+#if ORTEAF_ENABLE_CUDA
+#include "orteaf/internal/execution/cuda/resource/cuda_kernel_metadata.h"
+#endif
 
 namespace orteaf::internal::kernel::core {
 

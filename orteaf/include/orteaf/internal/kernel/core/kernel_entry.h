@@ -11,6 +11,9 @@
 #if ORTEAF_ENABLE_MPS
 #include "orteaf/internal/execution/mps/manager/mps_kernel_base_manager.h"
 #endif
+#if ORTEAF_ENABLE_CUDA
+#include "orteaf/internal/execution/cuda/manager/cuda_kernel_base_manager.h"
+#endif
 
 namespace orteaf::internal::kernel::core {
 
@@ -32,10 +35,19 @@ public:
       MpsKernelBaseManager::KernelBaseLease;
 #endif
 
+#if ORTEAF_ENABLE_CUDA
+  using CudaKernelBaseLease = ::orteaf::internal::execution::cuda::manager::
+      CudaKernelBaseManager::KernelBaseLease;
+#endif
+
   using KernelBaseLease = std::variant<std::monostate, CpuKernelBaseLease
 #if ORTEAF_ENABLE_MPS
                                        ,
                                        MpsKernelBaseLease
+#endif
+#if ORTEAF_ENABLE_CUDA
+                                       ,
+                                       CudaKernelBaseLease
 #endif
                                        >;
 

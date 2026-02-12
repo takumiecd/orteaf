@@ -8,6 +8,9 @@
 #if ORTEAF_ENABLE_MPS
 #include "orteaf/internal/execution/mps/manager/mps_kernel_metadata_manager.h"
 #endif
+#if ORTEAF_ENABLE_CUDA
+#include "orteaf/internal/execution/cuda/manager/cuda_kernel_metadata_manager.h"
+#endif
 #include "orteaf/internal/kernel/core/kernel_entry.h"
 
 namespace orteaf::internal::kernel::core {
@@ -29,10 +32,20 @@ public:
       MpsKernelMetadataManager::MpsKernelMetadataLease;
 #endif
 
+#if ORTEAF_ENABLE_CUDA
+  using CudaKernelMetadataLease =
+      ::orteaf::internal::execution::cuda::manager::
+          CudaKernelMetadataManager::CudaKernelMetadataLease;
+#endif
+
   using Variant = std::variant<std::monostate, CpuKernelMetadataLease
 #if ORTEAF_ENABLE_MPS
                                ,
                                MpsKernelMetadataLease
+#endif
+#if ORTEAF_ENABLE_CUDA
+                               ,
+                               CudaKernelMetadataLease
 #endif
                                >;
 

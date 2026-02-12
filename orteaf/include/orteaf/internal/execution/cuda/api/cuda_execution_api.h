@@ -6,6 +6,7 @@
 #include <memory>
 #include <utility>
 
+#include "orteaf/internal/base/heap_vector.h"
 #include "orteaf/internal/diagnostics/error/error.h"
 #include "orteaf/internal/execution/cuda/cuda_handles.h"
 #include "orteaf/internal/execution/cuda/manager/cuda_execution_manager.h"
@@ -26,6 +27,14 @@ public:
       CudaContextManager::ContextLease;
   using StreamLease = ::orteaf::internal::execution::cuda::manager::
       CudaStreamManager::StreamLease;
+  using ModuleKey = ::orteaf::internal::execution::cuda::manager::ModuleKey;
+  using KernelKey = ::orteaf::internal::execution::cuda::manager::
+      CudaKernelBaseManager::Key;
+  using KernelKeys = ::orteaf::internal::base::HeapVector<KernelKey>;
+  using KernelBaseLease = ::orteaf::internal::execution::cuda::manager::
+      CudaKernelBaseManager::KernelBaseLease;
+  using KernelMetadataLease = ::orteaf::internal::execution::cuda::manager::
+      CudaKernelMetadataManager::CudaKernelMetadataLease;
   using SlowOps = ::orteaf::internal::execution::cuda::platform::CudaSlowOps;
 
   CudaExecutionApi() = delete;
@@ -75,6 +84,14 @@ public:
           "CUDA context lease has no payload");
     }
     return context_lease;
+  }
+
+  static KernelBaseLease acquireKernelBase(const KernelKeys &keys) {
+    return manager().kernelBaseManager().acquire(keys);
+  }
+
+  static KernelMetadataLease acquireKernelMetadata(const KernelKeys &keys) {
+    return manager().kernelMetadataManager().acquire(keys);
   }
 
 private:
