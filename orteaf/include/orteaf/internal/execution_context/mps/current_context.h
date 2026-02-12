@@ -18,6 +18,7 @@ void reset();
 
 const Context &currentContext();
 Context::DeviceLease currentDevice();
+Context::Architecture currentArchitecture();
 Context::CommandQueueLease currentCommandQueue();
 
 } // namespace orteaf::internal::execution_context::mps

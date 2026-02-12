@@ -21,9 +21,9 @@
 #include <orteaf/internal/execution_context/mps/current_context.h>
 #endif
 
-#include "op_common.h"
+#include "dense_op_common.h"
 
-namespace orteaf::extension::ops::detail::transfer {
+namespace orteaf::extension::ops::dense::detail::transfer {
 
 namespace error = ::orteaf::internal::diagnostics::error;
 using DenseTensorImpl = ::orteaf::extension::tensor::DenseTensorImpl;
@@ -380,5 +380,4 @@ inline void syncCurrentMpsQueue(const char *op_name) {
 
 #endif // ORTEAF_ENABLE_MPS
 
-} // namespace orteaf::extension::ops::detail::transfer
-
+} // namespace orteaf::extension::ops::dense::detail::transfer

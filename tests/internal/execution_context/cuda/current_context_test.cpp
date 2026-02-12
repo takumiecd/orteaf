@@ -2,6 +2,7 @@
 
 #if ORTEAF_ENABLE_CUDA
 
+#include "orteaf/internal/architecture/architecture.h"
 #include "orteaf/internal/execution/cuda/api/cuda_execution_api.h"
 #include "orteaf/internal/execution/cuda/platform/wrapper/cuda_device.h"
 #include "orteaf/internal/execution/cuda/platform/wrapper/cuda_init.h"
@@ -11,6 +12,7 @@ namespace cuda_context = ::orteaf::internal::execution_context::cuda;
 namespace cuda_api = ::orteaf::internal::execution::cuda::api;
 namespace cuda_exec = ::orteaf::internal::execution::cuda;
 namespace cuda_wrapper = ::orteaf::internal::execution::cuda::platform::wrapper;
+namespace architecture = ::orteaf::internal::architecture;
 
 class CudaCurrentContextTest : public ::testing::Test {
 protected:
@@ -96,6 +98,14 @@ TEST_F(CudaCurrentContextTest, CurrentCudaContextReturnsContext) {
 TEST_F(CudaCurrentContextTest, CurrentStreamReturnsStream) {
   auto stream = cuda_context::currentStream();
   EXPECT_TRUE(stream);
+}
+
+TEST_F(CudaCurrentContextTest, CurrentArchitectureMatchesCurrentContext) {
+  const auto &ctx = cuda_context::currentContext();
+  const auto arch = cuda_context::currentArchitecture();
+  EXPECT_EQ(arch, ctx.architecture());
+  EXPECT_EQ(architecture::executionOf(arch),
+            ::orteaf::internal::execution::Execution::Cuda);
 }
 
 TEST_F(CudaCurrentContextTest, SetCurrentContextOverridesState) {

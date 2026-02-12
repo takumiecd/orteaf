@@ -2,6 +2,7 @@
 
 #include <utility>
 
+#include <orteaf/internal/architecture/architecture.h>
 #include <orteaf/internal/execution/execution.h>
 #include <orteaf/internal/kernel/core/context_any.h>
 #include <orteaf/internal/kernel/param/param_list.h>
@@ -21,6 +22,7 @@ namespace orteaf::internal::kernel {
 class KernelArgs {
 public:
   using Execution = ::orteaf::internal::execution::Execution;
+  using Architecture = ::orteaf::internal::architecture::Architecture;
   using Context = ContextAny;
   using StorageLease = ::orteaf::internal::storage::StorageLease;
   using StorageBindingType = StorageBinding;
@@ -45,6 +47,11 @@ public:
    * @brief Return the execution backend for this KernelArgs.
    */
   Execution execution() const { return context_.execution(); }
+
+  /**
+   * @brief Return the current architecture for this KernelArgs.
+   */
+  Architecture architecture() const { return context_.architecture(); }
 
   /**
    * @brief Add a storage binding with the specified operand key.

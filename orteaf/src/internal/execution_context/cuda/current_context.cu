@@ -75,6 +75,12 @@ Context::DeviceLease currentDevice() {
   return state.current.device;
 }
 
+Context::Architecture currentArchitecture() {
+  auto &state = currentStateStorage();
+  ensureDefaultDevice(state);
+  return state.current.architecture();
+}
+
 Context::ContextLease currentCudaContext() {
   auto &state = currentStateStorage();
   ensureDefaultContext(state);

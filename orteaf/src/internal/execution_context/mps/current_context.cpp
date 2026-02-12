@@ -63,6 +63,12 @@ Context::DeviceLease currentDevice() {
   return state.current.device;
 }
 
+Context::Architecture currentArchitecture() {
+  auto &state = currentStateStorage();
+  ensureDefaultDevice(state);
+  return state.current.architecture();
+}
+
 Context::CommandQueueLease currentCommandQueue() {
   auto &state = currentStateStorage();
   ensureDefaultCommandQueue(state);
