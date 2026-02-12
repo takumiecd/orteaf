@@ -86,6 +86,34 @@ struct StorageLeaseFactory<::orteaf::internal::execution::Execution::Mps> {
 };
 #endif
 
+#if ORTEAF_ENABLE_CUDA
+/// @brief CUDA storage factory specialization
+template <>
+struct StorageLeaseFactory<::orteaf::internal::execution::Execution::Cuda> {
+  template <typename Impl>
+  static ::orteaf::internal::storage::StorageLease create(
+      const TensorImplCreateRequest<Impl> &req,
+      ::orteaf::internal::storage::RegisteredStorages *storage_registry,
+      std::int64_t numel) {
+    using CudaStorage = ::orteaf::internal::storage::cuda::CudaStorage;
+    using CudaStorageManager =
+        ::orteaf::internal::storage::CudaStorageManager;
+
+    typename CudaStorageManager::Request storage_request{};
+    storage_request.device =
+        ::orteaf::internal::execution::cuda::CudaDeviceHandle{0};
+    storage_request.dtype = req.dtype;
+    storage_request.numel = static_cast<std::size_t>(numel);
+    storage_request.alignment = req.alignment;
+    storage_request.layout = typename CudaStorage::Layout{};
+
+    auto lease =
+        storage_registry->template get<CudaStorage>().acquire(storage_request);
+    return ::orteaf::internal::storage::StorageLease::erase(std::move(lease));
+  }
+};
+#endif
+
 /// @brief Runtime dispatcher for storage lease creation
 template <typename Impl>
 ::orteaf::internal::storage::StorageLease createStorageLeaseForExecution(
@@ -102,6 +130,11 @@ template <typename Impl>
   case Execution::Mps:
     return StorageLeaseFactory<Execution::Mps>::create(req, storage_registry,
                                                         numel);
+#endif
+#if ORTEAF_ENABLE_CUDA
+  case Execution::Cuda:
+    return StorageLeaseFactory<Execution::Cuda>::create(req, storage_registry,
+                                                         numel);
 #endif
   default:
     return {};
