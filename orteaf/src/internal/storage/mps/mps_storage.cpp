@@ -8,12 +8,22 @@ namespace orteaf::internal::storage::mps {
 
 MpsStorage MpsStorage::Builder::build() {
   if (!heap_lease_) {
+    if (heap_handle_.isValid() && has_heap_key_) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+          "MpsStorage build requires either heap handle or heap key, not both");
+    }
+    if ((heap_handle_.isValid() || has_heap_key_) && !device_handle_.isValid()) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
+          "MpsStorage build requires an explicit device handle");
+    }
     if (heap_handle_.isValid()) {
       heap_lease_ = ::orteaf::internal::execution::mps::api::MpsExecutionApi::
-          acquireHeap(heap_handle_);
+          acquireHeap(device_handle_, heap_handle_);
     } else if (has_heap_key_) {
       heap_lease_ = ::orteaf::internal::execution::mps::api::MpsExecutionApi::
-          acquireHeap(heap_key_);
+          acquireHeap(device_handle_, heap_key_);
     }
   }
   if (!heap_lease_) {

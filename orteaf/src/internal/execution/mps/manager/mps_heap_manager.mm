@@ -6,6 +6,25 @@
 
 namespace orteaf::internal::execution::mps::manager {
 
+namespace {
+
+constexpr std::uint64_t kMtlResourceStorageModeShift = 4u;
+constexpr std::uint64_t kMtlResourceStorageModeMask = 0xF0u;
+
+inline ::orteaf::internal::execution::mps::platform::wrapper::MpsBufferUsage_t
+composeUsageWithStorageMode(
+    std::uint64_t resource_options,
+    std::uint64_t storage_mode) {
+  const auto cleared = resource_options & ~kMtlResourceStorageModeMask;
+  const auto mode_bits =
+      (storage_mode << kMtlResourceStorageModeShift) &
+      kMtlResourceStorageModeMask;
+  return static_cast<::orteaf::internal::execution::mps::platform::wrapper::
+                         MpsBufferUsage_t>(cleared | mode_bits);
+}
+
+} // namespace
+
 // =============================================================================
 // HeapPayloadPoolTraits Implementation
 // =============================================================================
@@ -55,6 +74,9 @@ bool MpsHeapPayload::initialize(const InitConfig &config) {
   // Configure buffer manager
   BufferManager::InternalConfig buf_cfg{};
   buf_cfg.public_config = config.buffer_config;
+  buf_cfg.usage = composeUsageWithStorageMode(
+      static_cast<std::uint64_t>(config.key.resource_options),
+      static_cast<std::uint64_t>(config.key.storage_mode));
   buf_cfg.device = config.device;
   buf_cfg.device_handle = config.device_handle;
   buf_cfg.heap = heap_;

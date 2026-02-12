@@ -152,9 +152,6 @@ public:
     std::size_t chunk_size{16 * 1024 * 1024};
     std::size_t min_block_size{64};
     std::size_t max_block_size{16 * 1024 * 1024};
-    ::orteaf::internal::execution::mps::platform::wrapper::MpsBufferUsage_t
-        usage{::orteaf::internal::execution::mps::platform::wrapper::
-                  kMPSDefaultBufferUsage};
     // PoolManager config
     std::size_t control_block_capacity{0};
     std::size_t control_block_block_size{0};
@@ -177,6 +174,9 @@ public:
 private:
   struct InternalConfig {
     Config public_config{};
+    ::orteaf::internal::execution::mps::platform::wrapper::MpsBufferUsage_t
+        usage{::orteaf::internal::execution::mps::platform::wrapper::
+                  kMPSDefaultBufferUsage};
     DeviceType device{nullptr};
     ::orteaf::internal::execution::mps::MpsDeviceHandle device_handle{};
     HeapType heap{nullptr};
@@ -207,7 +207,7 @@ private:
     res_cfg.device = config.device;
     res_cfg.device_handle = config.device_handle;
     res_cfg.heap = config.heap;
-    res_cfg.usage = cfg.usage;
+    res_cfg.usage = config.usage;
     res_cfg.library_manager = config.library_manager;
 
     resource_ = Resource{};

@@ -80,7 +80,9 @@ void applyMpsDefaults(LibraryConfig &config) {
   ensurePoolConfig(device_cfg.event_config, per_device_pool);
   ensurePoolConfig(device_cfg.fence_config, per_device_pool);
   ensurePoolConfig(device_cfg.heap_config, per_device_pool);
+  ensurePoolConfig(device_cfg.heap_config.buffer_config, per_device_pool);
   ensurePoolConfig(device_cfg.library_config, per_device_pool);
+  ensurePoolConfig(device_cfg.library_config.pipeline_config, per_device_pool);
   ensurePoolConfig(device_cfg.graph_config, per_device_pool);
 
   ensurePoolConfig(exec_config.kernel_base_config, 1u);

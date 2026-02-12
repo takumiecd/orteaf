@@ -346,6 +346,7 @@ TEST(MpsStorageExecutionApiTest, BuilderWithDeviceHandleUsesExecutionApi) {
   mps_api::MpsExecutionApi::configure(config);
   {
     auto storage = mps_storage::MpsStorage::builder()
+                       .withDeviceHandle(mps::MpsDeviceHandle{0})
                        .withHeapKey(heap_key)
                        .withNumElements(0)
                        .build();

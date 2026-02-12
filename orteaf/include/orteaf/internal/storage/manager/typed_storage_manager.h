@@ -95,11 +95,19 @@ template <typename Storage> struct TypedStoragePoolTraits {
   #if ORTEAF_ENABLE_MPS
     if constexpr (std::is_same_v<
                       Storage, ::orteaf::internal::storage::mps::MpsStorage>) {
+      if (!request.device.isValid()) {
+        ORTEAF_THROW(InvalidArgument,
+                     "MpsStorage request requires a valid device handle");
+      }
       if (!request.heap_handle.isValid() &&
           request.heap_key.size_bytes == 0) {
         ORTEAF_THROW(
             InvalidArgument,
             "MpsStorage request requires a valid heap handle or heap key");
+      }
+      if (request.heap_handle.isValid() && request.heap_key.size_bytes != 0) {
+        ORTEAF_THROW(InvalidArgument,
+                     "MpsStorage request cannot set both heap handle and heap key");
       }
     } else
   #endif
