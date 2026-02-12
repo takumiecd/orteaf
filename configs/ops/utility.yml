@@ -1,0 +1,110 @@
+schema_version: "1.0"
+
+ops:
+  - id: "Fill"
+    display_name: "Fill"
+    category: "utility"
+    arity: 0
+    inputs: []
+    outputs:
+      - name: "output"
+        description: "Filled tensor"
+        dtype_rule:
+          kind: "custom"
+          function: "FillOutputDType"
+    attributes:
+      - name: "value"
+        type: "double"
+        required: true
+        description: "Scalar fill value"
+    compute_policy:
+      kind: "custom"
+      handler: "FillComputePolicy"
+    shape_inference:
+      kind: "custom"
+      function: "FillOutputShape"
+      description: "Uses output shape provided by caller"
+    metadata:
+      description: "Fills the output tensor with a scalar value"
+      tags: ["fill", "utility"]
+      commutative: false
+      differentiable: false
+
+  - id: "CopyHostToMps"
+    display_name: "Copy Host To MPS"
+    category: "utility"
+    arity: 1
+    inputs:
+      - name: "input"
+        description: "Host tensor to upload"
+        dtype_constraints:
+          mode: "allow"
+          categories: ["floating_point", "signed_integer", "unsigned_integer", "boolean"]
+    outputs:
+      - name: "output"
+        description: "MPS tensor receiving copied values"
+        dtype_rule:
+          kind: "same_as"
+          input: "input"
+    compute_policy:
+      kind: "same_as"
+      input: "input"
+    shape_inference:
+      kind: "identity"
+      description: "Output shape matches input shape"
+    metadata:
+      description: "Copies tensor data from host storage into MPS storage"
+      tags: ["copy", "transfer", "mps"]
+      commutative: false
+      differentiable: false
+
+  - id: "CopyMpsToHost"
+    display_name: "Copy MPS To Host"
+    category: "utility"
+    arity: 1
+    inputs:
+      - name: "input"
+        description: "MPS tensor to download"
+        dtype_constraints:
+          mode: "allow"
+          categories: ["floating_point", "signed_integer", "unsigned_integer", "boolean"]
+    outputs:
+      - name: "output"
+        description: "Host tensor receiving copied values"
+        dtype_rule:
+          kind: "same_as"
+          input: "input"
+    compute_policy:
+      kind: "same_as"
+      input: "input"
+    shape_inference:
+      kind: "identity"
+      description: "Output shape matches input shape"
+    metadata:
+      description: "Copies tensor data from MPS storage into host storage"
+      tags: ["copy", "transfer", "mps"]
+      commutative: false
+      differentiable: false
+
+  - id: "Print"
+    display_name: "Print"
+    category: "utility"
+    arity: 1
+    inputs:
+      - name: "input"
+        description: "Tensor to print"
+        dtype_constraints:
+          mode: "allow"
+          categories: ["floating_point", "signed_integer", "unsigned_integer", "boolean"]
+    outputs: []
+    compute_policy:
+      kind: "same_as"
+      input: "input"
+    shape_inference:
+      kind: "none"
+      description: "No outputs to infer"
+    metadata:
+      description: "Prints the tensor"
+      tags: ["debug", "io"]
+      commutative: false
+      differentiable: false

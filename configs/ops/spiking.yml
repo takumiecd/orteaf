@@ -1,0 +1,35 @@
+schema_version: "1.0"
+
+ops:
+  - id: "SpikeThreshold"
+    display_name: "Spike Threshold"
+    category: "spiking"
+    arity: 2
+    inputs:
+      - name: "membrane_potential"
+        description: "Membrane potential inputs"
+        dtype_constraints:
+          mode: "allow"
+          categories: ["floating_point"]
+      - name: "threshold"
+        description: "Firing threshold per neuron"
+        dtype_constraints:
+          mode: "deny"
+          categories: ["boolean"]
+          dtypes: ["Bool"]
+    outputs:
+      - name: "spike"
+        description: "Binary spike events"
+        dtype_rule:
+          kind: "fixed"
+          dtype: "Bool"
+    compute_policy:
+      kind: "fixed"
+      dtype: "Bool"
+    shape_inference:
+      kind: "elementwise"
+    metadata:
+      description: "Generates binary spike events when membrane potential exceeds threshold"
+      tags: ["spiking", "non-differentiable"]
+      commutative: false
+      differentiable: false

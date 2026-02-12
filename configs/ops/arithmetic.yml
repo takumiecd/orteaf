@@ -1,0 +1,83 @@
+schema_version: "1.0"
+
+ops:
+  - id: "Add"
+    display_name: "Add"
+    category: "arithmetic"
+    arity: 2
+    inputs:
+      - name: "lhs"
+        description: "Left-hand operand"
+        dtype_constraints:
+          mode: "allow"
+          categories: ["floating_point", "signed_integer", "unsigned_integer"]
+          dtypes: ["Bool"]
+      - name: "rhs"
+        description: "Right-hand operand"
+        dtype_constraints:
+          mode: "match"
+          reference: "lhs"
+          allow_promotion: true
+          require_same_shape: false
+    outputs:
+      - name: "output"
+        description: "Elementwise sum respecting broadcasting"
+        dtype_rule:
+          kind: "promote"
+          inputs: ["lhs", "rhs"]
+    attributes:
+      - name: "alpha"
+        type: "float"
+        default: 1.0
+        required: false
+        description: "Optional scaling factor applied to rhs before addition"
+    compute_policy:
+      kind: "promote"
+      inputs: ["lhs", "rhs"]
+    shape_inference:
+      kind: "broadcast"
+      description: "Applies NumPy-style broadcasting rules"
+    metadata:
+      description: "Elementwise addition that supports broadcasting"
+      tags: ["elementwise", "commutative"]
+      commutative: true
+      differentiable: true
+      aliases: ["add", "sum"]
+
+  - id: "CustomQuantize"
+    display_name: "Custom Quantize"
+    category: "arithmetic"
+    arity: 1
+    inputs:
+      - name: "input"
+        description: "Tensor to quantize"
+        dtype_constraints:
+          mode: "allow"
+          categories: ["floating_point"]
+    outputs:
+      - name: "quantized"
+        description: "Quantized tensor using user-provided rule"
+        dtype_rule:
+          kind: "custom"
+          function: "InferQuantizedDType"
+    attributes:
+      - name: "bit_width"
+        type: "int"
+        default: 8
+        description: "Number of bits per quantized element"
+      - name: "symmetric"
+        type: "bool"
+        default: true
+        description: "Use symmetric quantization range"
+    compute_policy:
+      kind: "custom"
+      handler: "SelectQuantizedComputeType"
+    shape_inference:
+      kind: "custom"
+      function: "QuantizeShapeRule"
+      description: "Consults execution-specific quantization layout"
+    metadata:
+      description: "Delegates quantization specifics to a execution-provided rule"
+      tags: ["quantization", "execution-specific"]
+      commutative: false
+      differentiable: false

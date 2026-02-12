@@ -1,0 +1,46 @@
+schema_version: "1.0"
+
+devices:
+  - id: "CudaGeneric"
+    display_name: "Generic CUDA Device"
+    execution: "Cuda"
+    architecture: "Generic"
+    memory:
+      max_bytes: 4294967296   # 4 GiB
+      shared_bytes: 49152
+    supported_dtypes: ["F32", "F16"]
+    supported_ops: ["Add", "MatMul", "Relu"]
+    capabilities:
+      compute_capability: "sm50"
+      tensor_cores: "false"
+    notes: "フォールバック用のCUDAデバイス定義"
+
+  - id: "CudaH100Pcie80GB"
+    display_name: "H100 PCIe (80GB)"
+    execution: "Cuda"
+    architecture: "Sm90"
+    memory:
+      max_bytes: 85899345920   # 80 GiB
+      shared_bytes: 229376
+    supported_dtypes: ["F32", "F16", "F8E4M3", "F8E5M2"]
+    supported_ops: ["Add", "MatMul", "Relu", "CustomQuantize"]
+    capabilities:
+      compute_capability: "sm90"
+      tensor_cores: "true"
+      pcie_bandwidth_gbps: "128"
+    notes: "CUDA 12.2 以上の環境を推奨"
+
+  - id: "CudaRtx3070"
+    display_name: "GeForce RTX 3070"
+    execution: "Cuda"
+    architecture: "Sm86"
+    memory:
+      max_bytes: 8589934592    # 8 GiB
+      shared_bytes: 102400
+    supported_dtypes: ["F32", "F16", "F8E4M3", "F8E5M2"]
+    supported_ops: ["Add", "MatMul", "Relu", "CustomQuantize"]
+    capabilities:
+      compute_capability: "sm86"
+      tensor_cores: "true"
+      memory_type: "GDDR6"
+    notes: "Desktop Ampere GPU"
