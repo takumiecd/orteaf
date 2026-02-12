@@ -85,7 +85,7 @@ add_custom_target(generate_dtypes
         ${DTYPE_GEN_DIR}/dtype_tables.h
 )
 
-file(GLOB OPS_YAML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/configs/ops/*.yml")
+file(GLOB OPS_YAML_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/configs/ops/*.yml")
 
 add_custom_command(
     OUTPUT
@@ -124,7 +124,7 @@ add_custom_target(generate_executions
         ${EXECUTION_GEN_DIR}/execution_tables.h
 )
 
-file(GLOB ARCHITECTURE_YAML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/configs/architecture/*.yml")
+file(GLOB ARCHITECTURE_YAML_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/configs/architecture/*.yml")
 
 add_custom_command(
     OUTPUT
@@ -148,7 +148,7 @@ add_custom_target(generate_architectures
         ${ARCHITECTURE_GEN_DIR}/architecture_tables.h
 )
 
-file(GLOB DEVICE_YAML_FILES "${CMAKE_CURRENT_SOURCE_DIR}/configs/device/*.yml")
+file(GLOB DEVICE_YAML_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/configs/device/*.yml")
 
 add_custom_command(
     OUTPUT
