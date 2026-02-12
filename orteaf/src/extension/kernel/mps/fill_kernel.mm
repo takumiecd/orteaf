@@ -6,6 +6,7 @@
 #include <system_error>
 
 #include <orteaf/internal/architecture/architecture.h>
+#include <orteaf/internal/base/checked_int.h>
 #include <orteaf/internal/base/inline_vector.h>
 #include <orteaf/internal/diagnostics/error/error.h>
 #include <orteaf/internal/dtype/dtype.h>
@@ -62,11 +63,15 @@ namespace {
 
 struct LayoutInfo {
   std::size_t numel{};
+  bool has_zero{};
   bool contiguous{};
+  std::int64_t min_index{};
+  std::int64_t max_index{};
 };
 
 LayoutInfo analyzeLayout(const FillMpsParams::ShapeVector &shape,
-                         const FillMpsParams::ShapeVector &strides) {
+                         const FillMpsParams::ShapeVector &strides,
+                         std::int64_t offset) {
   if (shape.size != strides.size) {
     error::throwError(error::OrteafErrc::InvalidParameter,
                       "MPS fill kernel received mismatched shape/strides");
@@ -74,7 +79,14 @@ LayoutInfo analyzeLayout(const FillMpsParams::ShapeVector &shape,
 
   LayoutInfo info{};
   info.numel = 1;
+  info.has_zero = false;
   info.contiguous = true;
+  info.min_index = offset;
+  info.max_index = offset;
+
+  if (shape.size == 0) {
+    return info;
+  }
 
   std::size_t expected_stride = 1;
   for (std::size_t i = shape.size; i-- > 0;) {
@@ -85,6 +97,7 @@ LayoutInfo analyzeLayout(const FillMpsParams::ShapeVector &shape,
     }
     if (dim == 0) {
       info.numel = 0;
+      info.has_zero = true;
       return info;
     }
 
@@ -106,8 +119,44 @@ LayoutInfo analyzeLayout(const FillMpsParams::ShapeVector &shape,
     expected_stride *= dim_size;
   }
 
+  std::int64_t min_index = offset;
+  std::int64_t max_index = offset;
+  for (std::uint8_t i = 0; i < shape.size; ++i) {
+    const auto dim = shape.data[i];
+    if (dim <= 0) {
+      continue;
+    }
+    const auto stride = strides.data[i];
+    std::int64_t span = 0;
+    if (::orteaf::internal::base::mulOverflowI64(stride, dim - 1, span)) {
+      error::throwError(error::OrteafErrc::InvalidParameter,
+                        "MPS fill kernel index range overflow");
+    }
+    if (stride >= 0) {
+      if (::orteaf::internal::base::addOverflowI64(max_index, span,
+                                                   max_index)) {
+        error::throwError(error::OrteafErrc::InvalidParameter,
+                          "MPS fill kernel index range overflow");
+      }
+    } else {
+      if (::orteaf::internal::base::addOverflowI64(min_index, span,
+                                                   min_index)) {
+        error::throwError(error::OrteafErrc::InvalidParameter,
+                          "MPS fill kernel index range overflow");
+      }
+    }
+  }
+
+  info.min_index = min_index;
+  info.max_index = max_index;
   return info;
 }
+
+struct FillLayoutParams {
+  std::uint32_t rank{};
+  std::uint32_t shape[kFillShapeInlineCapacity]{};
+  std::int32_t strides[kFillShapeInlineCapacity]{};
+};
 
 } // namespace
 
@@ -135,36 +184,61 @@ void fillMpsExecute(
     error::throwError(error::OrteafErrc::Unsupported,
                       "MPS fill kernel supports only F32");
   }
-  const auto storage_numel = storage->numel();
-
-  const auto layout = analyzeLayout(params.shape.get(), params.strides.get());
-  if (layout.numel == 0) {
-    return;
+  const auto storage_numel_raw = storage->numel();
+  if (storage_numel_raw >
+      static_cast<std::size_t>(std::numeric_limits<std::int64_t>::max())) {
+    error::throwError(error::OrteafErrc::InvalidParameter,
+                      "MPS fill kernel storage size exceeds index range");
   }
-  if (!layout.contiguous) {
-    error::throwError(error::OrteafErrc::Unsupported,
-                      "MPS fill kernel supports only contiguous output");
-  }
+  const auto storage_numel = static_cast<std::int64_t>(storage_numel_raw);
 
   const auto raw_offset = params.offset.get();
   if (raw_offset < 0) {
     error::throwError(error::OrteafErrc::InvalidParameter,
                       "MPS fill kernel received negative offset");
   }
-  const auto offset = static_cast<std::size_t>(raw_offset);
-  if (offset > storage_numel || layout.numel > storage_numel - offset) {
+
+  const auto &shape = params.shape.get();
+  const auto &strides = params.strides.get();
+  const auto layout = analyzeLayout(shape, strides, raw_offset);
+  if (layout.has_zero) {
+    return;
+  }
+
+  if (layout.min_index < 0 || layout.max_index < 0 ||
+      layout.max_index >= storage_numel) {
     error::throwError(error::OrteafErrc::InvalidParameter,
                       "MPS fill kernel view exceeds output storage bounds");
   }
 
+  const auto offset = static_cast<std::size_t>(raw_offset);
   if (layout.numel > static_cast<std::size_t>(
                         std::numeric_limits<std::uint32_t>::max()) ||
       offset >
           static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max()) ||
-      offset + layout.numel >
+      static_cast<std::size_t>(layout.max_index) >
           static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max())) {
     error::throwError(error::OrteafErrc::InvalidParameter,
                       "MPS fill kernel size exceeds uint32 range");
+  }
+
+  FillLayoutParams layout_params{};
+  layout_params.rank = shape.size;
+  for (std::size_t i = 0; i < shape.size; ++i) {
+    const auto dim = shape.data[i];
+    const auto stride = strides.data[i];
+    if (dim < 0 ||
+        dim > static_cast<std::int64_t>(std::numeric_limits<std::uint32_t>::max())) {
+      error::throwError(error::OrteafErrc::InvalidParameter,
+                        "MPS fill kernel shape dimension exceeds uint32 range");
+    }
+    if (stride < static_cast<std::int64_t>(std::numeric_limits<std::int32_t>::min()) ||
+        stride > static_cast<std::int64_t>(std::numeric_limits<std::int32_t>::max())) {
+      error::throwError(error::OrteafErrc::InvalidParameter,
+                        "MPS fill kernel stride exceeds int32 range");
+    }
+    layout_params.shape[i] = static_cast<std::uint32_t>(dim);
+    layout_params.strides[i] = static_cast<std::int32_t>(stride);
   }
 
   const auto offset_u32 = static_cast<std::uint32_t>(offset);
@@ -184,6 +258,7 @@ void fillMpsExecute(
   session->waitDependencies(storages.output);
   session->bindStorages<0>(storages.output);
   session->bindParams<1, 2, 3>(offset_param, numel_param, fill_value_param);
+  base.setBytes(session->encoder(), &layout_params, sizeof(layout_params), 4);
   session->dispatch1D(static_cast<std::size_t>(numel_u32));
 
   if (!session->updateTokens(storages.output)) {
@@ -199,7 +274,7 @@ kernel::core::KernelMetadataLease createFillMpsMetadata() {
   MpsExecutionApi::KernelKeys keys;
   keys.pushBack(MpsExecutionApi::KernelKey{
       MpsExecutionApi::LibraryKey::Named("fill_kernel"),
-      MpsExecutionApi::FunctionKey::Named("orteaf_fill_contiguous_f32")});
+      MpsExecutionApi::FunctionKey::Named("orteaf_fill_strided_f32")});
 
   auto metadata_lease = MpsExecutionApi::acquireKernelMetadata(keys);
   if (auto *meta_ptr = metadata_lease.operator->()) {

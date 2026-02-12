@@ -5,11 +5,9 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <system_error>
 
 #include <orteaf/extension/ops/fill.h>
 #include <orteaf/extension/tensor/dense_tensor_impl.h>
-#include <orteaf/internal/diagnostics/error/error.h>
 #include <orteaf/internal/dtype/dtype.h>
 #include <orteaf/internal/execution/execution.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_buffer.h>
@@ -20,14 +18,11 @@
 #include <orteaf/internal/storage/registry/storage_types.h>
 #include <orteaf/user/tensor/tensor.h>
 
-#include "tests/internal/testing/error_assert.h"
-
 namespace ops = ::orteaf::extension::ops;
 namespace tensor = ::orteaf::user::tensor;
 namespace init = ::orteaf::internal::init;
 namespace mps_context = ::orteaf::internal::execution_context::mps;
 namespace mps_wrapper = ::orteaf::internal::execution::mps::platform::wrapper;
-namespace error = ::orteaf::internal::diagnostics::error;
 
 using DType = ::orteaf::internal::DType;
 using Execution = ::orteaf::internal::execution::Execution;
@@ -125,18 +120,29 @@ TEST_F(FillMpsOpTest, FillsContiguousSliceViewF32) {
   }
 }
 
-TEST_F(FillMpsOpTest, RejectsNonContiguousView) {
-  std::array<std::int64_t, 2> shape{2, 3};
+TEST_F(FillMpsOpTest, FillsNonContiguousSliceViewF32) {
+  std::array<std::int64_t, 2> shape{4, 4};
   auto base = tensor::Tensor::dense(shape, DType::F32, Execution::Mps);
 
-  std::array<std::size_t, 2> perm{1, 0};
-  auto transposed = base.transpose(perm);
-  ASSERT_TRUE(transposed.valid());
-  ASSERT_FALSE(transposed.isContiguous());
+  ops::fill(base, -3.0);
+  syncCurrentMpsQueue();
 
-  ::orteaf::tests::ExpectError(error::OrteafErrc::OperationFailed, [&] {
-    ops::fill(transposed, 9.0);
-  });
+  std::array<std::int64_t, 2> starts{1, 0};
+  std::array<std::int64_t, 2> sizes{2, 3};
+  auto view = base.slice(starts, sizes);
+  ASSERT_TRUE(view.valid());
+  ASSERT_FALSE(view.isContiguous());
+
+  ops::fill(view, 7.0);
+  syncCurrentMpsQueue();
+
+  const float *data = getMpsBuffer(base);
+  ASSERT_NE(data, nullptr);
+  for (std::size_t i = 0; i < static_cast<std::size_t>(base.numel()); ++i) {
+    const bool should_fill =
+        (i == 4u || i == 5u || i == 6u || i == 8u || i == 9u || i == 10u);
+    EXPECT_FLOAT_EQ(data[i], should_fill ? 7.0f : -3.0f);
+  }
 }
 
 #endif // ORTEAF_ENABLE_MPS
