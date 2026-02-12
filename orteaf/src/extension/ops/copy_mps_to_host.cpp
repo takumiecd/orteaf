@@ -86,8 +86,7 @@ void copyMpsToHost(Tensor &output, const Tensor &input) {
 
   kernel::KeyRequest request{::orteaf::internal::ops::Op::CopyMpsToHost,
                              input_impl->dtype(),
-                             detail::architectureForExecution(Execution::Mps,
-                                                              kOpName)};
+                             detail::architectureForArgs(args, kOpName)};
   kernel::dispatch::Dispatcher dispatcher;
   const auto result = dispatcher.dispatch(request, args);
   if (result.notFound()) {
@@ -116,4 +115,3 @@ void copyMpsToHost(Tensor &output, const Tensor &input) {
 }
 
 } // namespace orteaf::extension::ops
-

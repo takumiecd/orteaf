@@ -18,6 +18,7 @@ void reset();
 
 const Context &currentContext();
 Context::DeviceLease currentDevice();
+Context::Architecture currentArchitecture();
 Context::ContextLease currentCudaContext();
 Context::StreamLease currentStream();
 

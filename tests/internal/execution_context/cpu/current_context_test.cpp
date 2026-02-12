@@ -1,11 +1,13 @@
 #include "orteaf/internal/execution_context/cpu/current_context.h"
 
+#include "orteaf/internal/architecture/architecture.h"
 #include "orteaf/internal/execution/cpu/api/cpu_execution_api.h"
 #include <gtest/gtest.h>
 
 namespace cpu_context = ::orteaf::internal::execution_context::cpu;
 namespace cpu_api = ::orteaf::internal::execution::cpu::api;
 namespace cpu_exec = ::orteaf::internal::execution::cpu;
+namespace architecture = ::orteaf::internal::architecture;
 
 class CpuCurrentContextTest : public ::testing::Test {
 protected:
@@ -64,4 +66,12 @@ TEST_F(CpuCurrentContextTest, ResetReacquiresDefaultDevice) {
   auto second = cpu_context::currentDevice();
   EXPECT_TRUE(second);
   EXPECT_EQ(second.payloadHandle(), cpu_exec::CpuDeviceHandle{0});
+}
+
+TEST_F(CpuCurrentContextTest, CurrentArchitectureMatchesCurrentContext) {
+  const auto &ctx = cpu_context::currentContext();
+  const auto arch = cpu_context::currentArchitecture();
+  EXPECT_EQ(arch, ctx.architecture());
+  EXPECT_EQ(architecture::executionOf(arch),
+            ::orteaf::internal::execution::Execution::Cpu);
 }

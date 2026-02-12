@@ -9,6 +9,7 @@ class Context {
 public:
   using DeviceLease =
       ::orteaf::internal::execution::cpu::manager::CpuDeviceManager::DeviceLease;
+  using Architecture = ::orteaf::internal::architecture::Architecture;
 
   /// @brief Create an empty context with no resources.
   Context() = default;
@@ -16,6 +17,14 @@ public:
   /// @brief Create a context for the specified CPU device.
   /// @param device The device handle to create the context for.
   explicit Context(::orteaf::internal::execution::cpu::CpuDeviceHandle device);
+
+  Architecture architecture() const noexcept {
+    const auto *resource = device.operator->();
+    if (resource == nullptr) {
+      return Architecture::CpuGeneric;
+    }
+    return resource->arch;
+  }
 
   DeviceLease device{};
 };

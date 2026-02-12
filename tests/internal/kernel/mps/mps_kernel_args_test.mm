@@ -7,6 +7,7 @@
 #include "orteaf/internal/kernel/storage/operand_id.h"
 #include "orteaf/internal/kernel/storage/operand_key.h"
 
+#include "orteaf/internal/architecture/architecture.h"
 #include "orteaf/internal/execution/mps/api/mps_execution_api.h"
 #include "orteaf/internal/execution/mps/platform/mps_slow_ops.h"
 #include "orteaf/internal/execution_context/mps/current_context.h"
@@ -15,6 +16,7 @@
 #include <type_traits>
 
 namespace kernel = orteaf::internal::kernel;
+namespace architecture = ::orteaf::internal::architecture;
 using Execution = orteaf::internal::execution::Execution;
 using DType = orteaf::internal::DType;
 
@@ -230,10 +232,23 @@ TEST_F(KernelArgsMpsContextTest, ContextFromMpsContext) {
 
   EXPECT_TRUE(args.valid());
   EXPECT_EQ(args.execution(), orteaf::internal::execution::Execution::Mps);
+  EXPECT_EQ(architecture::executionOf(args.architecture()),
+            ::orteaf::internal::execution::Execution::Mps);
   auto *mps_ctx =
       args.context()
           .tryAs<::orteaf::internal::execution_context::mps::Context>();
   EXPECT_NE(mps_ctx, nullptr);
+}
+
+TEST_F(KernelArgsMpsContextTest, ArchitectureMatchesContext) {
+  auto ctx = kernel::ContextAny::erase(
+      ::orteaf::internal::execution_context::mps::currentContext());
+  TypeErasedArgs args(std::move(ctx));
+
+  EXPECT_TRUE(args.valid());
+  EXPECT_EQ(args.architecture(), args.context().architecture());
+  EXPECT_EQ(architecture::executionOf(args.architecture()),
+            ::orteaf::internal::execution::Execution::Mps);
 }
 
 TEST_F(KernelArgsMpsContextTest, ContextVisitOnInvalid) {

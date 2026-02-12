@@ -49,4 +49,10 @@ Context::DeviceLease currentDevice() {
   return state.current.device;
 }
 
+Context::Architecture currentArchitecture() {
+  auto &state = currentStateStorage();
+  ensureDefaultContext(state);
+  return state.current.architecture();
+}
+
 } // namespace orteaf::internal::execution_context::cpu

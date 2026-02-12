@@ -13,6 +13,7 @@ class Context {
 public:
   using DeviceLease =
       ::orteaf::internal::execution::cuda::manager::CudaDeviceManager::DeviceLease;
+  using Architecture = ::orteaf::internal::architecture::Architecture;
   using ContextLease = ::orteaf::internal::execution::cuda::manager::
       CudaContextManager::ContextLease;
   using StreamLease =
@@ -30,6 +31,14 @@ public:
   /// @param stream The stream handle to acquire.
   Context(::orteaf::internal::execution::cuda::CudaDeviceHandle device,
           ::orteaf::internal::execution::cuda::CudaStreamHandle stream);
+
+  Architecture architecture() const noexcept {
+    const auto *resource = device.operator->();
+    if (resource == nullptr) {
+      return Architecture::CudaGeneric;
+    }
+    return resource->arch;
+  }
 
   DeviceLease device{};
   ContextLease context{};

@@ -37,8 +37,7 @@ void fill(Tensor &output, double value) {
   args.addParam(kernel::Param(kernel::ParamId::Value, value));
 
   kernel::KeyRequest request{::orteaf::internal::ops::Op::Fill, impl->dtype(),
-                             detail::architectureForExecution(impl->execution(),
-                                                              "fill")};
+                             detail::architectureForArgs(args, "fill")};
 
   kernel::dispatch::Dispatcher dispatcher;
   auto result = dispatcher.dispatch(request, args);

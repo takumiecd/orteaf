@@ -16,5 +16,6 @@ void reset();
 
 const Context &currentContext();
 Context::DeviceLease currentDevice();
+Context::Architecture currentArchitecture();
 
 } // namespace orteaf::internal::execution_context::cpu

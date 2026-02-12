@@ -12,6 +12,7 @@ class Context {
 public:
   using DeviceLease =
       ::orteaf::internal::execution::mps::manager::MpsDeviceManager::DeviceLease;
+  using Architecture = ::orteaf::internal::architecture::Architecture;
   using CommandQueueLease = ::orteaf::internal::execution::mps::manager::
       MpsCommandQueueManager::CommandQueueLease;
 
@@ -27,6 +28,14 @@ public:
   /// @param command_queue The command queue handle to acquire.
   Context(::orteaf::internal::execution::mps::MpsDeviceHandle device,
           ::orteaf::internal::execution::mps::MpsCommandQueueHandle command_queue);
+
+  Architecture architecture() const noexcept {
+    const auto *resource = device.operator->();
+    if (resource == nullptr) {
+      return Architecture::MpsGeneric;
+    }
+    return resource->architecture();
+  }
 
   DeviceLease device{};
   CommandQueueLease command_queue{};

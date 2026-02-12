@@ -1,9 +1,11 @@
 #pragma once
 
+#include <concepts>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
+#include <orteaf/internal/architecture/architecture.h>
 #include <orteaf/internal/execution/execution.h>
 #include <orteaf/internal/execution_context/cpu/context.h>
 
@@ -55,9 +57,23 @@ template <> struct ContextExecution<CudaContext> {
  * @brief Concept for allowed context types.
  */
 template <typename T>
-concept KernelContextType = requires {
+concept KernelContextType = requires(const std::decay_t<T> &ctx) {
   ContextExecution<std::decay_t<T>>::kValue;
+  {
+    ctx.architecture()
+  } -> std::same_as<::orteaf::internal::architecture::Architecture>;
 };
+
+static_assert(KernelContextType<CpuContext>,
+              "CpuContext must expose execution mapping and architecture()");
+#if ORTEAF_ENABLE_MPS
+static_assert(KernelContextType<MpsContext>,
+              "MpsContext must expose execution mapping and architecture()");
+#endif
+#if ORTEAF_ENABLE_CUDA
+static_assert(KernelContextType<CudaContext>,
+              "CudaContext must expose execution mapping and architecture()");
+#endif
 
 /**
  * @brief Type-erased execution context container.
@@ -68,6 +84,7 @@ concept KernelContextType = requires {
 class ContextAny {
 public:
   using Execution = ::orteaf::internal::execution::Execution;
+  using Architecture = ::orteaf::internal::architecture::Architecture;
   using Variant = std::variant<std::monostate, CpuContext
 #if ORTEAF_ENABLE_MPS
                                ,
@@ -115,6 +132,22 @@ public:
             static_assert(KernelContextType<T>,
                           "Context type must have Execution mapping");
             return ContextExecution<T>::kValue;
+          }
+        },
+        variant_);
+  }
+
+  Architecture architecture() const {
+    return std::visit(
+        [](const auto &ctx) -> Architecture {
+          using T = std::decay_t<decltype(ctx)>;
+          if constexpr (std::is_same_v<T, std::monostate>) {
+            return Architecture::CpuGeneric;
+          } else {
+            static_assert(
+                KernelContextType<T>,
+                "Context type must have Execution mapping and architecture()");
+            return ctx.architecture();
           }
         },
         variant_);

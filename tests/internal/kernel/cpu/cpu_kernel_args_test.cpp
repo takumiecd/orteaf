@@ -6,6 +6,7 @@
 #include "orteaf/internal/kernel/storage/operand_id.h"
 #include "orteaf/internal/kernel/storage/operand_key.h"
 
+#include "orteaf/internal/architecture/architecture.h"
 #include "orteaf/internal/execution/cpu/api/cpu_execution_api.h"
 #include "orteaf/internal/execution_context/cpu/current_context.h"
 
@@ -13,6 +14,7 @@
 #include <type_traits>
 
 namespace kernel = orteaf::internal::kernel;
+namespace architecture = ::orteaf::internal::architecture;
 using Execution = orteaf::internal::execution::Execution;
 using DType = orteaf::internal::DType;
 
@@ -204,10 +206,23 @@ TEST_F(KernelArgsCpuContextTest, ContextFromCpuContext) {
 
   EXPECT_TRUE(args.valid());
   EXPECT_EQ(args.execution(), orteaf::internal::execution::Execution::Cpu);
+  EXPECT_EQ(architecture::executionOf(args.architecture()),
+            ::orteaf::internal::execution::Execution::Cpu);
   auto *cpu_ctx =
       args.context()
           .tryAs<::orteaf::internal::execution_context::cpu::Context>();
   EXPECT_NE(cpu_ctx, nullptr);
+}
+
+TEST_F(KernelArgsCpuContextTest, ArchitectureMatchesContext) {
+  auto ctx = kernel::ContextAny::erase(
+      ::orteaf::internal::execution_context::cpu::currentContext());
+  TypeErasedArgs args(std::move(ctx));
+
+  EXPECT_TRUE(args.valid());
+  EXPECT_EQ(args.architecture(), args.context().architecture());
+  EXPECT_EQ(architecture::executionOf(args.architecture()),
+            ::orteaf::internal::execution::Execution::Cpu);
 }
 
 TEST(KernelArgs, ContextVisitOnInvalid) {

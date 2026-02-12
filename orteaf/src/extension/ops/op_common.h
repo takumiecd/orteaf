@@ -124,20 +124,20 @@ inline kernel::KernelArgs makeArgsForCpuOrMpsOrCuda(Execution execution,
                               op_name);
 }
 
-inline Architecture architectureForExecution(Execution execution,
-                                             const char *op_name) {
-  switch (execution) {
-  case Execution::Cpu:
-    return Architecture::CpuGeneric;
-  case Execution::Mps:
-    return Architecture::MpsGeneric;
-  case Execution::Cuda:
-    return Architecture::CudaGeneric;
-  default:
-    error::throwError(error::OrteafErrc::ExecutionUnavailable,
+inline Architecture architectureForArgs(const kernel::KernelArgs &args,
+                                        const char *op_name) {
+  if (!args.valid()) {
+    error::throwError(error::OrteafErrc::InvalidState,
                       std::string(op_name) +
-                          ": unknown execution type");
+                          ": kernel args context is not valid");
   }
+  const auto arch = args.architecture();
+  if (::orteaf::internal::architecture::executionOf(arch) != args.execution()) {
+    error::throwError(error::OrteafErrc::InvalidState,
+                      std::string(op_name) +
+                          ": context architecture does not match execution");
+  }
+  return arch;
 }
 
 } // namespace orteaf::extension::ops::detail

@@ -1,6 +1,5 @@
 #include "orteaf/extension/ops/print.h"
 
-#include <orteaf/internal/architecture/architecture.h>
 #include <orteaf/internal/diagnostics/error/error.h>
 #include <orteaf/internal/execution/execution.h>
 #include <orteaf/internal/kernel/core/key_components.h>
@@ -16,7 +15,6 @@ namespace {
 using Tensor = ::orteaf::user::tensor::Tensor;
 namespace error = ::orteaf::internal::diagnostics::error;
 namespace kernel = ::orteaf::internal::kernel;
-using Architecture = ::orteaf::internal::architecture::Architecture;
 
 }  // namespace
 
@@ -33,7 +31,7 @@ void print(const Tensor &input) {
   impl->bindAllArgs(args, kernel::OperandId::Input0);
 
   kernel::KeyRequest request{::orteaf::internal::ops::Op::Print, impl->dtype(),
-                             Architecture::CpuGeneric};
+                             detail::architectureForArgs(args, "print")};
 
   kernel::dispatch::Dispatcher dispatcher;
   auto result = dispatcher.dispatch(request, args);

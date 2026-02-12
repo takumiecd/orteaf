@@ -2,6 +2,7 @@
 
 #include "orteaf/internal/execution_context/mps/current_context.h"
 
+#include "orteaf/internal/architecture/architecture.h"
 #include "orteaf/internal/execution/mps/api/mps_execution_api.h"
 #include "orteaf/internal/execution/mps/platform/mps_slow_ops.h"
 #include <gtest/gtest.h>
@@ -12,6 +13,7 @@ namespace mps_context = ::orteaf::internal::execution_context::mps;
 namespace mps_api = ::orteaf::internal::execution::mps::api;
 namespace mps_platform = ::orteaf::internal::execution::mps::platform;
 namespace mps_exec = ::orteaf::internal::execution::mps;
+namespace architecture = ::orteaf::internal::architecture;
 
 namespace {
 
@@ -149,6 +151,20 @@ TEST_F(MpsCurrentContextTest, SetCurrentOverridesState) {
   EXPECT_TRUE(current_ctx.device);
   EXPECT_TRUE(current_ctx.command_queue);
   EXPECT_EQ(current_ctx.device.payloadHandle(), mps_exec::MpsDeviceHandle{0});
+}
+
+TEST_F(MpsCurrentContextTest, CurrentArchitectureMatchesCurrentContext) {
+  std::string error;
+  if (!configureMps(&error)) {
+    GTEST_SKIP() << error;
+  }
+  mps_context::reset();
+
+  const auto &ctx = mps_context::currentContext();
+  const auto arch = mps_context::currentArchitecture();
+  EXPECT_EQ(arch, ctx.architecture());
+  EXPECT_EQ(architecture::executionOf(arch),
+            ::orteaf::internal::execution::Execution::Mps);
 }
 
 #endif // ORTEAF_ENABLE_MPS
