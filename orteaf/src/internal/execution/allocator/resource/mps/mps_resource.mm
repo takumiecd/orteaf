@@ -2,7 +2,6 @@
 #include "orteaf/internal/execution/allocator/resource/mps/mps_resource.h"
 #include <orteaf/internal/execution/mps/platform/mps_fast_ops.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_buffer.h>
-#include <orteaf/internal/execution/mps/platform/wrapper/mps_heap.h>
 
 #include "orteaf/internal/diagnostics/error/error_macros.h"
 #include <limits>
@@ -19,20 +18,6 @@ void MpsResource::initialize(const Config &config) {
   device_handle_ = config.device_handle;
   heap_ = config.heap;
   usage_ = config.usage;
-  if (usage_ ==
-      ::orteaf::internal::execution::mps::platform::wrapper::
-          kMPSDefaultBufferUsage) {
-    // MTLHeap newBufferWithLength:options: requires options whose storage mode
-    // is compatible with the heap mode. Default 0 implies Shared, which
-    // aborts on Private heaps.
-    constexpr std::uint32_t kMtlResourceStorageModeShift = 4u;
-    const auto storage_mode = static_cast<std::uint32_t>(
-        ::orteaf::internal::execution::mps::platform::wrapper::heapStorageMode(
-            heap_));
-    usage_ = static_cast<decltype(usage_)>(
-        static_cast<std::uint64_t>(storage_mode)
-        << kMtlResourceStorageModeShift);
-  }
   initialized_ = (device_ != nullptr && heap_ != nullptr);
 }
 

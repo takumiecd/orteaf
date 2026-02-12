@@ -69,12 +69,8 @@ public:
     return device_lease->heapManager().acquire(key);
   }
 
-  static HeapLease acquireHeap(const HeapDescriptorKey &key) {
-    return acquireHeap(DeviceHandle{0}, key);
-  }
-
-  static HeapLease acquireHeap(HeapHandle handle) {
-    auto device_lease = acquireDevice(DeviceHandle{0});
+  static HeapLease acquireHeap(DeviceHandle device, HeapHandle handle) {
+    auto device_lease = acquireDevice(device);
     return device_lease->heapManager().acquire(handle);
   }
 

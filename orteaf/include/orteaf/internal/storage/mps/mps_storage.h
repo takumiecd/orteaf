@@ -70,6 +70,11 @@ public:
       return *this;
     }
 
+    Builder &withDeviceHandle(DeviceHandle device) {
+      device_handle_ = device;
+      return *this;
+    }
+
     Builder &withHeapHandle(HeapHandle handle) {
       heap_handle_ = handle;
       return *this;
@@ -119,6 +124,7 @@ public:
 
   private:
     HeapLease heap_lease_{};
+    DeviceHandle device_handle_{DeviceHandle::invalid()};
     HeapHandle heap_handle_{HeapHandle::invalid()};
     HeapDescriptorKey heap_key_{};
     bool has_heap_key_{false};

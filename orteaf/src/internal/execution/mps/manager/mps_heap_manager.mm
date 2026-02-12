@@ -55,6 +55,17 @@ bool MpsHeapPayload::initialize(const InitConfig &config) {
   // Configure buffer manager
   BufferManager::InternalConfig buf_cfg{};
   buf_cfg.public_config = config.buffer_config;
+  if (buf_cfg.public_config.usage ==
+      ::orteaf::internal::execution::mps::platform::wrapper::
+          kMPSDefaultBufferUsage) {
+    // Keep MTLResourceOptions storage mode consistent with the heap.
+    constexpr std::uint32_t kMtlResourceStorageModeShift = 4u;
+    const auto storage_mode =
+        static_cast<std::uint64_t>(config.key.storage_mode);
+    buf_cfg.public_config.usage =
+        static_cast<decltype(buf_cfg.public_config.usage)>(
+            storage_mode << kMtlResourceStorageModeShift);
+  }
   buf_cfg.device = config.device;
   buf_cfg.device_handle = config.device_handle;
   buf_cfg.heap = heap_;
