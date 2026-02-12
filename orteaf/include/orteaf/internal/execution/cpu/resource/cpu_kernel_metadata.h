@@ -2,11 +2,6 @@
 
 #include "orteaf/internal/execution/cpu/resource/cpu_kernel_base.h"
 
-namespace orteaf::internal::kernel::core {
-class KernelEntry;
-class KernelMetadataLease;
-} // namespace orteaf::internal::kernel::core
-
 namespace orteaf::internal::execution::cpu::resource {
 
 /**
@@ -22,16 +17,6 @@ struct CpuKernelMetadata {
 
   ExecuteFunc execute() const noexcept { return execute_; }
   void setExecute(ExecuteFunc execute) noexcept { execute_ = execute; }
-
-  // rebuild KernelEntry from Metadata
-  void rebuild(::orteaf::internal::kernel::core::KernelEntry &entry) const;
-
-  // Build Metadata from KernelBase
-  static CpuKernelMetadata buildFromBase(const CpuKernelBase &base);
-
-  // Build a metadata lease from KernelBase
-  static ::orteaf::internal::kernel::core::KernelMetadataLease
-  buildMetadataLeaseFromBase(const CpuKernelBase &base);
 
 private:
   ExecuteFunc execute_{nullptr};

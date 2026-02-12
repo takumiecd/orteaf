@@ -144,6 +144,22 @@ void applyCudaDefaults(LibraryConfig &config) {
   ensurePoolConfig(context_cfg.event_config, stream_capacity);
   ensurePoolConfig(context_cfg.buffer_config, stream_capacity);
   ensurePoolConfig(context_cfg.module_config, device_count);
+
+  ensurePoolConfig(exec_config.kernel_base_config, 1u);
+
+  auto &metadata_cfg = exec_config.kernel_metadata_config;
+  const std::size_t metadata_capacity =
+      metadata_cfg.payload_capacity > 0 ? metadata_cfg.payload_capacity : 1u;
+  if (metadata_cfg.control_block_capacity == 0) {
+    metadata_cfg.control_block_capacity = metadata_capacity;
+  }
+  if (metadata_cfg.control_block_block_size == 0) {
+    metadata_cfg.control_block_block_size =
+        metadata_cfg.control_block_capacity;
+  }
+  if (metadata_cfg.payload_block_size == 0) {
+    metadata_cfg.payload_block_size = metadata_capacity;
+  }
 }
 #endif
 

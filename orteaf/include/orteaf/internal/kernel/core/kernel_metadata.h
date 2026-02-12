@@ -8,6 +8,9 @@
 #if ORTEAF_ENABLE_MPS
 #include "orteaf/internal/execution/mps/manager/mps_kernel_metadata_manager.h"
 #endif
+#if ORTEAF_ENABLE_CUDA
+#include "orteaf/internal/execution/cuda/manager/cuda_kernel_metadata_manager.h"
+#endif
 #include "orteaf/internal/kernel/core/kernel_entry.h"
 
 namespace orteaf::internal::kernel::core {
@@ -29,10 +32,20 @@ public:
       MpsKernelMetadataManager::MpsKernelMetadataLease;
 #endif
 
+#if ORTEAF_ENABLE_CUDA
+  using CudaKernelMetadataLease =
+      ::orteaf::internal::execution::cuda::manager::
+          CudaKernelMetadataManager::CudaKernelMetadataLease;
+#endif
+
   using Variant = std::variant<std::monostate, CpuKernelMetadataLease
 #if ORTEAF_ENABLE_MPS
                                ,
                                MpsKernelMetadataLease
+#endif
+#if ORTEAF_ENABLE_CUDA
+                               ,
+                               CudaKernelMetadataLease
 #endif
                                >;
 
@@ -49,15 +62,16 @@ public:
   /**
    * @brief Rebuild a KernelEntry from this metadata.
    *
-   * Delegates to the backend-specific Metadata::rebuild() method.
+   * Rebuilds backend-specific KernelBase via the corresponding
+   * KernelBaseManager::acquire(metadata) path.
    */
   ::orteaf::internal::kernel::core::KernelEntry rebuild() const;
 
   /**
    * @brief Build metadata from a KernelEntry.
    *
-   * Delegates to backend-specific Metadata::buildMetadataLeaseFromBase()
-   * methods for lease acquisition.
+   * Extracts metadata data from backend KernelBase payload and acquires a
+   * backend metadata lease via KernelMetadataManager.
    */
   static KernelMetadataLease
   fromEntry(const ::orteaf::internal::kernel::core::KernelEntry &entry);

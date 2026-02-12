@@ -4,7 +4,6 @@
 
 #include <cstddef>
 #include <limits>
-#include <string>
 #include <utility>
 
 #include "orteaf/internal/base/heap_vector.h"
@@ -27,6 +26,10 @@
 namespace orteaf::internal::kernel {
 class KernelArgs;
 } // namespace orteaf::internal::kernel
+
+namespace orteaf::internal::execution::mps::manager {
+struct KernelBasePayloadPoolTraits;
+}
 
 namespace orteaf::internal::execution::mps::resource {
 
@@ -82,11 +85,6 @@ struct MpsKernelBase {
           &device_lease);
 
   /**
-   * @brief Set kernel keys only (no pipeline acquisition).
-   */
-  bool setKeys(const ::orteaf::internal::base::HeapVector<Key> &keys);
-
-  /**
    * @brief Ensure pipeline leases are configured for the given device lease.
    *
    * Returns false if the device lease is invalid or any pipeline acquisition
@@ -97,60 +95,33 @@ struct MpsKernelBase {
           &device_lease);
 
   /**
-   * @brief Clear keys and cached pipelines.
+   * @brief Clear keys, cached pipelines, and execute callback.
    */
   void reset() noexcept {
     device_pipelines_.clear();
     keys_.clear();
+    execute_ = nullptr;
   }
 
   /**
-   * @brief Get a mutable pipeline lease for the specified device and kernel
-   * index.
+   * @brief Get a pipeline lease for the specified device and kernel index.
    *
-   * @return Pointer to PipelineLease, or nullptr if not initialized or invalid
-   * index
+   * Returns an invalid lease when the device is not configured or index is out
+   * of range.
    */
-  PipelineLease *
-  getPipeline(::orteaf::internal::execution::mps::MpsDeviceHandle device,
-              std::size_t index) noexcept {
+  PipelineLease
+  getPipelineLease(::orteaf::internal::execution::mps::MpsDeviceHandle device,
+                   std::size_t index) const noexcept {
     const auto idx = findDeviceIndex(device);
-    if (idx == kInvalidIndex)
-      return nullptr;
-    auto &entry = device_pipelines_[idx];
-    if (!entry.configured || index >= entry.pipelines.size())
-      return nullptr;
-    return &entry.pipelines[index];
-  }
-
-  /**
-   * @brief Get a const pipeline lease for the specified device and kernel
-   * index.
-   */
-  const PipelineLease *
-  getPipeline(::orteaf::internal::execution::mps::MpsDeviceHandle device,
-              std::size_t index) const noexcept {
-    const auto idx = findDeviceIndex(device);
-    if (idx == kInvalidIndex)
-      return nullptr;
+    if (idx == kInvalidIndex) {
+      return PipelineLease{};
+    }
     const auto &entry = device_pipelines_[idx];
-    if (!entry.configured || index >= entry.pipelines.size())
-      return nullptr;
-    return &entry.pipelines[index];
+    if (!entry.configured || index >= entry.pipelines.size()) {
+      return PipelineLease{};
+    }
+    return entry.pipelines[index];
   }
-
-  /**
-   * @brief Add a kernel function key.
-   */
-  void addKey(const char *library, const char *function) {
-    keys_.pushBack(Key{LibraryKey::Named(std::string(library)),
-                       FunctionKey::Named(std::string(function))});
-  }
-
-  /**
-   * @brief Reserve space for kernel function keys.
-   */
-  void reserveKeys(std::size_t count) { keys_.reserve(count); }
 
   /**
    * @brief Get the total number of kernel functions registered.
@@ -950,8 +921,12 @@ private:
 private:
   friend class ::orteaf::internal::kernel::core::KernelEntry;
   friend struct MpsKernelMetadata;
+  friend struct ::orteaf::internal::execution::mps::manager::
+      KernelBasePayloadPoolTraits;
 
   void run(::orteaf::internal::kernel::KernelArgs &args);
+
+  bool setKeys(const ::orteaf::internal::base::HeapVector<Key> &keys);
 
   void setExecute(ExecuteFunc execute) noexcept { execute_ = execute; }
 

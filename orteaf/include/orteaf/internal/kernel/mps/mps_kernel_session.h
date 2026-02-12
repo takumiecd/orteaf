@@ -76,13 +76,13 @@ public:
       return std::nullopt;
     }
 
-    auto *pipeline = base.getPipeline(context->device.payloadHandle(),
-                                      kernel_index);
+    auto pipeline =
+        base.getPipelineLease(context->device.payloadHandle(), kernel_index);
     if (!pipeline) {
       base.endEncoding(encoder);
       return std::nullopt;
     }
-    base.setPipelineState(encoder, *pipeline);
+    base.setPipelineState(encoder, pipeline);
 
     return MpsKernelSession(base, args, command_buffer, encoder);
   }

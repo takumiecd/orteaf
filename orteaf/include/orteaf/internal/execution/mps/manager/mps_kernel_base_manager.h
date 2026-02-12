@@ -12,6 +12,7 @@
 #include "orteaf/internal/execution/mps/manager/mps_device_manager.h"
 #include "orteaf/internal/execution/mps/mps_handles.h"
 #include "orteaf/internal/execution/mps/resource/mps_kernel_base.h"
+#include "orteaf/internal/execution/mps/resource/mps_kernel_metadata.h"
 #include "orteaf/internal/execution/mps/platform/mps_slow_ops.h"
 
 namespace orteaf::internal::execution::mps::manager {
@@ -36,9 +37,12 @@ struct KernelBasePayloadPoolTraits {
   using LibraryKey = ::orteaf::internal::execution::mps::manager::LibraryKey;
   using FunctionKey = ::orteaf::internal::execution::mps::manager::FunctionKey;
   using Key = std::pair<LibraryKey, FunctionKey>;
+  using ExecuteFunc =
+      ::orteaf::internal::execution::mps::resource::MpsKernelBase::ExecuteFunc;
 
   struct Request {
     ::orteaf::internal::base::HeapVector<Key> keys;
+    ExecuteFunc execute{nullptr};
   };
 
   struct Context {};
@@ -105,6 +109,8 @@ public:
   using LibraryKey = ::orteaf::internal::execution::mps::manager::LibraryKey;
   using FunctionKey = ::orteaf::internal::execution::mps::manager::FunctionKey;
   using Key = std::pair<LibraryKey, FunctionKey>;
+  using ExecuteFunc =
+      ::orteaf::internal::execution::mps::resource::MpsKernelBase::ExecuteFunc;
 
   using ControlBlock = Core::ControlBlock;
   using ControlBlockHandle = Core::ControlBlockHandle;
@@ -153,6 +159,10 @@ public:
    * @return Strong lease to kernel base resource
    */
   KernelBaseLease acquire(const ::orteaf::internal::base::HeapVector<Key> &keys);
+
+  KernelBaseLease acquire(
+      const ::orteaf::internal::execution::mps::resource::MpsKernelMetadata
+          &metadata);
 
 #if ORTEAF_ENABLE_TEST
   void configureForTest(const Config &config) {

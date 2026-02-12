@@ -9,11 +9,6 @@
 #include "orteaf/internal/execution/mps/manager/mps_library_manager.h"
 #include "orteaf/internal/execution/mps/resource/mps_kernel_base.h"
 
-namespace orteaf::internal::kernel::core {
-class KernelMetadataLease;
-class KernelEntry;
-}
-
 namespace orteaf::internal::execution::mps::resource {
 
 struct MpsKernelBase;
@@ -47,15 +42,6 @@ struct MpsKernelMetadata {
 
   ExecuteFunc execute() const noexcept { return execute_; }
   void setExecute(ExecuteFunc execute) noexcept { execute_ = execute; }
-
-  void rebuild(::orteaf::internal::kernel::core::KernelEntry &entry) const;
-
-  static MpsKernelMetadata buildFromBase(
-      const ::orteaf::internal::execution::mps::resource::MpsKernelBase &base);
-
-  static ::orteaf::internal::kernel::core::KernelMetadataLease
-  buildMetadataLeaseFromBase(
-      const ::orteaf::internal::execution::mps::resource::MpsKernelBase &base);
 
 private:
   ::orteaf::internal::base::HeapVector<Key> keys_{};

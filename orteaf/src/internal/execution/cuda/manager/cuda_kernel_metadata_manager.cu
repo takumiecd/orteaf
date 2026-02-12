@@ -1,13 +1,8 @@
-#if ORTEAF_ENABLE_MPS
+#include "orteaf/internal/execution/cuda/manager/cuda_kernel_metadata_manager.h"
 
-#include "orteaf/internal/execution/mps/manager/mps_kernel_metadata_manager.h"
-#include "orteaf/internal/diagnostics/error/error.h"
+#if ORTEAF_ENABLE_CUDA
 
-namespace orteaf::internal::execution::mps::manager {
-
-// =============================================================================
-// PayloadPoolTraits implementation
-// =============================================================================
+namespace orteaf::internal::execution::cuda::manager {
 
 bool KernelMetadataPayloadPoolTraits::create(Payload &payload,
                                              const Request &request,
@@ -18,17 +13,12 @@ bool KernelMetadataPayloadPoolTraits::create(Payload &payload,
 }
 
 void KernelMetadataPayloadPoolTraits::destroy(Payload &payload,
-                                              const Request &,
-                                              const Context &) {
+                                              const Request &, const Context &) {
   payload.reset();
   payload.setExecute(nullptr);
 }
 
-// =============================================================================
-// MpsKernelMetadataManager implementation
-// =============================================================================
-
-void MpsKernelMetadataManager::configure(const InternalConfig &config) {
+void CudaKernelMetadataManager::configure(const InternalConfig &config) {
   shutdown();
 
   const auto &cfg = config.public_config;
@@ -48,7 +38,7 @@ void MpsKernelMetadataManager::configure(const InternalConfig &config) {
       .configure(core_);
 }
 
-void MpsKernelMetadataManager::shutdown() {
+void CudaKernelMetadataManager::shutdown() {
   if (!core_.isConfigured()) {
     return;
   }
@@ -58,39 +48,37 @@ void MpsKernelMetadataManager::shutdown() {
   core_.shutdown(payload_request, payload_context);
 }
 
-MpsKernelMetadataManager::MpsKernelMetadataLease
-MpsKernelMetadataManager::acquire(
+CudaKernelMetadataManager::CudaKernelMetadataLease
+CudaKernelMetadataManager::acquire(
     const ::orteaf::internal::base::HeapVector<Key> &keys) {
   core_.ensureConfigured();
 
   KernelMetadataPayloadPoolTraits::Request request{};
   request.keys = keys;
   request.execute = nullptr;
-
   const KernelMetadataPayloadPoolTraits::Context context{};
+
   auto handle = core_.reserveUncreatedPayloadOrGrowAndEmplaceOrThrow(request,
                                                                      context);
-
   return core_.acquireStrongLease(handle);
 }
 
-MpsKernelMetadataManager::MpsKernelMetadataLease
-MpsKernelMetadataManager::acquire(
-    const ::orteaf::internal::execution::mps::resource::MpsKernelMetadata
+CudaKernelMetadataManager::CudaKernelMetadataLease
+CudaKernelMetadataManager::acquire(
+    const ::orteaf::internal::execution::cuda::resource::CudaKernelMetadata
         &metadata) {
   core_.ensureConfigured();
 
   KernelMetadataPayloadPoolTraits::Request request{};
   request.keys = metadata.keys();
   request.execute = metadata.execute();
-
   const KernelMetadataPayloadPoolTraits::Context context{};
+
   auto handle = core_.reserveUncreatedPayloadOrGrowAndEmplaceOrThrow(request,
                                                                      context);
-
   return core_.acquireStrongLease(handle);
 }
 
-} // namespace orteaf::internal::execution::mps::manager
+} // namespace orteaf::internal::execution::cuda::manager
 
-#endif // ORTEAF_ENABLE_MPS
+#endif // ORTEAF_ENABLE_CUDA
