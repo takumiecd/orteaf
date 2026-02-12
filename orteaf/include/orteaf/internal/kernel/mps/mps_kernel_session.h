@@ -71,6 +71,7 @@ public:
 
     auto encoder = Ops::createComputeCommandEncoder(command_buffer);
     if (!encoder) {
+      Ops::destroyCommandBuffer(command_buffer);
       return std::nullopt;
     }
 
@@ -78,6 +79,8 @@ public:
         base.getPipelineLease(context->device.payloadHandle(), kernel_index);
     if (!pipeline) {
       Ops::endEncoding(encoder);
+      Ops::destroyComputeCommandEncoder(encoder);
+      Ops::destroyCommandBuffer(command_buffer);
       return std::nullopt;
     }
     Ops::setPipelineState(encoder, pipeline);
@@ -88,6 +91,9 @@ public:
   MpsKernelSession(MpsKernelSession &&other) noexcept
       : args_(other.args_), command_buffer_(other.command_buffer_),
         encoder_(other.encoder_), committed_(other.committed_) {
+    other.args_ = nullptr;
+    other.command_buffer_ = nullptr;
+    other.encoder_ = nullptr;
     other.committed_ = true;
   }
 
@@ -98,6 +104,9 @@ public:
       command_buffer_ = other.command_buffer_;
       encoder_ = other.encoder_;
       committed_ = other.committed_;
+      other.args_ = nullptr;
+      other.command_buffer_ = nullptr;
+      other.encoder_ = nullptr;
       other.committed_ = true;
     }
     return *this;
@@ -160,6 +169,11 @@ private:
     if (!committed_) {
       Ops::endEncoding(encoder_);
       Ops::commit(command_buffer_);
+      Ops::destroyComputeCommandEncoder(encoder_);
+      Ops::destroyCommandBuffer(command_buffer_);
+      args_ = nullptr;
+      command_buffer_ = nullptr;
+      encoder_ = nullptr;
       committed_ = true;
     }
   }

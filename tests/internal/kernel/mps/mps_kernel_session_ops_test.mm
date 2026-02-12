@@ -2,13 +2,6 @@
 #include <gtest/gtest.h>
 
 #include <cstddef>
-#include <optional>
-#include <string>
-#include <system_error>
-
-#include <orteaf/internal/execution/mps/platform/wrapper/mps_command_buffer.h>
-#include <orteaf/internal/execution/mps/platform/wrapper/mps_compute_command_encoder.h>
-#include <orteaf/internal/execution/mps/platform/wrapper/mps_device.h>
 #include <orteaf/internal/execution/mps/platform/wrapper/mps_size.h>
 #include <orteaf/internal/execution_context/mps/context.h>
 #include <orteaf/internal/kernel/mps/mps_kernel_session_ops.h>
@@ -16,115 +9,16 @@
 #include <orteaf/internal/kernel/param/param_id.h>
 #include <orteaf/internal/storage/mps/mps_storage.h>
 
+#include "tests/internal/kernel/mps/test_utils/mps_hardware_test_utils.h"
+
 namespace mps_context = ::orteaf::internal::execution_context::mps;
 namespace mps_ops = ::orteaf::internal::kernel::mps;
 namespace mps_wrapper = ::orteaf::internal::execution::mps::platform::wrapper;
 namespace mps_storage = ::orteaf::internal::storage::mps;
+namespace mps_test_utils =
+    ::orteaf::tests::internal::kernel::mps::test_utils;
 
 namespace {
-
-struct MpsHardwareContext {
-  mps_wrapper::MpsDevice_t device{nullptr};
-  mps_wrapper::MpsCommandQueue_t queue{nullptr};
-  mps_wrapper::MpsCommandBuffer_t command_buffer{nullptr};
-  mps_wrapper::MpsComputeCommandEncoder_t encoder{nullptr};
-
-  MpsHardwareContext() = default;
-  MpsHardwareContext(MpsHardwareContext &&other) noexcept
-      : device(other.device), queue(other.queue),
-        command_buffer(other.command_buffer), encoder(other.encoder) {
-    other.device = nullptr;
-    other.queue = nullptr;
-    other.command_buffer = nullptr;
-    other.encoder = nullptr;
-  }
-  MpsHardwareContext &operator=(MpsHardwareContext &&other) noexcept {
-    if (this != &other) {
-      cleanup();
-      device = other.device;
-      queue = other.queue;
-      command_buffer = other.command_buffer;
-      encoder = other.encoder;
-      other.device = nullptr;
-      other.queue = nullptr;
-      other.command_buffer = nullptr;
-      other.encoder = nullptr;
-    }
-    return *this;
-  }
-  MpsHardwareContext(const MpsHardwareContext &) = delete;
-  MpsHardwareContext &operator=(const MpsHardwareContext &) = delete;
-  ~MpsHardwareContext() { cleanup(); }
-
-private:
-  void cleanup() {
-    if (encoder != nullptr) {
-      mps_wrapper::destroyComputeCommandEncoder(encoder);
-      encoder = nullptr;
-    }
-    if (command_buffer != nullptr) {
-      mps_wrapper::destroyCommandBuffer(command_buffer);
-      command_buffer = nullptr;
-    }
-    if (queue != nullptr) {
-      mps_wrapper::destroyCommandQueue(queue);
-      queue = nullptr;
-    }
-    if (device != nullptr) {
-      mps_wrapper::deviceRelease(device);
-      device = nullptr;
-    }
-  }
-};
-
-struct HardwareAcquireResult {
-  std::optional<MpsHardwareContext> context;
-  std::string reason;
-};
-
-HardwareAcquireResult acquireHardware(bool need_buffer = false,
-                                      bool need_encoder = false) {
-  HardwareAcquireResult result{};
-  MpsHardwareContext hardware{};
-
-  try {
-    hardware.device = mps_wrapper::getDevice();
-  } catch (const std::system_error &err) {
-    result.reason = err.what();
-    return result;
-  }
-
-  if (hardware.device == nullptr) {
-    result.reason = "No Metal devices available";
-    return result;
-  }
-
-  hardware.queue = mps_wrapper::createCommandQueue(hardware.device);
-  if (hardware.queue == nullptr) {
-    result.reason = "Failed to create command queue";
-    return result;
-  }
-
-  if (need_buffer || need_encoder) {
-    hardware.command_buffer = mps_wrapper::createCommandBuffer(hardware.queue);
-    if (hardware.command_buffer == nullptr) {
-      result.reason = "Failed to create command buffer";
-      return result;
-    }
-  }
-
-  if (need_encoder) {
-    hardware.encoder =
-        mps_wrapper::createComputeCommandEncoder(hardware.command_buffer);
-    if (hardware.encoder == nullptr) {
-      result.reason = "Failed to create compute command encoder";
-      return result;
-    }
-  }
-
-  result.context = std::move(hardware);
-  return result;
-}
 
 TEST(MpsKernelSessionOpsTest, CreateCommandBufferReturnsNullptrForEmptyContext) {
   mps_context::Context context;
@@ -148,7 +42,7 @@ TEST(MpsKernelSessionOpsTest,
 }
 
 TEST(MpsKernelSessionOpsTest, CreateComputeCommandEncoderWithRealHardware) {
-  auto acquired = acquireHardware(true, false);
+  auto acquired = mps_test_utils::acquireHardware(true, false);
   if (!acquired.context) {
     GTEST_SKIP() << acquired.reason;
   }
@@ -166,7 +60,7 @@ TEST(MpsKernelSessionOpsTest, EndEncodingWithNullptrEncoderDoesNotCrash) {
 }
 
 TEST(MpsKernelSessionOpsTest, EndEncodingWithValidEncoder) {
-  auto acquired = acquireHardware(true, true);
+  auto acquired = mps_test_utils::acquireHardware(true, true);
   if (!acquired.context) {
     GTEST_SKIP() << acquired.reason;
   }
@@ -174,8 +68,17 @@ TEST(MpsKernelSessionOpsTest, EndEncodingWithValidEncoder) {
   mps_ops::MpsKernelSessionOps::endEncoding(hardware.encoder);
 }
 
+TEST(MpsKernelSessionOpsTest,
+     DestroyComputeCommandEncoderWithNullptrDoesNotCrash) {
+  mps_ops::MpsKernelSessionOps::destroyComputeCommandEncoder(nullptr);
+}
+
 TEST(MpsKernelSessionOpsTest, CommitWithNullptrBufferDoesNotCrash) {
   mps_ops::MpsKernelSessionOps::commit(nullptr);
+}
+
+TEST(MpsKernelSessionOpsTest, DestroyCommandBufferWithNullptrDoesNotCrash) {
+  mps_ops::MpsKernelSessionOps::destroyCommandBuffer(nullptr);
 }
 
 TEST(MpsKernelSessionOpsTest, WaitUntilCompletedWithNullptrBufferDoesNotCrash) {
@@ -183,7 +86,7 @@ TEST(MpsKernelSessionOpsTest, WaitUntilCompletedWithNullptrBufferDoesNotCrash) {
 }
 
 TEST(MpsKernelSessionOpsTest, CommitAndWaitWithValidBuffer) {
-  auto acquired = acquireHardware(true, true);
+  auto acquired = mps_test_utils::acquireHardware(true, true);
   if (!acquired.context) {
     GTEST_SKIP() << acquired.reason;
   }
@@ -194,13 +97,33 @@ TEST(MpsKernelSessionOpsTest, CommitAndWaitWithValidBuffer) {
   mps_ops::MpsKernelSessionOps::waitUntilCompleted(hardware.command_buffer);
 }
 
+TEST(MpsKernelSessionOpsTest, DestroyComputeCommandEncoderWithValidEncoder) {
+  auto acquired = mps_test_utils::acquireHardware(true, true);
+  if (!acquired.context) {
+    GTEST_SKIP() << acquired.reason;
+  }
+  auto &hardware = *acquired.context;
+  mps_ops::MpsKernelSessionOps::destroyComputeCommandEncoder(hardware.encoder);
+  hardware.encoder = nullptr;
+}
+
+TEST(MpsKernelSessionOpsTest, DestroyCommandBufferWithValidBuffer) {
+  auto acquired = mps_test_utils::acquireHardware(true, false);
+  if (!acquired.context) {
+    GTEST_SKIP() << acquired.reason;
+  }
+  auto &hardware = *acquired.context;
+  mps_ops::MpsKernelSessionOps::destroyCommandBuffer(hardware.command_buffer);
+  hardware.command_buffer = nullptr;
+}
+
 TEST(MpsKernelSessionOpsTest, SetBufferWithNullptrEncoderDoesNotCrash) {
   mps_storage::MpsStorage storage;
   mps_ops::MpsKernelSessionOps::setBuffer(nullptr, storage, 0);
 }
 
 TEST(MpsKernelSessionOpsTest, SetBufferWithInvalidStorageDoesNotCrash) {
-  auto acquired = acquireHardware(true, true);
+  auto acquired = mps_test_utils::acquireHardware(true, true);
   if (!acquired.context) {
     GTEST_SKIP() << acquired.reason;
   }
@@ -222,7 +145,7 @@ TEST(MpsKernelSessionOpsTest, SetBytesWithNullptrDataDoesNotCrash) {
 }
 
 TEST(MpsKernelSessionOpsTest, SetBytesWithValidEncoder) {
-  auto acquired = acquireHardware(true, true);
+  auto acquired = mps_test_utils::acquireHardware(true, true);
   if (!acquired.context) {
     GTEST_SKIP() << acquired.reason;
   }
@@ -241,7 +164,7 @@ TEST(MpsKernelSessionOpsTest, SetParamWithNullptrEncoderDoesNotCrash) {
 }
 
 TEST(MpsKernelSessionOpsTest, SetParamWithIntParam) {
-  auto acquired = acquireHardware(true, true);
+  auto acquired = mps_test_utils::acquireHardware(true, true);
   if (!acquired.context) {
     GTEST_SKIP() << acquired.reason;
   }
@@ -254,7 +177,7 @@ TEST(MpsKernelSessionOpsTest, SetParamWithIntParam) {
 }
 
 TEST(MpsKernelSessionOpsTest, SetParamWithFloatParam) {
-  auto acquired = acquireHardware(true, true);
+  auto acquired = mps_test_utils::acquireHardware(true, true);
   if (!acquired.context) {
     GTEST_SKIP() << acquired.reason;
   }
@@ -266,7 +189,7 @@ TEST(MpsKernelSessionOpsTest, SetParamWithFloatParam) {
 }
 
 TEST(MpsKernelSessionOpsTest, SetParamWithSizeTParam) {
-  auto acquired = acquireHardware(true, true);
+  auto acquired = mps_test_utils::acquireHardware(true, true);
   if (!acquired.context) {
     GTEST_SKIP() << acquired.reason;
   }
@@ -311,7 +234,7 @@ TEST(MpsKernelSessionOpsTest, GetGPUTimesWithNullptrReturnsZero) {
 }
 
 TEST(MpsKernelSessionOpsTest, GetGPUTimesWithUnscheduledBufferReturnsZero) {
-  auto acquired = acquireHardware(true, false);
+  auto acquired = mps_test_utils::acquireHardware(true, false);
   if (!acquired.context) {
     GTEST_SKIP() << acquired.reason;
   }

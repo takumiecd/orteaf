@@ -33,3 +33,11 @@ graph BT
 - 生成と破棄は Runtime のオーケストレーション下で行い、API 呼び出し側が寿命を直接握らない。
 - 単一占有を求める Lease（CommandQueue, Library）は重複生成を禁止し、再利用を強制する。
 - 複数許容の Lease（Device, Buffer, Event, Fence, Heap 等）は `orteaf/include/orteaf/internal/base/shared_lease.h` による寿命管理を通じて過剰生成を抑制する。
+
+## KernelBase と Session の責務境界
+- `MpsKernelBase` は「カーネルキーと device ごとの pipeline lease キャッシュ」のみを責務に持つ。
+- `MpsKernelSession` は RAII でコマンド発行のライフサイクル（begin/finish）を担う。
+  - `begin` 途中失敗時に中間ハンドルを回収し、`finish` で `endEncoding/commit` 後に encoder / command buffer を解放する。
+- `MpsKernelSessionOps` はバインド・dispatch・同期トークン更新など、実行時オペレーションのユーティリティを担う。
+- 実装上は `MpsKernelSessionOps` の同期処理を `mps_kernel_session_sync_ops.h` に分離し、依存の重い処理を局所化する。
+- 運用ルールとして、新しい「便利メソッド」は `MpsKernelBase` に追加せず、`MpsKernelSessionOps` またはその detail ヘッダへ追加する。

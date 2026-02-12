@@ -6,18 +6,22 @@
 #include <type_traits>
 #include <utility>
 
-#include "orteaf/internal/diagnostics/error/error.h"
-#include "orteaf/internal/execution/mps/manager/mps_fence_manager.h"
 #include "orteaf/internal/execution/mps/platform/mps_fast_ops.h"
 #include "orteaf/internal/execution/mps/platform/wrapper/mps_size.h"
 #include "orteaf/internal/execution/mps/resource/mps_kernel_base.h"
 #include "orteaf/internal/execution_context/mps/context.h"
+#include "orteaf/internal/kernel/mps/mps_kernel_session_sync_ops.h"
 #include "orteaf/internal/kernel/param/param.h"
-#include "orteaf/internal/kernel/schema/kernel_param_schema.h"
-#include "orteaf/internal/kernel/schema/kernel_storage_schema.h"
+#include "orteaf/internal/kernel/param/param_id.h"
+#include "orteaf/internal/kernel/storage/operand_id.h"
+#include "orteaf/internal/kernel/storage/role.h"
 #include "orteaf/internal/kernel/storage/storage_binding.h"
 #include "orteaf/internal/storage/mps/mps_storage.h"
-#include "orteaf/internal/storage/registry/storage_types.h"
+
+namespace orteaf::internal::kernel {
+template <ParamId ID, typename T> struct Field;
+template <OperandId ID, Role AccessRole> struct StorageField;
+} // namespace orteaf::internal::kernel
 
 namespace orteaf::internal::kernel::mps {
 
@@ -55,6 +59,23 @@ struct MpsKernelSessionOps {
     }
     return ::orteaf::internal::execution::mps::platform::MpsFastOps::
         createComputeCommandEncoder(command_buffer);
+  }
+
+  static void
+  destroyComputeCommandEncoder(MpsComputeCommandEncoder_t encoder) {
+    if (encoder == nullptr) {
+      return;
+    }
+    ::orteaf::internal::execution::mps::platform::MpsFastOps::
+        destroyComputeCommandEncoder(encoder);
+  }
+
+  static void destroyCommandBuffer(MpsCommandBuffer_t command_buffer) {
+    if (command_buffer == nullptr) {
+      return;
+    }
+    ::orteaf::internal::execution::mps::platform::MpsFastOps::
+        destroyCommandBuffer(command_buffer);
   }
 
   static void endEncoding(MpsComputeCommandEncoder_t encoder) {
@@ -191,8 +212,8 @@ struct MpsKernelSessionOps {
     if (encoder == nullptr) {
       return;
     }
-    ::orteaf::internal::execution::mps::platform::MpsFastOps::setThreadgroups(
-        encoder, threadgroups, threads_per_threadgroup);
+    ::orteaf::internal::execution::mps::platform::MpsFastOps::
+        dispatchThreadgroups(encoder, threadgroups, threads_per_threadgroup);
   }
 
   static void dispatchThreads(MpsComputeCommandEncoder_t encoder,
@@ -222,22 +243,18 @@ struct MpsKernelSessionOps {
 
   static MpsSize_t makeGridSize(std::size_t width, std::size_t height = 1,
                                 std::size_t depth = 1) {
-    return ::orteaf::internal::execution::mps::platform::wrapper::makeSize(
-        static_cast<
-            ::orteaf::internal::execution::mps::platform::wrapper::MpsInt_t>(
-            width),
-        static_cast<
-            ::orteaf::internal::execution::mps::platform::wrapper::MpsInt_t>(
-            height),
-        static_cast<
-            ::orteaf::internal::execution::mps::platform::wrapper::MpsInt_t>(
-            depth));
+    return makeSize(width, height, depth);
   }
 
   static MpsSize_t makeThreadsPerThreadgroup(std::size_t width,
                                              std::size_t height = 1,
                                              std::size_t depth = 1) {
-    return ::orteaf::internal::execution::mps::platform::wrapper::makeSize(
+    return makeSize(width, height, depth);
+  }
+
+  static MpsSize_t makeSize(std::size_t width, std::size_t height = 1,
+                            std::size_t depth = 1) {
+    return ::orteaf::internal::execution::mps::platform::MpsFastOps::makeSize(
         static_cast<
             ::orteaf::internal::execution::mps::platform::wrapper::MpsInt_t>(
             width),
@@ -268,7 +285,8 @@ struct MpsKernelSessionOps {
   template <typename... Fields>
   static void waitAllStorageDependencies(MpsComputeCommandEncoder_t encoder,
                                          Fields &...fields) {
-    (waitStorageDependency(encoder, fields), ...);
+    ::orteaf::internal::kernel::mps::detail::MpsKernelSessionSyncOps::
+        waitAllStorageDependencies(encoder, fields...);
   }
 
   template <typename... Fields>
@@ -276,145 +294,8 @@ struct MpsKernelSessionOps {
       ::orteaf::internal::execution_context::mps::Context &context,
       MpsCommandBuffer_t command_buffer, MpsComputeCommandEncoder_t encoder,
       Fields &...fields) {
-    auto fence_lease = acquireFence(context, command_buffer);
-
-    auto *payload = fence_lease.operator->();
-    if (!payload || !payload->hasFence()) {
-      return false;
-    }
-
-    updateFence(encoder, payload->fence());
-    (updateStorageToken(fence_lease, fields), ...);
-    return true;
-  }
-
-private:
-  static ::orteaf::internal::execution::mps::manager::MpsFenceManager::
-      StrongFenceLease
-  acquireFence(
-      ::orteaf::internal::execution_context::mps::Context &context,
-      MpsCommandBuffer_t command_buffer) {
-    if (!context.command_queue) {
-      ::orteaf::internal::diagnostics::error::throwError(
-          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-          "Context has no command queue");
-    }
-    auto *queue_resource = context.command_queue.operator->();
-    if (queue_resource == nullptr) {
-      ::orteaf::internal::diagnostics::error::throwError(
-          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
-          "Command queue lease has no resource");
-    }
-    return queue_resource->lifetime().acquire(command_buffer);
-  }
-
-  static void updateFence(
-      MpsComputeCommandEncoder_t encoder,
-      ::orteaf::internal::execution::mps::platform::wrapper::MpsFence_t fence) {
-    if (encoder == nullptr || fence == nullptr) {
-      return;
-    }
-    ::orteaf::internal::execution::mps::platform::MpsFastOps::updateFence(
-        encoder, fence);
-  }
-
-  static void
-  waitForFence(MpsComputeCommandEncoder_t encoder,
-               ::orteaf::internal::execution::mps::platform::wrapper::MpsFence_t
-                   fence) {
-    if (encoder == nullptr || fence == nullptr) {
-      return;
-    }
-    ::orteaf::internal::execution::mps::platform::MpsFastOps::waitForFence(
-        encoder, fence);
-  }
-
-  template <typename Field>
-  static void waitStorageDependency(MpsComputeCommandEncoder_t encoder,
-                                    const Field &field) {
-    using Access = ::orteaf::internal::kernel::Access;
-    constexpr auto access = Field::access();
-
-    if (!field) {
-      return;
-    }
-
-    using AnyBinding = ::orteaf::internal::kernel::StorageBinding;
-    using MpsLease = ::orteaf::internal::storage::MpsStorageLease;
-    auto &storage_lease_any = field.template lease<AnyBinding>();
-    auto *mps_lease = storage_lease_any.template tryAs<MpsLease>();
-    if (!mps_lease) {
-      return;
-    }
-    auto *storage_ptr = mps_lease->operator->();
-    if (!storage_ptr) {
-      return;
-    }
-    auto &fence_token = storage_ptr->fenceToken();
-
-    if constexpr (access == Access::Read) {
-      if (fence_token.hasWriteFence()) {
-        auto *payload = fence_token.writeFence().operator->();
-        if (payload && payload->hasFence()) {
-          waitForFence(encoder, payload->fence());
-        }
-      }
-    } else if constexpr (access == Access::Write ||
-                         access == Access::ReadWrite) {
-      if (fence_token.hasWriteFence()) {
-        auto *payload = fence_token.writeFence().operator->();
-        if (payload && payload->hasFence()) {
-          waitForFence(encoder, payload->fence());
-        }
-      }
-      for (std::size_t i = 0; i < fence_token.readFenceCount(); ++i) {
-        auto *payload = fence_token.readFence(i).operator->();
-        if (payload && payload->hasFence()) {
-          waitForFence(encoder, payload->fence());
-        }
-      }
-    }
-  }
-
-  template <typename FenceLease, typename Field>
-  static void updateStorageToken(FenceLease &fence_lease, Field &field) {
-    using Access = ::orteaf::internal::kernel::Access;
-    constexpr auto access = Field::access();
-
-    if (!field) {
-      return;
-    }
-
-    using AnyBinding = ::orteaf::internal::kernel::StorageBinding;
-    using MpsLease = ::orteaf::internal::storage::MpsStorageLease;
-    auto &storage_lease_any = field.template lease<AnyBinding>();
-    auto *mps_lease = storage_lease_any.template tryAs<MpsLease>();
-    if (!mps_lease) {
-      return;
-    }
-    auto *storage_ptr = mps_lease->operator->();
-    if (!storage_ptr) {
-      return;
-    }
-    auto &fence_token = storage_ptr->fenceToken();
-
-    if constexpr (access == Access::Read) {
-      fence_token.addReadFence(FenceLease(fence_lease));
-    } else if constexpr (access == Access::Write) {
-      fence_token.setWriteFence(FenceLease(fence_lease));
-    } else if constexpr (access == Access::ReadWrite) {
-      fence_token.addReadFence(FenceLease(fence_lease));
-      fence_token.setWriteFence(FenceLease(fence_lease));
-    }
-
-    auto &reuse_token = storage_ptr->reuseToken();
-    auto *payload = fence_lease.operator->();
-    if (payload) {
-      typename std::remove_reference_t<decltype(reuse_token)>::Hazard hazard;
-      hazard.setCommandQueueHandle(payload->commandQueueHandle());
-      hazard.setCommandBuffer(payload->commandBuffer());
-      reuse_token.addOrReplaceHazard(std::move(hazard));
-    }
+    return ::orteaf::internal::kernel::mps::detail::MpsKernelSessionSyncOps::
+        updateAllStorageTokens(context, command_buffer, encoder, fields...);
   }
 };
 
