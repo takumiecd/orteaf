@@ -19,14 +19,15 @@ kernel void orteaf_fill_strided_f32(
     uint gid [[thread_position_in_grid]]) {
   if (gid < numel) {
     uint remaining = gid;
-    int linear_index = static_cast<int>(offset);
+    long linear_index = static_cast<long>(offset);
 
     for (uint r = layout.rank; r > 0; --r) {
       const uint dim = r - 1u;
       const uint extent = layout.shape[dim];
       const uint coord = remaining % extent;
       remaining /= extent;
-      linear_index += static_cast<int>(coord) * layout.strides[dim];
+      linear_index += static_cast<long>(coord) *
+                      static_cast<long>(layout.strides[dim]);
     }
 
     out[static_cast<uint>(linear_index)] = fill_value;
