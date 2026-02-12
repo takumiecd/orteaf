@@ -53,7 +53,7 @@ void reset() { currentStateStorage() = CurrentContext{}; }
 
 const Context &currentContext() {
   auto &state = currentStateStorage();
-  ensureDefaultDevice(state);
+  ensureDefaultCommandQueue(state);
   return state.current;
 }
 
