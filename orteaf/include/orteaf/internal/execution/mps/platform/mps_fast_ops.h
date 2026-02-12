@@ -66,6 +66,17 @@ struct MpsFastOps {
   }
 
   static inline void
+  dispatchThreads(::orteaf::internal::execution::mps::platform::wrapper::
+                      MpsComputeCommandEncoder_t encoder,
+                  ::orteaf::internal::execution::mps::platform::wrapper::MPSSize_t
+                      threads_per_grid,
+                  ::orteaf::internal::execution::mps::platform::wrapper::MPSSize_t
+                      threads_per_threadgroup) {
+    ::orteaf::internal::execution::mps::platform::wrapper::dispatchThreads(
+        encoder, threads_per_grid, threads_per_threadgroup);
+  }
+
+  static inline void
   endEncoding(::orteaf::internal::execution::mps::platform::wrapper::
                   MpsComputeCommandEncoder_t encoder) {
     ::orteaf::internal::execution::mps::platform::wrapper::endEncoding(encoder);
@@ -105,6 +116,27 @@ struct MpsFastOps {
           command_buffer) {
     ::orteaf::internal::execution::mps::platform::wrapper::waitUntilCompleted(
         command_buffer);
+  }
+
+  static inline double getGPUStartTime(
+      ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandBuffer_t
+          command_buffer) {
+    return ::orteaf::internal::execution::mps::platform::wrapper::
+        getGPUStartTime(command_buffer);
+  }
+
+  static inline double getGPUEndTime(
+      ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandBuffer_t
+          command_buffer) {
+    return ::orteaf::internal::execution::mps::platform::wrapper::
+        getGPUEndTime(command_buffer);
+  }
+
+  static inline double getGPUDuration(
+      ::orteaf::internal::execution::mps::platform::wrapper::MpsCommandBuffer_t
+          command_buffer) {
+    return ::orteaf::internal::execution::mps::platform::wrapper::
+        getGPUDuration(command_buffer);
   }
 };
 
