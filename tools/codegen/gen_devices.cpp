@@ -336,6 +336,13 @@ ParseArchitectureCatalog(const fs::path &architecture_input_path,
           << "'";
       Fail(oss.str());
     }
+    const std::string schema_version = schema_node.as<std::string>();
+    if (schema_version != "1.0") {
+      std::ostringstream oss;
+      oss << "Unsupported schema_version '" << schema_version << "' in '"
+          << yaml_path << "'";
+      Fail(oss.str());
+    }
 
     const auto architectures_node = root["architectures"];
     if (!architectures_node || !architectures_node.IsSequence()) {
@@ -557,6 +564,13 @@ ParseDeviceConfig(const fs::path &device_input_path,
       std::ostringstream oss;
       oss << "Missing required scalar key 'schema_version' in '" << yaml_path
           << "'";
+      Fail(oss.str());
+    }
+    const std::string schema_version = schema_node.as<std::string>();
+    if (schema_version != "1.0") {
+      std::ostringstream oss;
+      oss << "Unsupported schema_version '" << schema_version << "' in '"
+          << yaml_path << "'";
       Fail(oss.str());
     }
 
