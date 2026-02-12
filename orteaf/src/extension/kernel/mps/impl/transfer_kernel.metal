@@ -9,7 +9,7 @@ struct TransferLayoutParams {
   int dst_strides[8];
 };
 
-inline uint linearToStridedOffset(uint linear, uint rank,
+inline long linearToStridedOffset(uint linear, uint rank,
                                   constant uint *shape,
                                   constant int *strides) {
   ulong remaining = static_cast<ulong>(linear);
@@ -21,7 +21,7 @@ inline uint linearToStridedOffset(uint linear, uint rank,
     remaining = dim_size == 0 ? 0 : (remaining / dim_size);
     offset += static_cast<long>(coord) * static_cast<long>(strides[i]);
   }
-  return static_cast<uint>(offset);
+  return offset;
 }
 
 kernel void orteaf_copy_contiguous_to_strided_u8(
@@ -35,9 +35,11 @@ kernel void orteaf_copy_contiguous_to_strided_u8(
     return;
   }
   const uint src_elem = src_offset + gid;
-  const uint dst_elem =
-      dst_offset + linearToStridedOffset(gid, layout.rank, layout.shape,
-                                         layout.dst_strides);
+  const long dst_elem_signed =
+      static_cast<long>(dst_offset) +
+      linearToStridedOffset(gid, layout.rank, layout.shape,
+                            layout.dst_strides);
+  const uint dst_elem = static_cast<uint>(dst_elem_signed);
   const uint src_byte = src_elem * elem_size;
   const uint dst_byte = dst_elem * elem_size;
   for (uint i = 0; i < elem_size; ++i) {
@@ -55,9 +57,11 @@ kernel void orteaf_copy_strided_to_contiguous_u8(
   if (gid >= numel) {
     return;
   }
-  const uint src_elem =
-      src_offset + linearToStridedOffset(gid, layout.rank, layout.shape,
-                                         layout.src_strides);
+  const long src_elem_signed =
+      static_cast<long>(src_offset) +
+      linearToStridedOffset(gid, layout.rank, layout.shape,
+                            layout.src_strides);
+  const uint src_elem = static_cast<uint>(src_elem_signed);
   const uint dst_elem = dst_offset + gid;
   const uint src_byte = src_elem * elem_size;
   const uint dst_byte = dst_elem * elem_size;
@@ -65,4 +69,3 @@ kernel void orteaf_copy_strided_to_contiguous_u8(
     dst[dst_byte + i] = src[src_byte + i];
   }
 }
-
