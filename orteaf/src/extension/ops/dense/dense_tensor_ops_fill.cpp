@@ -31,7 +31,14 @@ void DenseTensorOps::fill(Tensor &output, double value) {
                       "fill: MPS currently supports only F32");
   }
 
-  auto args = detail::makeArgsForCpuOrMps(output_impl->execution(), kOpName);
+  if (output_impl->execution() == Execution::Cuda &&
+      output_impl->dtype() != ::orteaf::internal::DType::F32) {
+    error::throwError(error::OrteafErrc::Unsupported,
+                      "fill: CUDA currently supports only F32");
+  }
+
+  auto args =
+      detail::makeArgsForCpuOrMpsOrCuda(output_impl->execution(), kOpName);
   output_impl->bindAllArgs(args, kernel::OperandId::Output);
   args.addParam(kernel::Param(kernel::ParamId::Value, value));
 
