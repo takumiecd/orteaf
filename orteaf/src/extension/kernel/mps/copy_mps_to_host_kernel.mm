@@ -114,30 +114,26 @@ void copyMpsToHostExecute(
   auto &input_any = storages.input.lease<AnyBinding>();
   auto &output_any = storages.output.lease<AnyBinding>();
 
-  auto *input_lease = input_any.tryAs<::orteaf::internal::storage::MpsStorageLease>();
-  auto *output_lease =
-      output_any.tryAs<::orteaf::internal::storage::CpuStorageLease>();
-  if (!input_lease || !(*input_lease) || !output_lease || !(*output_lease)) {
-    error::throwError(error::OrteafErrc::InvalidParameter,
-                      "MPS copyDeviceToHost kernel requires MPS input and CPU output storage");
-  }
-  auto *input_storage = input_lease->operator->();
-  auto *output_storage = output_lease->operator->();
-  if (input_storage == nullptr || output_storage == nullptr ||
-      input_storage->buffer() == nullptr || output_storage->buffer() == nullptr) {
-    error::throwError(error::OrteafErrc::InvalidState,
-                      "MPS copyDeviceToHost kernel buffer is unavailable");
-  }
+  auto &input_storage = storages.input.payloadAs<
+      AnyBinding, ::orteaf::internal::storage::MpsStorageLease>(
+      "MPS copyDeviceToHost kernel requires MPS input and CPU output storage",
+      "MPS copyDeviceToHost kernel buffer is unavailable",
+      [](const auto &typed_storage) { return typed_storage.buffer() != nullptr; });
+  auto &output_storage = storages.output.payloadAs<
+      AnyBinding, ::orteaf::internal::storage::CpuStorageLease>(
+      "MPS copyDeviceToHost kernel requires MPS input and CPU output storage",
+      "MPS copyDeviceToHost kernel buffer is unavailable",
+      [](const auto &typed_storage) { return typed_storage.buffer() != nullptr; });
 
   const auto dtype = input_any.dtype();
-  if (dtype != output_any.dtype() || dtype != input_storage->dtype() ||
-      dtype != output_storage->dtype()) {
+  if (dtype != output_any.dtype() || dtype != input_storage.dtype() ||
+      dtype != output_storage.dtype()) {
     error::throwError(error::OrteafErrc::InvalidParameter,
                       "MPS copyDeviceToHost kernel requires matching dtype");
   }
 
-  const auto input_storage_numel_raw = input_storage->numel();
-  const auto output_storage_numel_raw = output_storage->numel();
+  const auto input_storage_numel_raw = input_storage.numel();
+  const auto output_storage_numel_raw = output_storage.numel();
   if (input_storage_numel_raw >
           static_cast<std::size_t>(std::numeric_limits<std::int64_t>::max()) ||
       output_storage_numel_raw >
@@ -208,7 +204,7 @@ void copyMpsToHostExecute(
 
     session->waitDependencies(storages.input);
     mps_kernel::MpsKernelSession::Ops::setBuffer(session->encoder(),
-                                                  *input_storage, 0);
+                                                  input_storage, 0);
     mps_kernel::MpsKernelSession::Ops::setBuffer(session->encoder(),
                                                   *staging_storage, 1);
     session->setBytes(&input_offset_u32, sizeof(input_offset_u32), 2);
@@ -232,7 +228,7 @@ void copyMpsToHostExecute(
                       "MPS copyDeviceToHost kernel staging is not CPU-visible");
   }
 
-  auto *output_base = static_cast<std::byte *>(output_storage->buffer());
+  auto *output_base = static_cast<std::byte *>(output_storage.buffer());
   const auto *staging_bytes = static_cast<const std::byte *>(staging_ptr);
   for (std::size_t linear = 0; linear < numel; ++linear) {
     const auto dst_index = common_layout::physicalIndexForLinear(

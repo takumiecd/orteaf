@@ -64,23 +64,18 @@ void fillMpsExecute(
 
   using AnyBinding = kernel::KernelArgs::StorageListType::Storage::value_type;
   auto &lease = storages.output.lease<AnyBinding>();
-  auto *mps_lease = lease.tryAs<::orteaf::internal::storage::MpsStorageLease>();
-  if (!mps_lease || !(*mps_lease)) {
-    error::throwError(error::OrteafErrc::InvalidParameter,
-                      "MPS fill kernel requires MPS output storage");
-  }
-  auto *storage = mps_lease->operator->();
-  if (storage == nullptr || storage->buffer() == nullptr) {
-    error::throwError(error::OrteafErrc::InvalidState,
-                      "MPS fill kernel output buffer is unavailable");
-  }
+  auto &storage = storages.output.payloadAs<
+      AnyBinding, ::orteaf::internal::storage::MpsStorageLease>(
+      "MPS fill kernel requires MPS output storage",
+      "MPS fill kernel output buffer is unavailable",
+      [](const auto &typed_storage) { return typed_storage.buffer() != nullptr; });
 
   if (lease.dtype() != ::orteaf::internal::DType::F32 ||
-      storage->dtype() != ::orteaf::internal::DType::F32) {
+      storage.dtype() != ::orteaf::internal::DType::F32) {
     error::throwError(error::OrteafErrc::Unsupported,
                       "MPS fill kernel supports only F32");
   }
-  const auto storage_numel_raw = storage->numel();
+  const auto storage_numel_raw = storage.numel();
   if (storage_numel_raw >
       static_cast<std::size_t>(std::numeric_limits<std::int64_t>::max())) {
     error::throwError(error::OrteafErrc::InvalidParameter,

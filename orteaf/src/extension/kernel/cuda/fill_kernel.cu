@@ -69,25 +69,21 @@ void fillCudaExecute(
 
   using AnyBinding = kernel::KernelArgs::StorageListType::Storage::value_type;
   auto &lease = storages.output.lease<AnyBinding>();
-  auto *cuda_lease = lease.tryAs<::orteaf::internal::storage::CudaStorageLease>();
-  if (!cuda_lease || !(*cuda_lease)) {
-    error::throwError(error::OrteafErrc::InvalidParameter,
-                      "CUDA fill kernel requires CUDA output storage");
-  }
-
-  auto *storage = cuda_lease->operator->();
-  if (storage == nullptr || !storage->bufferView()) {
-    error::throwError(error::OrteafErrc::InvalidState,
-                      "CUDA fill kernel output buffer is unavailable");
-  }
+  auto &storage = storages.output.payloadAs<
+      AnyBinding, ::orteaf::internal::storage::CudaStorageLease>(
+      "CUDA fill kernel requires CUDA output storage",
+      "CUDA fill kernel output buffer is unavailable",
+      [](const auto &typed_storage) {
+        return static_cast<bool>(typed_storage.bufferView());
+      });
 
   if (lease.dtype() != ::orteaf::internal::DType::F32 ||
-      storage->dtype() != ::orteaf::internal::DType::F32) {
+      storage.dtype() != ::orteaf::internal::DType::F32) {
     error::throwError(error::OrteafErrc::Unsupported,
                       "CUDA fill kernel supports only F32");
   }
 
-  const auto storage_numel_raw = storage->numel();
+  const auto storage_numel_raw = storage.numel();
   if (storage_numel_raw >
       static_cast<std::size_t>(std::numeric_limits<std::int64_t>::max())) {
     error::throwError(error::OrteafErrc::InvalidParameter,
@@ -140,7 +136,7 @@ void fillCudaExecute(
                       "CUDA fill kernel could not begin execution session");
   }
 
-  auto output_view = storage->bufferView();
+  auto output_view = storage.bufferView();
   auto output_ptr = cuda_wrapper::cuDeviceptrFromOpaque(output_view.raw());
   auto function = cuda_wrapper::objcFromOpaqueNoown<CUfunction>(session->function());
   auto stream = cuda_wrapper::objcFromOpaqueNoown<CUstream>(session->stream());

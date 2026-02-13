@@ -55,13 +55,12 @@ void printExecute(
 
   using AnyBinding = kernel::KernelArgs::StorageListType::Storage::value_type;
   auto &lease = storages.input.lease<AnyBinding>();
-  auto *cpu_lease = lease.tryAs<::orteaf::internal::storage::CpuStorageLease>();
-  if (!cpu_lease || !(*cpu_lease)) {
-    error::throwError(error::OrteafErrc::InvalidParameter,
-                      "Print kernel requires CPU storage for Input0");
-  }
+  auto &cpu_storage = storages.input.payloadAs<
+      AnyBinding, ::orteaf::internal::storage::CpuStorageLease>(
+      "Print kernel requires CPU storage for Input0",
+      "Print kernel input storage payload is unavailable");
 
-  auto view = (*cpu_lease)->bufferView();
+  auto view = cpu_storage.bufferView();
   const void *data = view.data();
   const auto dtype = lease.dtype();
   const auto &shape = params.shape.get();

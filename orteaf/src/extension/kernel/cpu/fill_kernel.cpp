@@ -67,11 +67,10 @@ void fillExecute(
 
   using AnyBinding = kernel::KernelArgs::StorageListType::Storage::value_type;
   auto &lease = storages.output.lease<AnyBinding>();
-  auto *cpu_lease = lease.tryAs<::orteaf::internal::storage::CpuStorageLease>();
-  if (!cpu_lease || !(*cpu_lease)) {
-    error::throwError(error::OrteafErrc::InvalidParameter,
-                      "Fill kernel requires CPU storage for Output");
-  }
+  auto &cpu_storage = storages.output.payloadAs<
+      AnyBinding, ::orteaf::internal::storage::CpuStorageLease>(
+      "Fill kernel requires CPU storage for Output",
+      "Fill kernel output storage payload is unavailable");
 
   const auto raw_storage_numel = lease.numel();
   if (raw_storage_numel >
@@ -87,7 +86,7 @@ void fillExecute(
   const auto stats = common_layout::analyzeLayout(shape, strides, offset,
                                                   "Fill kernel", "output");
 
-  auto view = (*cpu_lease)->bufferView();
+  auto view = cpu_storage.bufferView();
   if (stats.has_zero) {
     return;
   }

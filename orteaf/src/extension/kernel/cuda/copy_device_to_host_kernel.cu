@@ -124,32 +124,28 @@ void copyDeviceToHostExecute(
   auto &input_any = storages.input.lease<AnyBinding>();
   auto &output_any = storages.output.lease<AnyBinding>();
 
-  auto *input_lease = input_any.tryAs<::orteaf::internal::storage::CudaStorageLease>();
-  auto *output_lease =
-      output_any.tryAs<::orteaf::internal::storage::CpuStorageLease>();
-  if (!input_lease || !(*input_lease) || !output_lease || !(*output_lease)) {
-    error::throwError(
-        error::OrteafErrc::InvalidParameter,
-        "CUDA copyDeviceToHost kernel requires CUDA input and CPU output storage");
-  }
-
-  auto *input_storage = input_lease->operator->();
-  auto *output_storage = output_lease->operator->();
-  if (input_storage == nullptr || output_storage == nullptr ||
-      !input_storage->bufferView() || output_storage->buffer() == nullptr) {
-    error::throwError(error::OrteafErrc::InvalidState,
-                      "CUDA copyDeviceToHost kernel buffer is unavailable");
-  }
+  auto &input_storage = storages.input.payloadAs<
+      AnyBinding, ::orteaf::internal::storage::CudaStorageLease>(
+      "CUDA copyDeviceToHost kernel requires CUDA input and CPU output storage",
+      "CUDA copyDeviceToHost kernel buffer is unavailable",
+      [](const auto &typed_storage) {
+        return static_cast<bool>(typed_storage.bufferView());
+      });
+  auto &output_storage = storages.output.payloadAs<
+      AnyBinding, ::orteaf::internal::storage::CpuStorageLease>(
+      "CUDA copyDeviceToHost kernel requires CUDA input and CPU output storage",
+      "CUDA copyDeviceToHost kernel buffer is unavailable",
+      [](const auto &typed_storage) { return typed_storage.buffer() != nullptr; });
 
   const auto dtype = input_any.dtype();
-  if (dtype != output_any.dtype() || dtype != input_storage->dtype() ||
-      dtype != output_storage->dtype()) {
+  if (dtype != output_any.dtype() || dtype != input_storage.dtype() ||
+      dtype != output_storage.dtype()) {
     error::throwError(error::OrteafErrc::InvalidParameter,
                       "CUDA copyDeviceToHost kernel requires matching dtype");
   }
 
-  const auto input_storage_numel_raw = input_storage->numel();
-  const auto output_storage_numel_raw = output_storage->numel();
+  const auto input_storage_numel_raw = input_storage.numel();
+  const auto output_storage_numel_raw = output_storage.numel();
   if (input_storage_numel_raw >
           static_cast<std::size_t>(std::numeric_limits<std::int64_t>::max()) ||
       output_storage_numel_raw >
@@ -179,8 +175,8 @@ void copyDeviceToHostExecute(
   const auto &output_layout = validation.output_layout;
   const auto elem_size = validation.elem_size;
   const auto bytes = validation.bytes;
-  const auto input_base = input_storage->bufferView().data();
-  auto *output_base = static_cast<std::byte *>(output_storage->buffer());
+  const auto input_base = input_storage.bufferView().data();
+  auto *output_base = static_cast<std::byte *>(output_storage.buffer());
   if (input_base == 0) {
     error::throwError(error::OrteafErrc::InvalidState,
                       "CUDA copyDeviceToHost kernel source is invalid");
