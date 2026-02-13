@@ -91,7 +91,7 @@ public:
    * Throws when the held type is not T or the lease object is invalid.
    */
   template <typename T>
-  T &as(const char *error_message = "Storage lease type mismatch") {
+  T &asRef(const char *error_message = "Storage lease type mismatch") {
     auto *lease = tryAs<T>();
     if (lease == nullptr || !(*lease)) {
       ::orteaf::internal::diagnostics::error::throwError(
@@ -102,7 +102,7 @@ public:
   }
 
   template <typename T>
-  const T &as(const char *error_message = "Storage lease type mismatch") const {
+  const T &asRef(const char *error_message = "Storage lease type mismatch") const {
     auto *lease = tryAs<T>();
     if (lease == nullptr || !(*lease)) {
       ::orteaf::internal::diagnostics::error::throwError(
@@ -113,6 +113,21 @@ public:
   }
 
   /**
+   * @brief Retrieve lease type T by value.
+   *
+   * This performs a lease copy (increments strong ref count for strong leases).
+   */
+  template <typename T>
+  T as(const char *error_message = "Storage lease type mismatch") {
+    return asRef<T>(error_message);
+  }
+
+  template <typename T>
+  T as(const char *error_message = "Storage lease type mismatch") const {
+    return asRef<T>(error_message);
+  }
+
+  /**
    * @brief Retrieve the payload of lease type T by reference.
    *
    * Throws when type check fails or payload is unavailable.
@@ -120,7 +135,7 @@ public:
   template <typename T>
   auto &payloadAs(const char *lease_error_message,
                   const char *payload_error_message) {
-    auto &lease = as<T>(lease_error_message);
+    auto &lease = asRef<T>(lease_error_message);
     auto *payload = lease.operator->();
     if (payload == nullptr) {
       ::orteaf::internal::diagnostics::error::throwError(
@@ -133,7 +148,7 @@ public:
   template <typename T>
   const auto &payloadAs(const char *lease_error_message,
                         const char *payload_error_message) const {
-    const auto &lease = as<T>(lease_error_message);
+    const auto &lease = asRef<T>(lease_error_message);
     auto *payload = lease.operator->();
     if (payload == nullptr) {
       ::orteaf::internal::diagnostics::error::throwError(

@@ -78,16 +78,29 @@ struct StorageField {
   }
 
   /**
-   * @brief Get a typed lease by reference.
+   * @brief Get a typed lease by value (copy).
    */
   template <typename StorageBinding, typename TypedLease>
-  auto &leaseAs(const char *error_message) {
+  TypedLease leaseAs(const char *error_message) {
     return lease<StorageBinding>().template as<TypedLease>(error_message);
   }
 
   template <typename StorageBinding, typename TypedLease>
-  const auto &leaseAs(const char *error_message) const {
+  TypedLease leaseAs(const char *error_message) const {
     return lease<StorageBinding>().template as<TypedLease>(error_message);
+  }
+
+  /**
+   * @brief Get a typed lease by reference (no copy).
+   */
+  template <typename StorageBinding, typename TypedLease>
+  auto &leaseRefAs(const char *error_message) {
+    return lease<StorageBinding>().template asRef<TypedLease>(error_message);
+  }
+
+  template <typename StorageBinding, typename TypedLease>
+  const auto &leaseRefAs(const char *error_message) const {
+    return lease<StorageBinding>().template asRef<TypedLease>(error_message);
   }
 
   /**
