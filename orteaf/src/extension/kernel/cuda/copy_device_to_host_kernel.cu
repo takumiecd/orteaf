@@ -13,7 +13,6 @@
 #include <orteaf/internal/diagnostics/error/error.h>
 #include <orteaf/internal/dtype/dtype.h>
 #include <orteaf/internal/execution/cuda/api/cuda_execution_api.h>
-#include <orteaf/internal/execution/cuda/platform/wrapper/cuda_alloc.h>
 #include <orteaf/internal/kernel/api/kernel_registry_api.h>
 #include <orteaf/internal/kernel/core/kernel_args.h>
 #include <orteaf/internal/kernel/core/kernel_key.h>
@@ -26,14 +25,14 @@
 #include <orteaf/internal/kernel/storage/operand_id.h>
 #include <orteaf/internal/storage/registry/storage_types.h>
 
+#include "copy_kernel_common.h"
 #include "transfer_layout_common.h"
 
 namespace orteaf::extension::kernel::cuda {
 
 namespace kernel = ::orteaf::internal::kernel;
 namespace error = ::orteaf::internal::diagnostics::error;
-namespace cuda_wrapper =
-    ::orteaf::internal::execution::cuda::platform::wrapper;
+namespace cuda_wrapper = copy_detail::cuda_wrapper;
 
 using ShapeVector = detail::ShapeVector;
 using TransferLayoutParams = detail::TransferLayoutParams;
@@ -80,37 +79,6 @@ extern "C" __global__ void orteaf_copy_strided_to_contiguous_u8(
     std::uint32_t output_offset, std::uint32_t numel, std::uint32_t elem_size,
     TransferLayoutParams layout);
 
-std::int64_t physicalIndexForLinear(std::uint64_t linear,
-                                    const ShapeVector &shape,
-                                    const ShapeVector &strides,
-                                    std::int64_t offset) {
-  std::int64_t physical = offset;
-  std::uint64_t remaining = linear;
-  for (std::size_t i = shape.size; i-- > 0;) {
-    const auto dim = static_cast<std::uint64_t>(shape.data[i]);
-    const auto coord = dim == 0 ? 0 : (remaining % dim);
-    remaining = dim == 0 ? 0 : (remaining / dim);
-    physical += static_cast<std::int64_t>(coord) * strides.data[i];
-  }
-  return physical;
-}
-
-ShapeVector makeContiguousStrides(const ShapeVector &shape) {
-  ShapeVector strides{};
-  strides.size = shape.size;
-  std::int64_t running = 1;
-  for (std::size_t i = shape.size; i-- > 0;) {
-    strides.data[i] = running;
-    running *= shape.data[i];
-  }
-  return strides;
-}
-
-void throwCudaRuntimeError(const char *message, cudaError_t status) {
-  error::throwError(error::OrteafErrc::OperationFailed,
-                    std::string(message) + ": " + cudaGetErrorString(status));
-}
-
 void launchStridedToContiguousKernel(cuda_wrapper::CudaDevicePtr_t input_base,
                                      cuda_wrapper::CudaDevicePtr_t output_base,
                                      std::uint32_t input_offset,
@@ -129,25 +97,15 @@ void launchStridedToContiguousKernel(cuda_wrapper::CudaDevicePtr_t input_base,
 
   const auto launch_status = cudaGetLastError();
   if (launch_status != cudaSuccess) {
-    throwCudaRuntimeError("CUDA copyDeviceToHost kernel launch failed",
-                          launch_status);
+    copy_detail::throwCudaRuntimeError(
+        "CUDA copyDeviceToHost kernel launch failed", launch_status);
   }
   const auto sync_status = cudaDeviceSynchronize();
   if (sync_status != cudaSuccess) {
-    throwCudaRuntimeError("CUDA copyDeviceToHost kernel synchronization failed",
-                          sync_status);
+    copy_detail::throwCudaRuntimeError(
+        "CUDA copyDeviceToHost kernel synchronization failed", sync_status);
   }
 }
-
-struct DeviceBufferGuard {
-  cuda_wrapper::CudaDevicePtr_t ptr{};
-  std::size_t bytes{};
-  ~DeviceBufferGuard() {
-    if (ptr != 0) {
-      cuda_wrapper::free(ptr, bytes);
-    }
-  }
-};
 
 } // namespace
 
@@ -262,13 +220,14 @@ void copyDeviceToHostExecute(
     const auto src_byte_offset = static_cast<std::size_t>(input_offset) * elem_size;
     cuda_wrapper::copyToHost(input_base + src_byte_offset, packed.data(), bytes);
   } else {
-    DeviceBufferGuard staging{cuda_wrapper::alloc(bytes), bytes};
+    copy_detail::DeviceBufferGuard staging{cuda_wrapper::alloc(bytes), bytes};
     const auto input_offset_u32 = static_cast<std::uint32_t>(input_offset);
     const auto numel_u32 = static_cast<std::uint32_t>(input_layout.numel);
     const auto elem_size_u32 = static_cast<std::uint32_t>(elem_size);
 
     TransferLayoutParams layout_params{};
-    const auto staging_strides = makeContiguousStrides(input_shape);
+    const auto staging_strides =
+        detail::makeContiguousStrides(input_shape, kOpName, "input");
     detail::fillLayoutParams(layout_params, input_shape, input_strides,
                              staging_strides, kOpName);
 
@@ -284,7 +243,7 @@ void copyDeviceToHostExecute(
   }
 
   for (std::size_t linear = 0; linear < input_layout.numel; ++linear) {
-    const auto dst_index = physicalIndexForLinear(
+    const auto dst_index = detail::physicalIndexForLinear(
         static_cast<std::uint64_t>(linear), output_shape, output_strides,
         output_offset);
     const auto dst_byte_index = static_cast<std::size_t>(dst_index) * elem_size;

@@ -26,8 +26,8 @@
 #include <orteaf/internal/kernel/schema/kernel_storage_schema.h>
 #include <orteaf/internal/kernel/storage/operand_id.h>
 #include <orteaf/internal/storage/registry/storage_types.h>
-#include <orteaf/internal/tensor/api/tensor_api.h>
 
+#include "copy_kernel_common.h"
 #include "transfer_layout_common.h"
 
 namespace orteaf::extension::kernel::mps {
@@ -73,64 +73,6 @@ struct CopyHostToMpsParams : kernel::ParamSchema<CopyHostToMpsParams> {
 namespace {
 
 constexpr const char *kOpName = "MPS copyHostToDevice kernel";
-
-std::int64_t physicalIndexForLinear(std::uint64_t linear,
-                                    const ShapeVector &shape,
-                                    const ShapeVector &strides,
-                                    std::int64_t offset) {
-  std::int64_t physical = offset;
-  std::uint64_t remaining = linear;
-  for (std::size_t i = shape.size; i-- > 0;) {
-    const auto dim = static_cast<std::uint64_t>(shape.data[i]);
-    const auto coord = dim == 0 ? 0 : (remaining % dim);
-    remaining = dim == 0 ? 0 : (remaining / dim);
-    physical += static_cast<std::int64_t>(coord) * strides.data[i];
-  }
-  return physical;
-}
-
-ShapeVector makeContiguousStrides(const ShapeVector &shape) {
-  ShapeVector strides{};
-  strides.size = shape.size;
-  std::int64_t running = 1;
-  for (std::size_t i = shape.size; i-- > 0;) {
-    strides.data[i] = running;
-    running *= shape.data[i];
-  }
-  return strides;
-}
-
-::orteaf::internal::storage::MpsStorageLease
-acquireSharedMpsStaging(::orteaf::internal::DType dtype, std::size_t numel) {
-  using MpsStorage = ::orteaf::internal::storage::mps::MpsStorage;
-  using MpsStorageManager = ::orteaf::internal::storage::MpsStorageManager;
-
-  const auto elem_size = ::orteaf::internal::sizeOf(dtype);
-  if (numel > std::numeric_limits<std::size_t>::max() / elem_size) {
-    error::throwError(error::OrteafErrc::InvalidParameter,
-                      "MPS copyHostToDevice kernel staging size overflow");
-  }
-
-  typename MpsStorageManager::Request request{};
-  request.device = ::orteaf::internal::execution::mps::MpsDeviceHandle{0};
-  request.heap_key = MpsStorage::HeapDescriptorKey::Sized(numel * elem_size);
-  request.heap_key.storage_mode =
-      ::orteaf::internal::execution::mps::platform::wrapper::
-          kMPSStorageModeShared;
-  request.dtype = dtype;
-  request.numel = numel;
-  request.alignment = 0;
-  request.layout = typename MpsStorage::Layout{};
-
-  auto lease = ::orteaf::internal::tensor::api::TensorApi::storage()
-                   .template get<MpsStorage>()
-                   .acquire(request);
-  if (!lease || lease->buffer() == nullptr) {
-    error::throwError(error::OrteafErrc::InvalidState,
-                      "MPS copyHostToDevice kernel failed to acquire staging");
-  }
-  return lease;
-}
 
 } // namespace
 
@@ -230,7 +172,7 @@ void copyHostToMpsExecute(
                       "MPS copyHostToDevice kernel size exceeds uint32 range");
   }
 
-  auto staging_lease = acquireSharedMpsStaging(dtype, numel);
+  auto staging_lease = copy_detail::acquireSharedMpsStaging(dtype, numel, kOpName);
   auto *staging_storage = staging_lease.operator->();
   if (staging_storage == nullptr || staging_storage->buffer() == nullptr) {
     error::throwError(error::OrteafErrc::InvalidState,
@@ -248,7 +190,7 @@ void copyHostToMpsExecute(
   const auto *input_base = static_cast<const std::byte *>(input_storage->buffer());
   auto *staging_bytes = static_cast<std::byte *>(staging_ptr);
   for (std::size_t linear = 0; linear < numel; ++linear) {
-    const auto src_index = physicalIndexForLinear(
+    const auto src_index = detail::physicalIndexForLinear(
         static_cast<std::uint64_t>(linear), input_shape, input_strides,
         input_offset);
     const auto src_byte_index = static_cast<std::size_t>(src_index) * elem_size;
@@ -256,7 +198,8 @@ void copyHostToMpsExecute(
                 staging_bytes + linear * elem_size);
   }
 
-  const auto staging_strides = makeContiguousStrides(output_shape);
+  const auto staging_strides =
+      detail::makeContiguousStrides(output_shape, kOpName, "output");
   detail::TransferLayoutParams layout_params{};
   detail::fillLayoutParams(layout_params, output_shape, staging_strides,
                            output_strides, kOpName);

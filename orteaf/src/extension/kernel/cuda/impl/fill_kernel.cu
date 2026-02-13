@@ -27,6 +27,9 @@ orteaf_fill_strided_f32(float *output, std::uint32_t offset,
   std::int64_t flat_index = static_cast<std::int64_t>(offset);
   for (std::uint32_t d = layout.rank; d-- > 0;) {
     const auto dim = layout.shape[d];
+    if (dim == 0) {
+      return;
+    }
     const auto coord = linear % dim;
     linear /= dim;
     flat_index += static_cast<std::int64_t>(coord) *

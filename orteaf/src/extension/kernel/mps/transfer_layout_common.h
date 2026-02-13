@@ -178,5 +178,45 @@ inline void fillLayoutParams(TransferLayoutParams &params,
   }
 }
 
-} // namespace orteaf::extension::kernel::mps::detail
+inline std::int64_t physicalIndexForLinear(std::uint64_t linear,
+                                           const ShapeVector &shape,
+                                           const ShapeVector &strides,
+                                           std::int64_t offset) {
+  std::int64_t physical = offset;
+  std::uint64_t remaining = linear;
+  for (std::size_t i = shape.size; i-- > 0;) {
+    const auto dim = static_cast<std::uint64_t>(shape.data[i]);
+    const auto coord = dim == 0 ? 0 : (remaining % dim);
+    remaining = dim == 0 ? 0 : (remaining / dim);
+    physical += static_cast<std::int64_t>(coord) * strides.data[i];
+  }
+  return physical;
+}
 
+inline ShapeVector makeContiguousStrides(const ShapeVector &shape,
+                                         const char *op_name,
+                                         const char *tensor_name) {
+  ShapeVector strides{};
+  strides.size = shape.size;
+  std::int64_t running = 1;
+  for (std::size_t i = shape.size; i-- > 0;) {
+    const auto dim = shape.data[i];
+    if (dim < 0) {
+      error::throwError(
+          error::OrteafErrc::InvalidParameter,
+          std::string(op_name) + ": " + tensor_name +
+              " has negative shape dimension");
+    }
+    strides.data[i] = running;
+    if (dim != 0 &&
+        running > std::numeric_limits<std::int64_t>::max() / dim) {
+      error::throwError(error::OrteafErrc::InvalidParameter,
+                        std::string(op_name) + ": " + tensor_name +
+                            " contiguous stride overflow");
+    }
+    running *= dim;
+  }
+  return strides;
+}
+
+} // namespace orteaf::extension::kernel::mps::detail

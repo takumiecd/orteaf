@@ -275,6 +275,26 @@ struct TensorImplTraits<::orteaf::extension::tensor::DenseTensorImpl> {
   }
 
 private:
+  template <typename Storage, typename StorageManager, typename DeviceLease,
+            typename ConfigureRequestFn>
+  static StorageLease createStorageForDevice(const CreateRequest &request,
+                                             StorageRegistry *storage_registry,
+                                             std::int64_t numel,
+                                             DeviceLease &&device_lease,
+                                             ConfigureRequestFn &&configure) {
+    typename StorageManager::Request storage_request{};
+    storage_request.device = device_lease.payloadHandle();
+    storage_request.dtype = request.dtype;
+    storage_request.numel = static_cast<std::size_t>(numel);
+    storage_request.alignment = request.alignment;
+    storage_request.layout = typename Storage::Layout{};
+    configure(storage_request);
+
+    auto lease =
+        storage_registry->template get<Storage>().acquire(storage_request);
+    return StorageLease::erase(std::move(lease));
+  }
+
   static StorageLease createStorageLease(const CreateRequest &request,
                                          StorageRegistry *storage_registry,
                                          std::int64_t numel) {
@@ -307,16 +327,9 @@ private:
           "CPU current context has no active device");
     }
 
-    typename CpuStorageManager::Request storage_request{};
-    storage_request.device = device_lease.payloadHandle();
-    storage_request.dtype = request.dtype;
-    storage_request.numel = static_cast<std::size_t>(numel);
-    storage_request.alignment = request.alignment;
-    storage_request.layout = typename CpuStorage::Layout{};
-
-    auto lease =
-        storage_registry->template get<CpuStorage>().acquire(storage_request);
-    return StorageLease::erase(std::move(lease));
+    return createStorageForDevice<CpuStorage, CpuStorageManager>(
+        request, storage_registry, numel, std::move(device_lease),
+        [](typename CpuStorageManager::Request &) {});
   }
 
 #if ORTEAF_ENABLE_MPS
@@ -333,22 +346,24 @@ private:
           "MPS current context has no active device");
     }
 
-    typename MpsStorageManager::Request storage_request{};
-    storage_request.device = device_lease.payloadHandle();
-    const auto numel_size =
-        static_cast<std::size_t>(numel) * ::orteaf::internal::sizeOf(request.dtype);
-    storage_request.heap_key = MpsStorage::HeapDescriptorKey::Sized(numel_size);
-    storage_request.heap_key.storage_mode =
-        ::orteaf::internal::execution::mps::platform::wrapper::
-            kMPSStorageModePrivate;
-    storage_request.dtype = request.dtype;
-    storage_request.numel = static_cast<std::size_t>(numel);
-    storage_request.alignment = request.alignment;
-    storage_request.layout = typename MpsStorage::Layout{};
-
-    auto lease =
-        storage_registry->template get<MpsStorage>().acquire(storage_request);
-    return StorageLease::erase(std::move(lease));
+    return createStorageForDevice<MpsStorage, MpsStorageManager>(
+        request, storage_registry, numel, std::move(device_lease),
+        [numel, &request](typename MpsStorageManager::Request &storage_request) {
+          const auto elem_size = ::orteaf::internal::sizeOf(request.dtype);
+          if (static_cast<std::size_t>(numel) >
+              std::numeric_limits<std::size_t>::max() / elem_size) {
+            ::orteaf::internal::diagnostics::error::throwError(
+                ::orteaf::internal::diagnostics::error::OrteafErrc::
+                    InvalidParameter,
+                "MPS tensor create request byte size overflow");
+          }
+          const auto numel_size = static_cast<std::size_t>(numel) * elem_size;
+          storage_request.heap_key =
+              MpsStorage::HeapDescriptorKey::Sized(numel_size);
+          storage_request.heap_key.storage_mode =
+              ::orteaf::internal::execution::mps::platform::wrapper::
+                  kMPSStorageModePrivate;
+        });
   }
 #endif
 
@@ -366,16 +381,9 @@ private:
           "CUDA current context has no active device");
     }
 
-    typename CudaStorageManager::Request storage_request{};
-    storage_request.device = device_lease.payloadHandle();
-    storage_request.dtype = request.dtype;
-    storage_request.numel = static_cast<std::size_t>(numel);
-    storage_request.alignment = request.alignment;
-    storage_request.layout = typename CudaStorage::Layout{};
-
-    auto lease =
-        storage_registry->template get<CudaStorage>().acquire(storage_request);
-    return StorageLease::erase(std::move(lease));
+    return createStorageForDevice<CudaStorage, CudaStorageManager>(
+        request, storage_registry, numel, std::move(device_lease),
+        [](typename CudaStorageManager::Request &) {});
   }
 #endif
 };
