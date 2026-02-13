@@ -27,7 +27,7 @@ acquireSharedMpsStaging(::orteaf::internal::DType dtype, std::size_t numel,
   }
 
   typename MpsStorageManager::Request request{};
-  request.device = {};
+  request.device = ::orteaf::internal::execution::mps::MpsDeviceHandle{0};
   request.heap_key = MpsStorage::HeapDescriptorKey::Sized(numel * elem_size);
   request.heap_key.storage_mode =
       ::orteaf::internal::execution::mps::platform::wrapper::
