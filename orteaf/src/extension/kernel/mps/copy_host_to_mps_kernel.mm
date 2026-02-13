@@ -254,16 +254,7 @@ void registerCopyHostToMpsKernel(
     ::orteaf::internal::architecture::Architecture architecture =
         ::orteaf::internal::architecture::Architecture::MpsGeneric) {
   kernel::core::KernelMetadataLease metadata;
-  try {
-    metadata = createCopyHostToMpsMetadata();
-  } catch (const std::system_error &err) {
-    const auto invalid_state =
-        error::makeErrorCode(error::OrteafErrc::InvalidState);
-    if (err.code() == invalid_state) {
-      return;
-    }
-    throw;
-  }
+  metadata = createCopyHostToMpsMetadata();
 
   auto key = ::orteaf::internal::kernel::kernel_key::makeAnyDType(
       ::orteaf::internal::ops::Op::CopyHostToDevice, architecture,

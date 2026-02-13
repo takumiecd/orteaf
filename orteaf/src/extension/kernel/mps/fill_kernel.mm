@@ -288,18 +288,7 @@ void registerFillKernel(
     ::orteaf::internal::architecture::Architecture architecture =
         ::orteaf::internal::architecture::Architecture::MpsGeneric) {
   kernel::core::KernelMetadataLease metadata;
-  try {
-    metadata = createFillMpsMetadata();
-  } catch (const std::system_error &err) {
-    // MPS may be compiled in but not configured yet (e.g. CPU-only unit tests).
-    // Skip registration in that case so other backends can initialize normally.
-    const auto invalid_state =
-        error::makeErrorCode(error::OrteafErrc::InvalidState);
-    if (err.code() == invalid_state) {
-      return;
-    }
-    throw;
-  }
+  metadata = createFillMpsMetadata();
   auto key = ::orteaf::internal::kernel::kernel_key::make(
       ::orteaf::internal::ops::Op::Fill, architecture,
       static_cast<::orteaf::internal::kernel::Layout>(0),
