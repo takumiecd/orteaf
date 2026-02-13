@@ -1,23 +1,23 @@
 #if ORTEAF_ENABLE_CUDA
 
-#include <cuda.h>
+#include <cuda_runtime.h>
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <string>
+#include <vector>
 
 #include <orteaf/internal/architecture/architecture.h>
 #include <orteaf/internal/diagnostics/error/error.h>
 #include <orteaf/internal/dtype/dtype.h>
 #include <orteaf/internal/execution/cuda/api/cuda_execution_api.h>
-#include <orteaf/internal/execution/cuda/platform/wrapper/cuda_check.h>
-#include <orteaf/internal/execution/cuda/platform/wrapper/cuda_objc_bridge.h>
+#include <orteaf/internal/execution/cuda/platform/wrapper/cuda_alloc.h>
 #include <orteaf/internal/kernel/api/kernel_registry_api.h>
 #include <orteaf/internal/kernel/core/kernel_args.h>
-#include <orteaf/internal/kernel/core/kernel_entry.h>
 #include <orteaf/internal/kernel/core/kernel_key.h>
 #include <orteaf/internal/kernel/core/kernel_metadata.h>
-#include <orteaf/internal/kernel/cuda/cuda_kernel_session.h>
 #include <orteaf/internal/kernel/param/param_id.h>
 #include <orteaf/internal/kernel/param/transform/array_view_inline_vector.h>
 #include <orteaf/internal/kernel/registry/kernel_auto_registry.h>
@@ -31,12 +31,12 @@
 namespace orteaf::extension::kernel::cuda {
 
 namespace kernel = ::orteaf::internal::kernel;
-namespace cuda_kernel = ::orteaf::internal::kernel::cuda;
 namespace error = ::orteaf::internal::diagnostics::error;
 namespace cuda_wrapper =
     ::orteaf::internal::execution::cuda::platform::wrapper;
 
 using ShapeVector = detail::ShapeVector;
+using TransferLayoutParams = detail::TransferLayoutParams;
 
 struct CopyDeviceToHostStorages
     : kernel::StorageSchema<CopyDeviceToHostStorages> {
@@ -75,10 +75,84 @@ namespace {
 
 constexpr const char *kOpName = "CUDA copyDeviceToHost kernel";
 
+extern "C" __global__ void orteaf_copy_strided_to_contiguous_u8(
+    const std::uint8_t *input, std::uint8_t *output, std::uint32_t input_offset,
+    std::uint32_t output_offset, std::uint32_t numel, std::uint32_t elem_size,
+    TransferLayoutParams layout);
+
+std::int64_t physicalIndexForLinear(std::uint64_t linear,
+                                    const ShapeVector &shape,
+                                    const ShapeVector &strides,
+                                    std::int64_t offset) {
+  std::int64_t physical = offset;
+  std::uint64_t remaining = linear;
+  for (std::size_t i = shape.size; i-- > 0;) {
+    const auto dim = static_cast<std::uint64_t>(shape.data[i]);
+    const auto coord = dim == 0 ? 0 : (remaining % dim);
+    remaining = dim == 0 ? 0 : (remaining / dim);
+    physical += static_cast<std::int64_t>(coord) * strides.data[i];
+  }
+  return physical;
+}
+
+ShapeVector makeContiguousStrides(const ShapeVector &shape) {
+  ShapeVector strides{};
+  strides.size = shape.size;
+  std::int64_t running = 1;
+  for (std::size_t i = shape.size; i-- > 0;) {
+    strides.data[i] = running;
+    running *= shape.data[i];
+  }
+  return strides;
+}
+
+void throwCudaRuntimeError(const char *message, cudaError_t status) {
+  error::throwError(error::OrteafErrc::OperationFailed,
+                    std::string(message) + ": " + cudaGetErrorString(status));
+}
+
+void launchStridedToContiguousKernel(cuda_wrapper::CudaDevicePtr_t input_base,
+                                     cuda_wrapper::CudaDevicePtr_t output_base,
+                                     std::uint32_t input_offset,
+                                     std::uint32_t numel,
+                                     std::uint32_t elem_size,
+                                     const TransferLayoutParams &layout) {
+  auto *src = reinterpret_cast<std::uint8_t *>(
+      static_cast<std::uintptr_t>(input_base));
+  auto *dst = reinterpret_cast<std::uint8_t *>(
+      static_cast<std::uintptr_t>(output_base));
+
+  constexpr std::uint32_t kThreads = 256;
+  const auto blocks = static_cast<std::uint32_t>((numel + kThreads - 1) / kThreads);
+  orteaf_copy_strided_to_contiguous_u8<<<blocks, kThreads>>>(
+      src, dst, input_offset, 0, numel, elem_size, layout);
+
+  const auto launch_status = cudaGetLastError();
+  if (launch_status != cudaSuccess) {
+    throwCudaRuntimeError("CUDA copyDeviceToHost kernel launch failed",
+                          launch_status);
+  }
+  const auto sync_status = cudaDeviceSynchronize();
+  if (sync_status != cudaSuccess) {
+    throwCudaRuntimeError("CUDA copyDeviceToHost kernel synchronization failed",
+                          sync_status);
+  }
+}
+
+struct DeviceBufferGuard {
+  cuda_wrapper::CudaDevicePtr_t ptr{};
+  std::size_t bytes{};
+  ~DeviceBufferGuard() {
+    if (ptr != 0) {
+      cuda_wrapper::free(ptr, bytes);
+    }
+  }
+};
+
 } // namespace
 
 void copyDeviceToHostExecute(
-    ::orteaf::internal::execution::cuda::resource::CudaKernelBase &base,
+    ::orteaf::internal::execution::cuda::resource::CudaKernelBase &,
     kernel::KernelArgs &args) {
   auto storages = CopyDeviceToHostStorages::extract(args);
   auto params = CopyDeviceToHostParams::extract(args);
@@ -89,16 +163,17 @@ void copyDeviceToHostExecute(
 
   auto *input_lease = input_any.tryAs<::orteaf::internal::storage::CudaStorageLease>();
   auto *output_lease =
-      output_any.tryAs<::orteaf::internal::storage::CudaStorageLease>();
+      output_any.tryAs<::orteaf::internal::storage::CpuStorageLease>();
   if (!input_lease || !(*input_lease) || !output_lease || !(*output_lease)) {
     error::throwError(
         error::OrteafErrc::InvalidParameter,
-        "CUDA copyDeviceToHost kernel requires CUDA input/output storage");
+        "CUDA copyDeviceToHost kernel requires CUDA input and CPU output storage");
   }
+
   auto *input_storage = input_lease->operator->();
   auto *output_storage = output_lease->operator->();
   if (input_storage == nullptr || output_storage == nullptr ||
-      !input_storage->bufferView() || !output_storage->bufferView()) {
+      !input_storage->bufferView() || output_storage->buffer() == nullptr) {
     error::throwError(error::OrteafErrc::InvalidState,
                       "CUDA copyDeviceToHost kernel buffer is unavailable");
   }
@@ -150,10 +225,6 @@ void copyDeviceToHostExecute(
     error::throwError(error::OrteafErrc::InvalidParameter,
                       "CUDA copyDeviceToHost kernel numel mismatch");
   }
-  if (!output_layout.contiguous) {
-    error::throwError(error::OrteafErrc::InvalidParameter,
-                      "CUDA copyDeviceToHost kernel requires contiguous output");
-  }
 
   if (input_layout.min_index < 0 || input_layout.max_index < 0 ||
       input_layout.max_index >= input_storage_numel ||
@@ -164,62 +235,62 @@ void copyDeviceToHostExecute(
   }
 
   const auto elem_size = ::orteaf::internal::sizeOf(dtype);
-  if (elem_size > static_cast<std::size_t>(
-                      std::numeric_limits<std::uint32_t>::max())) {
-    error::throwError(
-        error::OrteafErrc::InvalidParameter,
-        "CUDA copyDeviceToHost kernel element size exceeds uint32 range");
-  }
-  const auto numel = input_layout.numel;
-  if (numel > static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max()) ||
-      static_cast<std::size_t>(input_offset) >
-          static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max()) ||
-      static_cast<std::size_t>(output_offset) >
-          static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max()) ||
-      static_cast<std::size_t>(input_layout.max_index) >
-          static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max()) ||
-      static_cast<std::size_t>(output_layout.max_index) >
-          static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max())) {
+  if (input_layout.numel > std::numeric_limits<std::size_t>::max() / elem_size) {
     error::throwError(error::OrteafErrc::InvalidParameter,
-                      "CUDA copyDeviceToHost kernel size exceeds uint32 range");
+                      "CUDA copyDeviceToHost kernel byte size overflow");
   }
 
-  detail::TransferLayoutParams layout_params{};
-  detail::fillLayoutParams(layout_params, input_shape, input_strides,
-                           output_strides, kOpName);
-
-  const auto input_offset_u32 = static_cast<std::uint32_t>(input_offset);
-  const auto output_offset_u32 = static_cast<std::uint32_t>(output_offset);
-  const auto numel_u32 = static_cast<std::uint32_t>(numel);
-  const auto elem_size_u32 = static_cast<std::uint32_t>(elem_size);
-
-  auto session = cuda_kernel::CudaKernelSession::begin(base, args, 0);
-  if (!session) {
-    error::throwError(
-        error::OrteafErrc::InvalidState,
-        "CUDA copyDeviceToHost kernel could not begin execution session");
+  const auto bytes = input_layout.numel * elem_size;
+  const auto input_base = input_storage->bufferView().data();
+  auto *output_base = static_cast<std::byte *>(output_storage->buffer());
+  if (input_base == 0) {
+    error::throwError(error::OrteafErrc::InvalidState,
+                      "CUDA copyDeviceToHost kernel source is invalid");
   }
 
-  auto input_view = input_storage->bufferView();
-  auto output_view = output_storage->bufferView();
-  auto input_ptr = cuda_wrapper::cuDeviceptrFromOpaque(input_view.raw());
-  auto output_ptr = cuda_wrapper::cuDeviceptrFromOpaque(output_view.raw());
-  auto function = cuda_wrapper::objcFromOpaqueNoown<CUfunction>(session->function());
-  auto stream = cuda_wrapper::objcFromOpaqueNoown<CUstream>(session->stream());
+  if (input_layout.contiguous && output_layout.contiguous) {
+    const auto src_byte_offset = static_cast<std::size_t>(input_offset) * elem_size;
+    const auto dst_byte_offset = static_cast<std::size_t>(output_offset) * elem_size;
+    cuda_wrapper::copyToHost(input_base + src_byte_offset,
+                             output_base + dst_byte_offset, bytes);
+    return;
+  }
 
-  void *kernel_args[] = {
-      &input_ptr,       &output_ptr,      &input_offset_u32, &output_offset_u32,
-      &numel_u32,       &elem_size_u32,   &layout_params,
-  };
+  std::vector<std::byte> packed(bytes);
 
-  const auto block = cuda_kernel::CudaKernelSession::makeBlock1D(256);
-  const auto grid =
-      cuda_kernel::CudaKernelSession::makeGrid1D(numel, block.x);
+  if (input_layout.contiguous) {
+    const auto src_byte_offset = static_cast<std::size_t>(input_offset) * elem_size;
+    cuda_wrapper::copyToHost(input_base + src_byte_offset, packed.data(), bytes);
+  } else {
+    DeviceBufferGuard staging{cuda_wrapper::alloc(bytes), bytes};
+    const auto input_offset_u32 = static_cast<std::uint32_t>(input_offset);
+    const auto numel_u32 = static_cast<std::uint32_t>(input_layout.numel);
+    const auto elem_size_u32 = static_cast<std::uint32_t>(elem_size);
 
-  CU_CHECK(cuLaunchKernel(function, grid.x, grid.y, grid.z, block.x, block.y,
-                          block.z, 0, stream, kernel_args, nullptr));
+    TransferLayoutParams layout_params{};
+    const auto staging_strides = makeContiguousStrides(input_shape);
+    detail::fillLayoutParams(layout_params, input_shape, input_strides,
+                             staging_strides, kOpName);
 
-  session->synchronize();
+    launchStridedToContiguousKernel(input_base, staging.ptr, input_offset_u32,
+                                    numel_u32, elem_size_u32, layout_params);
+    cuda_wrapper::copyToHost(staging.ptr, packed.data(), bytes);
+  }
+
+  if (output_layout.contiguous) {
+    const auto dst_byte_offset = static_cast<std::size_t>(output_offset) * elem_size;
+    std::copy_n(packed.data(), bytes, output_base + dst_byte_offset);
+    return;
+  }
+
+  for (std::size_t linear = 0; linear < input_layout.numel; ++linear) {
+    const auto dst_index = physicalIndexForLinear(
+        static_cast<std::uint64_t>(linear), output_shape, output_strides,
+        output_offset);
+    const auto dst_byte_index = static_cast<std::size_t>(dst_index) * elem_size;
+    std::copy_n(packed.data() + linear * elem_size, elem_size,
+                output_base + dst_byte_index);
+  }
 }
 
 kernel::core::KernelMetadataLease createCopyDeviceToHostCudaMetadata() {
@@ -227,10 +298,6 @@ kernel::core::KernelMetadataLease createCopyDeviceToHostCudaMetadata() {
       ::orteaf::internal::execution::cuda::api::CudaExecutionApi;
 
   CudaExecutionApi::KernelKeys keys;
-  keys.pushBack(CudaExecutionApi::KernelKey{
-      CudaExecutionApi::ModuleKey::Embedded("transfer_kernel"),
-      std::string{"orteaf_copy_strided_to_contiguous_u8"}});
-
   auto metadata_lease = CudaExecutionApi::acquireKernelMetadata(keys);
   if (auto *meta_ptr = metadata_lease.operator->()) {
     meta_ptr->setExecute(copyDeviceToHostExecute);

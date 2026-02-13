@@ -1,5 +1,6 @@
 #if ORTEAF_ENABLE_MPS
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -9,9 +10,11 @@
 #include <orteaf/internal/diagnostics/error/error.h>
 #include <orteaf/internal/dtype/dtype.h>
 #include <orteaf/internal/execution/mps/api/mps_execution_api.h>
+#include <orteaf/internal/execution/mps/platform/wrapper/mps_buffer.h>
+#include <orteaf/internal/execution/mps/platform/wrapper/mps_command_buffer.h>
+#include <orteaf/internal/execution/mps/platform/wrapper/mps_heap.h>
 #include <orteaf/internal/kernel/api/kernel_registry_api.h>
 #include <orteaf/internal/kernel/core/kernel_args.h>
-#include <orteaf/internal/kernel/core/kernel_entry.h>
 #include <orteaf/internal/kernel/core/kernel_key.h>
 #include <orteaf/internal/kernel/core/kernel_metadata.h>
 #include <orteaf/internal/kernel/mps/mps_kernel_session.h>
@@ -23,6 +26,7 @@
 #include <orteaf/internal/kernel/schema/kernel_storage_schema.h>
 #include <orteaf/internal/kernel/storage/operand_id.h>
 #include <orteaf/internal/storage/registry/storage_types.h>
+#include <orteaf/internal/tensor/api/tensor_api.h>
 
 #include "transfer_layout_common.h"
 
@@ -68,7 +72,65 @@ struct CopyHostToMpsParams : kernel::ParamSchema<CopyHostToMpsParams> {
 
 namespace {
 
-constexpr const char *kOpName = "MPS copyHostToMps kernel";
+constexpr const char *kOpName = "MPS copyHostToDevice kernel";
+
+std::int64_t physicalIndexForLinear(std::uint64_t linear,
+                                    const ShapeVector &shape,
+                                    const ShapeVector &strides,
+                                    std::int64_t offset) {
+  std::int64_t physical = offset;
+  std::uint64_t remaining = linear;
+  for (std::size_t i = shape.size; i-- > 0;) {
+    const auto dim = static_cast<std::uint64_t>(shape.data[i]);
+    const auto coord = dim == 0 ? 0 : (remaining % dim);
+    remaining = dim == 0 ? 0 : (remaining / dim);
+    physical += static_cast<std::int64_t>(coord) * strides.data[i];
+  }
+  return physical;
+}
+
+ShapeVector makeContiguousStrides(const ShapeVector &shape) {
+  ShapeVector strides{};
+  strides.size = shape.size;
+  std::int64_t running = 1;
+  for (std::size_t i = shape.size; i-- > 0;) {
+    strides.data[i] = running;
+    running *= shape.data[i];
+  }
+  return strides;
+}
+
+::orteaf::internal::storage::MpsStorageLease
+acquireSharedMpsStaging(::orteaf::internal::DType dtype, std::size_t numel) {
+  using MpsStorage = ::orteaf::internal::storage::mps::MpsStorage;
+  using MpsStorageManager = ::orteaf::internal::storage::MpsStorageManager;
+
+  const auto elem_size = ::orteaf::internal::sizeOf(dtype);
+  if (numel > std::numeric_limits<std::size_t>::max() / elem_size) {
+    error::throwError(error::OrteafErrc::InvalidParameter,
+                      "MPS copyHostToDevice kernel staging size overflow");
+  }
+
+  typename MpsStorageManager::Request request{};
+  request.device = ::orteaf::internal::execution::mps::MpsDeviceHandle{0};
+  request.heap_key = MpsStorage::HeapDescriptorKey::Sized(numel * elem_size);
+  request.heap_key.storage_mode =
+      ::orteaf::internal::execution::mps::platform::wrapper::
+          kMPSStorageModeShared;
+  request.dtype = dtype;
+  request.numel = numel;
+  request.alignment = 0;
+  request.layout = typename MpsStorage::Layout{};
+
+  auto lease = ::orteaf::internal::tensor::api::TensorApi::storage()
+                   .template get<MpsStorage>()
+                   .acquire(request);
+  if (!lease || lease->buffer() == nullptr) {
+    error::throwError(error::OrteafErrc::InvalidState,
+                      "MPS copyHostToDevice kernel failed to acquire staging");
+  }
+  return lease;
+}
 
 } // namespace
 
@@ -82,26 +144,26 @@ void copyHostToMpsExecute(
   auto &input_any = storages.input.lease<AnyBinding>();
   auto &output_any = storages.output.lease<AnyBinding>();
 
-  auto *input_lease = input_any.tryAs<::orteaf::internal::storage::MpsStorageLease>();
+  auto *input_lease = input_any.tryAs<::orteaf::internal::storage::CpuStorageLease>();
   auto *output_lease =
       output_any.tryAs<::orteaf::internal::storage::MpsStorageLease>();
   if (!input_lease || !(*input_lease) || !output_lease || !(*output_lease)) {
     error::throwError(error::OrteafErrc::InvalidParameter,
-                      "MPS copyHostToMps kernel requires MPS input/output storage");
+                      "MPS copyHostToDevice kernel requires CPU input and MPS output storage");
   }
   auto *input_storage = input_lease->operator->();
   auto *output_storage = output_lease->operator->();
   if (input_storage == nullptr || output_storage == nullptr ||
       input_storage->buffer() == nullptr || output_storage->buffer() == nullptr) {
     error::throwError(error::OrteafErrc::InvalidState,
-                      "MPS copyHostToMps kernel buffer is unavailable");
+                      "MPS copyHostToDevice kernel buffer is unavailable");
   }
 
   const auto dtype = input_any.dtype();
   if (dtype != output_any.dtype() || dtype != input_storage->dtype() ||
       dtype != output_storage->dtype()) {
     error::throwError(error::OrteafErrc::InvalidParameter,
-                      "MPS copyHostToMps kernel requires matching dtype");
+                      "MPS copyHostToDevice kernel requires matching dtype");
   }
 
   const auto input_storage_numel_raw = input_storage->numel();
@@ -111,10 +173,9 @@ void copyHostToMpsExecute(
       output_storage_numel_raw >
           static_cast<std::size_t>(std::numeric_limits<std::int64_t>::max())) {
     error::throwError(error::OrteafErrc::InvalidParameter,
-                      "MPS copyHostToMps kernel storage size exceeds index range");
+                      "MPS copyHostToDevice kernel storage size exceeds index range");
   }
-  const auto input_storage_numel =
-      static_cast<std::int64_t>(input_storage_numel_raw);
+  const auto input_storage_numel = static_cast<std::int64_t>(input_storage_numel_raw);
   const auto output_storage_numel =
       static_cast<std::int64_t>(output_storage_numel_raw);
 
@@ -122,7 +183,7 @@ void copyHostToMpsExecute(
   const auto output_offset = params.output_offset.get();
   if (input_offset < 0 || output_offset < 0) {
     error::throwError(error::OrteafErrc::InvalidParameter,
-                      "MPS copyHostToMps kernel received negative offset");
+                      "MPS copyHostToDevice kernel received negative offset");
   }
 
   const auto &input_shape = params.input_shape.get();
@@ -142,11 +203,7 @@ void copyHostToMpsExecute(
   }
   if (input_layout.numel != output_layout.numel) {
     error::throwError(error::OrteafErrc::InvalidParameter,
-                      "MPS copyHostToMps kernel numel mismatch");
-  }
-  if (!input_layout.contiguous) {
-    error::throwError(error::OrteafErrc::InvalidParameter,
-                      "MPS copyHostToMps kernel requires contiguous input");
+                      "MPS copyHostToDevice kernel numel mismatch");
   }
 
   if (input_layout.min_index < 0 || input_layout.max_index < 0 ||
@@ -154,34 +211,57 @@ void copyHostToMpsExecute(
       output_layout.min_index < 0 || output_layout.max_index < 0 ||
       output_layout.max_index >= output_storage_numel) {
     error::throwError(error::OrteafErrc::InvalidParameter,
-                      "MPS copyHostToMps kernel view exceeds storage bounds");
+                      "MPS copyHostToDevice kernel view exceeds storage bounds");
   }
 
   const auto elem_size = ::orteaf::internal::sizeOf(dtype);
   if (elem_size > static_cast<std::size_t>(
                       std::numeric_limits<std::uint32_t>::max())) {
     error::throwError(error::OrteafErrc::InvalidParameter,
-                      "MPS copyHostToMps kernel element size exceeds uint32 range");
+                      "MPS copyHostToDevice kernel element size exceeds uint32 range");
   }
   const auto numel = input_layout.numel;
   if (numel > static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max()) ||
-      static_cast<std::size_t>(input_offset) >
-          static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max()) ||
       static_cast<std::size_t>(output_offset) >
-          static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max()) ||
-      static_cast<std::size_t>(input_layout.max_index) >
           static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max()) ||
       static_cast<std::size_t>(output_layout.max_index) >
           static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max())) {
     error::throwError(error::OrteafErrc::InvalidParameter,
-                      "MPS copyHostToMps kernel size exceeds uint32 range");
+                      "MPS copyHostToDevice kernel size exceeds uint32 range");
   }
 
+  auto staging_lease = acquireSharedMpsStaging(dtype, numel);
+  auto *staging_storage = staging_lease.operator->();
+  if (staging_storage == nullptr || staging_storage->buffer() == nullptr) {
+    error::throwError(error::OrteafErrc::InvalidState,
+                      "MPS copyHostToDevice kernel staging is unavailable");
+  }
+
+  auto *staging_ptr =
+      ::orteaf::internal::execution::mps::platform::wrapper::getBufferContents(
+          staging_storage->buffer());
+  if (staging_ptr == nullptr) {
+    error::throwError(error::OrteafErrc::InvalidState,
+                      "MPS copyHostToDevice kernel staging is not CPU-visible");
+  }
+
+  const auto *input_base = static_cast<const std::byte *>(input_storage->buffer());
+  auto *staging_bytes = static_cast<std::byte *>(staging_ptr);
+  for (std::size_t linear = 0; linear < numel; ++linear) {
+    const auto src_index = physicalIndexForLinear(
+        static_cast<std::uint64_t>(linear), input_shape, input_strides,
+        input_offset);
+    const auto src_byte_index = static_cast<std::size_t>(src_index) * elem_size;
+    std::copy_n(input_base + src_byte_index, elem_size,
+                staging_bytes + linear * elem_size);
+  }
+
+  const auto staging_strides = makeContiguousStrides(output_shape);
   detail::TransferLayoutParams layout_params{};
-  detail::fillLayoutParams(layout_params, output_shape, input_strides,
+  detail::fillLayoutParams(layout_params, output_shape, staging_strides,
                            output_strides, kOpName);
 
-  const auto input_offset_u32 = static_cast<std::uint32_t>(input_offset);
+  const std::uint32_t input_offset_u32 = 0;
   const auto output_offset_u32 = static_cast<std::uint32_t>(output_offset);
   const auto numel_u32 = static_cast<std::uint32_t>(numel);
   const auto elem_size_u32 = static_cast<std::uint32_t>(elem_size);
@@ -189,11 +269,14 @@ void copyHostToMpsExecute(
   auto session = mps_kernel::MpsKernelSession::begin(base, args, 0);
   if (!session) {
     error::throwError(error::OrteafErrc::InvalidState,
-                      "MPS copyHostToMps kernel could not begin execution session");
+                      "MPS copyHostToDevice kernel could not begin execution session");
   }
 
-  session->waitDependencies(storages.input, storages.output);
-  session->bindStorages<0, 1>(storages.input, storages.output);
+  session->waitDependencies(storages.output);
+  mps_kernel::MpsKernelSession::Ops::setBuffer(session->encoder(),
+                                                *staging_storage, 0);
+  mps_kernel::MpsKernelSession::Ops::setBuffer(session->encoder(),
+                                                *output_storage, 1);
   session->setBytes(&input_offset_u32, sizeof(input_offset_u32), 2);
   session->setBytes(&output_offset_u32, sizeof(output_offset_u32), 3);
   session->setBytes(&numel_u32, sizeof(numel_u32), 4);
@@ -201,9 +284,9 @@ void copyHostToMpsExecute(
   session->setBytes(&layout_params, sizeof(layout_params), 6);
   session->dispatch1D(static_cast<std::size_t>(numel_u32));
 
-  if (!session->updateTokens(storages.input, storages.output)) {
+  if (!session->updateTokens(storages.output)) {
     error::throwError(error::OrteafErrc::InvalidState,
-                      "MPS copyHostToMps kernel failed to update synchronization tokens");
+                      "MPS copyHostToDevice kernel failed to update synchronization tokens");
   }
 }
 
