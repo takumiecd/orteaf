@@ -119,8 +119,8 @@ TEST_F(TensorApiInternalTest, TransposePreservesType) {
   auto result = tensor_api::TensorApi::transpose(variant, perm);
 
   // Result should still be a dense tensor
-  using DenseLease = orteaf::internal::tensor::registry::TensorImplTraits<
-      DenseTensorImpl>::Lease;
+  using DenseLease = typename orteaf::internal::tensor::TensorImplManager<
+      DenseTensorImpl>::TensorImplLease;
   EXPECT_TRUE(std::holds_alternative<DenseLease>(result));
 }
 

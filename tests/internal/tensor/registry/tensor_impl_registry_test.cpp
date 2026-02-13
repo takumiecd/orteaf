@@ -94,7 +94,6 @@ TEST_F(TensorImplRegistryTest, DispatchToDenseManager) {
       makeDenseRequest(shape, DType::F32, Execution::Cpu));
 
   // Verify dispatch correctly identifies the impl type
-  using Lease = registry::TensorImplTraits<DenseTensorImpl>::Lease;
   bool dispatched_correctly = false;
 
   registry::RegisteredImpls::dispatch(
@@ -117,8 +116,8 @@ TEST_F(TensorImplRegistryTest, DenseTraitsName) {
 }
 
 TEST_F(TensorImplRegistryTest, DenseTraitsLeaseType) {
-  using Lease = registry::TensorImplTraits<DenseTensorImpl>::Lease;
-  using Manager = registry::TensorImplTraits<DenseTensorImpl>::Manager;
+  using Manager = orteaf::internal::tensor::TensorImplManager<DenseTensorImpl>;
+  using Lease = typename Manager::TensorImplLease;
 
   // Verify types are correctly defined
   static_assert(std::is_same_v<Lease, typename Manager::TensorImplLease>);

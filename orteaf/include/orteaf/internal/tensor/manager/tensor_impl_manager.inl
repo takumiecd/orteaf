@@ -32,7 +32,8 @@ void TensorImplPoolTraits<Impl>::validateRequestOrThrow(
                 "TensorImplViewRequest requires valid storage");
           }
         } else {
-          TensorImplCreationTraits<Impl>::validateCreateRequest(req);
+          ::orteaf::internal::tensor::registry::TensorImplTraits<
+              Impl>::validateCreateRequest(req);
         }
       },
       request);
@@ -49,8 +50,8 @@ bool TensorImplPoolTraits<Impl>::create(Payload &payload,
           payload = Impl(req.layout, req.storage);
           return true;
         } else {
-          return TensorImplCreationTraits<Impl>::createPayload(payload, req,
-                                                               context);
+          return ::orteaf::internal::tensor::registry::TensorImplTraits<
+              Impl>::createPayload(payload, req, context);
         }
       },
       request);
@@ -59,7 +60,8 @@ bool TensorImplPoolTraits<Impl>::create(Payload &payload,
 template <typename Impl>
 void TensorImplPoolTraits<Impl>::destroy(Payload &payload, const Request &,
                                          const Context &context) {
-  TensorImplCreationTraits<Impl>::destroyPayload(payload, context);
+  ::orteaf::internal::tensor::registry::TensorImplTraits<Impl>::destroyPayload(
+      payload, context);
 }
 
 } // namespace detail

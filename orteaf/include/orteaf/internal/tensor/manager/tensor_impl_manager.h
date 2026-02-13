@@ -24,7 +24,7 @@
 #include <orteaf/internal/storage/registry/storage_types.h>
 #include <orteaf/internal/storage/storage_lease.h>
 #include <orteaf/internal/tensor/concepts/tensor_impl_concepts.h>
-#include <orteaf/internal/tensor/manager/tensor_impl_creation_traits.h>
+#include <orteaf/internal/tensor/traits/tensor_impl_traits.h>
 
 namespace orteaf::internal::tensor {
 
@@ -56,7 +56,8 @@ template <typename Impl> struct TensorImplViewRequest {
 /// @brief Combined request type
 template <typename Impl>
 using TensorImplRequest = std::variant<
-    typename TensorImplCreationTraits<Impl>::CreateRequest,
+    typename ::orteaf::internal::tensor::registry::TensorImplTraits<
+        Impl>::CreateRequest,
     TensorImplViewRequest<Impl>>;
 
 /// @brief Context for pool operations
@@ -66,7 +67,8 @@ struct TensorImplContext {
 
 /// @brief Pool traits for generic TensorImpl
 template <typename Impl> struct TensorImplPoolTraits {
-  using CreateRequest = typename TensorImplCreationTraits<Impl>::CreateRequest;
+  using CreateRequest = typename ::orteaf::internal::tensor::registry::
+      TensorImplTraits<Impl>::CreateRequest;
   using Payload = Impl;
   using Handle = TensorImplHandle<Impl>;
   using Request = TensorImplRequest<Impl>;
@@ -120,7 +122,8 @@ public:
   using Layout = typename Impl::Layout;
   using Dims = typename Layout::Dims;
   using Dim = typename Layout::Dim;
-  using CreateRequest = typename TensorImplCreationTraits<Impl>::CreateRequest;
+  using CreateRequest = typename ::orteaf::internal::tensor::registry::
+      TensorImplTraits<Impl>::CreateRequest;
   using StorageRegistry = ::orteaf::internal::storage::RegisteredStorages;
   using StorageLease = ::orteaf::internal::storage::StorageLease;
 

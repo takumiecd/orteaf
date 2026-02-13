@@ -46,8 +46,7 @@ public:
   using Dim = Layout::Dim;
   using DType = ::orteaf::internal::DType;
   using Execution = ::orteaf::internal::execution::Execution;
-  using DenseCreateRequest =
-      typename ::orteaf::extension::tensor::DenseTensorImpl::CreateRequest;
+  using DenseBuilder = ::orteaf::extension::tensor::DenseTensorImpl::Builder;
 
   Tensor() = default;
 
@@ -60,22 +59,6 @@ public:
   Tensor(Tensor &&) = default;
   Tensor &operator=(Tensor &&) = default;
   ~Tensor() = default;
-
-  class DenseBuilder {
-  public:
-    DenseBuilder() = default;
-
-    DenseBuilder &withShape(std::span<const Dim> shape);
-    DenseBuilder &withDType(DType dtype) noexcept;
-    DenseBuilder &withExecution(Execution execution) noexcept;
-    DenseBuilder &withAlignment(std::size_t alignment) noexcept;
-    Tensor build() const;
-
-  private:
-    DenseCreateRequest request_{};
-    bool shape_set_{false};
-    bool execution_set_{false};
-  };
 
   // ===== Factory methods =====
 
