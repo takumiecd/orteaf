@@ -92,10 +92,30 @@ TEST_F(CopyMpsTransferTest, CopiesHostToMpsContiguous) {
   fillSequential(host_src, 1.0f);
 
   auto mps_dst = makeDense(shape, DType::F32, Execution::Mps);
-  ops::TensorOps::copyHostToMps(mps_dst, host_src);
+  ops::TensorOps::copyHostToDevice(mps_dst, host_src);
 
   auto host_out = makeDense(shape, DType::F32, Execution::Cpu);
-  ops::TensorOps::copyMpsToHost(host_out, mps_dst);
+  ops::TensorOps::copyDeviceToHost(host_out, mps_dst);
+
+  auto *src_data = getCpuF32Buffer(host_src);
+  auto *out_data = getCpuF32Buffer(host_out);
+  ASSERT_NE(src_data, nullptr);
+  ASSERT_NE(out_data, nullptr);
+  for (std::size_t i = 0; i < static_cast<std::size_t>(host_out.numel()); ++i) {
+    EXPECT_FLOAT_EQ(out_data[i], src_data[i]);
+  }
+}
+
+TEST_F(CopyMpsTransferTest, CopiesHostToDeviceAndBackContiguous) {
+  std::array<std::int64_t, 1> shape{8};
+  auto host_src = makeDense(shape, DType::F32, Execution::Cpu);
+  fillSequential(host_src, 3.0f);
+
+  auto mps_dst = makeDense(shape, DType::F32, Execution::Mps);
+  ops::TensorOps::copyHostToDevice(mps_dst, host_src);
+
+  auto host_out = makeDense(shape, DType::F32, Execution::Cpu);
+  ops::TensorOps::copyDeviceToHost(host_out, mps_dst);
 
   auto *src_data = getCpuF32Buffer(host_src);
   auto *out_data = getCpuF32Buffer(host_out);
@@ -121,10 +141,10 @@ TEST_F(CopyMpsTransferTest, CopiesHostToMpsIntoStridedView) {
   ASSERT_TRUE(mps_view.valid());
   ASSERT_FALSE(mps_view.isContiguous());
 
-  ops::TensorOps::copyHostToMps(mps_view, host_src);
+  ops::TensorOps::copyHostToDevice(mps_view, host_src);
 
   auto host_base = makeDense(base_shape, DType::F32, Execution::Cpu);
-  ops::TensorOps::copyMpsToHost(host_base, mps_base);
+  ops::TensorOps::copyDeviceToHost(host_base, mps_base);
   auto *base_data = getCpuF32Buffer(host_base);
   ASSERT_NE(base_data, nullptr);
 
@@ -147,7 +167,7 @@ TEST_F(CopyMpsTransferTest, CopiesMpsToHostFromStridedView) {
   fillSequential(host_src, 0.0f);
 
   auto mps_base = makeDense(base_shape, DType::F32, Execution::Mps);
-  ops::TensorOps::copyHostToMps(mps_base, host_src);
+  ops::TensorOps::copyHostToDevice(mps_base, host_src);
 
   std::array<std::int64_t, 2> starts{1, 0};
   std::array<std::int64_t, 2> sizes{2, 3};
@@ -157,7 +177,7 @@ TEST_F(CopyMpsTransferTest, CopiesMpsToHostFromStridedView) {
 
   std::array<std::int64_t, 2> out_shape{2, 3};
   auto host_out = makeDense(out_shape, DType::F32, Execution::Cpu);
-  ops::TensorOps::copyMpsToHost(host_out, mps_view);
+  ops::TensorOps::copyDeviceToHost(host_out, mps_view);
 
   auto *out = getCpuF32Buffer(host_out);
   ASSERT_NE(out, nullptr);
@@ -175,7 +195,7 @@ TEST_F(CopyMpsTransferTest, CopiesMpsToHostIntoStridedView) {
   fillSequential(host_src, 10.0f);
 
   auto mps_src = makeDense(src_shape, DType::F32, Execution::Mps);
-  ops::TensorOps::copyHostToMps(mps_src, host_src);
+  ops::TensorOps::copyHostToDevice(mps_src, host_src);
 
   std::array<std::int64_t, 2> base_shape{4, 4};
   auto host_base = makeDense(base_shape, DType::F32, Execution::Cpu);
@@ -191,7 +211,7 @@ TEST_F(CopyMpsTransferTest, CopiesMpsToHostIntoStridedView) {
   ASSERT_TRUE(host_view.valid());
   ASSERT_FALSE(host_view.isContiguous());
 
-  ops::TensorOps::copyMpsToHost(host_view, mps_src);
+  ops::TensorOps::copyDeviceToHost(host_view, mps_src);
 
   EXPECT_FLOAT_EQ(base_data[4], 10.0f);
   EXPECT_FLOAT_EQ(base_data[5], 11.0f);
@@ -212,10 +232,10 @@ TEST_F(CopyMpsTransferTest, RejectsExecutionMismatch) {
   auto cpu = makeDense(shape, DType::F32, Execution::Cpu);
   auto mps = makeDense(shape, DType::F32, Execution::Mps);
 
-  EXPECT_THROW(ops::TensorOps::copyHostToMps(cpu, cpu), std::system_error);
-  EXPECT_THROW(ops::TensorOps::copyHostToMps(mps, mps), std::system_error);
-  EXPECT_THROW(ops::TensorOps::copyMpsToHost(mps, mps), std::system_error);
-  EXPECT_THROW(ops::TensorOps::copyMpsToHost(cpu, cpu), std::system_error);
+  EXPECT_THROW(ops::TensorOps::copyHostToDevice(cpu, cpu), std::system_error);
+  EXPECT_THROW(ops::TensorOps::copyHostToDevice(mps, mps), std::system_error);
+  EXPECT_THROW(ops::TensorOps::copyDeviceToHost(mps, mps), std::system_error);
+  EXPECT_THROW(ops::TensorOps::copyDeviceToHost(cpu, cpu), std::system_error);
 }
 
 TEST_F(CopyMpsTransferTest, RejectsDTypeMismatch) {
@@ -224,11 +244,11 @@ TEST_F(CopyMpsTransferTest, RejectsDTypeMismatch) {
   auto cpu_f32 = makeDense(shape, DType::F32, Execution::Cpu);
   auto mps_f32 = makeDense(shape, DType::F32, Execution::Mps);
 
-  EXPECT_THROW(ops::TensorOps::copyHostToMps(mps_f32, cpu_i32),
+  EXPECT_THROW(ops::TensorOps::copyHostToDevice(mps_f32, cpu_i32),
                std::system_error);
-  EXPECT_THROW(ops::TensorOps::copyMpsToHost(cpu_i32, mps_f32),
+  EXPECT_THROW(ops::TensorOps::copyDeviceToHost(cpu_i32, mps_f32),
                std::system_error);
-  EXPECT_NO_THROW(ops::TensorOps::copyHostToMps(mps_f32, cpu_f32));
+  EXPECT_NO_THROW(ops::TensorOps::copyHostToDevice(mps_f32, cpu_f32));
 }
 
 #endif // ORTEAF_ENABLE_MPS

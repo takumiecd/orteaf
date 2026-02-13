@@ -21,6 +21,11 @@
 #include <orteaf/internal/execution_context/mps/current_context.h>
 #endif
 
+#if ORTEAF_ENABLE_CUDA
+#include <orteaf/internal/execution/cuda/platform/wrapper/cuda_alloc.h>
+#include <orteaf/internal/execution_context/cuda/current_context.h>
+#endif
+
 #include "dense_op_common.h"
 
 namespace orteaf::extension::ops::dense::detail::transfer {
@@ -379,5 +384,67 @@ inline void syncCurrentMpsQueue(const char *op_name) {
 }
 
 #endif // ORTEAF_ENABLE_MPS
+
+#if ORTEAF_ENABLE_CUDA
+
+inline ::orteaf::internal::storage::CudaStorageLease
+acquireCudaStaging(DType dtype, std::size_t numel, const char *op_name) {
+  using CudaStorage = ::orteaf::internal::storage::cuda::CudaStorage;
+  using CudaStorageManager = ::orteaf::internal::storage::CudaStorageManager;
+
+  auto device_lease = ::orteaf::internal::execution_context::cuda::currentDevice();
+  if (!device_lease) {
+    error::throwError(error::OrteafErrc::InvalidState,
+                      std::string(op_name) + ": CUDA current context has no device");
+  }
+
+  typename CudaStorageManager::Request request{};
+  request.device = device_lease.payloadHandle();
+  request.dtype = dtype;
+  request.numel = numel;
+  request.alignment = 0;
+  request.layout = typename CudaStorage::Layout{};
+
+  auto lease = ::orteaf::internal::tensor::api::TensorApi::storage()
+                   .template get<CudaStorage>()
+                   .acquire(request);
+  if (!lease || !lease->bufferView()) {
+    error::throwError(error::OrteafErrc::InvalidState,
+                      std::string(op_name) + ": failed to acquire CUDA staging");
+  }
+  return lease;
+}
+
+inline ::orteaf::internal::execution::cuda::platform::wrapper::CudaDevicePtr_t
+requireCudaStagingBuffer(
+    const ::orteaf::internal::storage::CudaStorageLease &lease,
+    const char *op_name) {
+  auto *storage = lease.operator->();
+  if (storage == nullptr || !storage->bufferView()) {
+    error::throwError(error::OrteafErrc::InvalidState,
+                      std::string(op_name) +
+                          ": staging CUDA buffer is unavailable");
+  }
+  return storage->buffer();
+}
+
+inline void copyHostToCudaStaging(
+    void *host_ptr,
+    const ::orteaf::internal::storage::CudaStorageLease &dst_lease,
+    std::size_t bytes, const char *op_name) {
+  auto dst_ptr = requireCudaStagingBuffer(dst_lease, op_name);
+  ::orteaf::internal::execution::cuda::platform::wrapper::copyToDevice(
+      host_ptr, dst_ptr, bytes);
+}
+
+inline void copyCudaStagingToHost(
+    const ::orteaf::internal::storage::CudaStorageLease &src_lease,
+    void *host_ptr, std::size_t bytes, const char *op_name) {
+  auto src_ptr = requireCudaStagingBuffer(src_lease, op_name);
+  ::orteaf::internal::execution::cuda::platform::wrapper::copyToHost(
+      src_ptr, host_ptr, bytes);
+}
+
+#endif // ORTEAF_ENABLE_CUDA
 
 } // namespace orteaf::extension::ops::dense::detail::transfer

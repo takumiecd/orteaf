@@ -16,8 +16,8 @@ concept TensorKindBackendOps = requires(Tensor &output, const Tensor &input,
                                         double value) {
   { Backend::fill(output, value) } -> std::same_as<void>;
   { Backend::print(input) } -> std::same_as<void>;
-  { Backend::copyHostToMps(output, input) } -> std::same_as<void>;
-  { Backend::copyMpsToHost(output, input) } -> std::same_as<void>;
+  { Backend::copyHostToDevice(output, input) } -> std::same_as<void>;
+  { Backend::copyDeviceToHost(output, input) } -> std::same_as<void>;
 };
 
 template <typename Impl> struct KindOps;
@@ -45,17 +45,17 @@ inline void kindPrint(const Tensor &input) {
 }
 
 template <typename Impl>
-inline void kindCopyHostToMps(Tensor &output, const Tensor &input) {
+inline void kindCopyHostToDevice(Tensor &output, const Tensor &input) {
   static_assert(HasKindOpsBackend<Impl>,
                 "KindOps backend is missing required fill/print/copy methods");
-  KindOps<Impl>::Backend::copyHostToMps(output, input);
+  KindOps<Impl>::Backend::copyHostToDevice(output, input);
 }
 
 template <typename Impl>
-inline void kindCopyMpsToHost(Tensor &output, const Tensor &input) {
+inline void kindCopyDeviceToHost(Tensor &output, const Tensor &input) {
   static_assert(HasKindOpsBackend<Impl>,
                 "KindOps backend is missing required fill/print/copy methods");
-  KindOps<Impl>::Backend::copyMpsToHost(output, input);
+  KindOps<Impl>::Backend::copyDeviceToHost(output, input);
 }
 
 } // namespace orteaf::extension::ops::detail

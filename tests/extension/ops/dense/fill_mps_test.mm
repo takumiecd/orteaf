@@ -63,7 +63,7 @@ float *getCpuBuffer(tensor::Tensor &t) {
 tensor::Tensor copyToHost(const tensor::Tensor &src) {
   const auto src_shape = src.shape();
   auto host = makeDense(src_shape, src.dtype(), Execution::Cpu);
-  ops::TensorOps::copyMpsToHost(host, src);
+  ops::TensorOps::copyDeviceToHost(host, src);
   return host;
 }
 

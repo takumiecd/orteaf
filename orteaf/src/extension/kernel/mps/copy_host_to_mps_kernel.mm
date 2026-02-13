@@ -240,7 +240,7 @@ void registerCopyHostToMpsKernel(
   }
 
   auto key = ::orteaf::internal::kernel::kernel_key::makeAnyDType(
-      ::orteaf::internal::ops::Op::CopyHostToMps, architecture,
+      ::orteaf::internal::ops::Op::CopyHostToDevice, architecture,
       static_cast<::orteaf::internal::kernel::Layout>(0),
       static_cast<::orteaf::internal::kernel::Variant>(0));
   ::orteaf::internal::kernel::api::KernelRegistryApi::registerKernel(
