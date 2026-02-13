@@ -78,6 +78,67 @@ struct StorageField {
   }
 
   /**
+   * @brief Get a typed lease by value (copy).
+   */
+  template <typename StorageBinding, typename TypedLease>
+  TypedLease leaseAs(const char *error_message) {
+    return lease<StorageBinding>().template as<TypedLease>(error_message);
+  }
+
+  template <typename StorageBinding, typename TypedLease>
+  TypedLease leaseAs(const char *error_message) const {
+    return lease<StorageBinding>().template as<TypedLease>(error_message);
+  }
+
+  /**
+   * @brief Get a typed lease by reference (no copy).
+   */
+  template <typename StorageBinding, typename TypedLease>
+  auto &leaseRefAs(const char *error_message) {
+    return lease<StorageBinding>().template asRef<TypedLease>(error_message);
+  }
+
+  template <typename StorageBinding, typename TypedLease>
+  const auto &leaseRefAs(const char *error_message) const {
+    return lease<StorageBinding>().template asRef<TypedLease>(error_message);
+  }
+
+  /**
+   * @brief Get storage payload from a typed lease by reference.
+   */
+  template <typename StorageBinding, typename TypedLease>
+  auto &payloadAs(const char *lease_error_message,
+                  const char *payload_error_message) {
+    return lease<StorageBinding>().template payloadAs<TypedLease>(
+        lease_error_message, payload_error_message);
+  }
+
+  template <typename StorageBinding, typename TypedLease>
+  const auto &payloadAs(const char *lease_error_message,
+                        const char *payload_error_message) const {
+    return lease<StorageBinding>().template payloadAs<TypedLease>(
+        lease_error_message, payload_error_message);
+  }
+
+  template <typename StorageBinding, typename TypedLease, typename ValidateFn>
+  auto &payloadAs(const char *lease_error_message,
+                  const char *payload_error_message,
+                  ValidateFn &&validate_payload) {
+    return lease<StorageBinding>().template payloadAs<TypedLease>(
+        lease_error_message, payload_error_message,
+        std::forward<ValidateFn>(validate_payload));
+  }
+
+  template <typename StorageBinding, typename TypedLease, typename ValidateFn>
+  const auto &payloadAs(const char *lease_error_message,
+                        const char *payload_error_message,
+                        ValidateFn &&validate_payload) const {
+    return lease<StorageBinding>().template payloadAs<TypedLease>(
+        lease_error_message, payload_error_message,
+        std::forward<ValidateFn>(validate_payload));
+  }
+
+  /**
    * @brief Get the access pattern for this storage.
    */
   static constexpr ::orteaf::internal::kernel::Access access() {

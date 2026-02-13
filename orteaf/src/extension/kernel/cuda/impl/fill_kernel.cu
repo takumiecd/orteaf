@@ -11,6 +11,7 @@ struct FillLayoutParams {
   std::uint32_t shape[kFillShapeInlineCapacity]{};
   std::int32_t strides[kFillShapeInlineCapacity]{};
 };
+// ABI contract: must match common::layout::FillLayoutParams on host side.
 
 } // namespace
 

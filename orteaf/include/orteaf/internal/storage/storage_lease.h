@@ -79,6 +79,115 @@ public:
   }
 
   /**
+   * @brief Return true if this StorageLease currently holds lease type T.
+   */
+  template <typename T> bool holds() const noexcept {
+    return std::holds_alternative<T>(variant_);
+  }
+
+  /**
+   * @brief Retrieve lease type T by reference.
+   *
+   * Throws when the held type is not T or the lease object is invalid.
+   */
+  template <typename T>
+  T &asRef(const char *error_message = "Storage lease type mismatch") {
+    auto *lease = tryAs<T>();
+    if (lease == nullptr || !(*lease)) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+          error_message);
+    }
+    return *lease;
+  }
+
+  template <typename T>
+  const T &asRef(const char *error_message = "Storage lease type mismatch") const {
+    auto *lease = tryAs<T>();
+    if (lease == nullptr || !(*lease)) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+          error_message);
+    }
+    return *lease;
+  }
+
+  /**
+   * @brief Retrieve lease type T by value.
+   *
+   * This performs a lease copy (increments strong ref count for strong leases).
+   */
+  template <typename T>
+  T as(const char *error_message = "Storage lease type mismatch") {
+    return asRef<T>(error_message);
+  }
+
+  template <typename T>
+  T as(const char *error_message = "Storage lease type mismatch") const {
+    return asRef<T>(error_message);
+  }
+
+  /**
+   * @brief Retrieve the payload of lease type T by reference.
+   *
+   * Throws when type check fails or payload is unavailable.
+   */
+  template <typename T>
+  auto &payloadAs(const char *lease_error_message,
+                  const char *payload_error_message) {
+    auto &lease = asRef<T>(lease_error_message);
+    auto *payload = lease.operator->();
+    if (payload == nullptr) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+          payload_error_message);
+    }
+    return *payload;
+  }
+
+  template <typename T>
+  const auto &payloadAs(const char *lease_error_message,
+                        const char *payload_error_message) const {
+    const auto &lease = asRef<T>(lease_error_message);
+    auto *payload = lease.operator->();
+    if (payload == nullptr) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+          payload_error_message);
+    }
+    return *payload;
+  }
+
+  /**
+   * @brief Retrieve payload and run additional validation.
+   */
+  template <typename T, typename ValidateFn>
+  auto &payloadAs(const char *lease_error_message,
+                  const char *payload_error_message,
+                  ValidateFn &&validate_payload) {
+    auto &payload = payloadAs<T>(lease_error_message, payload_error_message);
+    if (!std::forward<ValidateFn>(validate_payload)(payload)) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+          payload_error_message);
+    }
+    return payload;
+  }
+
+  template <typename T, typename ValidateFn>
+  const auto &payloadAs(const char *lease_error_message,
+                        const char *payload_error_message,
+                        ValidateFn &&validate_payload) const {
+    const auto &payload = payloadAs<T>(lease_error_message, payload_error_message);
+    if (!std::forward<ValidateFn>(validate_payload)(payload)) {
+      ::orteaf::internal::diagnostics::error::throwError(
+          ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidState,
+          payload_error_message);
+    }
+    return payload;
+  }
+
+  /**
    * @brief Apply a visitor to the underlying lease.
    */
   template <typename Visitor> decltype(auto) visit(Visitor &&v) {

@@ -9,14 +9,14 @@
 #include <orteaf/internal/base/inline_vector.h>
 #include <orteaf/internal/diagnostics/error/error.h>
 
-namespace orteaf::extension::kernel::mps::detail {
+#include "layout_params_common.h"
+
+namespace orteaf::extension::kernel::common::layout {
 
 namespace error = ::orteaf::internal::diagnostics::error;
 
-inline constexpr std::uint8_t kTransferShapeInlineCapacity = 8;
-using ShapeVector =
-    ::orteaf::internal::base::InlineVector<std::int64_t,
-                                           kTransferShapeInlineCapacity>;
+using ShapeVector = ::orteaf::internal::base::InlineVector<std::int64_t,
+                                                           kShapeInlineCapacity>;
 
 struct LayoutInfo {
   std::size_t numel{};
@@ -26,17 +26,9 @@ struct LayoutInfo {
   std::int64_t max_index{};
 };
 
-struct TransferLayoutParams {
-  std::uint32_t rank{};
-  std::uint32_t shape[kTransferShapeInlineCapacity]{};
-  std::int32_t src_strides[kTransferShapeInlineCapacity]{};
-  std::int32_t dst_strides[kTransferShapeInlineCapacity]{};
-};
-
 inline LayoutInfo analyzeLayout(const ShapeVector &shape,
                                 const ShapeVector &strides,
-                                std::int64_t offset,
-                                const char *op_name,
+                                std::int64_t offset, const char *op_name,
                                 const char *tensor_name) {
   if (shape.size != strides.size) {
     error::throwError(error::OrteafErrc::InvalidParameter,
@@ -59,10 +51,9 @@ inline LayoutInfo analyzeLayout(const ShapeVector &shape,
   for (std::size_t i = shape.size; i-- > 0;) {
     const auto dim = shape.data[i];
     if (dim < 0) {
-      error::throwError(
-          error::OrteafErrc::InvalidParameter,
-          std::string(op_name) + ": " + tensor_name +
-              " has negative shape dimension");
+      error::throwError(error::OrteafErrc::InvalidParameter,
+                        std::string(op_name) + ": " + tensor_name +
+                            " has negative shape dimension");
     }
     if (dim == 0) {
       info.numel = 0;
@@ -104,15 +95,13 @@ inline LayoutInfo analyzeLayout(const ShapeVector &shape,
                             " index range overflow");
     }
     if (stride >= 0) {
-      if (::orteaf::internal::base::addOverflowI64(max_index, span,
-                                                   max_index)) {
+      if (::orteaf::internal::base::addOverflowI64(max_index, span, max_index)) {
         error::throwError(error::OrteafErrc::InvalidParameter,
                           std::string(op_name) + ": " + tensor_name +
                               " index range overflow");
       }
     } else {
-      if (::orteaf::internal::base::addOverflowI64(min_index, span,
-                                                   min_index)) {
+      if (::orteaf::internal::base::addOverflowI64(min_index, span, min_index)) {
         error::throwError(error::OrteafErrc::InvalidParameter,
                           std::string(op_name) + ": " + tensor_name +
                               " index range overflow");
@@ -139,15 +128,94 @@ inline void ensureSameShape(const ShapeVector &lhs, const ShapeVector &rhs,
   }
 }
 
-inline void fillLayoutParams(TransferLayoutParams &params,
-                             const ShapeVector &shape,
-                             const ShapeVector &src_strides,
-                             const ShapeVector &dst_strides,
-                             const char *op_name) {
+inline ShapeVector makeContiguousStrides(const ShapeVector &shape,
+                                         const char *op_name,
+                                         const char *tensor_name) {
+  ShapeVector strides{};
+  strides.size = shape.size;
+  std::int64_t running = 1;
+  for (std::size_t i = shape.size; i-- > 0;) {
+    const auto dim = shape.data[i];
+    if (dim < 0) {
+      error::throwError(error::OrteafErrc::InvalidParameter,
+                        std::string(op_name) + ": " + tensor_name +
+                            " has negative shape dimension");
+    }
+    strides.data[i] = running;
+    if (dim != 0 && running > std::numeric_limits<std::int64_t>::max() / dim) {
+      error::throwError(error::OrteafErrc::InvalidParameter,
+                        std::string(op_name) + ": " + tensor_name +
+                            " contiguous stride overflow");
+    }
+    running *= dim;
+  }
+  return strides;
+}
+
+inline std::int64_t physicalIndexForLinear(std::uint64_t linear,
+                                           const ShapeVector &shape,
+                                           const ShapeVector &strides,
+                                           std::int64_t offset) {
+  std::int64_t physical = offset;
+  std::uint64_t remaining = linear;
+  for (std::size_t i = shape.size; i-- > 0;) {
+    const auto dim = static_cast<std::uint64_t>(shape.data[i]);
+    const auto coord = dim == 0 ? 0 : (remaining % dim);
+    remaining = dim == 0 ? 0 : (remaining / dim);
+    physical += static_cast<std::int64_t>(coord) * strides.data[i];
+  }
+  return physical;
+}
+
+inline void fillFillLayoutParams(FillLayoutParams &params,
+                                 const ShapeVector &shape,
+                                 const ShapeVector &strides,
+                                 const char *op_name) {
+  if (shape.size != strides.size) {
+    error::throwError(error::OrteafErrc::InvalidParameter,
+                      std::string(op_name) +
+                          ": shape/stride rank mismatch in fill layout params");
+  }
+  if (shape.size > kShapeInlineCapacity) {
+    error::throwError(error::OrteafErrc::InvalidParameter,
+                      std::string(op_name) +
+                          ": rank exceeds fill layout capacity");
+  }
+  params.rank = shape.size;
+  for (std::size_t i = 0; i < shape.size; ++i) {
+    const auto dim = shape.data[i];
+    const auto stride = strides.data[i];
+    if (dim < 0 || dim > static_cast<std::int64_t>(
+                            std::numeric_limits<std::uint32_t>::max())) {
+      error::throwError(error::OrteafErrc::InvalidParameter,
+                        std::string(op_name) +
+                            ": shape dimension exceeds uint32 range");
+    }
+    if (stride < static_cast<std::int64_t>(
+                     std::numeric_limits<std::int32_t>::min()) ||
+        stride > static_cast<std::int64_t>(
+                     std::numeric_limits<std::int32_t>::max())) {
+      error::throwError(error::OrteafErrc::InvalidParameter,
+                        std::string(op_name) + ": stride exceeds int32 range");
+    }
+    params.shape[i] = static_cast<std::uint32_t>(dim);
+    params.strides[i] = static_cast<std::int32_t>(stride);
+  }
+}
+
+inline void fillTransferLayoutParams(TransferLayoutParams &params,
+                                     const ShapeVector &shape,
+                                     const ShapeVector &src_strides,
+                                     const ShapeVector &dst_strides,
+                                     const char *op_name) {
   if (shape.size != src_strides.size || shape.size != dst_strides.size) {
     error::throwError(error::OrteafErrc::InvalidParameter,
                       std::string(op_name) +
                           ": shape/stride rank mismatch in layout params");
+  }
+  if (shape.size > kShapeInlineCapacity) {
+    error::throwError(error::OrteafErrc::InvalidParameter,
+                      std::string(op_name) + ": rank exceeds layout capacity");
   }
   params.rank = shape.size;
   for (std::size_t i = 0; i < shape.size; ++i) {
@@ -169,8 +237,7 @@ inline void fillLayoutParams(TransferLayoutParams &params,
         dst_stride > static_cast<std::int64_t>(
                          std::numeric_limits<std::int32_t>::max())) {
       error::throwError(error::OrteafErrc::InvalidParameter,
-                        std::string(op_name) +
-                            ": stride exceeds int32 range");
+                        std::string(op_name) + ": stride exceeds int32 range");
     }
     params.shape[i] = static_cast<std::uint32_t>(dim);
     params.src_strides[i] = static_cast<std::int32_t>(src_stride);
@@ -178,45 +245,4 @@ inline void fillLayoutParams(TransferLayoutParams &params,
   }
 }
 
-inline std::int64_t physicalIndexForLinear(std::uint64_t linear,
-                                           const ShapeVector &shape,
-                                           const ShapeVector &strides,
-                                           std::int64_t offset) {
-  std::int64_t physical = offset;
-  std::uint64_t remaining = linear;
-  for (std::size_t i = shape.size; i-- > 0;) {
-    const auto dim = static_cast<std::uint64_t>(shape.data[i]);
-    const auto coord = dim == 0 ? 0 : (remaining % dim);
-    remaining = dim == 0 ? 0 : (remaining / dim);
-    physical += static_cast<std::int64_t>(coord) * strides.data[i];
-  }
-  return physical;
-}
-
-inline ShapeVector makeContiguousStrides(const ShapeVector &shape,
-                                         const char *op_name,
-                                         const char *tensor_name) {
-  ShapeVector strides{};
-  strides.size = shape.size;
-  std::int64_t running = 1;
-  for (std::size_t i = shape.size; i-- > 0;) {
-    const auto dim = shape.data[i];
-    if (dim < 0) {
-      error::throwError(
-          error::OrteafErrc::InvalidParameter,
-          std::string(op_name) + ": " + tensor_name +
-              " has negative shape dimension");
-    }
-    strides.data[i] = running;
-    if (dim != 0 &&
-        running > std::numeric_limits<std::int64_t>::max() / dim) {
-      error::throwError(error::OrteafErrc::InvalidParameter,
-                        std::string(op_name) + ": " + tensor_name +
-                            " contiguous stride overflow");
-    }
-    running *= dim;
-  }
-  return strides;
-}
-
-} // namespace orteaf::extension::kernel::mps::detail
+} // namespace orteaf::extension::kernel::common::layout

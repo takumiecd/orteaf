@@ -9,6 +9,7 @@ struct FillLayoutParams {
   uint shape[kFillMaxRank];
   int strides[kFillMaxRank];
 };
+// ABI contract: must match common::layout::FillLayoutParams on host side.
 
 kernel void orteaf_fill_strided_f32(
     device float *out [[buffer(0)]],

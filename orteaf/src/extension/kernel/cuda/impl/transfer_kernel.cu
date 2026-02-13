@@ -13,6 +13,7 @@ struct TransferLayoutParams {
   std::int32_t src_strides[kTransferShapeInlineCapacity]{};
   std::int32_t dst_strides[kTransferShapeInlineCapacity]{};
 };
+// ABI contract: must match common::layout::TransferLayoutParams on host side.
 
 __device__ inline std::int64_t physicalIndexForLinear(
     std::uint32_t linear, std::uint32_t rank, const std::uint32_t *shape,

@@ -8,8 +8,6 @@
 #include <string>
 
 #include <orteaf/internal/architecture/architecture.h>
-#include <orteaf/internal/base/checked_int.h>
-#include <orteaf/internal/base/inline_vector.h>
 #include <orteaf/internal/diagnostics/error/error.h>
 #include <orteaf/internal/dtype/dtype.h>
 #include <orteaf/internal/execution/cuda/api/cuda_execution_api.h>
@@ -29,15 +27,16 @@
 #include <orteaf/internal/kernel/storage/operand_id.h>
 #include <orteaf/internal/storage/registry/storage_types.h>
 
+#include "../common/layout_common.h"
+
 namespace orteaf::extension::kernel::cuda {
 
 namespace kernel = ::orteaf::internal::kernel;
 namespace cuda_kernel = ::orteaf::internal::kernel::cuda;
 namespace error = ::orteaf::internal::diagnostics::error;
+namespace common_layout = ::orteaf::extension::kernel::common::layout;
 namespace cuda_wrapper =
     ::orteaf::internal::execution::cuda::platform::wrapper;
-
-inline constexpr std::uint8_t kFillShapeInlineCapacity = 8;
 
 struct FillCudaStorages : kernel::StorageSchema<FillCudaStorages> {
   kernel::StorageField<kernel::OperandId::Output> output;
@@ -46,9 +45,7 @@ struct FillCudaStorages : kernel::StorageSchema<FillCudaStorages> {
 };
 
 struct FillCudaParams : kernel::ParamSchema<FillCudaParams> {
-  using ShapeVector =
-      ::orteaf::internal::base::InlineVector<std::int64_t,
-                                             kFillShapeInlineCapacity>;
+  using ShapeVector = common_layout::ShapeVector;
 
   kernel::Field<kernel::ParamId::Value, double> value;
   kernel::ScopedField<kernel::ParamId::Shape, ShapeVector,
@@ -64,94 +61,6 @@ struct FillCudaParams : kernel::ParamSchema<FillCudaParams> {
   ORTEAF_EXTRACT_FIELDS(value, shape, strides, offset)
 };
 
-namespace {
-
-struct LayoutInfo {
-  std::size_t numel{};
-  bool has_zero{};
-  std::int64_t min_index{};
-  std::int64_t max_index{};
-};
-
-struct FillLayoutParams {
-  std::uint32_t rank{};
-  std::uint32_t shape[kFillShapeInlineCapacity]{};
-  std::int32_t strides[kFillShapeInlineCapacity]{};
-};
-
-LayoutInfo analyzeLayout(const FillCudaParams::ShapeVector &shape,
-                         const FillCudaParams::ShapeVector &strides,
-                         std::int64_t offset) {
-  if (shape.size != strides.size) {
-    error::throwError(error::OrteafErrc::InvalidParameter,
-                      "CUDA fill kernel received mismatched shape/strides");
-  }
-
-  LayoutInfo info{};
-  info.numel = 1;
-  info.has_zero = false;
-  info.min_index = offset;
-  info.max_index = offset;
-
-  if (shape.size == 0) {
-    return info;
-  }
-
-  for (std::size_t i = shape.size; i-- > 0;) {
-    const auto dim = shape.data[i];
-    if (dim < 0) {
-      error::throwError(error::OrteafErrc::InvalidParameter,
-                        "CUDA fill kernel received negative shape dimension");
-    }
-    if (dim == 0) {
-      info.numel = 0;
-      info.has_zero = true;
-      return info;
-    }
-
-    const auto dim_size = static_cast<std::size_t>(dim);
-    if (info.numel > std::numeric_limits<std::size_t>::max() / dim_size) {
-      error::throwError(error::OrteafErrc::InvalidParameter,
-                        "CUDA fill kernel shape is too large");
-    }
-    info.numel *= dim_size;
-  }
-
-  std::int64_t min_index = offset;
-  std::int64_t max_index = offset;
-  for (std::uint8_t i = 0; i < shape.size; ++i) {
-    const auto dim = shape.data[i];
-    if (dim <= 0) {
-      continue;
-    }
-    const auto stride = strides.data[i];
-    std::int64_t span = 0;
-    if (::orteaf::internal::base::mulOverflowI64(stride, dim - 1, span)) {
-      error::throwError(error::OrteafErrc::InvalidParameter,
-                        "CUDA fill kernel index range overflow");
-    }
-    if (stride >= 0) {
-      if (::orteaf::internal::base::addOverflowI64(max_index, span,
-                                                   max_index)) {
-        error::throwError(error::OrteafErrc::InvalidParameter,
-                          "CUDA fill kernel index range overflow");
-      }
-    } else {
-      if (::orteaf::internal::base::addOverflowI64(min_index, span,
-                                                   min_index)) {
-        error::throwError(error::OrteafErrc::InvalidParameter,
-                          "CUDA fill kernel index range overflow");
-      }
-    }
-  }
-
-  info.min_index = min_index;
-  info.max_index = max_index;
-  return info;
-}
-
-} // namespace
-
 void fillCudaExecute(
     ::orteaf::internal::execution::cuda::resource::CudaKernelBase &base,
     kernel::KernelArgs &args) {
@@ -160,25 +69,21 @@ void fillCudaExecute(
 
   using AnyBinding = kernel::KernelArgs::StorageListType::Storage::value_type;
   auto &lease = storages.output.lease<AnyBinding>();
-  auto *cuda_lease = lease.tryAs<::orteaf::internal::storage::CudaStorageLease>();
-  if (!cuda_lease || !(*cuda_lease)) {
-    error::throwError(error::OrteafErrc::InvalidParameter,
-                      "CUDA fill kernel requires CUDA output storage");
-  }
-
-  auto *storage = cuda_lease->operator->();
-  if (storage == nullptr || !storage->bufferView()) {
-    error::throwError(error::OrteafErrc::InvalidState,
-                      "CUDA fill kernel output buffer is unavailable");
-  }
+  auto &storage = storages.output.payloadAs<
+      AnyBinding, ::orteaf::internal::storage::CudaStorageLease>(
+      "CUDA fill kernel requires CUDA output storage",
+      "CUDA fill kernel output buffer is unavailable",
+      [](const auto &typed_storage) {
+        return static_cast<bool>(typed_storage.bufferView());
+      });
 
   if (lease.dtype() != ::orteaf::internal::DType::F32 ||
-      storage->dtype() != ::orteaf::internal::DType::F32) {
+      storage.dtype() != ::orteaf::internal::DType::F32) {
     error::throwError(error::OrteafErrc::Unsupported,
                       "CUDA fill kernel supports only F32");
   }
 
-  const auto storage_numel_raw = storage->numel();
+  const auto storage_numel_raw = storage.numel();
   if (storage_numel_raw >
       static_cast<std::size_t>(std::numeric_limits<std::int64_t>::max())) {
     error::throwError(error::OrteafErrc::InvalidParameter,
@@ -194,7 +99,8 @@ void fillCudaExecute(
 
   const auto &shape = params.shape.get();
   const auto &strides = params.strides.get();
-  const auto layout = analyzeLayout(shape, strides, raw_offset);
+  const auto layout = common_layout::analyzeLayout(
+      shape, strides, raw_offset, "CUDA fill kernel", "output");
   if (layout.has_zero) {
     return;
   }
@@ -216,27 +122,9 @@ void fillCudaExecute(
                       "CUDA fill kernel size exceeds uint32 range");
   }
 
-  FillLayoutParams layout_params{};
-  layout_params.rank = shape.size;
-  for (std::size_t i = 0; i < shape.size; ++i) {
-    const auto dim = shape.data[i];
-    const auto stride = strides.data[i];
-    if (dim < 0 ||
-        dim >
-            static_cast<std::int64_t>(std::numeric_limits<std::uint32_t>::max())) {
-      error::throwError(error::OrteafErrc::InvalidParameter,
-                        "CUDA fill kernel shape dimension exceeds uint32 range");
-    }
-    if (stride <
-            static_cast<std::int64_t>(std::numeric_limits<std::int32_t>::min()) ||
-        stride >
-            static_cast<std::int64_t>(std::numeric_limits<std::int32_t>::max())) {
-      error::throwError(error::OrteafErrc::InvalidParameter,
-                        "CUDA fill kernel stride exceeds int32 range");
-    }
-    layout_params.shape[i] = static_cast<std::uint32_t>(dim);
-    layout_params.strides[i] = static_cast<std::int32_t>(stride);
-  }
+  common_layout::FillLayoutParams layout_params{};
+  common_layout::fillFillLayoutParams(layout_params, shape, strides,
+                                      "CUDA fill kernel");
 
   auto offset_u32 = static_cast<std::uint32_t>(offset);
   auto numel_u32 = static_cast<std::uint32_t>(layout.numel);
@@ -248,7 +136,7 @@ void fillCudaExecute(
                       "CUDA fill kernel could not begin execution session");
   }
 
-  auto output_view = storage->bufferView();
+  auto output_view = storage.bufferView();
   auto output_ptr = cuda_wrapper::cuDeviceptrFromOpaque(output_view.raw());
   auto function = cuda_wrapper::objcFromOpaqueNoown<CUfunction>(session->function());
   auto stream = cuda_wrapper::objcFromOpaqueNoown<CUstream>(session->stream());
