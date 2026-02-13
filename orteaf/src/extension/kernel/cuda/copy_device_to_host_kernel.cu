@@ -26,16 +26,19 @@
 #include <orteaf/internal/storage/registry/storage_types.h>
 
 #include "copy_kernel_common.h"
-#include "transfer_layout_common.h"
+#include "../common/copy_plan_common.h"
+#include "../common/layout_common.h"
 
 namespace orteaf::extension::kernel::cuda {
 
 namespace kernel = ::orteaf::internal::kernel;
 namespace error = ::orteaf::internal::diagnostics::error;
 namespace cuda_wrapper = copy_detail::cuda_wrapper;
+namespace common_layout = ::orteaf::extension::kernel::common::layout;
+namespace copy_plan = ::orteaf::extension::kernel::common::copy_plan;
 
-using ShapeVector = detail::ShapeVector;
-using TransferLayoutParams = detail::TransferLayoutParams;
+using ShapeVector = common_layout::ShapeVector;
+using TransferLayoutParams = common_layout::TransferLayoutParams;
 
 struct CopyDeviceToHostStorages
     : kernel::StorageSchema<CopyDeviceToHostStorages> {
@@ -157,48 +160,23 @@ void copyDeviceToHostExecute(
   const auto output_storage_numel =
       static_cast<std::int64_t>(output_storage_numel_raw);
 
-  const auto input_offset = params.input_offset.get();
-  const auto output_offset = params.output_offset.get();
-  if (input_offset < 0 || output_offset < 0) {
-    error::throwError(error::OrteafErrc::InvalidParameter,
-                      "CUDA copyDeviceToHost kernel received negative offset");
-  }
-
   const auto &input_shape = params.input_shape.get();
   const auto &output_shape = params.output_shape.get();
   const auto &input_strides = params.input_strides.get();
   const auto &output_strides = params.output_strides.get();
-  detail::ensureSameShape(input_shape, output_shape, kOpName);
+  const auto input_offset = params.input_offset.get();
+  const auto output_offset = params.output_offset.get();
 
-  const auto input_layout =
-      detail::analyzeLayout(input_shape, input_strides, input_offset, kOpName,
-                            "input");
-  const auto output_layout =
-      detail::analyzeLayout(output_shape, output_strides, output_offset, kOpName,
-                            "output");
-  if (input_layout.has_zero) {
+  const auto validation = copy_plan::validateCopyLayouts(
+      input_shape, input_strides, input_offset, input_storage_numel, output_shape,
+      output_strides, output_offset, output_storage_numel, dtype, kOpName);
+  if (validation.has_zero) {
     return;
   }
-  if (input_layout.numel != output_layout.numel) {
-    error::throwError(error::OrteafErrc::InvalidParameter,
-                      "CUDA copyDeviceToHost kernel numel mismatch");
-  }
-
-  if (input_layout.min_index < 0 || input_layout.max_index < 0 ||
-      input_layout.max_index >= input_storage_numel ||
-      output_layout.min_index < 0 || output_layout.max_index < 0 ||
-      output_layout.max_index >= output_storage_numel) {
-    error::throwError(error::OrteafErrc::InvalidParameter,
-                      "CUDA copyDeviceToHost kernel view exceeds storage bounds");
-  }
-
-  const auto elem_size = ::orteaf::internal::sizeOf(dtype);
-  if (input_layout.numel > std::numeric_limits<std::size_t>::max() / elem_size) {
-    error::throwError(error::OrteafErrc::InvalidParameter,
-                      "CUDA copyDeviceToHost kernel byte size overflow");
-  }
-
-  const auto bytes = input_layout.numel * elem_size;
+  const auto &input_layout = validation.input_layout;
+  const auto &output_layout = validation.output_layout;
+  const auto elem_size = validation.elem_size;
+  const auto bytes = validation.bytes;
   const auto input_base = input_storage->bufferView().data();
   auto *output_base = static_cast<std::byte *>(output_storage->buffer());
   if (input_base == 0) {
@@ -226,10 +204,11 @@ void copyDeviceToHostExecute(
     const auto elem_size_u32 = static_cast<std::uint32_t>(elem_size);
 
     TransferLayoutParams layout_params{};
-    const auto staging_strides =
-        detail::makeContiguousStrides(input_shape, kOpName, "input");
-    detail::fillLayoutParams(layout_params, input_shape, input_strides,
-                             staging_strides, kOpName);
+    const auto staging_strides = common_layout::makeContiguousStrides(
+        input_shape, kOpName, "input");
+    common_layout::fillTransferLayoutParams(layout_params, input_shape,
+                                            input_strides, staging_strides,
+                                            kOpName);
 
     launchStridedToContiguousKernel(input_base, staging.ptr, input_offset_u32,
                                     numel_u32, elem_size_u32, layout_params);
@@ -243,7 +222,7 @@ void copyDeviceToHostExecute(
   }
 
   for (std::size_t linear = 0; linear < input_layout.numel; ++linear) {
-    const auto dst_index = detail::physicalIndexForLinear(
+    const auto dst_index = common_layout::physicalIndexForLinear(
         static_cast<std::uint64_t>(linear), output_shape, output_strides,
         output_offset);
     const auto dst_byte_index = static_cast<std::size_t>(dst_index) * elem_size;

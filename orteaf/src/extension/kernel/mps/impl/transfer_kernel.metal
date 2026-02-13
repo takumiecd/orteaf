@@ -8,6 +8,7 @@ struct TransferLayoutParams {
   int src_strides[8];
   int dst_strides[8];
 };
+// ABI contract: must match common::layout::TransferLayoutParams on host side.
 
 inline long linearToStridedOffset(uint linear, uint rank,
                                   constant uint *shape,

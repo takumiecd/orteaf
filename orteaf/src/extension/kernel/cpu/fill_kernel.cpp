@@ -5,8 +5,6 @@
 #include <limits>
 #include <span>
 
-#include <orteaf/internal/base/inline_vector.h>
-#include <orteaf/internal/base/checked_int.h>
 #include <orteaf/internal/architecture/architecture.h>
 #include <orteaf/internal/diagnostics/error/error.h>
 #include <orteaf/internal/execution/cpu/api/cpu_execution_api.h>
@@ -23,10 +21,13 @@
 #include <orteaf/internal/storage/registry/storage_types.h>
 #include <orteaf/internal/dtype/dtype.h>
 
+#include "../common/layout_common.h"
+
 namespace orteaf::extension::kernel::cpu {
 
 namespace kernel = ::orteaf::internal::kernel;
 namespace error = ::orteaf::internal::diagnostics::error;
+namespace common_layout = ::orteaf::extension::kernel::common::layout;
 
 void fillTensor(void *data, std::size_t count,
                 ::orteaf::internal::DType dtype, double value);
@@ -35,8 +36,6 @@ void fillTensorStrided(void *data, std::span<const std::int64_t> shape,
                        std::int64_t offset, ::orteaf::internal::DType dtype,
                        double value);
 
-inline constexpr std::uint8_t kFillShapeInlineCapacity = 8;
-
 struct FillStorages : kernel::StorageSchema<FillStorages> {
   kernel::StorageField<kernel::OperandId::Output> output;
 
@@ -44,9 +43,7 @@ struct FillStorages : kernel::StorageSchema<FillStorages> {
 };
 
 struct FillParams : kernel::ParamSchema<FillParams> {
-  using ShapeVector =
-      ::orteaf::internal::base::InlineVector<std::int64_t,
-                                             kFillShapeInlineCapacity>;
+  using ShapeVector = common_layout::ShapeVector;
 
   kernel::Field<kernel::ParamId::Value, double> value;
   kernel::ScopedField<kernel::ParamId::Shape, ShapeVector,
@@ -61,101 +58,6 @@ struct FillParams : kernel::ParamSchema<FillParams> {
 
   ORTEAF_EXTRACT_FIELDS(value, shape, strides, offset)
 };
-
-namespace {
-
-struct LayoutStats {
-  std::size_t numel{};
-  bool has_zero{};
-  bool contiguous{};
-  std::int64_t min_index{};
-  std::int64_t max_index{};
-};
-
-LayoutStats analyzeLayout(const FillParams::ShapeVector &shape,
-                          const FillParams::ShapeVector &strides,
-                          std::int64_t offset) {
-  const auto rank = shape.size;
-  if (rank != strides.size) {
-    error::throwError(error::OrteafErrc::InvalidParameter,
-                      "Fill kernel received mismatched shape/strides");
-  }
-
-  LayoutStats stats{};
-  stats.numel = 1;
-  stats.has_zero = false;
-  stats.contiguous = true;
-  stats.min_index = offset;
-  stats.max_index = offset;
-
-  if (rank == 0) {
-    return stats;
-  }
-
-  std::size_t product = 1;
-  constexpr std::size_t kMaxSize =
-      std::numeric_limits<std::size_t>::max();
-  std::size_t expected_stride = 1;
-  for (std::size_t i = rank; i-- > 0;) {
-    const auto dim = shape.data[i];
-    if (dim < 0) {
-      error::throwError(error::OrteafErrc::InvalidParameter,
-                        "Fill kernel received negative shape dimension");
-    }
-    if (dim == 0) {
-      stats.has_zero = true;
-      stats.numel = 0;
-      return stats;
-    }
-    const std::size_t dim_size = static_cast<std::size_t>(dim);
-    if (dim_size != 0 && product > kMaxSize / dim_size) {
-      error::throwError(error::OrteafErrc::InvalidParameter,
-                        "Fill kernel shape is too large");
-    }
-    product *= dim_size;
-    if (strides.data[i] != static_cast<std::int64_t>(expected_stride)) {
-      stats.contiguous = false;
-    }
-    if (expected_stride > kMaxSize / dim_size) {
-      error::throwError(error::OrteafErrc::InvalidParameter,
-                        "Fill kernel shape is too large");
-    }
-    expected_stride *= dim_size;
-  }
-  stats.numel = product;
-
-  std::int64_t min_index = offset;
-  std::int64_t max_index = offset;
-  for (std::uint8_t i = 0; i < rank; ++i) {
-    const auto dim = shape.data[i];
-    if (dim <= 0) {
-      continue;
-    }
-    const auto stride = strides.data[i];
-    std::int64_t span = 0;
-    if (::orteaf::internal::base::mulOverflowI64(stride, dim - 1, span)) {
-      error::throwError(error::OrteafErrc::InvalidParameter,
-                        "Fill kernel index range overflow");
-    }
-    if (stride >= 0) {
-      if (::orteaf::internal::base::addOverflowI64(max_index, span, max_index)) {
-        error::throwError(error::OrteafErrc::InvalidParameter,
-                          "Fill kernel index range overflow");
-      }
-    } else {
-      if (::orteaf::internal::base::addOverflowI64(min_index, span, min_index)) {
-        error::throwError(error::OrteafErrc::InvalidParameter,
-                          "Fill kernel index range overflow");
-      }
-    }
-  }
-
-  stats.min_index = min_index;
-  stats.max_index = max_index;
-  return stats;
-}
-
-}  // namespace
 
 void fillExecute(
     ::orteaf::internal::execution::cpu::resource::CpuKernelBase & /*base*/,
@@ -182,7 +84,8 @@ void fillExecute(
   const auto shape = params.shape.get();
   const auto strides = params.strides.get();
   const auto offset = params.offset.get();
-  const auto stats = analyzeLayout(shape, strides, offset);
+  const auto stats = common_layout::analyzeLayout(shape, strides, offset,
+                                                  "Fill kernel", "output");
 
   auto view = (*cpu_lease)->bufferView();
   if (stats.has_zero) {
