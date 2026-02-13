@@ -13,10 +13,13 @@
 #include <orteaf/internal/diagnostics/error/error.h>
 #include <orteaf/internal/dtype/dtype.h>
 #include <orteaf/internal/execution/cuda/api/cuda_execution_api.h>
+#include <orteaf/internal/execution/cuda/platform/wrapper/cuda_check.h>
+#include <orteaf/internal/execution/cuda/platform/wrapper/cuda_objc_bridge.h>
 #include <orteaf/internal/kernel/api/kernel_registry_api.h>
 #include <orteaf/internal/kernel/core/kernel_args.h>
 #include <orteaf/internal/kernel/core/kernel_key.h>
 #include <orteaf/internal/kernel/core/kernel_metadata.h>
+#include <orteaf/internal/kernel/cuda/cuda_kernel_session.h>
 #include <orteaf/internal/kernel/param/param_id.h>
 #include <orteaf/internal/kernel/param/transform/array_view_inline_vector.h>
 #include <orteaf/internal/kernel/registry/kernel_auto_registry.h>
@@ -34,6 +37,7 @@ namespace orteaf::extension::kernel::cuda {
 namespace kernel = ::orteaf::internal::kernel;
 namespace error = ::orteaf::internal::diagnostics::error;
 namespace cuda_wrapper = copy_detail::cuda_wrapper;
+namespace cuda_kernel = ::orteaf::internal::kernel::cuda;
 namespace common_layout = ::orteaf::extension::kernel::common::layout;
 namespace copy_plan = ::orteaf::extension::kernel::common::copy_plan;
 
@@ -77,43 +81,41 @@ namespace {
 
 constexpr const char *kOpName = "CUDA copyHostToDevice kernel";
 
-extern "C" __global__ void orteaf_copy_contiguous_to_strided_u8(
-    const std::uint8_t *input, std::uint8_t *output, std::uint32_t input_offset,
-    std::uint32_t output_offset, std::uint32_t numel, std::uint32_t elem_size,
-    TransferLayoutParams layout);
-
-void launchContiguousToStridedKernel(cuda_wrapper::CudaDevicePtr_t input_base,
+void launchContiguousToStridedKernel(cuda_kernel::CudaKernelSession &session,
+                                     cuda_wrapper::CudaDevicePtr_t input_base,
                                      cuda_wrapper::CudaDevicePtr_t output_base,
                                      std::uint32_t output_offset,
                                      std::uint32_t numel,
                                      std::uint32_t elem_size,
                                      const TransferLayoutParams &layout) {
-  auto *src = reinterpret_cast<std::uint8_t *>(
-      static_cast<std::uintptr_t>(input_base));
-  auto *dst = reinterpret_cast<std::uint8_t *>(
-      static_cast<std::uintptr_t>(output_base));
+  const auto input_offset = std::uint32_t{0};
+  auto input_ptr = cuda_wrapper::cuDeviceptrFromOpaque(input_base);
+  auto output_ptr = cuda_wrapper::cuDeviceptrFromOpaque(output_base);
+  auto function = cuda_wrapper::objcFromOpaqueNoown<CUfunction>(session.function());
+  auto stream = cuda_wrapper::objcFromOpaqueNoown<CUstream>(session.stream());
 
-  constexpr std::uint32_t kThreads = 256;
-  const auto blocks = static_cast<std::uint32_t>((numel + kThreads - 1) / kThreads);
-  orteaf_copy_contiguous_to_strided_u8<<<blocks, kThreads>>>(
-      src, dst, 0, output_offset, numel, elem_size, layout);
+  void *kernel_args[] = {
+      &input_ptr,
+      &output_ptr,
+      &input_offset,
+      &output_offset,
+      &numel,
+      &elem_size,
+      const_cast<TransferLayoutParams *>(&layout),
+  };
 
-  const auto launch_status = cudaGetLastError();
-  if (launch_status != cudaSuccess) {
-    copy_detail::throwCudaRuntimeError(
-        "CUDA copyHostToDevice kernel launch failed", launch_status);
-  }
-  const auto sync_status = cudaDeviceSynchronize();
-  if (sync_status != cudaSuccess) {
-    copy_detail::throwCudaRuntimeError(
-        "CUDA copyHostToDevice kernel synchronization failed", sync_status);
-  }
+  const auto block = cuda_kernel::CudaKernelSession::makeBlock1D(256);
+  const auto grid = cuda_kernel::CudaKernelSession::makeGrid1D(numel, block.x);
+
+  CU_CHECK(cuLaunchKernel(function, grid.x, grid.y, grid.z, block.x, block.y,
+                          block.z, 0, stream, kernel_args, nullptr));
+  session.synchronize();
 }
 
 } // namespace
 
 void copyHostToDeviceExecute(
-    ::orteaf::internal::execution::cuda::resource::CudaKernelBase &,
+    ::orteaf::internal::execution::cuda::resource::CudaKernelBase &base,
     kernel::KernelArgs &args) {
   auto storages = CopyHostToDeviceStorages::extract(args);
   auto params = CopyHostToDeviceParams::extract(args);
@@ -222,8 +224,14 @@ void copyHostToDeviceExecute(
   const auto output_offset_u32 = static_cast<std::uint32_t>(output_offset);
   const auto numel_u32 = static_cast<std::uint32_t>(input_layout.numel);
   const auto elem_size_u32 = static_cast<std::uint32_t>(elem_size);
-  launchContiguousToStridedKernel(staging.ptr, output_base, output_offset_u32,
-                                  numel_u32, elem_size_u32, layout_params);
+  auto session = cuda_kernel::CudaKernelSession::begin(base, args, 0);
+  if (!session) {
+    error::throwError(error::OrteafErrc::InvalidState,
+                      "CUDA copyHostToDevice kernel could not begin execution session");
+  }
+  launchContiguousToStridedKernel(*session, staging.ptr, output_base,
+                                  output_offset_u32, numel_u32, elem_size_u32,
+                                  layout_params);
 }
 
 kernel::core::KernelMetadataLease createCopyHostToDeviceCudaMetadata() {
@@ -231,6 +239,9 @@ kernel::core::KernelMetadataLease createCopyHostToDeviceCudaMetadata() {
       ::orteaf::internal::execution::cuda::api::CudaExecutionApi;
 
   CudaExecutionApi::KernelKeys keys;
+  keys.pushBack(CudaExecutionApi::KernelKey{
+      CudaExecutionApi::ModuleKey::Embedded("transfer_kernel"),
+      std::string{"orteaf_copy_contiguous_to_strided_u8"}});
   auto metadata_lease = CudaExecutionApi::acquireKernelMetadata(keys);
   if (auto *meta_ptr = metadata_lease.operator->()) {
     meta_ptr->setExecute(copyHostToDeviceExecute);
