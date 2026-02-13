@@ -24,7 +24,7 @@ void dispatchTransferKernel(const char *op_name, Op op, Execution execution,
                             const DenseTensorImpl *output_impl,
                             const char *not_found_message,
                             const char *failed_message) {
-  auto args = detail::makeArgsForCpuOrMpsOrCuda(execution, op_name);
+  auto args = detail::makeArgsForAllExecution(execution, op_name);
   input_impl->bindAllArgs(args, kernel::OperandId::Input0);
   output_impl->bindAllArgs(args, kernel::OperandId::Output);
 

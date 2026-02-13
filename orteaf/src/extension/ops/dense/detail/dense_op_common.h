@@ -36,6 +36,7 @@ enum class ExecutionSupport : std::uint8_t {
   CpuOrMps,
   CpuOrCuda,
   CpuOrMpsOrCuda,
+  All,
 };
 
 inline void ensureValidTensor(const Tensor &tensor, const char *op_name) {
@@ -57,12 +58,14 @@ inline const DenseTensorImpl *requireDenseImpl(const Tensor &tensor,
 
 inline bool allowsMps(ExecutionSupport support) noexcept {
   return support == ExecutionSupport::CpuOrMps ||
-         support == ExecutionSupport::CpuOrMpsOrCuda;
+         support == ExecutionSupport::CpuOrMpsOrCuda ||
+         support == ExecutionSupport::All;
 }
 
 inline bool allowsCuda(ExecutionSupport support) noexcept {
   return support == ExecutionSupport::CpuOrCuda ||
-         support == ExecutionSupport::CpuOrMpsOrCuda;
+         support == ExecutionSupport::CpuOrMpsOrCuda ||
+         support == ExecutionSupport::All;
 }
 
 inline kernel::KernelArgs makeArgsForExecution(Execution execution,
@@ -124,6 +127,11 @@ inline kernel::KernelArgs makeArgsForCpuOrMpsOrCuda(Execution execution,
                                                     const char *op_name) {
   return makeArgsForExecution(execution, ExecutionSupport::CpuOrMpsOrCuda,
                               op_name);
+}
+
+inline kernel::KernelArgs makeArgsForAllExecution(Execution execution,
+                                                  const char *op_name) {
+  return makeArgsForExecution(execution, ExecutionSupport::All, op_name);
 }
 
 inline Architecture architectureForArgs(const kernel::KernelArgs &args,

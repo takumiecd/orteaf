@@ -38,7 +38,7 @@ void DenseTensorOps::fill(Tensor &output, double value) {
   }
 
   auto args =
-      detail::makeArgsForCpuOrMpsOrCuda(output_impl->execution(), kOpName);
+      detail::makeArgsForAllExecution(output_impl->execution(), kOpName);
   output_impl->bindAllArgs(args, kernel::OperandId::Output);
   args.addParam(kernel::Param(kernel::ParamId::Value, value));
 
