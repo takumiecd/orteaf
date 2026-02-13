@@ -5,12 +5,12 @@
 #include <span>
 
 #include <orteaf/extension/tensor/registry/tensor_impl_types.h>
-#include <orteaf/internal/execution/cpu/api/cpu_execution_api.h>
+#include <orteaf/internal/init/library_init.h>
 #include <orteaf/internal/storage/registry/storage_types.h>
 
 namespace {
 
-namespace cpu_api = orteaf::internal::execution::cpu::api;
+namespace init = orteaf::internal::init;
 namespace storage_reg = orteaf::internal::storage::registry;
 namespace registry = orteaf::internal::tensor::registry;
 using DenseTensorImpl = orteaf::extension::tensor::DenseTensorImpl;
@@ -33,8 +33,9 @@ DenseTensorImpl::CreateRequest makeDenseRequest(std::span<const std::int64_t> sh
 class TensorImplRegistryTest : public ::testing::Test {
 protected:
   void SetUp() override {
-    cpu_api::CpuExecutionApi::ExecutionManager::Config cpu_config{};
-    cpu_api::CpuExecutionApi::configure(cpu_config);
+    init::LibraryConfig config{};
+    config.register_kernels = false;
+    init::initialize(config);
 
     StorageRegistry::Config storage_config{};
     storage_registry_.configure(storage_config);
@@ -46,7 +47,7 @@ protected:
   void TearDown() override {
     registry_.shutdown();
     storage_registry_.shutdown();
-    cpu_api::CpuExecutionApi::shutdown();
+    init::shutdown();
   }
 
   StorageRegistry storage_registry_;

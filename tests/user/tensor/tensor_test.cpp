@@ -4,13 +4,13 @@
 #include <cstdint>
 #include <span>
 
-#include <orteaf/internal/execution/cpu/api/cpu_execution_api.h>
+#include <orteaf/internal/init/library_init.h>
 #include <orteaf/internal/tensor/api/tensor_api.h>
 #include <orteaf/user/tensor/tensor.h>
 
 namespace tensor_api = orteaf::internal::tensor::api;
 namespace tensor = orteaf::user::tensor;
-namespace cpu_api = orteaf::internal::execution::cpu::api;
+namespace init = orteaf::internal::init;
 using DType = orteaf::internal::DType;
 using Execution = orteaf::internal::execution::Execution;
 using DenseTensorImpl = orteaf::extension::tensor::DenseTensorImpl;
@@ -44,17 +44,12 @@ tensor::Tensor makeDense(std::span<const std::int64_t> shape, DType dtype,
 class TensorApiTest : public ::testing::Test {
 protected:
   void SetUp() override {
-    cpu_api::CpuExecutionApi::ExecutionManager::Config cpu_config{};
-    cpu_api::CpuExecutionApi::configure(cpu_config);
-
-    tensor_api::TensorApi::Config config{};
-    tensor_api::TensorApi::configure(config);
+    init::LibraryConfig config{};
+    config.register_kernels = false;
+    init::initialize(config);
   }
 
-  void TearDown() override {
-    tensor_api::TensorApi::shutdown();
-    cpu_api::CpuExecutionApi::shutdown();
-  }
+  void TearDown() override { init::shutdown(); }
 };
 
 // =============================================================================
