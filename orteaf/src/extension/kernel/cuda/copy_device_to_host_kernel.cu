@@ -88,7 +88,7 @@ void launchStridedToContiguousKernel(cuda_kernel::CudaKernelSession &session,
                                      std::uint32_t numel,
                                      std::uint32_t elem_size,
                                      const TransferLayoutParams &layout) {
-  const auto output_offset = std::uint32_t{0};
+  auto output_offset = std::uint32_t{0};
   auto input_ptr = cuda_wrapper::cuDeviceptrFromOpaque(input_base);
   auto output_ptr = cuda_wrapper::cuDeviceptrFromOpaque(output_base);
   auto function = cuda_wrapper::objcFromOpaqueNoown<CUfunction>(session.function());
