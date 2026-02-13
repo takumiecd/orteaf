@@ -9,7 +9,6 @@
  */
 
 #include <span>
-#include <string_view>
 
 #include <orteaf/extension/tensor/registry/tensor_impl_types.h>
 #include <orteaf/internal/storage/registry/storage_types.h>
@@ -28,8 +27,6 @@ public:
   using Registry = ::orteaf::internal::tensor::registry::RegisteredImpls;
   using LeaseVariant = typename Registry::LeaseVariant;
   using DenseTensorImpl = ::orteaf::extension::tensor::DenseTensorImpl;
-  using DType = ::orteaf::internal::DType;
-  using Execution = ::orteaf::internal::execution::Execution;
   using Dim = ::orteaf::extension::tensor::DenseTensorLayout::Dim;
 
   struct Config {
@@ -49,23 +46,9 @@ public:
   // ===== Creation (typed) =====
 
   template <typename Impl>
-  static auto create(std::span<const Dim> shape, DType dtype,
-                     Execution execution, std::size_t alignment = 0) {
-    return registry().template get<Impl>().create(shape, dtype, execution,
-                                                  alignment);
+  static auto create(const typename Impl::CreateRequest &request) {
+    return registry().template get<Impl>().create(request);
   }
-
-  // ===== Creation (by name) =====
-
-  /// @brief Create tensor impl by type name (e.g., "dense", "coo").
-  /// @throws std::system_error if name is not registered.
-  static LeaseVariant createByName(std::string_view impl_name,
-                                   std::span<const Dim> shape, DType dtype,
-                                   Execution execution,
-                                   std::size_t alignment = 0);
-
-  /// @brief Check if an impl type name is registered.
-  static bool hasImplName(std::string_view impl_name);
 
   // ===== Auto-dispatch Operations =====
 

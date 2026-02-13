@@ -24,6 +24,7 @@
 #include <orteaf/internal/storage/registry/storage_types.h>
 #include <orteaf/internal/storage/storage_lease.h>
 #include <orteaf/internal/tensor/concepts/tensor_impl_concepts.h>
+#include <orteaf/internal/tensor/manager/tensor_impl_creation_traits.h>
 
 namespace orteaf::internal::tensor {
 
@@ -43,19 +44,6 @@ using TensorImplHandle =
 
 namespace detail {
 
-/// @brief Request for creating a new TensorImpl
-template <typename Impl> struct TensorImplCreateRequest {
-  using Layout = typename Impl::Layout;
-  using Dims = typename Layout::Dims;
-  using DType = ::orteaf::internal::DType;
-  using Execution = ::orteaf::internal::execution::Execution;
-
-  Dims shape{};
-  DType dtype{DType::F32};
-  Execution execution{Execution::Cpu};
-  std::size_t alignment{0};
-};
-
 /// @brief Request for creating a view (shares storage)
 template <typename Impl> struct TensorImplViewRequest {
   using Layout = typename Impl::Layout;
@@ -67,8 +55,9 @@ template <typename Impl> struct TensorImplViewRequest {
 
 /// @brief Combined request type
 template <typename Impl>
-using TensorImplRequest =
-    std::variant<TensorImplCreateRequest<Impl>, TensorImplViewRequest<Impl>>;
+using TensorImplRequest = std::variant<
+    typename TensorImplCreationTraits<Impl>::CreateRequest,
+    TensorImplViewRequest<Impl>>;
 
 /// @brief Context for pool operations
 struct TensorImplContext {
@@ -77,6 +66,7 @@ struct TensorImplContext {
 
 /// @brief Pool traits for generic TensorImpl
 template <typename Impl> struct TensorImplPoolTraits {
+  using CreateRequest = typename TensorImplCreationTraits<Impl>::CreateRequest;
   using Payload = Impl;
   using Handle = TensorImplHandle<Impl>;
   using Request = TensorImplRequest<Impl>;
@@ -130,10 +120,9 @@ public:
   using Layout = typename Impl::Layout;
   using Dims = typename Layout::Dims;
   using Dim = typename Layout::Dim;
+  using CreateRequest = typename TensorImplCreationTraits<Impl>::CreateRequest;
   using StorageRegistry = ::orteaf::internal::storage::RegisteredStorages;
   using StorageLease = ::orteaf::internal::storage::StorageLease;
-  using DType = ::orteaf::internal::DType;
-  using Execution = ::orteaf::internal::execution::Execution;
 
   struct Config {
     std::size_t control_block_capacity{64};
@@ -157,8 +146,7 @@ public:
 
   // ===== Creation =====
 
-  TensorImplLease create(std::span<const Dim> shape, DType dtype,
-                         Execution execution, std::size_t alignment = 0);
+  TensorImplLease create(const CreateRequest &request);
 
   // ===== View Operations (conditionally enabled) =====
 

@@ -10,6 +10,7 @@
  */
 
 #include <cstddef>
+#include <cstdint>
 #include <utility>
 
 #include <orteaf/extension/tensor/layout/dense_tensor_layout.h>
@@ -43,6 +44,18 @@ public:
       ::orteaf::internal::kernel::Role::Data>;
   using DType = ::orteaf::internal::DType;
   using Execution = ::orteaf::internal::execution::Execution;
+
+  struct CreateRequest {
+    enum class PlacementPolicy : std::uint8_t {
+      CurrentContext,
+    };
+
+    Dims shape{};
+    DType dtype{DType::F32};
+    Execution execution{Execution::Cpu};
+    std::size_t alignment{0};
+    PlacementPolicy placement_policy{PlacementPolicy::CurrentContext};
+  };
 
   /**
    * @brief Default constructor. Creates an uninitialized impl.

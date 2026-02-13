@@ -1,5 +1,9 @@
 #include <gtest/gtest.h>
 
+#include <array>
+#include <cstdint>
+#include <span>
+
 #include <orteaf/extension/tensor/registry/tensor_impl_types.h>
 #include <orteaf/internal/execution/cpu/api/cpu_execution_api.h>
 #include <orteaf/internal/storage/registry/storage_types.h>
@@ -13,6 +17,18 @@ using DenseTensorImpl = orteaf::extension::tensor::DenseTensorImpl;
 using DType = orteaf::internal::DType;
 using Execution = orteaf::internal::execution::Execution;
 using StorageRegistry = storage_reg::RegisteredStorages;
+
+DenseTensorImpl::CreateRequest makeDenseRequest(std::span<const std::int64_t> shape,
+                                                DType dtype,
+                                                Execution execution,
+                                                std::size_t alignment = 0) {
+  DenseTensorImpl::CreateRequest request{};
+  request.shape.assign(shape.begin(), shape.end());
+  request.dtype = dtype;
+  request.execution = execution;
+  request.alignment = alignment;
+  return request;
+}
 
 class TensorImplRegistryTest : public ::testing::Test {
 protected:
@@ -61,8 +77,8 @@ TEST_F(TensorImplRegistryTest, LeaseVariantHoldsMonostate) {
 
 TEST_F(TensorImplRegistryTest, LeaseVariantHoldsDenseLease) {
   std::array<int64_t, 2> shape{3, 4};
-  auto lease = registry_.get<DenseTensorImpl>().create(shape, DType::F32,
-                                                       Execution::Cpu);
+  auto lease = registry_.get<DenseTensorImpl>().create(
+      makeDenseRequest(shape, DType::F32, Execution::Cpu));
 
   registry::RegisteredImpls::LeaseVariant variant = lease;
   EXPECT_FALSE(std::holds_alternative<std::monostate>(variant));
@@ -74,8 +90,8 @@ TEST_F(TensorImplRegistryTest, LeaseVariantHoldsDenseLease) {
 
 TEST_F(TensorImplRegistryTest, DispatchToDenseManager) {
   std::array<int64_t, 2> shape{3, 4};
-  auto lease = registry_.get<DenseTensorImpl>().create(shape, DType::F32,
-                                                       Execution::Cpu);
+  auto lease = registry_.get<DenseTensorImpl>().create(
+      makeDenseRequest(shape, DType::F32, Execution::Cpu));
 
   // Verify dispatch correctly identifies the impl type
   using Lease = registry::TensorImplTraits<DenseTensorImpl>::Lease;

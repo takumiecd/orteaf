@@ -5,6 +5,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <span>
 #include <system_error>
 #include <vector>
 
@@ -32,6 +33,16 @@ using DenseTensorImpl = ::orteaf::extension::tensor::DenseTensorImpl;
 using CudaStorageLease = ::orteaf::internal::storage::CudaStorageLease;
 
 namespace {
+
+tensor::Tensor makeDense(std::span<const std::int64_t> shape, DType dtype,
+                         Execution execution, std::size_t alignment = 0) {
+  return tensor::Tensor::denseBuilder()
+      .withShape(shape)
+      .withDType(dtype)
+      .withExecution(execution)
+      .withAlignment(alignment)
+      .build();
+}
 
 bool copyToHost(const tensor::Tensor &tensor_ref, std::vector<float> &host) {
   auto *lease = tensor_ref.tryAs<DenseTensorImpl>();
@@ -87,7 +98,7 @@ protected:
 
 TEST_F(FillCudaOpTest, FillsDenseTensorF32) {
   std::array<std::int64_t, 1> shape{8};
-  auto tensor_ref = tensor::Tensor::dense(shape, DType::F32, Execution::Cuda);
+  auto tensor_ref = makeDense(shape, DType::F32, Execution::Cuda);
 
   ops::TensorOps::fill(tensor_ref, 3.5);
 
@@ -101,7 +112,7 @@ TEST_F(FillCudaOpTest, FillsDenseTensorF32) {
 
 TEST_F(FillCudaOpTest, FillsContiguousSliceViewF32) {
   std::array<std::int64_t, 1> shape{8};
-  auto base = tensor::Tensor::dense(shape, DType::F32, Execution::Cuda);
+  auto base = makeDense(shape, DType::F32, Execution::Cuda);
 
   ops::TensorOps::fill(base, -1.0);
 
@@ -124,7 +135,7 @@ TEST_F(FillCudaOpTest, FillsContiguousSliceViewF32) {
 
 TEST_F(FillCudaOpTest, FillsNonContiguousSliceViewF32) {
   std::array<std::int64_t, 2> shape{4, 4};
-  auto base = tensor::Tensor::dense(shape, DType::F32, Execution::Cuda);
+  auto base = makeDense(shape, DType::F32, Execution::Cuda);
 
   ops::TensorOps::fill(base, -3.0);
 
@@ -148,7 +159,7 @@ TEST_F(FillCudaOpTest, FillsNonContiguousSliceViewF32) {
 
 TEST_F(FillCudaOpTest, RejectsNonF32DType) {
   std::array<std::int64_t, 1> shape{4};
-  auto tensor_ref = tensor::Tensor::dense(shape, DType::I32, Execution::Cuda);
+  auto tensor_ref = makeDense(shape, DType::I32, Execution::Cuda);
 
   EXPECT_THROW(ops::TensorOps::fill(tensor_ref, 1.0), std::system_error);
 }

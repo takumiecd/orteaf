@@ -1,5 +1,9 @@
 #include <gtest/gtest.h>
 
+#include <array>
+#include <cstdint>
+#include <span>
+
 #include <orteaf/internal/execution/cpu/api/cpu_execution_api.h>
 #include <orteaf/internal/tensor/api/tensor_api.h>
 
@@ -10,6 +14,24 @@ namespace cpu_api = orteaf::internal::execution::cpu::api;
 using DenseTensorImpl = orteaf::extension::tensor::DenseTensorImpl;
 using DType = orteaf::internal::DType;
 using Execution = orteaf::internal::execution::Execution;
+
+DenseTensorImpl::CreateRequest makeDenseRequest(std::span<const std::int64_t> shape,
+                                                DType dtype,
+                                                Execution execution,
+                                                std::size_t alignment = 0) {
+  DenseTensorImpl::CreateRequest request{};
+  request.shape.assign(shape.begin(), shape.end());
+  request.dtype = dtype;
+  request.execution = execution;
+  request.alignment = alignment;
+  return request;
+}
+
+auto createDense(std::span<const std::int64_t> shape, DType dtype,
+                 Execution execution, std::size_t alignment = 0) {
+  return tensor_api::TensorApi::create<DenseTensorImpl>(
+      makeDenseRequest(shape, dtype, execution, alignment));
+}
 
 class TensorApiInternalTest : public ::testing::Test {
 protected:
@@ -47,7 +69,7 @@ TEST_F(TensorApiInternalTest, DoubleConfigureThrows) {
 
 TEST_F(TensorApiInternalTest, CreateDenseViaTemplate) {
   std::array<int64_t, 2> shape{3, 4};
-  auto lease = tensor_api::TensorApi::create<DenseTensorImpl>(shape, DType::F32,
+  auto lease = createDense(shape, DType::F32,
                                                               Execution::Cpu);
 
   ASSERT_TRUE(lease);
@@ -59,9 +81,9 @@ TEST_F(TensorApiInternalTest, CreateDifferentShapes) {
   std::array<int64_t, 1> shape1{10};
   std::array<int64_t, 4> shape2{2, 3, 4, 5};
 
-  auto lease1 = tensor_api::TensorApi::create<DenseTensorImpl>(
+  auto lease1 = createDense(
       shape1, DType::F32, Execution::Cpu);
-  auto lease2 = tensor_api::TensorApi::create<DenseTensorImpl>(
+  auto lease2 = createDense(
       shape2, DType::F32, Execution::Cpu);
 
   EXPECT_EQ(lease1->rank(), 1);
@@ -75,7 +97,7 @@ TEST_F(TensorApiInternalTest, CreateDifferentShapes) {
 
 TEST_F(TensorApiInternalTest, AutoDispatchTranspose) {
   std::array<int64_t, 2> shape{3, 4};
-  auto lease = tensor_api::TensorApi::create<DenseTensorImpl>(shape, DType::F32,
+  auto lease = createDense(shape, DType::F32,
                                                               Execution::Cpu);
 
   tensor_api::TensorApi::LeaseVariant variant = lease;
@@ -88,7 +110,7 @@ TEST_F(TensorApiInternalTest, AutoDispatchTranspose) {
 
 TEST_F(TensorApiInternalTest, TransposePreservesType) {
   std::array<int64_t, 2> shape{3, 4};
-  auto lease = tensor_api::TensorApi::create<DenseTensorImpl>(shape, DType::F32,
+  auto lease = createDense(shape, DType::F32,
                                                               Execution::Cpu);
 
   tensor_api::TensorApi::LeaseVariant variant = lease;
@@ -108,7 +130,7 @@ TEST_F(TensorApiInternalTest, TransposePreservesType) {
 
 TEST_F(TensorApiInternalTest, AutoDispatchReshape) {
   std::array<int64_t, 2> shape{3, 4};
-  auto lease = tensor_api::TensorApi::create<DenseTensorImpl>(shape, DType::F32,
+  auto lease = createDense(shape, DType::F32,
                                                               Execution::Cpu);
 
   tensor_api::TensorApi::LeaseVariant variant = lease;
@@ -125,7 +147,7 @@ TEST_F(TensorApiInternalTest, AutoDispatchReshape) {
 
 TEST_F(TensorApiInternalTest, AutoDispatchSlice) {
   std::array<int64_t, 2> shape{6, 8};
-  auto lease = tensor_api::TensorApi::create<DenseTensorImpl>(shape, DType::F32,
+  auto lease = createDense(shape, DType::F32,
                                                               Execution::Cpu);
 
   tensor_api::TensorApi::LeaseVariant variant = lease;
@@ -143,7 +165,7 @@ TEST_F(TensorApiInternalTest, AutoDispatchSlice) {
 
 TEST_F(TensorApiInternalTest, AutoDispatchSqueeze) {
   std::array<int64_t, 3> shape{1, 4, 1};
-  auto lease = tensor_api::TensorApi::create<DenseTensorImpl>(shape, DType::F32,
+  auto lease = createDense(shape, DType::F32,
                                                               Execution::Cpu);
 
   tensor_api::TensorApi::LeaseVariant variant = lease;
@@ -154,7 +176,7 @@ TEST_F(TensorApiInternalTest, AutoDispatchSqueeze) {
 
 TEST_F(TensorApiInternalTest, AutoDispatchUnsqueeze) {
   std::array<int64_t, 2> shape{3, 4};
-  auto lease = tensor_api::TensorApi::create<DenseTensorImpl>(shape, DType::F32,
+  auto lease = createDense(shape, DType::F32,
                                                               Execution::Cpu);
 
   tensor_api::TensorApi::LeaseVariant variant = lease;
@@ -195,7 +217,7 @@ TEST_F(TensorApiInternalTest, SqueezeInvalidThrows) {
 
 TEST_F(TensorApiInternalTest, ChainedAutoDispatch) {
   std::array<int64_t, 2> shape{3, 4};
-  auto lease = tensor_api::TensorApi::create<DenseTensorImpl>(shape, DType::F32,
+  auto lease = createDense(shape, DType::F32,
                                                               Execution::Cpu);
 
   tensor_api::TensorApi::LeaseVariant variant = lease;
@@ -206,34 +228,6 @@ TEST_F(TensorApiInternalTest, ChainedAutoDispatch) {
   auto unsqueezed = tensor_api::TensorApi::unsqueeze(transposed, 0);
 
   ASSERT_FALSE(std::holds_alternative<std::monostate>(unsqueezed));
-}
-
-// =============================================================================
-// CreateByName Tests
-// =============================================================================
-
-TEST_F(TensorApiInternalTest, CreateByNameDense) {
-  std::array<int64_t, 2> shape{3, 4};
-  auto variant = tensor_api::TensorApi::createByName("dense", shape, DType::F32,
-                                                     Execution::Cpu);
-
-  ASSERT_FALSE(std::holds_alternative<std::monostate>(variant));
-}
-
-TEST_F(TensorApiInternalTest, CreateByNameUnknownThrows) {
-  std::array<int64_t, 2> shape{3, 4};
-  EXPECT_THROW(tensor_api::TensorApi::createByName("unknown", shape, DType::F32,
-                                                   Execution::Cpu),
-               std::system_error);
-}
-
-TEST_F(TensorApiInternalTest, HasImplNameDense) {
-  EXPECT_TRUE(tensor_api::TensorApi::hasImplName("dense"));
-}
-
-TEST_F(TensorApiInternalTest, HasImplNameUnknown) {
-  EXPECT_FALSE(tensor_api::TensorApi::hasImplName("unknown"));
-  EXPECT_FALSE(tensor_api::TensorApi::hasImplName("coo"));
 }
 
 } // namespace

@@ -30,7 +30,12 @@ using TensorImplVariant =
  *
  * @par Example
  * @code
- * auto a = Tensor::dense({3, 4}, DType::F32, Execution::Cpu);
+ * std::array<Tensor::Dim, 2> shape{3, 4};
+ * auto a = Tensor::denseBuilder()
+ *              .withShape(shape)
+ *              .withDType(DType::F32)
+ *              .withExecution(Execution::Cpu)
+ *              .build();
  * auto b = a.transpose({1, 0});
  * @endcode
  */
@@ -41,6 +46,8 @@ public:
   using Dim = Layout::Dim;
   using DType = ::orteaf::internal::DType;
   using Execution = ::orteaf::internal::execution::Execution;
+  using DenseCreateRequest =
+      typename ::orteaf::extension::tensor::DenseTensorImpl::CreateRequest;
 
   Tensor() = default;
 
@@ -54,10 +61,25 @@ public:
   Tensor &operator=(Tensor &&) = default;
   ~Tensor() = default;
 
+  class DenseBuilder {
+  public:
+    DenseBuilder() = default;
+
+    DenseBuilder &withShape(std::span<const Dim> shape);
+    DenseBuilder &withDType(DType dtype) noexcept;
+    DenseBuilder &withExecution(Execution execution) noexcept;
+    DenseBuilder &withAlignment(std::size_t alignment) noexcept;
+    Tensor build() const;
+
+  private:
+    DenseCreateRequest request_{};
+    bool shape_set_{false};
+    bool execution_set_{false};
+  };
+
   // ===== Factory methods =====
 
-  static Tensor dense(std::span<const Dim> shape, DType dtype,
-                      Execution execution, std::size_t alignment = 0);
+  static DenseBuilder denseBuilder();
 
   // Future: Tensor::coo(), Tensor::csr() generated automatically
   // by adding to RegisteredImpls

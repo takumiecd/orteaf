@@ -67,34 +67,6 @@ TensorApi::Registry &TensorApi::registry() {
   return registrySingleton();
 }
 
-// ===== Creation by Name =====
-
-TensorApi::LeaseVariant TensorApi::createByName(std::string_view impl_name,
-                                                std::span<const Dim> shape,
-                                                DType dtype,
-                                                Execution execution,
-                                                std::size_t alignment) {
-  ensureConfigured();
-
-  LeaseVariant result;
-  bool found = registrySingleton().dispatchByName(
-      impl_name, [&]<typename Impl>(auto &manager) {
-        result = manager.create(shape, dtype, execution, alignment);
-      });
-
-  if (!found) {
-    ::orteaf::internal::diagnostics::error::throwError(
-        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidArgument,
-        "Unknown tensor impl type name");
-  }
-
-  return result;
-}
-
-bool TensorApi::hasImplName(std::string_view impl_name) {
-  return Registry::hasName(impl_name);
-}
-
 // ===== Auto-dispatch Operations =====
 
 TensorApi::LeaseVariant

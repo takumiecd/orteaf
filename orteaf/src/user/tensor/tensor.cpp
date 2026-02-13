@@ -20,10 +20,45 @@ void ensureValid(const Tensor &t) {
 
 } // namespace
 
-Tensor Tensor::dense(std::span<const Dim> shape, DType dtype,
-                     Execution execution, std::size_t alignment) {
-  auto impl =
-      TensorApi::create<DenseTensorImpl>(shape, dtype, execution, alignment);
+Tensor::DenseBuilder Tensor::denseBuilder() { return DenseBuilder{}; }
+
+Tensor::DenseBuilder &Tensor::DenseBuilder::withShape(
+    std::span<const Dim> shape) {
+  request_.shape.assign(shape.begin(), shape.end());
+  shape_set_ = true;
+  return *this;
+}
+
+Tensor::DenseBuilder &Tensor::DenseBuilder::withDType(DType dtype) noexcept {
+  request_.dtype = dtype;
+  return *this;
+}
+
+Tensor::DenseBuilder &
+Tensor::DenseBuilder::withExecution(Execution execution) noexcept {
+  request_.execution = execution;
+  execution_set_ = true;
+  return *this;
+}
+
+Tensor::DenseBuilder &
+Tensor::DenseBuilder::withAlignment(std::size_t alignment) noexcept {
+  request_.alignment = alignment;
+  return *this;
+}
+
+Tensor Tensor::DenseBuilder::build() const {
+  if (!shape_set_) {
+    ::orteaf::internal::diagnostics::error::throwError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+        "Tensor::DenseBuilder requires withShape() before build()");
+  }
+  if (!execution_set_) {
+    ::orteaf::internal::diagnostics::error::throwError(
+        ::orteaf::internal::diagnostics::error::OrteafErrc::InvalidParameter,
+        "Tensor::DenseBuilder requires withExecution() before build()");
+  }
+  auto impl = TensorApi::create<DenseTensorImpl>(request_);
   return Tensor(std::move(impl));
 }
 

@@ -1,5 +1,9 @@
 #include <gtest/gtest.h>
 
+#include <array>
+#include <cstdint>
+#include <span>
+
 #include <orteaf/internal/execution/cpu/api/cpu_execution_api.h>
 #include <orteaf/internal/tensor/api/tensor_api.h>
 #include <orteaf/user/tensor/tensor.h>
@@ -10,6 +14,32 @@ namespace cpu_api = orteaf::internal::execution::cpu::api;
 using DType = orteaf::internal::DType;
 using Execution = orteaf::internal::execution::Execution;
 using DenseTensorImpl = orteaf::extension::tensor::DenseTensorImpl;
+
+namespace {
+
+DenseTensorImpl::CreateRequest makeDenseRequest(std::span<const std::int64_t> shape,
+                                                DType dtype,
+                                                Execution execution,
+                                                std::size_t alignment = 0) {
+  DenseTensorImpl::CreateRequest request{};
+  request.shape.assign(shape.begin(), shape.end());
+  request.dtype = dtype;
+  request.execution = execution;
+  request.alignment = alignment;
+  return request;
+}
+
+tensor::Tensor makeDense(std::span<const std::int64_t> shape, DType dtype,
+                         Execution execution, std::size_t alignment = 0) {
+  return tensor::Tensor::denseBuilder()
+      .withShape(shape)
+      .withDType(dtype)
+      .withExecution(execution)
+      .withAlignment(alignment)
+      .build();
+}
+
+} // namespace
 
 class TensorApiTest : public ::testing::Test {
 protected:
@@ -33,8 +63,8 @@ protected:
 
 TEST_F(TensorApiTest, CreateDenseTensor) {
   std::array<int64_t, 2> shape{3, 4};
-  auto lease = tensor_api::TensorApi::create<DenseTensorImpl>(shape, DType::F32,
-                                                              Execution::Cpu);
+  auto lease = tensor_api::TensorApi::create<DenseTensorImpl>(
+      makeDenseRequest(shape, DType::F32, Execution::Cpu));
 
   ASSERT_TRUE(lease);
   EXPECT_EQ(lease->numel(), 12);
@@ -44,7 +74,7 @@ TEST_F(TensorApiTest, CreateDenseTensor) {
 TEST_F(TensorApiTest, AutoDispatchTranspose) {
   std::array<int64_t, 2> shape{3, 4};
   auto original = tensor_api::TensorApi::create<DenseTensorImpl>(
-      shape, DType::F32, Execution::Cpu);
+      makeDenseRequest(shape, DType::F32, Execution::Cpu));
 
   // Auto-dispatch via LeaseVariant
   tensor_api::TensorApi::LeaseVariant variant = original;
@@ -60,7 +90,7 @@ TEST_F(TensorApiTest, AutoDispatchTranspose) {
 
 TEST_F(TensorApiTest, TensorDenseFactory) {
   std::array<int64_t, 2> shape{3, 4};
-  auto t = tensor::Tensor::dense(shape, DType::F32, Execution::Cpu);
+  auto t = makeDense(shape, DType::F32, Execution::Cpu);
 
   EXPECT_TRUE(t.valid());
   EXPECT_TRUE(t.is<DenseTensorImpl>());
@@ -68,9 +98,24 @@ TEST_F(TensorApiTest, TensorDenseFactory) {
   EXPECT_EQ(t.rank(), 2);
 }
 
+TEST_F(TensorApiTest, DenseBuilderRequiresShape) {
+  EXPECT_THROW(tensor::Tensor::denseBuilder()
+                   .withDType(DType::F32)
+                   .withExecution(Execution::Cpu)
+                   .build(),
+               std::system_error);
+}
+
+TEST_F(TensorApiTest, DenseBuilderRequiresExecution) {
+  std::array<int64_t, 2> shape{3, 4};
+  EXPECT_THROW(
+      tensor::Tensor::denseBuilder().withShape(shape).withDType(DType::F32).build(),
+      std::system_error);
+}
+
 TEST_F(TensorApiTest, TensorTranspose) {
   std::array<int64_t, 2> shape{3, 4};
-  auto a = tensor::Tensor::dense(shape, DType::F32, Execution::Cpu);
+  auto a = makeDense(shape, DType::F32, Execution::Cpu);
 
   std::array<std::size_t, 2> perm{1, 0};
   auto b = a.transpose(perm);
@@ -83,7 +128,7 @@ TEST_F(TensorApiTest, TensorTranspose) {
 
 TEST_F(TensorApiTest, TensorReshape) {
   std::array<int64_t, 2> shape{3, 4};
-  auto a = tensor::Tensor::dense(shape, DType::F32, Execution::Cpu);
+  auto a = makeDense(shape, DType::F32, Execution::Cpu);
 
   std::array<int64_t, 3> new_shape{2, 2, 3};
   auto b = a.reshape(new_shape);
@@ -94,7 +139,7 @@ TEST_F(TensorApiTest, TensorReshape) {
 
 TEST_F(TensorApiTest, TensorSlice) {
   std::array<int64_t, 2> shape{6, 6};
-  auto a = tensor::Tensor::dense(shape, DType::F32, Execution::Cpu);
+  auto a = makeDense(shape, DType::F32, Execution::Cpu);
 
   std::array<int64_t, 2> starts{2, 2};
   std::array<int64_t, 2> sizes{3, 3};
@@ -108,7 +153,7 @@ TEST_F(TensorApiTest, TensorSlice) {
 
 TEST_F(TensorApiTest, TensorSqueeze) {
   std::array<int64_t, 4> shape{1, 3, 1, 4};
-  auto a = tensor::Tensor::dense(shape, DType::F32, Execution::Cpu);
+  auto a = makeDense(shape, DType::F32, Execution::Cpu);
 
   auto b = a.squeeze();
 
@@ -118,7 +163,7 @@ TEST_F(TensorApiTest, TensorSqueeze) {
 
 TEST_F(TensorApiTest, TensorUnsqueeze) {
   std::array<int64_t, 2> shape{3, 4};
-  auto a = tensor::Tensor::dense(shape, DType::F32, Execution::Cpu);
+  auto a = makeDense(shape, DType::F32, Execution::Cpu);
 
   auto b = a.unsqueeze(1);
 
@@ -129,7 +174,7 @@ TEST_F(TensorApiTest, TensorUnsqueeze) {
 
 TEST_F(TensorApiTest, TensorChainOperations) {
   std::array<int64_t, 3> shape{2, 3, 4};
-  auto a = tensor::Tensor::dense(shape, DType::F32, Execution::Cpu);
+  auto a = makeDense(shape, DType::F32, Execution::Cpu);
 
   std::array<int64_t, 2> reshape_to{6, 4};
   std::array<std::size_t, 2> perm{1, 0};

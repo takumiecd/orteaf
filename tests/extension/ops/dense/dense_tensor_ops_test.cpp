@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 #include <iostream>
+#include <span>
 #include <sstream>
 #include <system_error>
 
@@ -18,6 +19,20 @@ namespace init = ::orteaf::internal::init;
 
 using DType = ::orteaf::internal::DType;
 using Execution = ::orteaf::internal::execution::Execution;
+
+namespace {
+
+tensor::Tensor makeDense(std::span<const std::int64_t> shape, DType dtype,
+                         Execution execution, std::size_t alignment = 0) {
+  return tensor::Tensor::denseBuilder()
+      .withShape(shape)
+      .withDType(dtype)
+      .withExecution(execution)
+      .withAlignment(alignment)
+      .build();
+}
+
+} // namespace
 
 class TensorOpsTest : public ::testing::Test {
 protected:
@@ -44,7 +59,7 @@ TEST_F(TensorOpsTest, InvalidTensorThrowsOnPrint) {
 
 TEST_F(TensorOpsTest, PrintAcceptsConstTensor) {
   std::array<std::int64_t, 2> shape{2, 2};
-  auto tensor_value = tensor::Tensor::dense(shape, DType::F32, Execution::Cpu);
+  auto tensor_value = makeDense(shape, DType::F32, Execution::Cpu);
 
   const tensor::Tensor &const_tensor = tensor_value;
   std::ostringstream oss;

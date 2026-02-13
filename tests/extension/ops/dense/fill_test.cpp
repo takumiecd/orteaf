@@ -3,6 +3,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <span>
 
 #include <orteaf/extension/ops/tensor_ops.h>
 #include <orteaf/extension/tensor/dense_tensor_impl.h>
@@ -22,6 +23,16 @@ using DenseTensorImpl = ::orteaf::extension::tensor::DenseTensorImpl;
 using CpuStorageLease = ::orteaf::internal::storage::CpuStorageLease;
 
 namespace {
+
+tensor::Tensor makeDense(std::span<const std::int64_t> shape, DType dtype,
+                         Execution execution, std::size_t alignment = 0) {
+  return tensor::Tensor::denseBuilder()
+      .withShape(shape)
+      .withDType(dtype)
+      .withExecution(execution)
+      .withAlignment(alignment)
+      .build();
+}
 
 float *getCpuBuffer(tensor::Tensor &t) {
   auto *lease = t.tryAs<DenseTensorImpl>();
@@ -54,7 +65,7 @@ protected:
 
 TEST_F(FillOpTest, FillsDenseTensor) {
   std::array<std::int64_t, 2> shape{2, 3};
-  auto t = tensor::Tensor::dense(shape, DType::F32, Execution::Cpu);
+  auto t = makeDense(shape, DType::F32, Execution::Cpu);
 
   ops::TensorOps::fill(t, 1.5);
 
@@ -67,7 +78,7 @@ TEST_F(FillOpTest, FillsDenseTensor) {
 
 TEST_F(FillOpTest, FillsStridedSliceView) {
   std::array<std::int64_t, 2> shape{4, 4};
-  auto base = tensor::Tensor::dense(shape, DType::F32, Execution::Cpu);
+  auto base = makeDense(shape, DType::F32, Execution::Cpu);
 
   float *data = getCpuBuffer(base);
   ASSERT_NE(data, nullptr);
