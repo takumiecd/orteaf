@@ -30,8 +30,8 @@ ops:
       commutative: false
       differentiable: false
 
-  - id: "CopyHostToMps"
-    display_name: "Copy Host To MPS"
+  - id: "CopyHostToDevice"
+    display_name: "Copy Host To Device"
     category: "utility"
     arity: 1
     inputs:
@@ -42,7 +42,7 @@ ops:
           categories: ["floating_point", "signed_integer", "unsigned_integer", "boolean"]
     outputs:
       - name: "output"
-        description: "MPS tensor receiving copied values"
+        description: "Device tensor receiving copied values"
         dtype_rule:
           kind: "same_as"
           input: "input"
@@ -53,18 +53,18 @@ ops:
       kind: "identity"
       description: "Output shape matches input shape"
     metadata:
-      description: "Copies tensor data from host storage into MPS storage"
-      tags: ["copy", "transfer", "mps"]
+      description: "Copies tensor data from host storage into device storage"
+      tags: ["copy", "transfer", "device"]
       commutative: false
       differentiable: false
 
-  - id: "CopyMpsToHost"
-    display_name: "Copy MPS To Host"
+  - id: "CopyDeviceToHost"
+    display_name: "Copy Device To Host"
     category: "utility"
     arity: 1
     inputs:
       - name: "input"
-        description: "MPS tensor to download"
+        description: "Device tensor to download"
         dtype_constraints:
           mode: "allow"
           categories: ["floating_point", "signed_integer", "unsigned_integer", "boolean"]
@@ -81,8 +81,8 @@ ops:
       kind: "identity"
       description: "Output shape matches input shape"
     metadata:
-      description: "Copies tensor data from MPS storage into host storage"
-      tags: ["copy", "transfer", "mps"]
+      description: "Copies tensor data from device storage into host storage"
+      tags: ["copy", "transfer", "device"]
       commutative: false
       differentiable: false
 

@@ -72,6 +72,11 @@ if(ORTEAF_TEST_SOURCES)
     # Set CUDA architectures for test target if CUDA is enabled
     if(ORTEAF_ENABLE_CUDA_INT AND CMAKE_CUDA_ARCHITECTURES)
         set_property(TARGET orteaf_tests PROPERTY CUDA_ARCHITECTURES "${CMAKE_CUDA_ARCHITECTURES}")
+        target_compile_options(orteaf_tests
+            PRIVATE
+                $<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>
+                $<$<COMPILE_LANGUAGE:CUDA>:-Xcudafe=--diag_suppress=20012>
+        )
     endif()
     
     # Propagate compile definitions from main CMakeLists.txt

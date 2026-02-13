@@ -20,12 +20,7 @@ void ensureValid(const Tensor &t) {
 
 } // namespace
 
-Tensor Tensor::dense(std::span<const Dim> shape, DType dtype,
-                     Execution execution, std::size_t alignment) {
-  auto impl =
-      TensorApi::create<DenseTensorImpl>(shape, dtype, execution, alignment);
-  return Tensor(std::move(impl));
-}
+Tensor::DenseBuilder Tensor::denseBuilder() { return DenseTensorImpl::builder(); }
 
 bool Tensor::valid() const noexcept {
   return !std::holds_alternative<std::monostate>(impl_);

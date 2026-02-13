@@ -9,7 +9,7 @@
 #include <orteaf/internal/base/inline_vector.h>
 #include <orteaf/internal/diagnostics/error/error.h>
 
-namespace orteaf::extension::kernel::mps::detail {
+namespace orteaf::extension::kernel::cuda::detail {
 
 namespace error = ::orteaf::internal::diagnostics::error;
 
@@ -219,4 +219,4 @@ inline ShapeVector makeContiguousStrides(const ShapeVector &shape,
   return strides;
 }
 
-} // namespace orteaf::extension::kernel::mps::detail
+} // namespace orteaf::extension::kernel::cuda::detail

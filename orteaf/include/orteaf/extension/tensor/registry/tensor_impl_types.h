@@ -16,18 +16,6 @@
 namespace orteaf::internal::tensor::registry {
 
 // =============================================================================
-// TensorImpl Traits Specializations
-// =============================================================================
-
-template <>
-struct TensorImplTraits<::orteaf::extension::tensor::DenseTensorImpl> {
-  using Manager =
-      TensorImplManager<::orteaf::extension::tensor::DenseTensorImpl>;
-  using Lease = typename Manager::TensorImplLease;
-  static constexpr const char *name = "dense";
-};
-
-// =============================================================================
 // Registered TensorImpl Types
 // =============================================================================
 

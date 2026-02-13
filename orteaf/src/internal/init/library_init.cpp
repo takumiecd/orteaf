@@ -209,15 +209,19 @@ void shutdown() {
 
   ::orteaf::internal::kernel::api::KernelRegistryApi::clear();
   ::orteaf::internal::tensor::api::TensorApi::shutdown();
-  ::orteaf::internal::execution::cpu::api::CpuExecutionApi::shutdown();
   ::orteaf::internal::execution_context::cpu::reset();
 #if ORTEAF_ENABLE_MPS
-  ::orteaf::internal::execution::mps::api::MpsExecutionApi::shutdown();
   ::orteaf::internal::execution_context::mps::reset();
 #endif
 #if ORTEAF_ENABLE_CUDA
-  ::orteaf::internal::execution::cuda::api::CudaExecutionApi::shutdown();
   ::orteaf::internal::execution_context::cuda::reset();
+#endif
+  ::orteaf::internal::execution::cpu::api::CpuExecutionApi::shutdown();
+#if ORTEAF_ENABLE_MPS
+  ::orteaf::internal::execution::mps::api::MpsExecutionApi::shutdown();
+#endif
+#if ORTEAF_ENABLE_CUDA
+  ::orteaf::internal::execution::cuda::api::CudaExecutionApi::shutdown();
 #endif
 
   g_initialized.store(false);

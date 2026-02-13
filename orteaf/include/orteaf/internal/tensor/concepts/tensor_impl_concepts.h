@@ -27,6 +27,7 @@ template <typename Impl>
 concept TensorImplConcept = requires {
   typename Impl::Layout;
   typename Impl::StorageLease;
+  typename Impl::CreateRequest;
 } && requires(const Impl &impl) {
   { impl.layout() } -> std::convertible_to<const typename Impl::Layout &>;
   {

@@ -21,19 +21,19 @@ void TensorOps::print(const Tensor &input) {
   });
 }
 
-void TensorOps::copyHostToMps(Tensor &output, const Tensor &input) {
+void TensorOps::copyHostToDevice(Tensor &output, const Tensor &input) {
   detail_ops::dispatch_out_in(
-      output, input, "copyHostToMps", [&]<typename KindTag>(KindTag) {
+      output, input, "copyHostToDevice", [&]<typename KindTag>(KindTag) {
         using Impl = typename KindTag::type;
-        detail_ops::kindCopyHostToMps<Impl>(output, input);
+        detail_ops::kindCopyHostToDevice<Impl>(output, input);
       });
 }
 
-void TensorOps::copyMpsToHost(Tensor &output, const Tensor &input) {
+void TensorOps::copyDeviceToHost(Tensor &output, const Tensor &input) {
   detail_ops::dispatch_out_in(
-      output, input, "copyMpsToHost", [&]<typename KindTag>(KindTag) {
+      output, input, "copyDeviceToHost", [&]<typename KindTag>(KindTag) {
         using Impl = typename KindTag::type;
-        detail_ops::kindCopyMpsToHost<Impl>(output, input);
+        detail_ops::kindCopyDeviceToHost<Impl>(output, input);
       });
 }
 

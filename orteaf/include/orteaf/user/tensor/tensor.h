@@ -30,7 +30,12 @@ using TensorImplVariant =
  *
  * @par Example
  * @code
- * auto a = Tensor::dense({3, 4}, DType::F32, Execution::Cpu);
+ * std::array<Tensor::Dim, 2> shape{3, 4};
+ * auto a = Tensor::denseBuilder()
+ *              .withShape(shape)
+ *              .withDType(DType::F32)
+ *              .withExecution(Execution::Cpu)
+ *              .build();
  * auto b = a.transpose({1, 0});
  * @endcode
  */
@@ -41,6 +46,7 @@ public:
   using Dim = Layout::Dim;
   using DType = ::orteaf::internal::DType;
   using Execution = ::orteaf::internal::execution::Execution;
+  using DenseBuilder = ::orteaf::extension::tensor::DenseTensorImpl::Builder;
 
   Tensor() = default;
 
@@ -56,8 +62,7 @@ public:
 
   // ===== Factory methods =====
 
-  static Tensor dense(std::span<const Dim> shape, DType dtype,
-                      Execution execution, std::size_t alignment = 0);
+  static DenseBuilder denseBuilder();
 
   // Future: Tensor::coo(), Tensor::csr() generated automatically
   // by adding to RegisteredImpls

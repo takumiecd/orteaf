@@ -5,6 +5,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <span>
 
 #include <orteaf/extension/ops/tensor_ops.h>
 #include <orteaf/extension/tensor/dense_tensor_impl.h>
@@ -29,6 +30,16 @@ using CpuStorageLease = ::orteaf::internal::storage::CpuStorageLease;
 
 namespace {
 
+tensor::Tensor makeDense(std::span<const std::int64_t> shape, DType dtype,
+                         Execution execution, std::size_t alignment = 0) {
+  return tensor::Tensor::denseBuilder()
+      .withShape(shape)
+      .withDType(dtype)
+      .withExecution(execution)
+      .withAlignment(alignment)
+      .build();
+}
+
 float *getCpuBuffer(tensor::Tensor &t) {
   auto *lease = t.tryAs<DenseTensorImpl>();
   if (!lease || !(*lease)) {
@@ -50,8 +61,9 @@ float *getCpuBuffer(tensor::Tensor &t) {
 }
 
 tensor::Tensor copyToHost(const tensor::Tensor &src) {
-  auto host = tensor::Tensor::dense(src.shape(), src.dtype(), Execution::Cpu);
-  ops::TensorOps::copyMpsToHost(host, src);
+  const auto src_shape = src.shape();
+  auto host = makeDense(src_shape, src.dtype(), Execution::Cpu);
+  ops::TensorOps::copyDeviceToHost(host, src);
   return host;
 }
 
@@ -74,7 +86,7 @@ protected:
 
 TEST_F(FillMpsOpTest, FillsDenseTensorF32) {
   std::array<std::int64_t, 1> shape{8};
-  auto t = tensor::Tensor::dense(shape, DType::F32, Execution::Mps);
+  auto t = makeDense(shape, DType::F32, Execution::Mps);
 
   ops::TensorOps::fill(t, 3.5);
   auto host = copyToHost(t);
@@ -88,7 +100,7 @@ TEST_F(FillMpsOpTest, FillsDenseTensorF32) {
 
 TEST_F(FillMpsOpTest, FillsContiguousSliceViewF32) {
   std::array<std::int64_t, 1> shape{8};
-  auto base = tensor::Tensor::dense(shape, DType::F32, Execution::Mps);
+  auto base = makeDense(shape, DType::F32, Execution::Mps);
 
   ops::TensorOps::fill(base, -1.0);
 
@@ -111,7 +123,7 @@ TEST_F(FillMpsOpTest, FillsContiguousSliceViewF32) {
 
 TEST_F(FillMpsOpTest, FillsNonContiguousSliceViewF32) {
   std::array<std::int64_t, 2> shape{4, 4};
-  auto base = tensor::Tensor::dense(shape, DType::F32, Execution::Mps);
+  auto base = makeDense(shape, DType::F32, Execution::Mps);
 
   ops::TensorOps::fill(base, -3.0);
 

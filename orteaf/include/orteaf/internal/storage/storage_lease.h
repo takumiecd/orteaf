@@ -33,12 +33,19 @@ public:
 #if ORTEAF_ENABLE_MPS
   using MpsLease = registry::MpsStorageLease;
 #endif
+#if ORTEAF_ENABLE_CUDA
+  using CudaLease = registry::CudaStorageLease;
+#endif
 
   // Variant type holding all backend lease implementations
   using Variant = std::variant<std::monostate, CpuLease
 #if ORTEAF_ENABLE_MPS
                                ,
                                MpsLease
+#endif
+#if ORTEAF_ENABLE_CUDA
+                               ,
+                               CudaLease
 #endif
                                >;
 

@@ -1,24 +1,22 @@
-#if ORTEAF_ENABLE_MPS
+#if ORTEAF_ENABLE_CUDA
+
+#include <cuda_runtime.h>
 
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <system_error>
+#include <string>
+#include <vector>
 
 #include <orteaf/internal/architecture/architecture.h>
 #include <orteaf/internal/diagnostics/error/error.h>
 #include <orteaf/internal/dtype/dtype.h>
-#include <orteaf/internal/execution/mps/api/mps_execution_api.h>
-#include <orteaf/internal/execution/mps/platform/wrapper/mps_buffer.h>
-#include <orteaf/internal/execution/mps/platform/wrapper/mps_command_buffer.h>
-#include <orteaf/internal/execution/mps/platform/wrapper/mps_heap.h>
+#include <orteaf/internal/execution/cuda/api/cuda_execution_api.h>
 #include <orteaf/internal/kernel/api/kernel_registry_api.h>
 #include <orteaf/internal/kernel/core/kernel_args.h>
 #include <orteaf/internal/kernel/core/kernel_key.h>
 #include <orteaf/internal/kernel/core/kernel_metadata.h>
-#include <orteaf/internal/kernel/mps/mps_kernel_session.h>
-#include <orteaf/internal/kernel/param/param.h>
 #include <orteaf/internal/kernel/param/param_id.h>
 #include <orteaf/internal/kernel/param/transform/array_view_inline_vector.h>
 #include <orteaf/internal/kernel/registry/kernel_auto_registry.h>
@@ -30,22 +28,24 @@
 #include "copy_kernel_common.h"
 #include "transfer_layout_common.h"
 
-namespace orteaf::extension::kernel::mps {
+namespace orteaf::extension::kernel::cuda {
 
 namespace kernel = ::orteaf::internal::kernel;
 namespace error = ::orteaf::internal::diagnostics::error;
-namespace mps_kernel = ::orteaf::internal::kernel::mps;
+namespace cuda_wrapper = copy_detail::cuda_wrapper;
 
 using ShapeVector = detail::ShapeVector;
+using TransferLayoutParams = detail::TransferLayoutParams;
 
-struct CopyHostToMpsStorages : kernel::StorageSchema<CopyHostToMpsStorages> {
+struct CopyHostToDeviceStorages
+    : kernel::StorageSchema<CopyHostToDeviceStorages> {
   kernel::StorageField<kernel::OperandId::Input0> input;
   kernel::StorageField<kernel::OperandId::Output> output;
 
   ORTEAF_EXTRACT_STORAGES(input, output)
 };
 
-struct CopyHostToMpsParams : kernel::ParamSchema<CopyHostToMpsParams> {
+struct CopyHostToDeviceParams : kernel::ParamSchema<CopyHostToDeviceParams> {
   kernel::ScopedField<kernel::ParamId::Shape, ShapeVector,
                       kernel::OperandId::Input0>
       input_shape;
@@ -72,15 +72,48 @@ struct CopyHostToMpsParams : kernel::ParamSchema<CopyHostToMpsParams> {
 
 namespace {
 
-constexpr const char *kOpName = "MPS copyHostToDevice kernel";
+constexpr const char *kOpName = "CUDA copyHostToDevice kernel";
+
+extern "C" __global__ void orteaf_copy_contiguous_to_strided_u8(
+    const std::uint8_t *input, std::uint8_t *output, std::uint32_t input_offset,
+    std::uint32_t output_offset, std::uint32_t numel, std::uint32_t elem_size,
+    TransferLayoutParams layout);
+
+void launchContiguousToStridedKernel(cuda_wrapper::CudaDevicePtr_t input_base,
+                                     cuda_wrapper::CudaDevicePtr_t output_base,
+                                     std::uint32_t output_offset,
+                                     std::uint32_t numel,
+                                     std::uint32_t elem_size,
+                                     const TransferLayoutParams &layout) {
+  auto *src = reinterpret_cast<std::uint8_t *>(
+      static_cast<std::uintptr_t>(input_base));
+  auto *dst = reinterpret_cast<std::uint8_t *>(
+      static_cast<std::uintptr_t>(output_base));
+
+  constexpr std::uint32_t kThreads = 256;
+  const auto blocks = static_cast<std::uint32_t>((numel + kThreads - 1) / kThreads);
+  orteaf_copy_contiguous_to_strided_u8<<<blocks, kThreads>>>(
+      src, dst, 0, output_offset, numel, elem_size, layout);
+
+  const auto launch_status = cudaGetLastError();
+  if (launch_status != cudaSuccess) {
+    copy_detail::throwCudaRuntimeError(
+        "CUDA copyHostToDevice kernel launch failed", launch_status);
+  }
+  const auto sync_status = cudaDeviceSynchronize();
+  if (sync_status != cudaSuccess) {
+    copy_detail::throwCudaRuntimeError(
+        "CUDA copyHostToDevice kernel synchronization failed", sync_status);
+  }
+}
 
 } // namespace
 
-void copyHostToMpsExecute(
-    ::orteaf::internal::execution::mps::resource::MpsKernelBase &base,
+void copyHostToDeviceExecute(
+    ::orteaf::internal::execution::cuda::resource::CudaKernelBase &,
     kernel::KernelArgs &args) {
-  auto storages = CopyHostToMpsStorages::extract(args);
-  auto params = CopyHostToMpsParams::extract(args);
+  auto storages = CopyHostToDeviceStorages::extract(args);
+  auto params = CopyHostToDeviceParams::extract(args);
 
   using AnyBinding = kernel::KernelArgs::StorageListType::Storage::value_type;
   auto &input_any = storages.input.lease<AnyBinding>();
@@ -88,24 +121,26 @@ void copyHostToMpsExecute(
 
   auto *input_lease = input_any.tryAs<::orteaf::internal::storage::CpuStorageLease>();
   auto *output_lease =
-      output_any.tryAs<::orteaf::internal::storage::MpsStorageLease>();
+      output_any.tryAs<::orteaf::internal::storage::CudaStorageLease>();
   if (!input_lease || !(*input_lease) || !output_lease || !(*output_lease)) {
-    error::throwError(error::OrteafErrc::InvalidParameter,
-                      "MPS copyHostToDevice kernel requires CPU input and MPS output storage");
+    error::throwError(
+        error::OrteafErrc::InvalidParameter,
+        "CUDA copyHostToDevice kernel requires CPU input and CUDA output storage");
   }
+
   auto *input_storage = input_lease->operator->();
   auto *output_storage = output_lease->operator->();
   if (input_storage == nullptr || output_storage == nullptr ||
-      input_storage->buffer() == nullptr || output_storage->buffer() == nullptr) {
+      input_storage->buffer() == nullptr || !output_storage->bufferView()) {
     error::throwError(error::OrteafErrc::InvalidState,
-                      "MPS copyHostToDevice kernel buffer is unavailable");
+                      "CUDA copyHostToDevice kernel buffer is unavailable");
   }
 
   const auto dtype = input_any.dtype();
   if (dtype != output_any.dtype() || dtype != input_storage->dtype() ||
       dtype != output_storage->dtype()) {
     error::throwError(error::OrteafErrc::InvalidParameter,
-                      "MPS copyHostToDevice kernel requires matching dtype");
+                      "CUDA copyHostToDevice kernel requires matching dtype");
   }
 
   const auto input_storage_numel_raw = input_storage->numel();
@@ -114,8 +149,9 @@ void copyHostToMpsExecute(
           static_cast<std::size_t>(std::numeric_limits<std::int64_t>::max()) ||
       output_storage_numel_raw >
           static_cast<std::size_t>(std::numeric_limits<std::int64_t>::max())) {
-    error::throwError(error::OrteafErrc::InvalidParameter,
-                      "MPS copyHostToDevice kernel storage size exceeds index range");
+    error::throwError(
+        error::OrteafErrc::InvalidParameter,
+        "CUDA copyHostToDevice kernel storage size exceeds index range");
   }
   const auto input_storage_numel = static_cast<std::int64_t>(input_storage_numel_raw);
   const auto output_storage_numel =
@@ -125,7 +161,7 @@ void copyHostToMpsExecute(
   const auto output_offset = params.output_offset.get();
   if (input_offset < 0 || output_offset < 0) {
     error::throwError(error::OrteafErrc::InvalidParameter,
-                      "MPS copyHostToDevice kernel received negative offset");
+                      "CUDA copyHostToDevice kernel received negative offset");
   }
 
   const auto &input_shape = params.input_shape.get();
@@ -145,7 +181,7 @@ void copyHostToMpsExecute(
   }
   if (input_layout.numel != output_layout.numel) {
     error::throwError(error::OrteafErrc::InvalidParameter,
-                      "MPS copyHostToDevice kernel numel mismatch");
+                      "CUDA copyHostToDevice kernel numel mismatch");
   }
 
   if (input_layout.min_index < 0 || input_layout.max_index < 0 ||
@@ -153,118 +189,81 @@ void copyHostToMpsExecute(
       output_layout.min_index < 0 || output_layout.max_index < 0 ||
       output_layout.max_index >= output_storage_numel) {
     error::throwError(error::OrteafErrc::InvalidParameter,
-                      "MPS copyHostToDevice kernel view exceeds storage bounds");
+                      "CUDA copyHostToDevice kernel view exceeds storage bounds");
   }
 
   const auto elem_size = ::orteaf::internal::sizeOf(dtype);
-  if (elem_size > static_cast<std::size_t>(
-                      std::numeric_limits<std::uint32_t>::max())) {
+  if (input_layout.numel > std::numeric_limits<std::size_t>::max() / elem_size) {
     error::throwError(error::OrteafErrc::InvalidParameter,
-                      "MPS copyHostToDevice kernel element size exceeds uint32 range");
-  }
-  const auto numel = input_layout.numel;
-  if (numel > static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max()) ||
-      static_cast<std::size_t>(output_offset) >
-          static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max()) ||
-      static_cast<std::size_t>(output_layout.max_index) >
-          static_cast<std::size_t>(std::numeric_limits<std::uint32_t>::max())) {
-    error::throwError(error::OrteafErrc::InvalidParameter,
-                      "MPS copyHostToDevice kernel size exceeds uint32 range");
+                      "CUDA copyHostToDevice kernel byte size overflow");
   }
 
-  auto staging_lease = copy_detail::acquireSharedMpsStaging(dtype, numel, kOpName);
-  auto *staging_storage = staging_lease.operator->();
-  if (staging_storage == nullptr || staging_storage->buffer() == nullptr) {
-    error::throwError(error::OrteafErrc::InvalidState,
-                      "MPS copyHostToDevice kernel staging is unavailable");
-  }
-
-  auto *staging_ptr =
-      ::orteaf::internal::execution::mps::platform::wrapper::getBufferContents(
-          staging_storage->buffer());
-  if (staging_ptr == nullptr) {
-    error::throwError(error::OrteafErrc::InvalidState,
-                      "MPS copyHostToDevice kernel staging is not CPU-visible");
-  }
-
+  const auto bytes = input_layout.numel * elem_size;
   const auto *input_base = static_cast<const std::byte *>(input_storage->buffer());
-  auto *staging_bytes = static_cast<std::byte *>(staging_ptr);
-  for (std::size_t linear = 0; linear < numel; ++linear) {
+  const auto output_base = output_storage->bufferView().data();
+  if (output_base == 0) {
+    error::throwError(error::OrteafErrc::InvalidState,
+                      "CUDA copyHostToDevice kernel destination is invalid");
+  }
+
+  if (input_layout.contiguous && output_layout.contiguous) {
+    const auto src_byte_offset = static_cast<std::size_t>(input_offset) * elem_size;
+    const auto dst_byte_offset = static_cast<std::size_t>(output_offset) * elem_size;
+    cuda_wrapper::copyToDevice(
+        const_cast<std::byte *>(input_base + src_byte_offset),
+        output_base + dst_byte_offset, bytes);
+    return;
+  }
+
+  std::vector<std::byte> packed(bytes);
+  for (std::size_t linear = 0; linear < input_layout.numel; ++linear) {
     const auto src_index = detail::physicalIndexForLinear(
         static_cast<std::uint64_t>(linear), input_shape, input_strides,
         input_offset);
     const auto src_byte_index = static_cast<std::size_t>(src_index) * elem_size;
     std::copy_n(input_base + src_byte_index, elem_size,
-                staging_bytes + linear * elem_size);
+                packed.data() + linear * elem_size);
   }
 
+  if (output_layout.contiguous) {
+    const auto dst_byte_offset = static_cast<std::size_t>(output_offset) * elem_size;
+    cuda_wrapper::copyToDevice(packed.data(), output_base + dst_byte_offset, bytes);
+    return;
+  }
+
+  copy_detail::DeviceBufferGuard staging{cuda_wrapper::alloc(bytes), bytes};
+  cuda_wrapper::copyToDevice(packed.data(), staging.ptr, bytes);
+
+  TransferLayoutParams layout_params{};
   const auto staging_strides =
       detail::makeContiguousStrides(output_shape, kOpName, "output");
-  detail::TransferLayoutParams layout_params{};
   detail::fillLayoutParams(layout_params, output_shape, staging_strides,
                            output_strides, kOpName);
 
-  const std::uint32_t input_offset_u32 = 0;
   const auto output_offset_u32 = static_cast<std::uint32_t>(output_offset);
-  const auto numel_u32 = static_cast<std::uint32_t>(numel);
+  const auto numel_u32 = static_cast<std::uint32_t>(input_layout.numel);
   const auto elem_size_u32 = static_cast<std::uint32_t>(elem_size);
-
-  auto session = mps_kernel::MpsKernelSession::begin(base, args, 0);
-  if (!session) {
-    error::throwError(error::OrteafErrc::InvalidState,
-                      "MPS copyHostToDevice kernel could not begin execution session");
-  }
-
-  session->waitDependencies(storages.output);
-  mps_kernel::MpsKernelSession::Ops::setBuffer(session->encoder(),
-                                                *staging_storage, 0);
-  mps_kernel::MpsKernelSession::Ops::setBuffer(session->encoder(),
-                                                *output_storage, 1);
-  session->setBytes(&input_offset_u32, sizeof(input_offset_u32), 2);
-  session->setBytes(&output_offset_u32, sizeof(output_offset_u32), 3);
-  session->setBytes(&numel_u32, sizeof(numel_u32), 4);
-  session->setBytes(&elem_size_u32, sizeof(elem_size_u32), 5);
-  session->setBytes(&layout_params, sizeof(layout_params), 6);
-  session->dispatch1D(static_cast<std::size_t>(numel_u32));
-
-  if (!session->updateTokens(storages.output)) {
-    error::throwError(error::OrteafErrc::InvalidState,
-                      "MPS copyHostToDevice kernel failed to update synchronization tokens");
-  }
+  launchContiguousToStridedKernel(staging.ptr, output_base, output_offset_u32,
+                                  numel_u32, elem_size_u32, layout_params);
 }
 
-kernel::core::KernelMetadataLease createCopyHostToMpsMetadata() {
-  using MpsExecutionApi =
-      ::orteaf::internal::execution::mps::api::MpsExecutionApi;
+kernel::core::KernelMetadataLease createCopyHostToDeviceCudaMetadata() {
+  using CudaExecutionApi =
+      ::orteaf::internal::execution::cuda::api::CudaExecutionApi;
 
-  MpsExecutionApi::KernelKeys keys;
-  keys.pushBack(MpsExecutionApi::KernelKey{
-      MpsExecutionApi::LibraryKey::Named("transfer_kernel"),
-      MpsExecutionApi::FunctionKey::Named("orteaf_copy_contiguous_to_strided_u8")});
-
-  auto metadata_lease = MpsExecutionApi::acquireKernelMetadata(keys);
+  CudaExecutionApi::KernelKeys keys;
+  auto metadata_lease = CudaExecutionApi::acquireKernelMetadata(keys);
   if (auto *meta_ptr = metadata_lease.operator->()) {
-    meta_ptr->setExecute(copyHostToMpsExecute);
+    meta_ptr->setExecute(copyHostToDeviceExecute);
   }
 
   return kernel::core::KernelMetadataLease{std::move(metadata_lease)};
 }
 
-void registerCopyHostToMpsKernel(
+void registerCopyHostToDeviceKernel(
     ::orteaf::internal::architecture::Architecture architecture =
-        ::orteaf::internal::architecture::Architecture::MpsGeneric) {
-  kernel::core::KernelMetadataLease metadata;
-  try {
-    metadata = createCopyHostToMpsMetadata();
-  } catch (const std::system_error &err) {
-    const auto invalid_state =
-        error::makeErrorCode(error::OrteafErrc::InvalidState);
-    if (err.code() == invalid_state) {
-      return;
-    }
-    throw;
-  }
-
+        ::orteaf::internal::architecture::Architecture::CudaGeneric) {
+  auto metadata = createCopyHostToDeviceCudaMetadata();
   auto key = ::orteaf::internal::kernel::kernel_key::makeAnyDType(
       ::orteaf::internal::ops::Op::CopyHostToDevice, architecture,
       static_cast<::orteaf::internal::kernel::Layout>(0),
@@ -273,11 +272,11 @@ void registerCopyHostToMpsKernel(
       key, std::move(metadata));
 }
 
-void registerCopyHostToMpsKernelDefault() { registerCopyHostToMpsKernel(); }
+void registerCopyHostToDeviceKernelDefault() { registerCopyHostToDeviceKernel(); }
 
 ORTEAF_REGISTER_KERNEL(
-    ::orteaf::extension::kernel::mps::registerCopyHostToMpsKernelDefault);
+    ::orteaf::extension::kernel::cuda::registerCopyHostToDeviceKernelDefault);
 
-} // namespace orteaf::extension::kernel::mps
+} // namespace orteaf::extension::kernel::cuda
 
-#endif // ORTEAF_ENABLE_MPS
+#endif // ORTEAF_ENABLE_CUDA

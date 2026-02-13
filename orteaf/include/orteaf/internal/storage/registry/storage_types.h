@@ -17,6 +17,10 @@
 #include <orteaf/internal/storage/mps/mps_storage.h>
 #endif
 
+#if ORTEAF_ENABLE_CUDA
+#include <orteaf/internal/storage/cuda/cuda_storage.h>
+#endif
+
 namespace orteaf::internal::storage::registry {
 
 // =============================================================================
@@ -39,6 +43,16 @@ template <> struct StorageTraits<::orteaf::internal::storage::mps::MpsStorage> {
 };
 #endif
 
+#if ORTEAF_ENABLE_CUDA
+template <>
+struct StorageTraits<::orteaf::internal::storage::cuda::CudaStorage> {
+  using Manager = manager::TypedStorageManager<
+      ::orteaf::internal::storage::cuda::CudaStorage>;
+  using Lease = typename Manager::StorageLease;
+  static constexpr const char *name = "cuda";
+};
+#endif
+
 // =============================================================================
 // Registered Storage Types
 // =============================================================================
@@ -48,6 +62,10 @@ using RegisteredStorages =
 #if ORTEAF_ENABLE_MPS
                     ,
                     ::orteaf::internal::storage::mps::MpsStorage
+#endif
+#if ORTEAF_ENABLE_CUDA
+                    ,
+                    ::orteaf::internal::storage::cuda::CudaStorage
 #endif
                     >;
 
@@ -67,6 +85,13 @@ using MpsStorageLease =
     StorageTraits<::orteaf::internal::storage::mps::MpsStorage>::Lease;
 #endif
 
+#if ORTEAF_ENABLE_CUDA
+using CudaStorageManager =
+    StorageTraits<::orteaf::internal::storage::cuda::CudaStorage>::Manager;
+using CudaStorageLease =
+    StorageTraits<::orteaf::internal::storage::cuda::CudaStorage>::Lease;
+#endif
+
 } // namespace orteaf::internal::storage::registry
 
 // Re-export for convenience
@@ -77,5 +102,9 @@ using CpuStorageLease = registry::CpuStorageLease;
 #if ORTEAF_ENABLE_MPS
 using MpsStorageManager = registry::MpsStorageManager;
 using MpsStorageLease = registry::MpsStorageLease;
+#endif
+#if ORTEAF_ENABLE_CUDA
+using CudaStorageManager = registry::CudaStorageManager;
+using CudaStorageLease = registry::CudaStorageLease;
 #endif
 } // namespace orteaf::internal::storage

@@ -1,12 +1,16 @@
 #include <gtest/gtest.h>
 
+#include <array>
+#include <cstdint>
+#include <span>
+
 #include <orteaf/extension/tensor/registry/tensor_impl_types.h>
-#include <orteaf/internal/execution/cpu/api/cpu_execution_api.h>
+#include <orteaf/internal/init/library_init.h>
 #include <orteaf/internal/storage/registry/storage_types.h>
 
 namespace {
 
-namespace cpu_api = orteaf::internal::execution::cpu::api;
+namespace init = orteaf::internal::init;
 namespace storage_reg = orteaf::internal::storage::registry;
 namespace registry = orteaf::internal::tensor::registry;
 using DenseTensorImpl = orteaf::extension::tensor::DenseTensorImpl;
@@ -14,11 +18,24 @@ using DType = orteaf::internal::DType;
 using Execution = orteaf::internal::execution::Execution;
 using StorageRegistry = storage_reg::RegisteredStorages;
 
+DenseTensorImpl::CreateRequest makeDenseRequest(std::span<const std::int64_t> shape,
+                                                DType dtype,
+                                                Execution execution,
+                                                std::size_t alignment = 0) {
+  DenseTensorImpl::CreateRequest request{};
+  request.shape.assign(shape.begin(), shape.end());
+  request.dtype = dtype;
+  request.execution = execution;
+  request.alignment = alignment;
+  return request;
+}
+
 class TensorImplRegistryTest : public ::testing::Test {
 protected:
   void SetUp() override {
-    cpu_api::CpuExecutionApi::ExecutionManager::Config cpu_config{};
-    cpu_api::CpuExecutionApi::configure(cpu_config);
+    init::LibraryConfig config{};
+    config.register_kernels = false;
+    init::initialize(config);
 
     StorageRegistry::Config storage_config{};
     storage_registry_.configure(storage_config);
@@ -30,7 +47,7 @@ protected:
   void TearDown() override {
     registry_.shutdown();
     storage_registry_.shutdown();
-    cpu_api::CpuExecutionApi::shutdown();
+    init::shutdown();
   }
 
   StorageRegistry storage_registry_;
@@ -61,8 +78,8 @@ TEST_F(TensorImplRegistryTest, LeaseVariantHoldsMonostate) {
 
 TEST_F(TensorImplRegistryTest, LeaseVariantHoldsDenseLease) {
   std::array<int64_t, 2> shape{3, 4};
-  auto lease = registry_.get<DenseTensorImpl>().create(shape, DType::F32,
-                                                       Execution::Cpu);
+  auto lease = registry_.get<DenseTensorImpl>().create(
+      makeDenseRequest(shape, DType::F32, Execution::Cpu));
 
   registry::RegisteredImpls::LeaseVariant variant = lease;
   EXPECT_FALSE(std::holds_alternative<std::monostate>(variant));
@@ -74,11 +91,10 @@ TEST_F(TensorImplRegistryTest, LeaseVariantHoldsDenseLease) {
 
 TEST_F(TensorImplRegistryTest, DispatchToDenseManager) {
   std::array<int64_t, 2> shape{3, 4};
-  auto lease = registry_.get<DenseTensorImpl>().create(shape, DType::F32,
-                                                       Execution::Cpu);
+  auto lease = registry_.get<DenseTensorImpl>().create(
+      makeDenseRequest(shape, DType::F32, Execution::Cpu));
 
   // Verify dispatch correctly identifies the impl type
-  using Lease = registry::TensorImplTraits<DenseTensorImpl>::Lease;
   bool dispatched_correctly = false;
 
   registry::RegisteredImpls::dispatch(
@@ -101,8 +117,8 @@ TEST_F(TensorImplRegistryTest, DenseTraitsName) {
 }
 
 TEST_F(TensorImplRegistryTest, DenseTraitsLeaseType) {
-  using Lease = registry::TensorImplTraits<DenseTensorImpl>::Lease;
-  using Manager = registry::TensorImplTraits<DenseTensorImpl>::Manager;
+  using Manager = orteaf::internal::tensor::TensorImplManager<DenseTensorImpl>;
+  using Lease = typename Manager::TensorImplLease;
 
   // Verify types are correctly defined
   static_assert(std::is_same_v<Lease, typename Manager::TensorImplLease>);
